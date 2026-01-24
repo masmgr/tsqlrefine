@@ -29,12 +29,12 @@
 
 ### 2.1 フォーマッタを “実装” する（現状は no-op）
 
-- [ ] `SqlFormatter.Format` を no-op から脱却（`src/TsqlRefine.Formatting/SqlFormatter.cs`）
-- [ ] 最小要件をまず満たす（`docs/requirements.md` の「3.3 フォーマット」）
-  - [ ] キーワードの大文字小文字統一
-  - [ ] インデント（spaces/tabs + size）の適用ポリシー確定
-  - [ ] 改行・末尾空白などの安全な正規化（コメント/文字列は壊さない）
-- [ ] `format` のテストを追加（`tests/TsqlRefine.Cli.Tests/` など）
+- [x] `SqlFormatter.Format` を no-op から脱却（`src/TsqlRefine.Formatting/SqlFormatter.cs`）
+- [x] 最小要件をまず満たす（`docs/requirements.md` の「3.3 フォーマット」）
+  - [x] キーワードの大文字小文字統一
+  - [x] インデント（spaces/tabs + size）の適用ポリシー確定
+  - [x] 改行・末尾空白などの安全な正規化（コメント/文字列は壊さない）
+- [x] `format` のテストを追加（`tests/TsqlRefine.Cli.Tests/` など）
 
 ### 2.2 位置情報（Range）を正しく出す
 
