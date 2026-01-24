@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tsqlrefine config",
+  "type": "object",
+  "properties": {
+    "compatLevel": {
+      "type": "integer",
+      "description": "SQL Server compatibility level (e.g. 150)."
+    },
+    "ruleset": {
+      "type": "string",
+      "description": "Path to a ruleset JSON file."
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "enabled": { "type": "boolean", "default": true }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

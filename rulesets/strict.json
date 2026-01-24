@@ -1,0 +1,6 @@
+{
+  "rules": [
+    { "id": "avoid-select-star", "enabled": true }
+  ]
+}
+

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tsqlrefine ruleset",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "enabled": { "type": "boolean", "default": true }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["rules"],
+  "additionalProperties": false
+}
+
