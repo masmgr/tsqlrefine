@@ -6,3 +6,4 @@
 - ルール整備（カテゴリ/優先度/プリセット）: `docs/rules.md`
 - CLI 仕様（JSON/終了コード）: `docs/cli.md`
 - プラグイン API（最小契約: Rule）: `docs/plugin-api.md`
+- プロジェクト構成（.NET / CLI・コアのみ）: `docs/project-structure.md`
