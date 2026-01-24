@@ -44,10 +44,10 @@
 
 ### 2.3 CLI 仕様と実装の “差分” を潰す
 
-- [ ] `--ignorelist` を実装（`src/TsqlRefine.Cli/CliApp.cs` で “not implemented”）
-- [ ] `format --diff` を実装（`src/TsqlRefine.Cli/CliApp.cs` で “not implemented”）
-- [ ] `--version` を仕様に合わせる（少なくともバージョン文字列を表示）
-- [ ] 仕様反映時に `docs/cli.md` と `tests/TsqlRefine.Cli.Tests/` を更新（変更漏れ防止）
+- [x] `--ignorelist` を実装（`src/TsqlRefine.Cli/CliApp.cs` で “not implemented”）
+- [x] `format --diff` を実装（`src/TsqlRefine.Cli/CliApp.cs` で “not implemented”）
+- [x] `--version` を仕様に合わせる（少なくともバージョン文字列を表示）
+- [x] 仕様反映時に `docs/cli.md` と `tests/TsqlRefine.Cli.Tests/` を更新（変更漏れ防止）
 
 ### 2.4 “MVP ルール” を増やす
 

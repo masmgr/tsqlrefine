@@ -1,5 +1,11 @@
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using DiffPlex;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
+using Microsoft.Extensions.FileSystemGlobbing;
+using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
 using TsqlRefine.Core.Engine;
@@ -12,13 +18,30 @@ namespace TsqlRefine.Cli;
 
 public static class CliApp
 {
+    private static string GetVersionString()
+    {
+        var assembly = typeof(CliApp).Assembly;
+
+        // Try InformationalVersion first (includes pre-release tags)
+        var infoVersionAttr = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        if (infoVersionAttr?.InformationalVersion is not null)
+            return infoVersionAttr.InformationalVersion;
+
+        // Fallback to AssemblyVersion
+        var version = assembly.GetName().Version;
+        if (version is not null)
+            return version.ToString();
+
+        return "unknown";
+    }
+
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
         var parsed = CliParser.Parse(args);
 
         if (parsed.ShowVersion)
         {
-            await stdout.WriteLineAsync("tsqlrefine");
+            await stdout.WriteLineAsync($"tsqlrefine {GetVersionString()}");
             return 0;
         }
 
@@ -173,15 +196,15 @@ public static class CliApp
             return ExitCodes.Fatal;
         }
 
-        if (!args.Write && inputs.Count > 1)
+        if (args.Diff && args.Write)
         {
-            await stderr.WriteLineAsync("Multiple inputs require --write.");
+            await stderr.WriteLineAsync("--diff and --write are mutually exclusive.");
             return ExitCodes.Fatal;
         }
 
-        if (args.Diff)
+        if (!args.Write && !args.Diff && inputs.Count > 1)
         {
-            await stderr.WriteLineAsync("--diff is not implemented yet.");
+            await stderr.WriteLineAsync("Multiple inputs require --write or --diff.");
             return ExitCodes.Fatal;
         }
 
@@ -193,7 +216,14 @@ public static class CliApp
         foreach (var input in inputs)
         {
             var formatted = SqlFormatter.Format(input.Text, options);
-            if (args.Write && input.FilePath != "<stdin>")
+
+            if (args.Diff)
+            {
+                var diff = GenerateUnifiedDiff(input.FilePath, input.Text, formatted);
+                if (!string.IsNullOrEmpty(diff))
+                    await stdout.WriteAsync(diff);
+            }
+            else if (args.Write && input.FilePath != "<stdin>")
             {
                 await File.WriteAllTextAsync(input.FilePath, formatted, Encoding.UTF8);
             }
@@ -312,7 +342,8 @@ public static class CliApp
             paths = paths.Where(p => p != "-").ToArray();
         }
 
-        foreach (var path in ExpandPaths(paths))
+        var ignorePatterns = LoadIgnorePatterns(args.IgnoreListPath, stderr);
+        foreach (var path in ExpandPaths(paths, ignorePatterns))
         {
             if (!File.Exists(path))
             {
@@ -327,22 +358,109 @@ public static class CliApp
         return inputs;
     }
 
-    private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths)
+    private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths, List<string> ignorePatterns)
     {
         foreach (var path in paths)
         {
             if (Directory.Exists(path))
             {
-                foreach (var file in Directory.EnumerateFiles(path, "*.sql", SearchOption.AllDirectories))
-                {
-                    yield return file;
-                }
+                var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+                matcher.AddInclude("**/*.sql");
+
+                foreach (var pattern in ignorePatterns)
+                    matcher.AddExclude(pattern);
+
+                var result = matcher.Execute(
+                    new DirectoryInfoWrapper(new DirectoryInfo(path)));
+
+                foreach (var file in result.Files)
+                    yield return Path.Combine(path, file.Path);
 
                 continue;
             }
 
-            yield return path;
+            // For individual files, check if they match ignore patterns
+            if (!ShouldIgnoreFile(path, ignorePatterns))
+                yield return path;
         }
+    }
+
+    private static bool ShouldIgnoreFile(string filePath, List<string> ignorePatterns)
+    {
+        if (ignorePatterns.Count == 0)
+            return false;
+
+        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+        foreach (var pattern in ignorePatterns)
+            matcher.AddInclude(pattern);
+
+        var fileName = Path.GetFileName(filePath);
+        var directoryPath = Path.GetDirectoryName(filePath) ?? string.Empty;
+
+        var result = matcher.Match(directoryPath, new[] { fileName });
+        return result.HasMatches;
+    }
+
+    private static List<string> LoadIgnorePatterns(string? ignoreListPath, TextWriter stderr)
+    {
+        // Check explicit path first, then default tsqlrefine.ignore
+        var path = ignoreListPath;
+        if (path is null)
+        {
+            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
+            if (File.Exists(defaultPath))
+                path = defaultPath;
+        }
+
+        if (path is null)
+            return new List<string>();
+
+        if (!File.Exists(path))
+            throw new ConfigException($"Ignore list file not found: {path}");
+
+        try
+        {
+            var lines = File.ReadAllLines(path, Encoding.UTF8);
+            return lines
+                .Select(l => l.Trim())
+                .Where(l => !string.IsNullOrEmpty(l) && !l.StartsWith('#'))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not ConfigException)
+        {
+            throw new ConfigException($"Failed to read ignore list: {ex.Message}");
+        }
+    }
+
+    private static string GenerateUnifiedDiff(string filePath, string original, string formatted)
+    {
+        if (string.Equals(original, formatted, StringComparison.Ordinal))
+            return string.Empty;
+
+        var differ = new Differ();
+        var builder = new InlineDiffBuilder(differ);
+
+        var diff = builder.BuildDiffModel(original, formatted, ignoreWhitespace: false);
+
+        var result = new StringBuilder();
+        result.AppendLine($"--- {filePath}");
+        result.AppendLine($"+++ {filePath}");
+
+        // Generate line-by-line diff
+        foreach (var line in diff.Lines)
+        {
+            var prefix = line.Type switch
+            {
+                ChangeType.Deleted => "-",
+                ChangeType.Inserted => "+",
+                ChangeType.Modified => "!",
+                _ => " "
+            };
+
+            result.AppendLine($"{prefix}{line.Text}");
+        }
+
+        return result.ToString();
     }
 
     private const string HelpText =
@@ -355,7 +473,7 @@ public static class CliApp
 
         Options:
           -c, --config <path>
-          -g, --ignorelist <path>        (not implemented)
+          -g, --ignorelist <path>
               --stdin
               --stdin-filepath <path>
               --output <text|json>
@@ -364,7 +482,7 @@ public static class CliApp
               --compat-level <110|120|130|140|150|160>
               --ruleset <path>
               --write                      (format only)
-              --diff                       (not implemented)
+              --diff                       (format only)
 
           -h, --help
           -v, --version

@@ -35,10 +35,11 @@ tsqlrefine <command> [options] [paths...]
 グローバル:
 
 - `-c, --config <path>`: 設定ファイルのパス（既定探索を上書き）
+- `-g, --ignorelist <path>`: 無視するファイルのパターンリスト（glob形式、1行1パターン、#でコメント）
 - `-i, --init`: `init` の短縮（互換用。`tsqlrefine init` 推奨）
 - `-p, --print-config`: `print-config` の短縮
 - `-l, --list-plugins`: `list-plugins` の短縮
-- `-v, --version`: バージョン表示
+- `-v, --version`: バージョン番号を表示
 - `-h, --help`: ヘルプ表示
 
 入出力:
@@ -57,7 +58,7 @@ tsqlrefine <command> [options] [paths...]
 format / fix:
 
 - `--write`: ファイルを上書き（指定しない場合は stdout に出力）
-- `--diff`: 差分を表示（将来 / もしくは `--write` と排他）
+- `--diff`: 差分を表示（`--write` と排他）
 - `--indent-style <tabs|spaces>`: インデントの種類（既定は入力踏襲 or 設定）
 - `--indent-size <n>`: spaces の場合の幅（既定: 4）
 

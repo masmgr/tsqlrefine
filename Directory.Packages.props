@@ -6,5 +6,7 @@
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="161.8812.0" />
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.0" />
+    <PackageVersion Include="DiffPlex" Version="1.7.2" />
   </ItemGroup>
 </Project>
