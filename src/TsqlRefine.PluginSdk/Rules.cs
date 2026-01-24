@@ -1,3 +1,5 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+
 namespace TsqlRefine.PluginSdk;
 
 public enum RuleSeverity
@@ -25,11 +27,29 @@ public sealed record Token(string Text, Position Start, int Length);
 public sealed class ScriptDomAst
 {
     public ScriptDomAst(string rawSql)
+        : this(rawSql, null, Array.Empty<ParseError>(), Array.Empty<ParseError>())
+    {
+    }
+
+    public ScriptDomAst(
+        string rawSql,
+        TSqlFragment? fragment,
+        IReadOnlyList<ParseError>? parseErrors,
+        IReadOnlyList<ParseError>? tokenizationErrors)
     {
         RawSql = rawSql ?? string.Empty;
+        Fragment = fragment;
+        ParseErrors = parseErrors ?? Array.Empty<ParseError>();
+        TokenizationErrors = tokenizationErrors ?? Array.Empty<ParseError>();
     }
 
     public string RawSql { get; }
+
+    public TSqlFragment? Fragment { get; }
+
+    public IReadOnlyList<ParseError> ParseErrors { get; }
+
+    public IReadOnlyList<ParseError> TokenizationErrors { get; }
 }
 
 public sealed record RuleContext(
@@ -57,4 +77,3 @@ public interface IRuleProvider
 
     IReadOnlyList<IRule> GetRules();
 }
-

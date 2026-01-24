@@ -39,11 +39,12 @@ public sealed class TsqlRefineEngine
         var diagnostics = new List<Diagnostic>();
         var ruleSettings = options.RuleSettings ?? new RuleSettings();
 
+        var analysis = ScriptDomTokenizer.Analyze(input.Text, options.CompatLevel);
         var context = new RuleContext(
             FilePath: input.FilePath,
             CompatLevel: options.CompatLevel,
-            Ast: new ScriptDomAst(input.Text),
-            Tokens: Array.Empty<Token>(),
+            Ast: analysis.Ast,
+            Tokens: analysis.Tokens,
             Settings: ruleSettings
         );
 

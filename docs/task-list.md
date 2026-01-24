@@ -38,9 +38,9 @@
 
 ### 2.2 位置情報（Range）を正しく出す
 
-- [ ] `Diagnostic.Range` を常に `(0,0)-(0,0)` から改善（`src/TsqlRefine.Core/Engine/TsqlRefineEngine.cs`, ルール実装）
-- [ ] `RuleContext.Tokens` を空配列のままにしない（トークナイズ方針を決めて実装）
-- [ ] ルール実装を Regex 中心から AST/Token 中心へ移行する方針を固める（誤検知と位置精度の改善）
+- [x] `Diagnostic.Range` を常に `(0,0)-(0,0)` から改善（`src/TsqlRefine.Core/Engine/TsqlRefineEngine.cs`, ルール実装）
+- [x] `RuleContext.Tokens` を空配列のままにしない（トークナイズ方針を決めて実装）
+- [x] ルール実装を Regex 中心から AST/Token 中心へ移行する方針を固める（誤検知と位置精度の改善）
 
 ### 2.3 CLI 仕様と実装の “差分” を潰す
 
