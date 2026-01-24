@@ -35,7 +35,6 @@ tsqlrefine <command> [options] [paths...]
 グローバル:
 
 - `-c, --config <path>`: 設定ファイルのパス（既定探索を上書き）
-- `-g, --ignorelist <path>`: ignore ファイルのパス（既定探索を上書き）
 - `-i, --init`: `init` の短縮（互換用。`tsqlrefine init` 推奨）
 - `-p, --print-config`: `print-config` の短縮
 - `-l, --list-plugins`: `list-plugins` の短縮

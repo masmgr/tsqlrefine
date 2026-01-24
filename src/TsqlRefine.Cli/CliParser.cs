@@ -1,3 +1,4 @@
+using System.CommandLine;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginSdk;
 
@@ -5,153 +6,37 @@ namespace TsqlRefine.Cli;
 
 public static class CliParser
 {
+    private static readonly ParserModel Model = BuildModel();
+
     public static CliArgs Parse(string[] args)
     {
-        var tokens = args?.ToList() ?? new List<string>();
-        var showHelp = tokens.Contains("--help") || tokens.Contains("-h") || tokens.Contains("/?");
-        var showVersion = tokens.Contains("--version") || tokens.Contains("-v");
-
-        var command = tokens.Count > 0 && IsCommand(tokens[0]) ? tokens[0] : "lint";
-        if (tokens.Count > 0 && IsCommand(tokens[0]))
+        var parseResult = Model.Root.Parse(args ?? Array.Empty<string>());
+        var command = GetCommandName(parseResult);
+        var commandOverride = GetCommandOverride(parseResult);
+        if (commandOverride is not null)
         {
-            tokens.RemoveAt(0);
+            command = commandOverride;
         }
 
-        var configPath = (string?)null;
-        var ignorePath = (string?)null;
-        var stdin = false;
-        var stdinFilePath = (string?)null;
-        var output = "text";
-        DiagnosticSeverity? severity = null;
-        var preset = (string?)null;
-        int? compatLevel = null;
-        var rulesetPath = (string?)null;
-        var write = false;
-        var diff = false;
-        IndentStyle? indentStyle = null;
-        int? indentSize = null;
-        var paths = new List<string>();
-
-        for (var i = 0; i < tokens.Count; i++)
-        {
-            var t = tokens[i];
-
-            if (t is "-i" or "--init")
-            {
-                command = "init";
-                continue;
-            }
-
-            if (t is "-p" or "--print-config")
-            {
-                command = "print-config";
-                continue;
-            }
-
-            if (t is "-l" or "--list-plugins")
-            {
-                command = "list-plugins";
-                continue;
-            }
-
-            if (t is "-c" or "--config")
-            {
-                configPath = NextValue(tokens, ref i);
-                continue;
-            }
-
-            if (t is "-g" or "--ignorelist")
-            {
-                ignorePath = NextValue(tokens, ref i);
-                continue;
-            }
-
-            if (t is "--stdin")
-            {
-                stdin = true;
-                continue;
-            }
-
-            if (t is "--stdin-filepath")
-            {
-                stdinFilePath = NextValue(tokens, ref i);
-                continue;
-            }
-
-            if (t is "--output")
-            {
-                output = NextValue(tokens, ref i) ?? "text";
-                continue;
-            }
-
-            if (t is "--severity")
-            {
-                severity = ParseSeverity(NextValue(tokens, ref i));
-                continue;
-            }
-
-            if (t is "--preset")
-            {
-                preset = NextValue(tokens, ref i);
-                continue;
-            }
-
-            if (t is "--compat-level")
-            {
-                if (int.TryParse(NextValue(tokens, ref i), out var v))
-                {
-                    compatLevel = v;
-                }
-
-                continue;
-            }
-
-            if (t is "--ruleset")
-            {
-                rulesetPath = NextValue(tokens, ref i);
-                continue;
-            }
-
-            if (t is "--write")
-            {
-                write = true;
-                continue;
-            }
-
-            if (t is "--diff")
-            {
-                diff = true;
-                continue;
-            }
-
-            if (t is "--indent-style")
-            {
-                indentStyle = ParseIndentStyle(NextValue(tokens, ref i));
-                continue;
-            }
-
-            if (t is "--indent-size")
-            {
-                if (int.TryParse(NextValue(tokens, ref i), out var n))
-                {
-                    indentSize = n;
-                }
-
-                continue;
-            }
-
-            if (t.StartsWith("-", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            paths.Add(t);
-        }
+        var configPath = parseResult.GetValue(Model.ConfigOption);
+        var ignorePath = parseResult.GetValue(Model.IgnoreListOption);
+        var stdin = parseResult.GetValue(Model.StdinOption);
+        var stdinFilePath = parseResult.GetValue(Model.StdinFilePathOption);
+        var output = parseResult.GetValue(Model.OutputOption) ?? "text";
+        var severity = ParseSeverity(parseResult.GetValue(Model.SeverityOption));
+        var preset = parseResult.GetValue(Model.PresetOption);
+        var compatLevel = ParseInt(parseResult.GetValue(Model.CompatLevelOption));
+        var rulesetPath = parseResult.GetValue(Model.RulesetOption);
+        var write = parseResult.GetValue(Model.WriteOption);
+        var diff = parseResult.GetValue(Model.DiffOption);
+        var indentStyle = ParseIndentStyle(parseResult.GetValue(Model.IndentStyleOption));
+        var indentSize = ParseInt(parseResult.GetValue(Model.IndentSizeOption));
+        var paths = GetPaths(parseResult);
 
         return new CliArgs(
             Command: command,
-            ShowHelp: showHelp,
-            ShowVersion: showVersion,
+            ShowHelp: parseResult.GetValue(Model.HelpOption),
+            ShowVersion: parseResult.GetValue(Model.VersionOption),
             ConfigPath: configPath,
             IgnoreListPath: ignorePath,
             Stdin: stdin,
@@ -169,19 +54,46 @@ public static class CliParser
         );
     }
 
-    private static bool IsCommand(string token) =>
-        token is "lint" or "check" or "format" or "fix" or "init" or "print-config" or "list-rules" or "list-plugins";
+    private static string GetCommandName(ParseResult parseResult) =>
+        parseResult.CommandResult.Command is RootCommand ? "lint" : parseResult.CommandResult.Command.Name;
 
-    private static string? NextValue(IReadOnlyList<string> tokens, ref int index)
+    private static string? GetCommandOverride(ParseResult parseResult)
     {
-        if (index + 1 >= tokens.Count)
+        if (parseResult.GetValue(Model.InitOption))
         {
-            return null;
+            return "init";
         }
 
-        index++;
-        return tokens[index];
+        if (parseResult.GetValue(Model.PrintConfigOption))
+        {
+            return "print-config";
+        }
+
+        if (parseResult.GetValue(Model.ListPluginsOption))
+        {
+            return "list-plugins";
+        }
+
+        return null;
     }
+
+    private static List<string> GetPaths(ParseResult parseResult)
+    {
+        if (parseResult.CommandResult.Command is RootCommand)
+        {
+            return (parseResult.GetValue(Model.RootPathsArgument) ?? Array.Empty<string>()).ToList();
+        }
+
+        if (Model.PathsByCommand.TryGetValue(parseResult.CommandResult.Command.Name, out var argument))
+        {
+            return (parseResult.GetValue(argument) ?? Array.Empty<string>()).ToList();
+        }
+
+        return new List<string>();
+    }
+
+    private static int? ParseInt(string? s) =>
+        int.TryParse(s, out var value) ? value : null;
 
     private static DiagnosticSeverity? ParseSeverity(string? s) =>
         s?.ToLowerInvariant() switch
@@ -200,5 +112,134 @@ public static class CliParser
             "spaces" => IndentStyle.Spaces,
             _ => null
         };
-}
 
+    private static ParserModel BuildModel()
+    {
+        var root = new RootCommand();
+
+        var configOption = CreateOptionalStringOption("--config", "-c");
+        var ignoreListOption = CreateOptionalStringOption("--ignorelist", "-g");
+        var stdinOption = CreateBoolOption("--stdin");
+        var stdinFilePathOption = CreateOptionalStringOption("--stdin-filepath");
+        var outputOption = CreateOptionalStringOption("--output");
+        var severityOption = CreateOptionalStringOption("--severity");
+        var presetOption = CreateOptionalStringOption("--preset");
+        var compatLevelOption = CreateOptionalStringOption("--compat-level");
+        var rulesetOption = CreateOptionalStringOption("--ruleset");
+        var writeOption = CreateBoolOption("--write");
+        var diffOption = CreateBoolOption("--diff");
+        var indentStyleOption = CreateOptionalStringOption("--indent-style");
+        var indentSizeOption = CreateOptionalStringOption("--indent-size");
+        var helpOption = CreateBoolOption("--help", "-h", "/?");
+        var versionOption = CreateBoolOption("--version", "-v");
+        var initOption = CreateBoolOption("--init", "-i");
+        var printConfigOption = CreateBoolOption("--print-config", "-p");
+        var listPluginsOption = CreateBoolOption("--list-plugins", "-l");
+
+        root.Add(configOption);
+        root.Add(ignoreListOption);
+        root.Add(stdinOption);
+        root.Add(stdinFilePathOption);
+        root.Add(outputOption);
+        root.Add(severityOption);
+        root.Add(presetOption);
+        root.Add(compatLevelOption);
+        root.Add(rulesetOption);
+        root.Add(writeOption);
+        root.Add(diffOption);
+        root.Add(indentStyleOption);
+        root.Add(indentSizeOption);
+        root.Add(helpOption);
+        root.Add(versionOption);
+        root.Add(initOption);
+        root.Add(printConfigOption);
+        root.Add(listPluginsOption);
+
+        var rootPaths = CreatePathsArgument();
+        root.Add(rootPaths);
+
+        var pathsByCommand = new Dictionary<string, Argument<string[]>>(StringComparer.Ordinal);
+        foreach (var commandName in new[]
+                 {
+                     "lint",
+                     "check",
+                     "format",
+                     "fix",
+                     "init",
+                     "print-config",
+                     "list-rules",
+                     "list-plugins"
+                 })
+        {
+            var command = new Command(commandName);
+            var paths = CreatePathsArgument();
+            command.Add(paths);
+            root.Add(command);
+            pathsByCommand[commandName] = paths;
+        }
+
+        return new ParserModel(
+            Root: root,
+            ConfigOption: configOption,
+            IgnoreListOption: ignoreListOption,
+            StdinOption: stdinOption,
+            StdinFilePathOption: stdinFilePathOption,
+            OutputOption: outputOption,
+            SeverityOption: severityOption,
+            PresetOption: presetOption,
+            CompatLevelOption: compatLevelOption,
+            RulesetOption: rulesetOption,
+            WriteOption: writeOption,
+            DiffOption: diffOption,
+            IndentStyleOption: indentStyleOption,
+            IndentSizeOption: indentSizeOption,
+            HelpOption: helpOption,
+            VersionOption: versionOption,
+            InitOption: initOption,
+            PrintConfigOption: printConfigOption,
+            ListPluginsOption: listPluginsOption,
+            RootPathsArgument: rootPaths,
+            PathsByCommand: pathsByCommand
+        );
+    }
+
+    private static Option<string?> CreateOptionalStringOption(string name, params string[] aliases)
+    {
+        var option = new Option<string?>(name, aliases) { Arity = ArgumentArity.ZeroOrOne };
+        option.Recursive = true;
+        return option;
+    }
+
+    private static Option<bool> CreateBoolOption(string name, params string[] aliases)
+    {
+        var option = new Option<bool>(name, aliases);
+        option.Recursive = true;
+        return option;
+    }
+
+    private static Argument<string[]> CreatePathsArgument() =>
+        new("paths") { Arity = ArgumentArity.ZeroOrMore };
+
+    private sealed record ParserModel(
+        RootCommand Root,
+        Option<string?> ConfigOption,
+        Option<string?> IgnoreListOption,
+        Option<bool> StdinOption,
+        Option<string?> StdinFilePathOption,
+        Option<string?> OutputOption,
+        Option<string?> SeverityOption,
+        Option<string?> PresetOption,
+        Option<string?> CompatLevelOption,
+        Option<string?> RulesetOption,
+        Option<bool> WriteOption,
+        Option<bool> DiffOption,
+        Option<string?> IndentStyleOption,
+        Option<string?> IndentSizeOption,
+        Option<bool> HelpOption,
+        Option<bool> VersionOption,
+        Option<bool> InitOption,
+        Option<bool> PrintConfigOption,
+        Option<bool> ListPluginsOption,
+        Argument<string[]> RootPathsArgument,
+        IReadOnlyDictionary<string, Argument<string[]>> PathsByCommand);
+}

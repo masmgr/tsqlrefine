@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
     <ProjectReference Include="..\TsqlRefine.Core\TsqlRefine.Core.csproj" />
     <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
     <ProjectReference Include="..\TsqlRefine.PluginHost\TsqlRefine.PluginHost.csproj" />
