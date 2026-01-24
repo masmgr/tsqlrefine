@@ -37,6 +37,7 @@ dotnet test  src/TsqlRefine.sln -c Release
 - `.editorconfig`:
   - 改行: LF、文字コード: UTF-8
   - C#: 4 spaces、`using` の System 優先ソート
+- ソースコード内の文字列（例: メッセージ）とコメントは英語で記載する（例外が必要な場合は PR で理由を明記する）
 
 ## 変更時の注意（よく漏れる点）
 
@@ -47,4 +48,3 @@ dotnet test  src/TsqlRefine.sln -c Release
   - ルール一覧/プリセット: `rulesets/`（必要なら）
   - テスト: `tests/TsqlRefine.Rules.Tests/` や `tests/TsqlRefine.Core.Tests/`
 - **プラグインロード周りを触る場合**: `src/TsqlRefine.PluginHost/` は AssemblyLoadContext 境界があるため、依存 DLL の解決/重複ロードに注意する。
-
