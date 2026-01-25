@@ -84,6 +84,8 @@ src/
 ├── TsqlRefine.PluginSdk/     # Contracts and interfaces (foundation)
 ├── TsqlRefine.Core/          # Analysis engine and tokenizer
 ├── TsqlRefine.Rules/         # Built-in rules
+│   ├── Helpers/              # Shared utilities for rule implementation
+│   └── Rules/                # Individual rule implementations
 ├── TsqlRefine.Formatting/    # SQL formatter
 ├── TsqlRefine.PluginHost/    # Plugin loading infrastructure
 └── TsqlRefine.Cli/           # Command-line interface
@@ -156,6 +158,33 @@ Current rules (7 total):
    - Detects INSERT SELECT without explicit column list
 
 `BuiltinRuleProvider` discovers and exposes all built-in rules.
+
+**Rule Helper Classes** (in `src/TsqlRefine.Rules/Helpers/`):
+
+All rules leverage shared helper utilities to reduce code duplication:
+
+1. **ScriptDomHelpers** - Static utilities for AST fragment operations
+   - `GetRange(TSqlFragment)`: Converts ScriptDom coordinates (1-based) to PluginSdk Range (0-based)
+   - Used by all AST-based rules to calculate diagnostic ranges
+
+2. **TokenHelpers** - Static utilities for token stream analysis
+   - `IsKeyword(Token, string)`: Case-insensitive keyword matching
+   - `IsTrivia(Token)`: Detects whitespace and comments
+   - `IsPrefixedByDot(IReadOnlyList<Token>, int)`: Checks for qualified identifiers
+   - `GetTokenEnd(Token)`: Calculates token end position (handles multi-line tokens)
+   - Used by token-based rules like `AvoidSelectStarRule`
+
+3. **DiagnosticVisitorBase** - Abstract base class for AST visitors
+   - Extends `TSqlFragmentVisitor` with diagnostic collection
+   - Provides `AddDiagnostic()` methods for creating diagnostics
+   - Manages `Diagnostics` collection automatically
+   - Used by all 6 AST-based rules
+
+4. **RuleHelpers** - Common rule patterns
+   - `NoFixes(RuleContext, Diagnostic)`: Standard implementation for non-fixable rules
+   - Used by all 7 rules
+
+**Benefits**: These helpers eliminate ~270 lines of duplicated code, provide single source of truth for common operations, and are available to external plugins.
 
 #### 4. **Formatting (Formatter Layer)**
 Independent SQL formatting engine.
@@ -339,11 +368,19 @@ Defined in `ExitCodes.cs`:
 ### Adding a New Built-in Rule
 
 1. Create rule class in `src/TsqlRefine.Rules/Rules/`
-2. Implement `IRule` interface:
+2. Implement `IRule` interface using helper classes:
+
+   **Option 1: AST-based rule (recommended for structural analysis)**
    ```csharp
-   public class MyRule : IRule
+   using Microsoft.SqlServer.TransactSql.ScriptDom;
+   using TsqlRefine.PluginSdk;
+   using TsqlRefine.Rules.Helpers;
+
+   namespace TsqlRefine.Rules.Rules;
+
+   public sealed class MyRule : IRule
    {
-       public RuleMetadata Metadata => new(
+       public RuleMetadata Metadata { get; } = new(
            RuleId: "my-rule",
            Description: "...",
            Category: "Performance",
@@ -353,43 +390,118 @@ Defined in `ExitCodes.cs`:
 
        public IEnumerable<Diagnostic> Analyze(RuleContext context)
        {
-           // Option 1: Token-based pattern matching (fast, simple)
-           foreach (var token in context.Tokens)
+           ArgumentNullException.ThrowIfNull(context);
+
+           if (context.Ast.Fragment is null)
            {
-               if (/* pattern match */)
-                   yield return new Diagnostic(...);
+               yield break;
            }
 
-           // Option 2: AST visitor pattern (structural analysis)
            var visitor = new MyVisitor();
            context.Ast.Fragment.Accept(visitor);
+
            foreach (var diagnostic in visitor.Diagnostics)
+           {
                yield return diagnostic;
+           }
        }
 
-       public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+       public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+           RuleHelpers.NoFixes(context, diagnostic);
+
+       // Visitor extends DiagnosticVisitorBase for automatic diagnostic collection
+       private sealed class MyVisitor : DiagnosticVisitorBase
        {
-           // Return fixes if Fixable = true
-           // Can return multiple fix options (rule selects best one)
-           yield break;
+           public override void ExplicitVisit(SomeStatementType node)
+           {
+               if (/* condition */)
+               {
+                   // Use AddDiagnostic helper - no need for GetRange()
+                   AddDiagnostic(
+                       fragment: node,
+                       message: "Your diagnostic message",
+                       code: "my-rule",
+                       category: "Performance",
+                       fixable: false
+                   );
+               }
+
+               base.ExplicitVisit(node);
+           }
        }
    }
    ```
+
+   **Option 2: Token-based rule (for pattern matching)**
+   ```csharp
+   using TsqlRefine.PluginSdk;
+   using TsqlRefine.Rules.Helpers;
+
+   namespace TsqlRefine.Rules.Rules;
+
+   public sealed class MyTokenRule : IRule
+   {
+       public RuleMetadata Metadata { get; } = new(
+           RuleId: "my-token-rule",
+           Description: "...",
+           Category: "Performance",
+           DefaultSeverity: RuleSeverity.Warning,
+           Fixable: false
+       );
+
+       public IEnumerable<Diagnostic> Analyze(RuleContext context)
+       {
+           ArgumentNullException.ThrowIfNull(context);
+
+           for (var i = 0; i < context.Tokens.Count; i++)
+           {
+               // Use TokenHelpers for common operations
+               if (TokenHelpers.IsKeyword(context.Tokens[i], "SELECT"))
+               {
+                   // Skip trivia
+                   if (TokenHelpers.IsTrivia(context.Tokens[i]))
+                       continue;
+
+                   // Check for qualified identifiers
+                   if (TokenHelpers.IsPrefixedByDot(context.Tokens, i))
+                       continue;
+
+                   // Calculate range
+                   var start = context.Tokens[i].Start;
+                   var end = TokenHelpers.GetTokenEnd(context.Tokens[i]);
+
+                   yield return new Diagnostic(
+                       Range: new TsqlRefine.PluginSdk.Range(start, end),
+                       Message: "Your message",
+                       Code: "my-token-rule",
+                       Data: new DiagnosticData("my-token-rule", "Performance", false)
+                   );
+               }
+           }
+       }
+
+       public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+           RuleHelpers.NoFixes(context, diagnostic);
+   }
+   ```
+
 3. Add to `BuiltinRuleProvider.GetRules()`
 4. Add tests in `tests/TsqlRefine.Rules.Tests/`
 5. Add sample SQL in `samples/sql/` to demonstrate the rule
 
 **Rule implementation patterns**:
-- **Token-based**: Fast pattern matching (e.g., `AvoidSelectStarRule`)
-- **AST visitor**: Structural analysis using `TSqlFragmentVisitor` (e.g., `DmlWithoutWhereRule`)
-- Use `context.Tokens` for keyword/operator patterns
-- Use `context.Ast` for statement structure analysis
+- **AST visitor**: Structural analysis - extend `DiagnosticVisitorBase` and use `AddDiagnostic()` helper
+- **Token-based**: Fast pattern matching - use `TokenHelpers` utilities
+- **Always use helper classes**: `ScriptDomHelpers`, `TokenHelpers`, `DiagnosticVisitorBase`, `RuleHelpers`
+- **Never duplicate code**: GetRange(), IsKeyword(), etc. are provided by helpers
 
 ### Adding Tests
 
 Tests follow xUnit conventions:
 - Core tests: `tests/TsqlRefine.Core.Tests/`
 - Rule tests: `tests/TsqlRefine.Rules.Tests/`
+  - Rule tests: `tests/TsqlRefine.Rules.Tests/*RuleTests.cs`
+  - Helper tests: `tests/TsqlRefine.Rules.Tests/Helpers/*Tests.cs`
 - CLI tests: `tests/TsqlRefine.Cli.Tests/`
 
 Run single test:
@@ -397,17 +509,71 @@ Run single test:
 dotnet test --filter "FullyQualifiedName~MyTestName"
 ```
 
+**Helper class tests**:
+When adding or modifying helper utilities in `src/TsqlRefine.Rules/Helpers/`, add corresponding tests in `tests/TsqlRefine.Rules.Tests/Helpers/`:
+- `ScriptDomHelpersTests.cs` - Tests for GetRange() and AST utilities
+- `TokenHelpersTests.cs` - Tests for token analysis utilities
+- `DiagnosticVisitorBaseTests.cs` - Tests for visitor base class
+- `RuleHelpersTests.cs` - Tests for common rule patterns
+
 ### Creating a Plugin
 
 1. Create new .NET library project
-2. Reference `TsqlRefine.PluginSdk`
+2. Reference `TsqlRefine.PluginSdk` (for interfaces) and optionally `TsqlRefine.Rules` (for helper utilities)
 3. Implement `IRuleProvider`:
    ```csharp
+   using TsqlRefine.PluginSdk;
+   using TsqlRefine.Rules.Helpers;  // Optional: Use built-in helpers
+
    public class MyRuleProvider : IRuleProvider
    {
-       public IEnumerable<IRule> GetRules()
+       public string Name => "My Custom Rules";
+       public int PluginApiVersion => 1;
+
+       public IReadOnlyList<IRule> GetRules()
        {
-           yield return new MyCustomRule();
+           return new IRule[]
+           {
+               new MyCustomRule()
+           };
+       }
+   }
+
+   // Your custom rule can use the same helpers as built-in rules
+   public class MyCustomRule : IRule
+   {
+       public RuleMetadata Metadata { get; } = new(
+           RuleId: "my-custom-rule",
+           Description: "My custom rule description",
+           Category: "Custom",
+           DefaultSeverity: RuleSeverity.Warning,
+           Fixable: false
+       );
+
+       public IEnumerable<Diagnostic> Analyze(RuleContext context)
+       {
+           // Use DiagnosticVisitorBase, TokenHelpers, etc.
+           var visitor = new MyVisitor();
+           context.Ast.Fragment?.Accept(visitor);
+           return visitor.Diagnostics;
+       }
+
+       public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+           RuleHelpers.NoFixes(context, diagnostic);
+
+       private sealed class MyVisitor : DiagnosticVisitorBase
+       {
+           public override void ExplicitVisit(SelectStatement node)
+           {
+               AddDiagnostic(
+                   fragment: node,
+                   message: "Custom rule violation",
+                   code: "my-custom-rule",
+                   category: "Custom",
+                   fixable: false
+               );
+               base.ExplicitVisit(node);
+           }
        }
    }
    ```
@@ -420,6 +586,8 @@ dotnet test --filter "FullyQualifiedName~MyTestName"
      ]
    }
    ```
+
+**Note**: Plugins can leverage `TsqlRefine.Rules.Helpers` utilities (ScriptDomHelpers, TokenHelpers, DiagnosticVisitorBase, RuleHelpers) to avoid duplicating common code patterns.
 
 ## Documentation
 
@@ -509,9 +677,15 @@ This creates:
 - Japanese documentation is present (`docs/` files) - important architectural details are there
 - When modifying rules, always add corresponding tests
 - When adding new rules, create sample SQL files in `samples/sql/` to demonstrate violations
+- **Always use helper classes** when implementing rules:
+  - Use `DiagnosticVisitorBase` for AST-based rules (not `TSqlFragmentVisitor` directly)
+  - Use `ScriptDomHelpers.GetRange()` instead of duplicating range calculation
+  - Use `TokenHelpers` utilities for token analysis
+  - Use `RuleHelpers.NoFixes()` for non-fixable rules
 - Plugin API must remain stable; changes require version bumping
 - ScriptDom is an external dependency - we cannot modify its AST structure
 - Exit codes are part of the public contract for CI integration
 - All CLI commands are fully implemented and functional
 - The fix system infrastructure is complete but no rules currently support auto-fixing (all have `Fixable: false`)
 - Use `.claude/` directory for agent-specific instructions and configurations
+- Helper classes in `TsqlRefine.Rules.Helpers` are public and available to external plugins
