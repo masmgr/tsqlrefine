@@ -58,7 +58,12 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new SetVariableRule(),
             new UnicodeStringRule(),
             new SchemaQualifyRule(),
-            new MultiTableAliasRule()
+            new MultiTableAliasRule(),
+            new UpperLowerRule(),
+            new CountStarRule(),
+            new NonSargableRule(),
+            new UtcDatetimeRule(),
+            new JoinKeywordRule()
         };
 }
 
