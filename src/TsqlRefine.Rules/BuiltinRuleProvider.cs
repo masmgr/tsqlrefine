@@ -28,7 +28,13 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new SemicolonTerminationRule(),
             new RequireAsForTableAliasRule(),
             new RequireAsForColumnAliasRule(),
-            new MeaningfulAliasRule()
+            new MeaningfulAliasRule(),
+            new InsertColumnCountMismatchRule(),
+            new CteNameConflictRule(),
+            new ReturnAfterStatementsRule(),
+            new JoinConditionAlwaysTrueRule(),
+            new LeftJoinFilteredByWhereRule(),
+            new AliasScopeViolationRule()
         };
 }
 
