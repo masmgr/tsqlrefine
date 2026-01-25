@@ -21,11 +21,7 @@ public sealed class TsqlRefineEngine
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(options);
 
-        var ruleset = options.Ruleset;
-        var activeRules = ruleset is null
-            ? _rules
-            : _rules.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId)).ToArray();
-
+        var activeRules = GetActiveRules(options);
         var files = inputs.Select(i => AnalyzeFile(i, activeRules, options)).ToArray();
         return new LintResult(
             Tool: "tsqlrefine",
@@ -40,11 +36,7 @@ public sealed class TsqlRefineEngine
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(options);
 
-        var ruleset = options.Ruleset;
-        var activeRules = ruleset is null
-            ? _rules
-            : _rules.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId)).ToArray();
-
+        var activeRules = GetActiveRules(options);
         var files = inputs.Select(i => FixFile(i, activeRules, options)).ToArray();
         return new FixResult(
             Tool: "tsqlrefine",
@@ -57,42 +49,11 @@ public sealed class TsqlRefineEngine
     private static FileResult AnalyzeFile(SqlInput input, IReadOnlyList<IRule> rules, EngineOptions options)
     {
         var diagnostics = new List<Diagnostic>();
-        var ruleSettings = options.RuleSettings ?? new RuleSettings();
-
-        var analysis = ScriptDomTokenizer.Analyze(input.Text, options.CompatLevel);
-        var context = new RuleContext(
-            FilePath: input.FilePath,
-            CompatLevel: options.CompatLevel,
-            Ast: analysis.Ast,
-            Tokens: analysis.Tokens,
-            Settings: ruleSettings
-        );
+        var context = CreateContext(input, options);
 
         foreach (var rule in rules)
         {
-            try
-            {
-                foreach (var diagnostic in rule.Analyze(context) ?? Array.Empty<Diagnostic>())
-                {
-                    var normalized = NormalizeDiagnostic(rule, diagnostic, options);
-                    if (IsAtOrAbove(normalized.Severity ?? DiagnosticSeverity.Warning, options.MinimumSeverity))
-                    {
-                        diagnostics.Add(normalized);
-                    }
-                }
-            }
-#pragma warning disable CA1031 // We intentionally isolate rule failures into diagnostics.
-            catch (Exception ex)
-            {
-                diagnostics.Add(new Diagnostic(
-                    Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 0)),
-                    Message: $"Rule '{rule.Metadata.RuleId}' crashed: {ex.GetType().Name}: {ex.Message}",
-                    Severity: DiagnosticSeverity.Error,
-                    Code: rule.Metadata.RuleId,
-                    Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
-                ));
-            }
-#pragma warning restore CA1031
+            AppendDiagnostics(rule, context, options, diagnostics, fixGroups: null);
         }
 
         return new FileResult(input.FilePath, diagnostics);
@@ -100,73 +61,14 @@ public sealed class TsqlRefineEngine
 
     private static FixedFileResult FixFile(SqlInput input, IReadOnlyList<IRule> rules, EngineOptions options)
     {
-        var ruleSettings = options.RuleSettings ?? new RuleSettings();
-
-        var analysis = ScriptDomTokenizer.Analyze(input.Text, options.CompatLevel);
-        var context = new RuleContext(
-            FilePath: input.FilePath,
-            CompatLevel: options.CompatLevel,
-            Ast: analysis.Ast,
-            Tokens: analysis.Tokens,
-            Settings: ruleSettings
-        );
+        var context = CreateContext(input, options);
 
         var diagnostics = new List<Diagnostic>();
         var fixGroups = new List<DiagnosticFixGroup>();
 
         foreach (var rule in rules)
         {
-            try
-            {
-                foreach (var diagnostic in rule.Analyze(context) ?? Array.Empty<Diagnostic>())
-                {
-                    var normalized = NormalizeDiagnostic(rule, diagnostic, options);
-                    if (!IsAtOrAbove(normalized.Severity ?? DiagnosticSeverity.Warning, options.MinimumSeverity))
-                    {
-                        continue;
-                    }
-
-                    diagnostics.Add(normalized);
-
-                    if (normalized.Data?.Fixable is true && rule.Metadata.Fixable)
-                    {
-                        try
-                        {
-                            var fixes = (rule.GetFixes(context, normalized) ?? Array.Empty<Fix>())
-                                .Where(f => f.Edits is not null && f.Edits.Count > 0)
-                                .ToArray();
-                            if (fixes.Length > 0)
-                            {
-                                fixGroups.Add(new DiagnosticFixGroup(rule, normalized, fixes));
-                            }
-                        }
-#pragma warning disable CA1031 // We intentionally isolate rule fix failures.
-                        catch (Exception ex)
-                        {
-                            diagnostics.Add(new Diagnostic(
-                                Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 0)),
-                                Message: $"Rule '{rule.Metadata.RuleId}' fix crashed: {ex.GetType().Name}: {ex.Message}",
-                                Severity: DiagnosticSeverity.Error,
-                                Code: rule.Metadata.RuleId,
-                                Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
-                            ));
-                        }
-#pragma warning restore CA1031
-                    }
-                }
-            }
-#pragma warning disable CA1031 // We intentionally isolate rule failures into diagnostics.
-            catch (Exception ex)
-            {
-                diagnostics.Add(new Diagnostic(
-                    Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 0)),
-                    Message: $"Rule '{rule.Metadata.RuleId}' crashed: {ex.GetType().Name}: {ex.Message}",
-                    Severity: DiagnosticSeverity.Error,
-                    Code: rule.Metadata.RuleId,
-                    Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
-                ));
-            }
-#pragma warning restore CA1031
+            AppendDiagnostics(rule, context, options, diagnostics, fixGroups);
         }
 
         var fixOutcome = ApplyFixes(input.Text, fixGroups);
@@ -421,7 +323,7 @@ public sealed class TsqlRefineEngine
         return new LineMap(lineStarts, lineLengths);
     }
 
-    private static Diagnostic NormalizeDiagnostic(IRule rule, Diagnostic diagnostic, EngineOptions options)
+    private static Diagnostic NormalizeDiagnostic(IRule rule, Diagnostic diagnostic)
     {
         var data = diagnostic.Data ?? new DiagnosticData();
         if (data.RuleId is null || data.Category is null || data.Fixable is null)
@@ -460,6 +362,93 @@ public sealed class TsqlRefineEngine
     {
         var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
         return asm.GetName().Version?.ToString() ?? "0.0.0";
+    }
+
+    private IReadOnlyList<IRule> GetActiveRules(EngineOptions options)
+    {
+        var ruleset = options.Ruleset;
+        return ruleset is null
+            ? _rules
+            : _rules.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId)).ToArray();
+    }
+
+    private static readonly TsqlRefine.PluginSdk.Range ZeroRange =
+        new(new Position(0, 0), new Position(0, 0));
+
+    private static RuleContext CreateContext(SqlInput input, EngineOptions options)
+    {
+        var ruleSettings = options.RuleSettings ?? new RuleSettings();
+        var analysis = ScriptDomTokenizer.Analyze(input.Text, options.CompatLevel);
+        return new RuleContext(
+            FilePath: input.FilePath,
+            CompatLevel: options.CompatLevel,
+            Ast: analysis.Ast,
+            Tokens: analysis.Tokens,
+            Settings: ruleSettings
+        );
+    }
+
+    private static void AppendDiagnostics(
+        IRule rule,
+        RuleContext context,
+        EngineOptions options,
+        List<Diagnostic> diagnostics,
+        List<DiagnosticFixGroup>? fixGroups)
+    {
+#pragma warning disable CA1031 // We intentionally isolate rule failures into diagnostics.
+        try
+        {
+            foreach (var diagnostic in rule.Analyze(context) ?? Array.Empty<Diagnostic>())
+            {
+                var normalized = NormalizeDiagnostic(rule, diagnostic);
+                if (!IsAtOrAbove(normalized.Severity ?? DiagnosticSeverity.Warning, options.MinimumSeverity))
+                {
+                    continue;
+                }
+
+                diagnostics.Add(normalized);
+
+                if (fixGroups is null)
+                {
+                    continue;
+                }
+
+                if (normalized.Data?.Fixable is true && rule.Metadata.Fixable)
+                {
+                    try
+                    {
+                        var fixes = (rule.GetFixes(context, normalized) ?? Array.Empty<Fix>())
+                            .Where(f => f.Edits is not null && f.Edits.Count > 0)
+                            .ToArray();
+                        if (fixes.Length > 0)
+                        {
+                            fixGroups.Add(new DiagnosticFixGroup(rule, normalized, fixes));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        diagnostics.Add(CreateRuleExceptionDiagnostic(rule, ex, isFix: true));
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            diagnostics.Add(CreateRuleExceptionDiagnostic(rule, ex, isFix: false));
+        }
+#pragma warning restore CA1031
+    }
+
+    private static Diagnostic CreateRuleExceptionDiagnostic(IRule rule, Exception ex, bool isFix)
+    {
+        var suffix = isFix ? "fix crashed" : "crashed";
+        return new Diagnostic(
+            Range: ZeroRange,
+            Message: $"Rule '{rule.Metadata.RuleId}' {suffix}: {ex.GetType().Name}: {ex.Message}",
+            Severity: DiagnosticSeverity.Error,
+            Code: rule.Metadata.RuleId,
+            Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
+        );
     }
 
     private sealed record DiagnosticFixGroup(IRule Rule, Diagnostic Diagnostic, IReadOnlyList<Fix> Fixes);
