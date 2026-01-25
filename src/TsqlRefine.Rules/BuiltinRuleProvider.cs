@@ -24,7 +24,11 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new UndefinedAliasRule(),
             new AvoidExecDynamicSqlRule(),
             new AvoidMergeRule(),
-            new AvoidImplicitConversionInPredicateRule()
+            new AvoidImplicitConversionInPredicateRule(),
+            new SemicolonTerminationRule(),
+            new RequireAsForTableAliasRule(),
+            new RequireAsForColumnAliasRule(),
+            new MeaningfulAliasRule()
         };
 }
 
