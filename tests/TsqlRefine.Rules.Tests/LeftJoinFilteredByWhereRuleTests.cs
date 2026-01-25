@@ -144,7 +144,8 @@ public sealed class LeftJoinFilteredByWhereRuleTests
                 return new Token(
                     text,
                     new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length);
+                    text.Length,
+                    token.TokenType.ToString());
             })
             .ToArray();
     }

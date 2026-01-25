@@ -22,7 +22,7 @@ public sealed record RuleMetadata(
 
 public sealed record RuleSettings;
 
-public sealed record Token(string Text, Position Start, int Length);
+public sealed record Token(string Text, Position Start, int Length, string? TokenType = null);
 
 public sealed class ScriptDomAst
 {

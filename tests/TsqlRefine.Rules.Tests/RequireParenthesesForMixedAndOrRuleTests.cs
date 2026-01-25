@@ -178,7 +178,8 @@ SELECT * FROM t WHERE x = 1 OR y = 2 AND z = 3;";
                 return new Token(
                     text,
                     new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length);
+                    text.Length,
+                    token.TokenType.ToString());
             })
             .ToArray();
     }

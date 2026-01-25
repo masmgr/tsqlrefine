@@ -44,7 +44,15 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new ObjectPropertyRule(),
             new LinkedServerRule(),
             new NamedConstraintRule(),
-            new CrossDatabaseTransactionRule()
+            new CrossDatabaseTransactionRule(),
+            new KeywordCapitalizationRule(),
+            new DuplicateEmptyLineRule(),
+            new DuplicateGoRule(),
+            new NestedBlockCommentsRule(),
+            new SetAnsiRule(),
+            new SetNocountRule(),
+            new SetQuotedIdentifierRule(),
+            new SetTransactionIsolationLevelRule()
         };
 }
 

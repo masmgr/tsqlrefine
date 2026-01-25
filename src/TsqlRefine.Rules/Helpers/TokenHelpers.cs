@@ -107,4 +107,56 @@ public static class TokenHelpers
 
         return new Position(line, character);
     }
+
+    /// <summary>
+    /// Checks if a token is a SQL keyword based on its TokenType.
+    /// Uses the same heuristic as the formatter: excludes tokens whose type name
+    /// contains "Identifier", "Comment", "WhiteSpace", "Variable", or "Literal".
+    /// </summary>
+    /// <param name="token">The token to check.</param>
+    /// <returns>True if the token is a keyword, false otherwise.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when token is null.</exception>
+    public static bool IsLikelyKeyword(Token token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+
+        var text = token.Text;
+        if (string.IsNullOrEmpty(text))
+        {
+            return false;
+        }
+
+        // Must be a word (starts with letter, contains only letters/digits/_)
+        if (!char.IsLetter(text[0]))
+        {
+            return false;
+        }
+
+        for (var i = 1; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (!char.IsLetterOrDigit(c) && c != '_')
+            {
+                return false;
+            }
+        }
+
+        // Check TokenType if available
+        if (token.TokenType is not null)
+        {
+            // Exclude non-keyword token types (same logic as SqlFormatter)
+            var typeName = token.TokenType;
+            if (typeName.Contains("Identifier", StringComparison.Ordinal) ||
+                typeName.Contains("Comment", StringComparison.Ordinal) ||
+                typeName.Contains("WhiteSpace", StringComparison.Ordinal) ||
+                typeName.Contains("Whitespace", StringComparison.Ordinal) ||
+                typeName.Contains("Variable", StringComparison.Ordinal) ||
+                typeName.Contains("Literal", StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

@@ -228,7 +228,8 @@ MERGE INTO t2 USING s2 ON t2.id = s2.id WHEN MATCHED THEN UPDATE SET t2.val = s2
                 return new Token(
                     text,
                     new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length);
+                    text.Length,
+                    token.TokenType.ToString());
             })
             .ToArray();
     }
