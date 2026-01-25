@@ -21,7 +21,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new RequireColumnListForInsertSelectRule(),
             new TopWithoutOrderByRule(),
             new DuplicateAliasRule(),
-            new UndefinedAliasRule()
+            new UndefinedAliasRule(),
+            new AvoidExecDynamicSqlRule(),
+            new AvoidMergeRule(),
+            new AvoidImplicitConversionInPredicateRule()
         };
 }
 
