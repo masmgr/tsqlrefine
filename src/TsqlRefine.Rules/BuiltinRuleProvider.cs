@@ -34,7 +34,17 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new ReturnAfterStatementsRule(),
             new JoinConditionAlwaysTrueRule(),
             new LeftJoinFilteredByWhereRule(),
-            new AliasScopeViolationRule()
+            new AliasScopeViolationRule(),
+            new PrintStatementRule(),
+            new DisallowCursorsRule(),
+            new ConditionalBeginEndRule(),
+            new FullTextRule(),
+            new DataCompressionRule(),
+            new InformationSchemaRule(),
+            new ObjectPropertyRule(),
+            new LinkedServerRule(),
+            new NamedConstraintRule(),
+            new CrossDatabaseTransactionRule()
         };
 }
 
