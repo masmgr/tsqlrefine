@@ -52,7 +52,13 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new SetAnsiRule(),
             new SetNocountRule(),
             new SetQuotedIdentifierRule(),
-            new SetTransactionIsolationLevelRule()
+            new SetTransactionIsolationLevelRule(),
+            new CaseSensitiveVariablesRule(),
+            new DataTypeLengthRule(),
+            new SetVariableRule(),
+            new UnicodeStringRule(),
+            new SchemaQualifyRule(),
+            new MultiTableAliasRule()
         };
 }
 

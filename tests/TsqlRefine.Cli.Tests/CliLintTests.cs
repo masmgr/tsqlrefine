@@ -24,7 +24,7 @@ public sealed class CliLintTests
     [Fact]
     public async Task Lint_WhenNoViolation_Exit0()
     {
-        var stdin = new StringReader("select id from t;");
+        var stdin = new StringReader("select id from dbo.t;");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
