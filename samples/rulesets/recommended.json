@@ -1,0 +1,11 @@
+{
+  "rules": [
+    { "id": "avoid-select-star", "enabled": true },
+    { "id": "dml-without-where", "enabled": true },
+    { "id": "avoid-null-comparison", "enabled": true },
+    { "id": "require-parentheses-for-mixed-and-or", "enabled": true },
+    { "id": "avoid-nolock", "enabled": true },
+    { "id": "require-column-list-for-insert-values", "enabled": true },
+    { "id": "require-column-list-for-insert-select", "enabled": true }
+  ]
+}

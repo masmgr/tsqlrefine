@@ -1,0 +1,7 @@
+{
+  "compatLevel": 160,
+  "ruleset": "samples/rulesets/strict.json",
+  "plugins": [
+    { "path": "samples/plugins/custom-rule/bin/Release/net10.0/CustomRule.dll", "enabled": true }
+  ]
+}

@@ -72,8 +72,8 @@
 
 ### 3.2 設定・スキーマ・サンプル整備
 
-- [ ] config/ruleset/plugins の変更に合わせて `schemas/` を更新
-- [ ] `samples/` に最低限の config / ruleset / plugin 例を追加・同期
+- [x] config/ruleset/plugins の変更に合わせて `schemas/` を更新
+- [x] `samples/` に最低限の config / ruleset / plugin 例を追加・同期
 
 ### 3.3 プラグインホスト強化（運用向け）
 

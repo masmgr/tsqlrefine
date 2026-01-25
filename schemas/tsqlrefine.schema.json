@@ -1,27 +1,50 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/tsqlrefine.schema.json",
   "title": "tsqlrefine config",
+  "description": "Configuration file for tsqlrefine T-SQL linter and formatter",
   "type": "object",
   "properties": {
     "compatLevel": {
       "type": "integer",
-      "description": "SQL Server compatibility level (e.g. 150)."
+      "description": "SQL Server compatibility level. Determines which T-SQL parser version to use. Values: 100 (SQL Server 2008), 110 (SQL Server 2012), 120 (SQL Server 2014), 150 (SQL Server 2019), 160 (SQL Server 2022). Default: 150",
+      "enum": [100, 110, 120, 150, 160],
+      "default": 150,
+      "examples": [150, 160]
     },
     "ruleset": {
       "type": "string",
-      "description": "Path to a ruleset JSON file."
+      "description": "Path to a ruleset JSON file. Can be relative to the config file location or absolute. Use preset rulesets: 'rulesets/recommended.json', 'rulesets/strict.json', or 'rulesets/security-only.json'",
+      "examples": [
+        "rulesets/recommended.json",
+        "../rulesets/custom.json",
+        "/absolute/path/to/ruleset.json"
+      ]
     },
     "plugins": {
       "type": "array",
+      "description": "List of external plugin DLLs to load for custom rules. Each plugin must implement IRuleProvider interface from TsqlRefine.PluginSdk",
       "items": {
         "type": "object",
         "properties": {
-          "path": { "type": "string" },
-          "enabled": { "type": "boolean", "default": true }
+          "path": {
+            "type": "string",
+            "description": "Path to the plugin DLL file. Can be relative to the config file location or absolute",
+            "examples": [
+              "plugins/custom-rules.dll",
+              "../shared/plugins/security-rules.dll"
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether to load and execute this plugin. Default: true",
+            "default": true
+          }
         },
         "required": ["path"],
         "additionalProperties": false
-      }
+      },
+      "default": []
     }
   },
   "additionalProperties": false
