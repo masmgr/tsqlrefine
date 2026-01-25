@@ -119,9 +119,8 @@ public static class CliApp
 
     private static Task<int> RunListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        _ = stderr;
         var config = LoadConfig(args);
-        var rules = LoadRules(args, config).OrderBy(r => r.Metadata.RuleId).ToArray();
+        var rules = LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
         foreach (var rule in rules)
         {
             stdout.WriteLine($"{rule.Metadata.RuleId}\t{rule.Metadata.Category}\t{rule.Metadata.DefaultSeverity}\tfixable={rule.Metadata.Fixable}");
@@ -142,7 +141,54 @@ public static class CliApp
 
         foreach (var p in loaded)
         {
-            stdout.WriteLine($"{p.Path}\tenabled={p.Enabled}\tproviders={p.Providers.Count}\terror={p.Error ?? "<none>"}");
+            var statusIcon = p.Diagnostic.Status switch
+            {
+                PluginLoadStatus.Success => "✓",
+                PluginLoadStatus.Disabled => "○",
+                PluginLoadStatus.FileNotFound => "✗",
+                PluginLoadStatus.LoadError => "✗",
+                PluginLoadStatus.VersionMismatch => "⚠",
+                PluginLoadStatus.NoProviders => "⚠",
+                _ => "?"
+            };
+
+            stdout.WriteLine($"{statusIcon} {p.Path}");
+            stdout.WriteLine($"  Status: {p.Diagnostic.Status}");
+
+            if (!p.Enabled)
+            {
+                stdout.WriteLine($"  Message: {p.Diagnostic.Message}");
+            }
+            else if (p.Diagnostic.Status == PluginLoadStatus.Success)
+            {
+                stdout.WriteLine($"  Providers: {p.Providers.Count}");
+                var ruleCount = p.Providers.SelectMany(prov => prov.GetRules()).Count();
+                stdout.WriteLine($"  Rules: {ruleCount}");
+            }
+            else if (p.Diagnostic.Status == PluginLoadStatus.VersionMismatch)
+            {
+                stdout.WriteLine($"  Message: {p.Diagnostic.Message}");
+                stdout.WriteLine($"  Expected API Version: {p.Diagnostic.ExpectedApiVersion}");
+                stdout.WriteLine($"  Actual API Version: {p.Diagnostic.ActualApiVersion}");
+            }
+            else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
+            {
+                stdout.WriteLine($"  Error: {p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
+                if (!string.IsNullOrWhiteSpace(p.Diagnostic.StackTrace))
+                {
+                    stdout.WriteLine($"  Stack Trace:");
+                    foreach (var line in p.Diagnostic.StackTrace.Split('\n'))
+                    {
+                        stdout.WriteLine($"    {line.TrimEnd()}");
+                    }
+                }
+            }
+            else
+            {
+                stdout.WriteLine($"  Message: {p.Diagnostic.Message}");
+            }
+
+            stdout.WriteLine();
         }
 
         return Task.FromResult(0);
@@ -158,7 +204,7 @@ public static class CliApp
 
         var config = LoadConfig(args);
         var ruleset = LoadRuleset(args, config);
-        var rules = LoadRules(args, config);
+        var rules = LoadRules(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -338,7 +384,7 @@ public static class CliApp
 
         var config = LoadConfig(args);
         var ruleset = LoadRuleset(args, config);
-        var rules = LoadRules(args, config);
+        var rules = LoadRules(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -477,7 +523,7 @@ public static class CliApp
         }
     }
 
-    private static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config)
+    private static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
     {
         _ = args;
 
@@ -492,6 +538,32 @@ public static class CliApp
 
         foreach (var p in loaded)
         {
+            // Report plugin loading issues to stderr if available
+            if (stderr is not null && p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled)
+            {
+                var warningPrefix = "Warning: Plugin loading issue - ";
+                stderr.WriteLine($"{warningPrefix}{p.Path}");
+
+                if (p.Diagnostic.Status == PluginLoadStatus.VersionMismatch)
+                {
+                    stderr.WriteLine($"  API version mismatch: plugin uses v{p.Diagnostic.ActualApiVersion}, host expects v{p.Diagnostic.ExpectedApiVersion}");
+                }
+                else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
+                {
+                    stderr.WriteLine($"  Load error: {p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
+                }
+                else if (p.Diagnostic.Status == PluginLoadStatus.FileNotFound)
+                {
+                    stderr.WriteLine($"  File not found");
+                }
+                else if (p.Diagnostic.Status == PluginLoadStatus.NoProviders)
+                {
+                    stderr.WriteLine($"  No rule providers found in assembly");
+                }
+
+                stderr.WriteLine();
+            }
+
             foreach (var provider in p.Providers)
             {
                 rules.AddRange(provider.GetRules());
