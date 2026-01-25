@@ -128,35 +128,6 @@ Key components:
 #### 3. **Rules (Built-in Rules)**
 Ships with the tool. Each rule implements `IRule` interface.
 
-Current rules (7 total):
-1. **AvoidSelectStarRule** (`avoid-select-star`)
-   - Category: Performance | Severity: Warning | Fixable: No
-   - Detects `SELECT *` usage and recommends explicit column lists
-
-2. **DmlWithoutWhereRule** (`dml-without-where`)
-   - Category: Safety | Severity: Error | Fixable: No
-   - Detects UPDATE/DELETE statements without WHERE clause
-
-3. **AvoidNullComparisonRule** (`avoid-null-comparison`)
-   - Category: Correctness | Severity: Warning | Fixable: No
-   - Detects NULL comparisons using `=` or `<>` instead of `IS NULL/IS NOT NULL`
-
-4. **RequireParenthesesForMixedAndOrRule** (`require-parentheses-for-mixed-and-or`)
-   - Category: Correctness | Severity: Warning | Fixable: No
-   - Detects mixed AND/OR operators without explicit parentheses
-
-5. **AvoidNolockRule** (`avoid-nolock`)
-   - Category: Correctness | Severity: Warning | Fixable: No
-   - Detects NOLOCK hint or READ UNCOMMITTED isolation level
-
-6. **RequireColumnListForInsertValuesRule** (`require-column-list-for-insert-values`)
-   - Category: Correctness | Severity: Warning | Fixable: No
-   - Detects INSERT VALUES without explicit column list
-
-7. **RequireColumnListForInsertSelectRule** (`require-column-list-for-insert-select`)
-   - Category: Correctness | Severity: Warning | Fixable: No
-   - Detects INSERT SELECT without explicit column list
-
 `BuiltinRuleProvider` discovers and exposes all built-in rules.
 
 **Rule Helper Classes** (in `src/TsqlRefine.Rules/Helpers/`):
