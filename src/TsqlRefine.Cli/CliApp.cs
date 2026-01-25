@@ -9,6 +9,7 @@ using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
 using TsqlRefine.Core.Engine;
+using TsqlRefine.Core.Model;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
@@ -338,10 +339,85 @@ public static class CliApp
 
     private static Task<int> RunFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        _ = stdout;
-        _ = stdin;
-        _ = args;
-        return stderr.WriteLineAsync("fix is not implemented yet.").ContinueWith(_ => ExitCodes.Fatal);
+        return RunFixInternalAsync(args, stdin, stdout, stderr);
+    }
+
+    private static async Task<int> RunFixInternalAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        var inputs = await ReadInputsAsync(args, stdin, stderr);
+        if (inputs.Count == 0)
+        {
+            await stderr.WriteLineAsync("No input.");
+            return ExitCodes.Fatal;
+        }
+
+        if (args.Diff && args.Write)
+        {
+            await stderr.WriteLineAsync("--diff and --write are mutually exclusive.");
+            return ExitCodes.Fatal;
+        }
+
+        var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
+        if (outputJson && args.Diff)
+        {
+            await stderr.WriteLineAsync("--diff cannot be used with --output json.");
+            return ExitCodes.Fatal;
+        }
+
+        if (!outputJson && !args.Write && !args.Diff && inputs.Count > 1)
+        {
+            await stderr.WriteLineAsync("Multiple inputs require --write or --diff.");
+            return ExitCodes.Fatal;
+        }
+
+        var config = LoadConfig(args);
+        var ruleset = LoadRuleset(args, config);
+        var rules = LoadRules(args, config);
+        var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
+
+        var engine = new TsqlRefineEngine(rules);
+        var result = engine.Fix(inputs, new EngineOptions(
+            CompatLevel: args.CompatLevel ?? config.CompatLevel,
+            MinimumSeverity: minimumSeverity,
+            Ruleset: ruleset
+        ));
+
+        if (outputJson)
+        {
+            var lintResult = new LintResult(
+                Tool: result.Tool,
+                Version: result.Version,
+                Command: result.Command,
+                Files: result.Files.Select(f => new FileResult(f.FilePath, f.Diagnostics)).ToArray()
+            );
+            await stdout.WriteLineAsync(JsonSerializer.Serialize(lintResult, JsonDefaults.Options));
+        }
+        else
+        {
+            foreach (var file in result.Files)
+            {
+                if (args.Diff)
+                {
+                    var diff = GenerateUnifiedDiff(file.FilePath, file.OriginalText, file.FixedText);
+                    if (!string.IsNullOrEmpty(diff))
+                        await stdout.WriteAsync(diff);
+                }
+                else if (args.Write && file.FilePath != "<stdin>")
+                {
+                    if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
+                    {
+                        await File.WriteAllTextAsync(file.FilePath, file.FixedText, Encoding.UTF8);
+                    }
+                }
+                else
+                {
+                    await stdout.WriteAsync(file.FixedText);
+                }
+            }
+        }
+
+        var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
+        return hasIssues ? ExitCodes.Violations : 0;
     }
 
     private static TsqlRefineConfig LoadConfig(CliArgs args)
@@ -581,8 +657,8 @@ public static class CliApp
               --preset <recommended|strict|security-only>
               --compat-level <110|120|130|140|150|160>
               --ruleset <path>
-              --write                      (format only)
-              --diff                       (format only)
+              --write                      (format/fix)
+              --diff                       (format/fix)
 
           -h, --help
           -v, --version

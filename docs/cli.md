@@ -65,6 +65,10 @@ format / fix:
 `format` は `.editorconfig` の `indent_style` / `indent_size` を参照します（対象: `*.sql` のみ）。
 stdin の場合は `--stdin-filepath` で拡張子と探索起点を指定できます。
 
+`fix` は `format` と同様に、`--write`/`--diff` が未指定のときは stdout に修正後 SQL を出力します
+（複数入力の場合は `--write` または `--diff` が必要）。`--output json` を指定した場合は
+診断結果のみを出力し、`--write` と組み合わせて利用できます。
+
 > format の不変領域: **コメント / 文字列 / 括弧内改行は変更しない**（要件より）。
 
 ---

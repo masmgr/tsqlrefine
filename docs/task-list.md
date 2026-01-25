@@ -66,9 +66,9 @@
 
 ### 3.1 fix コマンド（安全な範囲の自動修正）
 
-- [ ] `fix` を未実装から MVP 実装へ（`src/TsqlRefine.Cli/CliApp.cs`）
-- [ ] ルール側 `Fixable` / `GetFixes` を実際に使う実行基盤を実装（適用順・衝突・複数ファイル）
-- [ ] `--write` / `--diff` / “提案のみ” などの UX を確定（`docs/requirements.md` の「3.4 オートフィックス」）
+- [x] `fix` を未実装から MVP 実装へ（`src/TsqlRefine.Cli/CliApp.cs`）
+- [x] ルール側 `Fixable` / `GetFixes` を実際に使う実行基盤を実装（適用順・衝突・複数ファイル）
+- [x] `--write` / `--diff` / “提案のみ” などの UX を確定（`docs/requirements.md` の「3.4 オートフィックス」）
 
 ### 3.2 設定・スキーマ・サンプル整備
 
