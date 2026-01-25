@@ -56,9 +56,9 @@
 - [x] P0: `dml-without-where`（Safety）
 - [x] P0: `avoid-null-comparison`（Correctness）
 - [x] P0: `require-parentheses-for-mixed-and-or`（Correctness）
-- [ ] P1: `avoid-nolock`（Correctness）
-- [ ] P1: `require-column-list-for-insert-*`（Correctness）
-- [ ] 追加したルールごとにテスト（`tests/TsqlRefine.Rules.Tests/`）
+- [x] P1: `avoid-nolock`（Correctness）
+- [x] P1: `require-column-list-for-insert-*`（Correctness）
+- [x] 追加したルールごとにテスト（`tests/TsqlRefine.Rules.Tests/`）
 
 ---
 
