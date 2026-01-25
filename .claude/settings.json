@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "post-response": {
+      "enabled": true,
+      "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/post-response.ps1"
+    }
+  }
+}
