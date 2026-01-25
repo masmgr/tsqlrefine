@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules;
 
@@ -31,28 +32,23 @@ public sealed class DmlWithoutWhereRule : IRule
         }
     }
 
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
-        return Array.Empty<Fix>();
-    }
+    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+        RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class DmlWithoutWhereVisitor : TSqlFragmentVisitor
+    private sealed class DmlWithoutWhereVisitor : DiagnosticVisitorBase
     {
-        private readonly List<Diagnostic> _diagnostics = new();
-        public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
 
         public override void ExplicitVisit(UpdateStatement node)
         {
             if (node.UpdateSpecification?.WhereClause is null)
             {
-                _diagnostics.Add(new Diagnostic(
-                    Range: GetRange(node),
-                    Message: "UPDATE statement without WHERE clause can modify all rows. Add a WHERE clause to limit the scope.",
-                    Code: "dml-without-where",
-                    Data: new DiagnosticData("dml-without-where", "Safety", false)
-                ));
+                AddDiagnostic(
+                    fragment: node,
+                    message: "UPDATE statement without WHERE clause can modify all rows. Add a WHERE clause to limit the scope.",
+                    code: "dml-without-where",
+                    category: "Safety",
+                    fixable: false
+                );
             }
 
             base.ExplicitVisit(node);
@@ -62,36 +58,16 @@ public sealed class DmlWithoutWhereRule : IRule
         {
             if (node.DeleteSpecification?.WhereClause is null)
             {
-                _diagnostics.Add(new Diagnostic(
-                    Range: GetRange(node),
-                    Message: "DELETE statement without WHERE clause can delete all rows. Add a WHERE clause to limit the scope.",
-                    Code: "dml-without-where",
-                    Data: new DiagnosticData("dml-without-where", "Safety", false)
-                ));
-            }
-
-            base.ExplicitVisit(node);
-        }
-
-        private static TsqlRefine.PluginSdk.Range GetRange(TSqlFragment fragment)
-        {
-            var start = new Position(fragment.StartLine - 1, fragment.StartColumn - 1);
-            var end = start;
-
-            // Try to get the end position from the last token
-            if (fragment.ScriptTokenStream != null &&
-                fragment.LastTokenIndex >= 0 &&
-                fragment.LastTokenIndex < fragment.ScriptTokenStream.Count)
-            {
-                var lastToken = fragment.ScriptTokenStream[fragment.LastTokenIndex];
-                var tokenText = lastToken.Text ?? string.Empty;
-                end = new Position(
-                    lastToken.Line - 1,
-                    lastToken.Column - 1 + tokenText.Length
+                AddDiagnostic(
+                    fragment: node,
+                    message: "DELETE statement without WHERE clause can delete all rows. Add a WHERE clause to limit the scope.",
+                    code: "dml-without-where",
+                    category: "Safety",
+                    fixable: false
                 );
             }
 
-            return new TsqlRefine.PluginSdk.Range(start, end);
+            base.ExplicitVisit(node);
         }
     }
 }
