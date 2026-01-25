@@ -37,8 +37,9 @@ dotnet test -c Release --logger "console;verbosity=detailed"
 
 ### Run CLI
 ```powershell
-# Run CLI directly (from project)
+# Lint (check) SQL files
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- check file.sql  # alias for lint
 
 # Lint with JSON output
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint --output json file.sql
@@ -46,11 +47,30 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint --output json file.sq
 # Lint from stdin
 "SELECT * FROM users;" | dotnet run --project src/TsqlRefine.Cli -c Release -- lint --stdin
 
+# Lint with severity filtering
+dotnet run --project src/TsqlRefine.Cli -c Release -- lint --severity error file.sql
+
 # Format SQL
 dotnet run --project src/TsqlRefine.Cli -c Release -- format file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- format --write file.sql  # in-place
+dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff file.sql   # show diff
+
+# Auto-fix issues
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix --write file.sql    # apply fixes
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix --diff file.sql     # show diff
+
+# Initialize configuration
+dotnet run --project src/TsqlRefine.Cli -c Release -- init
 
 # List available rules
 dotnet run --project src/TsqlRefine.Cli -c Release -- list-rules
+
+# List loaded plugins
+dotnet run --project src/TsqlRefine.Cli -c Release -- list-plugins
+
+# Print effective configuration
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-config
 ```
 
 ## Architecture
@@ -106,8 +126,34 @@ Key components:
 #### 3. **Rules (Built-in Rules)**
 Ships with the tool. Each rule implements `IRule` interface.
 
-Current rules:
-- `AvoidSelectStarRule`: Detects `SELECT *` usage (Performance/Warning)
+Current rules (7 total):
+1. **AvoidSelectStarRule** (`avoid-select-star`)
+   - Category: Performance | Severity: Warning | Fixable: No
+   - Detects `SELECT *` usage and recommends explicit column lists
+
+2. **DmlWithoutWhereRule** (`dml-without-where`)
+   - Category: Safety | Severity: Error | Fixable: No
+   - Detects UPDATE/DELETE statements without WHERE clause
+
+3. **AvoidNullComparisonRule** (`avoid-null-comparison`)
+   - Category: Correctness | Severity: Warning | Fixable: No
+   - Detects NULL comparisons using `=` or `<>` instead of `IS NULL/IS NOT NULL`
+
+4. **RequireParenthesesForMixedAndOrRule** (`require-parentheses-for-mixed-and-or`)
+   - Category: Correctness | Severity: Warning | Fixable: No
+   - Detects mixed AND/OR operators without explicit parentheses
+
+5. **AvoidNolockRule** (`avoid-nolock`)
+   - Category: Correctness | Severity: Warning | Fixable: No
+   - Detects NOLOCK hint or READ UNCOMMITTED isolation level
+
+6. **RequireColumnListForInsertValuesRule** (`require-column-list-for-insert-values`)
+   - Category: Correctness | Severity: Warning | Fixable: No
+   - Detects INSERT VALUES without explicit column list
+
+7. **RequireColumnListForInsertSelectRule** (`require-column-list-for-insert-select`)
+   - Category: Correctness | Severity: Warning | Fixable: No
+   - Detects INSERT SELECT without explicit column list
 
 `BuiltinRuleProvider` discovers and exposes all built-in rules.
 
@@ -118,6 +164,10 @@ Independent SQL formatting engine.
 1. `ScriptDomKeywordCaser`: Normalizes keywords to uppercase using ScriptDom tokens
 2. `MinimalWhitespaceNormalizer`: Normalizes indentation and whitespace
 
+**EditorConfig Support**: Respects `.editorconfig` settings for:
+- `indent_style` (tabs/spaces)
+- `indent_size` (number of spaces)
+
 **Constraints**: Preserves comments, string literals, and structure. Minimal reformatting only.
 
 #### 5. **PluginHost (Plugin Runtime)**
@@ -125,9 +175,12 @@ Dynamically loads external rule plugins at runtime.
 
 - `PluginLoader`: Loads DLL plugins via reflection
 - `PluginLoadContext`: Custom AssemblyLoadContext for isolation
+  - Cross-platform native DLL loading (Windows .dll, Linux .so, macOS .dylib)
+  - Supports `runtimes/<rid>/native` pattern for platform-specific libraries
 - `PluginDescriptor`: Plugin metadata (path, enabled flag)
 - Supports API versioning (`PluginApi.CurrentVersion = 1`)
 - Graceful error handling (plugin failures don't crash core)
+- Detailed diagnostic information for plugin load failures
 
 #### 6. **Cli (User Interface)**
 Command-line interface built on System.CommandLine.
@@ -136,6 +189,30 @@ Command-line interface built on System.CommandLine.
 - `CliParser`: Argument parsing
 - `CliArgs`: Parsed argument record
 - Handles file I/O, glob expansion, output formatting (text/JSON)
+
+**Available commands** (all fully implemented):
+- `lint` / `check`: Analyze SQL files for rule violations
+- `format`: Format SQL files with keyword casing and whitespace normalization
+- `fix`: Auto-fix issues (applies fixes from rules that support it)
+- `init`: Create default `tsqlrefine.json` and `tsqlrefine.ignore` files
+- `print-config`: Display effective configuration as JSON
+- `list-rules`: List all available rules with metadata
+- `list-plugins`: List loaded plugins with status information
+
+**Global options**:
+- `-c, --config`: Configuration file path
+- `-g, --ignorelist`: Ignore patterns file
+- `--stdin`: Read from stdin
+- `--stdin-filepath`: Set filepath for stdin input
+- `--output`: Output format (text/json)
+- `--severity`: Minimum severity level (error/warning/info/hint)
+- `--preset`: Use preset ruleset (recommended/strict/security-only)
+- `--compat-level`: SQL Server compatibility level
+- `--ruleset`: Custom ruleset path
+- `--write`: Apply changes in-place (format/fix commands)
+- `--diff`: Show diff output (format/fix commands)
+- `--indent-style`: Indentation style (tabs/spaces)
+- `--indent-size`: Indentation size in spaces
 
 ### Data Flow
 
@@ -150,9 +227,21 @@ Collect results → Format output (text/JSON) → Exit code
 
 #### Format Command Flow
 ```
-CLI args → Parse → For each SQL input:
+CLI args → Parse → Load .editorconfig → For each SQL input:
   Parse SQL → ScriptDomKeywordCaser → MinimalWhitespaceNormalizer →
 Output (stdout/file/diff) → Exit
+```
+
+#### Fix Command Flow
+```
+CLI args → Parse → Load config → Load rules (builtin + plugins) →
+Create Engine → For each SQL input:
+  Parse SQL → AST + Tokens →
+  For each rule: Analyze(context) → Diagnostics →
+  For each diagnostic: GetFixes(context, diagnostic) → Fix[] →
+  Select best fix per diagnostic → Detect overlaps →
+  Apply non-overlapping fixes → Re-analyze to verify →
+Output (stdout/file/diff) → Report applied/skipped fixes → Exit
 ```
 
 ### Rule Execution Model
@@ -191,9 +280,11 @@ Uses **Microsoft.SqlServer.TransactSql.ScriptDom** for T-SQL parsing.
 ### Configuration
 
 #### tsqlrefine.json
+JSON schema available at `schemas/tsqlrefine.schema.json`.
+
 ```json
 {
-  "compatLevel": 150,              // SQL Server compat level
+  "compatLevel": 150,              // SQL Server compat level (100, 110, 120, 150, 160)
   "ruleset": "rulesets/recommended.json", // Optional ruleset file
   "plugins": [
     { "path": "plugins/custom.dll", "enabled": true }
@@ -201,7 +292,15 @@ Uses **Microsoft.SqlServer.TransactSql.ScriptDom** for T-SQL parsing.
 }
 ```
 
+**Sample configurations** in `samples/configs/`:
+- `basic.json`: Basic configuration example
+- `advanced.json`: Advanced configuration with plugins
+- `minimal.json`: Minimal configuration
+- `sql-server-2012.json`: SQL Server 2012 specific config
+
 #### Ruleset (enable/disable rules)
+JSON schema available at `schemas/ruleset.schema.json`.
+
 ```json
 {
   "rules": [
@@ -210,12 +309,21 @@ Uses **Microsoft.SqlServer.TransactSql.ScriptDom** for T-SQL parsing.
 }
 ```
 
-**Preset rulesets** in `rulesets/`:
-- `recommended.json`: Default ruleset
-- `strict.json`: More aggressive rules
-- `security-only.json`: Security-focused rules
+**Preset rulesets** in `samples/rulesets/`:
+- `recommended.json`: All 7 rules enabled (default)
+- `strict.json`: All 7 rules enabled (same as recommended)
+- `security-only.json`: Only `dml-without-where` rule enabled
+- `custom.json`: Example of selective rule enabling
 
 **Config load order**: CLI args → tsqlrefine.json → defaults
+
+#### .editorconfig
+Format command respects `.editorconfig` for indentation settings:
+```ini
+[*.sql]
+indent_style = spaces  # or tabs
+indent_size = 4        # number of spaces
+```
 
 ### Exit Codes
 
@@ -230,7 +338,7 @@ Defined in `ExitCodes.cs`:
 
 ### Adding a New Built-in Rule
 
-1. Create rule class in `src/TsqlRefine.Rules/`
+1. Create rule class in `src/TsqlRefine.Rules/Rules/`
 2. Implement `IRule` interface:
    ```csharp
    public class MyRule : IRule
@@ -245,19 +353,37 @@ Defined in `ExitCodes.cs`:
 
        public IEnumerable<Diagnostic> Analyze(RuleContext context)
        {
-           // Scan context.Tokens or traverse context.Ast
-           // Yield diagnostics for violations
+           // Option 1: Token-based pattern matching (fast, simple)
+           foreach (var token in context.Tokens)
+           {
+               if (/* pattern match */)
+                   yield return new Diagnostic(...);
+           }
+
+           // Option 2: AST visitor pattern (structural analysis)
+           var visitor = new MyVisitor();
+           context.Ast.Fragment.Accept(visitor);
+           foreach (var diagnostic in visitor.Diagnostics)
+               yield return diagnostic;
        }
 
        public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
        {
            // Return fixes if Fixable = true
+           // Can return multiple fix options (rule selects best one)
            yield break;
        }
    }
    ```
 3. Add to `BuiltinRuleProvider.GetRules()`
 4. Add tests in `tests/TsqlRefine.Rules.Tests/`
+5. Add sample SQL in `samples/sql/` to demonstrate the rule
+
+**Rule implementation patterns**:
+- **Token-based**: Fast pattern matching (e.g., `AvoidSelectStarRule`)
+- **AST visitor**: Structural analysis using `TSqlFragmentVisitor` (e.g., `DmlWithoutWhereRule`)
+- Use `context.Tokens` for keyword/operator patterns
+- Use `context.Ast` for statement structure analysis
 
 ### Adding Tests
 
@@ -304,6 +430,12 @@ Key docs in `docs/`:
 - [plugin-api.md](docs/plugin-api.md): Plugin API contract
 - [project-structure.md](docs/project-structure.md): Detailed project organization
 
+Sample files in `samples/`:
+- `configs/`: Configuration file examples (basic, advanced, minimal, sql-server-2012)
+- `rulesets/`: Preset ruleset files (recommended, strict, security-only, custom)
+- `sql/`: SQL examples demonstrating each rule violation
+- `README.md`: Comprehensive guide to samples
+
 ## Technical Constraints
 
 ### Target Framework
@@ -324,11 +456,19 @@ Key docs in `docs/`:
 
 ### Formatting Philosophy
 **Minimal formatting only**:
-- Keyword casing normalization
+- Keyword casing normalization (uppercase)
 - Identifier casing (with escaping for reserved words like `[Order]`)
-- Whitespace normalization
+- Whitespace normalization (respects .editorconfig settings)
 - **Preserves**: Comments, string literals, parenthesis-internal line breaks
 - **Does NOT**: Reformat layout, reorder clauses, change structure
+
+### Fix System
+Auto-fix infrastructure for rules that support fixing:
+- Multiple fixes per diagnostic supported (rule selects best one)
+- Overlap detection prevents conflicting edits
+- Line-by-line text mapping for position-to-offset conversion
+- Re-analysis after fixes to verify remaining issues
+- Detailed reporting: `AppliedFix` vs `SkippedFix` with reasons
 
 ## Common Tasks
 
@@ -355,11 +495,23 @@ Add logging or breakpoints in:
 - `ScriptDomTokenizer.Analyze()`: Parsing stage
 - Individual rule's `Analyze()` method
 
+### Initialize New Project
+Run the `init` command to create default configuration:
+```powershell
+dotnet run --project src/TsqlRefine.Cli -c Release -- init
+```
+This creates:
+- `tsqlrefine.json`: Default configuration file
+- `tsqlrefine.ignore`: Default ignore patterns file
+
 ## Notes for Claude
 
 - Japanese documentation is present (`docs/` files) - important architectural details are there
-- The project is in active development; some features are not yet implemented (e.g., `fix` command)
 - When modifying rules, always add corresponding tests
+- When adding new rules, create sample SQL files in `samples/sql/` to demonstrate violations
 - Plugin API must remain stable; changes require version bumping
 - ScriptDom is an external dependency - we cannot modify its AST structure
 - Exit codes are part of the public contract for CI integration
+- All CLI commands are fully implemented and functional
+- The fix system infrastructure is complete but no rules currently support auto-fixing (all have `Fixable: false`)
+- Use `.claude/` directory for agent-specific instructions and configurations
