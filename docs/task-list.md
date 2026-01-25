@@ -53,9 +53,9 @@
 
 `docs/rules.md` の「MVP ルール（最初に入れる 10〜20 個）」を基準に、まずは誤検知が少ないものから追加。
 
-- [ ] P0: `dml-without-where`（Safety）
-- [ ] P0: `avoid-null-comparison`（Correctness）
-- [ ] P0: `require-parentheses-for-mixed-and-or`（Correctness）
+- [x] P0: `dml-without-where`（Safety）
+- [x] P0: `avoid-null-comparison`（Correctness）
+- [x] P0: `require-parentheses-for-mixed-and-or`（Correctness）
 - [ ] P1: `avoid-nolock`（Correctness）
 - [ ] P1: `require-column-list-for-insert-*`（Correctness）
 - [ ] 追加したルールごとにテスト（`tests/TsqlRefine.Rules.Tests/`）

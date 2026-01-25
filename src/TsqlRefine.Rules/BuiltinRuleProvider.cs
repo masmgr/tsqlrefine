@@ -12,7 +12,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
     public IReadOnlyList<IRule> GetRules() =>
         new IRule[]
         {
-            new AvoidSelectStarRule()
+            new AvoidSelectStarRule(),
+            new DmlWithoutWhereRule(),
+            new AvoidNullComparisonRule(),
+            new RequireParenthesesForMixedAndOrRule()
         };
 }
 
