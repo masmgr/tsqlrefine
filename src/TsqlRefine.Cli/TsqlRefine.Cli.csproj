@@ -13,6 +13,7 @@
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
     <PackageReference Include="DiffPlex" />
+    <PackageReference Include="editorconfig" />
     <ProjectReference Include="..\TsqlRefine.Core\TsqlRefine.Core.csproj" />
     <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
     <ProjectReference Include="..\TsqlRefine.PluginHost\TsqlRefine.PluginHost.csproj" />

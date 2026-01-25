@@ -59,8 +59,11 @@ format / fix:
 
 - `--write`: ファイルを上書き（指定しない場合は stdout に出力）
 - `--diff`: 差分を表示（`--write` と排他）
-- `--indent-style <tabs|spaces>`: インデントの種類（既定は入力踏襲 or 設定）
-- `--indent-size <n>`: spaces の場合の幅（既定: 4）
+- `--indent-style <tabs|spaces>`: インデントの種類（`.editorconfig` より優先）
+- `--indent-size <n>`: spaces の場合の幅（`.editorconfig` より優先）
+
+`format` は `.editorconfig` の `indent_style` / `indent_size` を参照します（対象: `*.sql` のみ）。
+stdin の場合は `--stdin-filepath` で拡張子と探索起点を指定できます。
 
 > format の不変領域: **コメント / 文字列 / 括弧内改行は変更しない**（要件より）。
 
@@ -139,4 +142,3 @@ CI で扱いやすいように、結果種別で終了コードを固定しま�
 - `4`: 実行時例外（内部エラー）
 
 `format`/`fix` で `--write` の場合も、上記ルールに従う（修正できても違反が残るなら `1`）。
-

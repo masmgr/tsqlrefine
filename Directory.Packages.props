@@ -8,5 +8,6 @@
     <PackageVersion Include="System.CommandLine" Version="2.0.0" />
     <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.0" />
     <PackageVersion Include="DiffPlex" Version="1.7.2" />
+    <PackageVersion Include="editorconfig" Version="0.15.0" />
   </ItemGroup>
 </Project>
