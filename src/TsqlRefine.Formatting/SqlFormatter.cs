@@ -19,7 +19,7 @@ public static class SqlFormatter
 
     private static class ScriptDomKeywordCaser
     {
-        private static readonly string[] NonKeywordTokenKinds =
+        private static readonly string[] NonKeywordTokenKindHints =
         {
             "Identifier",
             "Comment",
@@ -52,13 +52,12 @@ public static class SqlFormatter
 
         private static bool IsKeywordToken(TSqlParserToken token)
         {
-            var text = token.Text;
-            if (string.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(token.Text))
             {
                 return false;
             }
 
-            if (!IsWordToken(text))
+            if (!IsWordToken(token.Text))
             {
                 return false;
             }
@@ -74,7 +73,7 @@ public static class SqlFormatter
         private static bool IsNonKeywordTokenKind(TSqlParserToken token)
         {
             var typeName = token.TokenType.ToString();
-            foreach (var kind in NonKeywordTokenKinds)
+            foreach (var kind in NonKeywordTokenKindHints)
             {
                 if (typeName.Contains(kind, StringComparison.Ordinal))
                 {
@@ -172,13 +171,8 @@ public static class SqlFormatter
             var lineStartsInProtected = IsInProtectedRegion();
             var lineContainsProtected = lineStartsInProtected;
 
-            var leadingLength = 0;
-            var columns = 0;
-            while (leadingLength < text.Length && (text[leadingLength] == ' ' || text[leadingLength] == '\t'))
-            {
-                columns += text[leadingLength] == '\t' ? GetIndentSize() : 1;
-                leadingLength++;
-            }
+            var indentSize = GetIndentSize();
+            GetLeadingWhitespace(text, indentSize, out var leadingLength, out var columns);
 
             var sbLine = new StringBuilder(text.Length);
             if (lineStartsInProtected)
@@ -187,7 +181,7 @@ public static class SqlFormatter
             }
             else
             {
-                sbLine.Append(BuildIndent(columns));
+                sbLine.Append(BuildIndent(columns, indentSize));
             }
 
             var i = leadingLength;
@@ -240,6 +234,32 @@ public static class SqlFormatter
             }
 
             output.Append(sbLine);
+        }
+
+        private static void GetLeadingWhitespace(string text, int indentSize, out int leadingLength, out int columns)
+        {
+            leadingLength = 0;
+            columns = 0;
+
+            while (leadingLength < text.Length)
+            {
+                var c = text[leadingLength];
+                if (c == ' ')
+                {
+                    columns++;
+                    leadingLength++;
+                    continue;
+                }
+
+                if (c == '\t')
+                {
+                    columns += indentSize;
+                    leadingLength++;
+                    continue;
+                }
+
+                break;
+            }
         }
 
         private bool IsInProtectedRegion() =>
@@ -412,14 +432,13 @@ public static class SqlFormatter
 
         private int GetIndentSize() => _options.IndentSize <= 0 ? 4 : _options.IndentSize;
 
-        private string BuildIndent(int columns)
+        private string BuildIndent(int columns, int indentSize)
         {
             if (columns <= 0)
             {
                 return string.Empty;
             }
 
-            var indentSize = GetIndentSize();
             if (_options.IndentStyle == IndentStyle.Tabs)
             {
                 var tabs = columns / indentSize;
