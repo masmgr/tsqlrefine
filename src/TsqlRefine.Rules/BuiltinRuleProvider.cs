@@ -18,7 +18,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new RequireParenthesesForMixedAndOrRule(),
             new AvoidNolockRule(),
             new RequireColumnListForInsertValuesRule(),
-            new RequireColumnListForInsertSelectRule()
+            new RequireColumnListForInsertSelectRule(),
+            new TopWithoutOrderByRule(),
+            new DuplicateAliasRule(),
+            new UndefinedAliasRule()
         };
 }
 
