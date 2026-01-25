@@ -79,10 +79,11 @@ public static class CliApp
         }
     }
 
-    private static Task<int> UnknownCommandAsync(string command, TextWriter stderr)
+    private static async Task<int> UnknownCommandAsync(string command, TextWriter stderr)
     {
         _ = command;
-        return stderr.WriteLineAsync("Unknown command.").ContinueWith(_ => ExitCodes.Fatal);
+        await stderr.WriteLineAsync("Unknown command.");
+        return ExitCodes.Fatal;
     }
 
     private static async Task<int> RunInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
@@ -152,8 +153,7 @@ public static class CliApp
         var inputs = await ReadInputsAsync(args, stdin, stderr);
         if (inputs.Count == 0)
         {
-            await stderr.WriteLineAsync("No input.");
-            return ExitCodes.Fatal;
+            return await WriteErrorAsync(stderr, "No input.");
         }
 
         var config = LoadConfig(args);
@@ -161,13 +161,8 @@ public static class CliApp
         var rules = LoadRules(args, config);
 
         var engine = new TsqlRefineEngine(rules);
-        var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
-
-        var result = engine.Run(command, inputs, new EngineOptions(
-            CompatLevel: args.CompatLevel ?? config.CompatLevel,
-            MinimumSeverity: minimumSeverity,
-            Ruleset: ruleset
-        ));
+        var options = CreateEngineOptions(args, config, ruleset);
+        var result = engine.Run(command, inputs, options);
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -193,21 +188,12 @@ public static class CliApp
         var inputs = await ReadInputsAsync(args, stdin, stderr);
         if (inputs.Count == 0)
         {
-            await stderr.WriteLineAsync("No input.");
-            return ExitCodes.Fatal;
+            return await WriteErrorAsync(stderr, "No input.");
         }
 
-        if (args.Diff && args.Write)
-        {
-            await stderr.WriteLineAsync("--diff and --write are mutually exclusive.");
-            return ExitCodes.Fatal;
-        }
-
-        if (!args.Write && !args.Diff && inputs.Count > 1)
-        {
-            await stderr.WriteLineAsync("Multiple inputs require --write or --diff.");
-            return ExitCodes.Fatal;
-        }
+        var optionError = await ValidateFormatFixOptionsAsync(args, inputs.Count, outputJson: false, stderr);
+        if (optionError.HasValue)
+            return optionError.Value;
 
         foreach (var input in inputs)
         {
@@ -337,50 +323,26 @@ public static class CliApp
         return int.TryParse(sizeValue, out var parsed) && parsed > 0 ? parsed : null;
     }
 
-    private static Task<int> RunFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
-    {
-        return RunFixInternalAsync(args, stdin, stdout, stderr);
-    }
-
-    private static async Task<int> RunFixInternalAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    private static async Task<int> RunFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
         var inputs = await ReadInputsAsync(args, stdin, stderr);
         if (inputs.Count == 0)
         {
-            await stderr.WriteLineAsync("No input.");
-            return ExitCodes.Fatal;
-        }
-
-        if (args.Diff && args.Write)
-        {
-            await stderr.WriteLineAsync("--diff and --write are mutually exclusive.");
-            return ExitCodes.Fatal;
+            return await WriteErrorAsync(stderr, "No input.");
         }
 
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
-        if (outputJson && args.Diff)
-        {
-            await stderr.WriteLineAsync("--diff cannot be used with --output json.");
-            return ExitCodes.Fatal;
-        }
-
-        if (!outputJson && !args.Write && !args.Diff && inputs.Count > 1)
-        {
-            await stderr.WriteLineAsync("Multiple inputs require --write or --diff.");
-            return ExitCodes.Fatal;
-        }
+        var optionError = await ValidateFormatFixOptionsAsync(args, inputs.Count, outputJson, stderr);
+        if (optionError.HasValue)
+            return optionError.Value;
 
         var config = LoadConfig(args);
         var ruleset = LoadRuleset(args, config);
         var rules = LoadRules(args, config);
-        var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
 
         var engine = new TsqlRefineEngine(rules);
-        var result = engine.Fix(inputs, new EngineOptions(
-            CompatLevel: args.CompatLevel ?? config.CompatLevel,
-            MinimumSeverity: minimumSeverity,
-            Ruleset: ruleset
-        ));
+        var options = CreateEngineOptions(args, config, ruleset);
+        var result = engine.Fix(inputs, options);
 
         if (outputJson)
         {
@@ -418,6 +380,40 @@ public static class CliApp
 
         var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
         return hasIssues ? ExitCodes.Violations : 0;
+    }
+
+    private static EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
+    {
+        var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
+        return new EngineOptions(
+            CompatLevel: args.CompatLevel ?? config.CompatLevel,
+            MinimumSeverity: minimumSeverity,
+            Ruleset: ruleset
+        );
+    }
+
+    private static async Task<int?> ValidateFormatFixOptionsAsync(
+        CliArgs args,
+        int inputCount,
+        bool outputJson,
+        TextWriter stderr)
+    {
+        if (args.Diff && args.Write)
+        {
+            return await WriteErrorAsync(stderr, "--diff and --write are mutually exclusive.");
+        }
+
+        if (outputJson && args.Diff)
+        {
+            return await WriteErrorAsync(stderr, "--diff cannot be used with --output json.");
+        }
+
+        if (!outputJson && !args.Write && !args.Diff && inputCount > 1)
+        {
+            return await WriteErrorAsync(stderr, "Multiple inputs require --write or --diff.");
+        }
+
+        return null;
     }
 
     private static TsqlRefineConfig LoadConfig(CliArgs args)
@@ -606,6 +602,12 @@ public static class CliApp
         {
             throw new ConfigException($"Failed to read ignore list: {ex.Message}");
         }
+    }
+
+    private static async Task<int> WriteErrorAsync(TextWriter stderr, string message)
+    {
+        await stderr.WriteLineAsync(message);
+        return ExitCodes.Fatal;
     }
 
     private static string GenerateUnifiedDiff(string filePath, string original, string formatted)
