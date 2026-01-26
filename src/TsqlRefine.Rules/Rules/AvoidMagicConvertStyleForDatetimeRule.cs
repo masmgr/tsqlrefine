@@ -43,8 +43,14 @@ public sealed class AvoidMagicConvertStyleForDatetimeRule : IRule
             if (node.Style is IntegerLiteral styleLiteral)
             {
                 // Check if converting to/from datetime types
-                var dataType = node.DataType as SqlDataTypeReference;
-                if (dataType != null && IsDateTimeType(dataType.SqlDataTypeOption))
+                var targetDataType = node.DataType as SqlDataTypeReference;
+                var isTargetDateTime = targetDataType != null && IsDateTimeType(targetDataType.SqlDataTypeOption);
+
+                // Check if the parameter expression involves datetime types
+                // For example: CONVERT(VARCHAR, GETDATE(), 101) - converting from datetime
+                var isSourceDateTime = InvolvesDateTimeExpression(node.Parameter);
+
+                if (isTargetDateTime || isSourceDateTime)
                 {
                     AddDiagnostic(
                         fragment: node,
@@ -67,6 +73,27 @@ public sealed class AvoidMagicConvertStyleForDatetimeRule : IRule
                    SqlDataTypeOption.Date or
                    SqlDataTypeOption.Time or
                    SqlDataTypeOption.DateTimeOffset;
+        }
+
+        private static bool InvolvesDateTimeExpression(ScalarExpression expression)
+        {
+            // Check if expression is a datetime function call
+            if (expression is FunctionCall funcCall)
+            {
+                var funcName = funcCall.FunctionName.Value;
+                if (funcName.Equals("GETDATE", StringComparison.OrdinalIgnoreCase) ||
+                    funcName.Equals("GETUTCDATE", StringComparison.OrdinalIgnoreCase) ||
+                    funcName.Equals("SYSDATETIME", StringComparison.OrdinalIgnoreCase) ||
+                    funcName.Equals("SYSUTCDATETIME", StringComparison.OrdinalIgnoreCase) ||
+                    funcName.Equals("SYSDATETIMEOFFSET", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            // For more complex cases, we'd need deeper analysis
+            // This is a simple heuristic that covers common cases
+            return false;
         }
     }
 }

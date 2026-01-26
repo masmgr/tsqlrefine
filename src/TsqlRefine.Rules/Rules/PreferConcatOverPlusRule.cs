@@ -43,14 +43,19 @@ public sealed class PreferConcatOverPlusRule : IRule
 
     private sealed class PreferConcatOverPlusVisitor : DiagnosticVisitorBase
     {
+        private readonly HashSet<BinaryExpression> _reported = new();
+
         public override void ExplicitVisit(BinaryExpression node)
         {
             // Check for string concatenation with +
-            if (node.BinaryExpressionType == BinaryExpressionType.Add)
+            if (node.BinaryExpressionType == BinaryExpressionType.Add && !_reported.Contains(node))
             {
                 // Check if expression contains ISNULL or COALESCE
-                if (ContainsNullHandling(node.FirstExpression) || ContainsNullHandling(node.SecondExpression))
+                if (ContainsNullHandling(node))
                 {
+                    // Mark all descendant Add expressions as reported
+                    MarkDescendantsAsReported(node);
+
                     AddDiagnostic(
                         fragment: node,
                         message: "Use CONCAT() instead of + concatenation with ISNULL/COALESCE; it handles NULL values automatically.",
@@ -64,8 +69,26 @@ public sealed class PreferConcatOverPlusRule : IRule
             base.ExplicitVisit(node);
         }
 
+        private void MarkDescendantsAsReported(BinaryExpression node)
+        {
+            _reported.Add(node);
+
+            if (node.FirstExpression is BinaryExpression leftBinary &&
+                leftBinary.BinaryExpressionType == BinaryExpressionType.Add)
+            {
+                MarkDescendantsAsReported(leftBinary);
+            }
+
+            if (node.SecondExpression is BinaryExpression rightBinary &&
+                rightBinary.BinaryExpressionType == BinaryExpressionType.Add)
+            {
+                MarkDescendantsAsReported(rightBinary);
+            }
+        }
+
         private static bool ContainsNullHandling(ScalarExpression expression)
         {
+            // Check for ISNULL function call
             if (expression is FunctionCall func)
             {
                 var funcName = func.FunctionName.Value;
@@ -74,6 +97,12 @@ public sealed class PreferConcatOverPlusRule : IRule
                 {
                     return true;
                 }
+            }
+
+            // Check for COALESCE expression (ScriptDom has a separate type for it)
+            if (expression is CoalesceExpression)
+            {
+                return true;
             }
 
             // Recursively check binary expressions
