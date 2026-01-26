@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
@@ -8,6 +9,8 @@ internal sealed record ScriptDomAnalysis(ScriptDomAst Ast, IReadOnlyList<Token> 
 
 internal static class ScriptDomTokenizer
 {
+    private static readonly IReadOnlyDictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
+
     public static ScriptDomAnalysis Analyze(string sql, int compatLevel)
     {
         var text = sql ?? string.Empty;
@@ -64,10 +67,26 @@ internal static class ScriptDomTokenizer
                 text,
                 new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
                 text.Length,
-                token.TokenType.ToString()
+                GetTokenTypeName(token.TokenType)
             ));
         }
 
         return tokens;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetTokenTypeName(TSqlTokenType tokenType) =>
+        TokenTypeNameCache.TryGetValue(tokenType, out var name) ? name : tokenType.ToString();
+
+    private static IReadOnlyDictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
+    {
+        var values = Enum.GetValues<TSqlTokenType>();
+        var map = new Dictionary<TSqlTokenType, string>(values.Length);
+        foreach (var value in values)
+        {
+            map[value] = value.ToString();
+        }
+
+        return map;
     }
 }

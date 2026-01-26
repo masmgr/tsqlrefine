@@ -1,4 +1,5 @@
 using System.Text;
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Formatting;
@@ -19,6 +20,8 @@ public static class SqlFormatter
 
     private static class ScriptDomKeywordCaser
     {
+        private static readonly IReadOnlyDictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
+
         private static readonly string[] NonKeywordTokenKindHints =
         {
             "Identifier",
@@ -72,7 +75,7 @@ public static class SqlFormatter
 
         private static bool IsNonKeywordTokenKind(TSqlParserToken token)
         {
-            var typeName = token.TokenType.ToString();
+            var typeName = GetTokenTypeName(token.TokenType);
             foreach (var kind in NonKeywordTokenKindHints)
             {
                 if (typeName.Contains(kind, StringComparison.Ordinal))
@@ -82,6 +85,22 @@ public static class SqlFormatter
             }
 
             return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string GetTokenTypeName(TSqlTokenType tokenType) =>
+            TokenTypeNameCache.TryGetValue(tokenType, out var name) ? name : tokenType.ToString();
+
+        private static IReadOnlyDictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
+        {
+            var values = Enum.GetValues<TSqlTokenType>();
+            var map = new Dictionary<TSqlTokenType, string>(values.Length);
+            foreach (var value in values)
+            {
+                map[value] = value.ToString();
+            }
+
+            return map;
         }
 
         private static bool IsWordToken(string text)

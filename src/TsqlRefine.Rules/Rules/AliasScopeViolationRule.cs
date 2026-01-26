@@ -104,28 +104,38 @@ public sealed class AliasScopeViolationRule : IRule
         {
             foreach (var tableRef in tableRefs)
             {
-                if (tableRef is QueryDerivedTable derivedTable)
-                {
-                    // Mark all subsequent aliases as "later" for this derived table
-                    // (aliases defined after this point aren't available inside the derived table)
-                    context.EnteringDerivedTable();
+                CollectAliasesFromTableReference(tableRef, context);
+            }
+        }
 
-                    // Add the derived table's own alias as available
-                    if (derivedTable.Alias?.Value != null)
-                    {
-                        context.AddAvailableAlias(derivedTable.Alias.Value);
-                    }
-                }
-                else if (tableRef is NamedTableReference namedTable)
+        private void CollectAliasesFromTableReference(TableReference tableRef, QueryContext context)
+        {
+            if (tableRef is QueryDerivedTable derivedTable)
+            {
+                // Mark all subsequent aliases as "later" for this derived table
+                // (aliases defined after this point aren't available inside the derived table)
+                context.EnteringDerivedTable();
+
+                // Add the derived table's own alias as available
+                if (derivedTable.Alias?.Value is { } derivedAlias)
                 {
-                    var alias = namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value;
-                    context.AddLaterAlias(alias);
+                    context.AddAvailableAlias(derivedAlias);
                 }
-                else if (tableRef is JoinTableReference join)
-                {
-                    CollectAliasesFromFrom(new[] { join.FirstTableReference }, context);
-                    CollectAliasesFromFrom(new[] { join.SecondTableReference }, context);
-                }
+
+                return;
+            }
+
+            if (tableRef is NamedTableReference namedTable)
+            {
+                var alias = namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value;
+                context.AddLaterAlias(alias);
+                return;
+            }
+
+            if (tableRef is JoinTableReference join)
+            {
+                CollectAliasesFromTableReference(join.FirstTableReference, context);
+                CollectAliasesFromTableReference(join.SecondTableReference, context);
             }
         }
 

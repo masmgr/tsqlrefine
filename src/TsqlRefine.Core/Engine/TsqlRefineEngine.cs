@@ -22,7 +22,12 @@ public sealed class TsqlRefineEngine
         ArgumentNullException.ThrowIfNull(options);
 
         var activeRules = GetActiveRules(options);
-        var files = inputs.Select(i => AnalyzeFile(i, activeRules, options)).ToArray();
+        var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
+        var files = new FileResult[inputList.Count];
+        for (var i = 0; i < inputList.Count; i++)
+        {
+            files[i] = AnalyzeFile(inputList[i], activeRules, options);
+        }
         return new LintResult(
             Tool: "tsqlrefine",
             Version: GetVersion(),
@@ -37,7 +42,12 @@ public sealed class TsqlRefineEngine
         ArgumentNullException.ThrowIfNull(options);
 
         var activeRules = GetActiveRules(options);
-        var files = inputs.Select(i => FixFile(i, activeRules, options)).ToArray();
+        var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
+        var files = new FixedFileResult[inputList.Count];
+        for (var i = 0; i < inputList.Count; i++)
+        {
+            files[i] = FixFile(inputList[i], activeRules, options);
+        }
         return new FixResult(
             Tool: "tsqlrefine",
             Version: GetVersion(),

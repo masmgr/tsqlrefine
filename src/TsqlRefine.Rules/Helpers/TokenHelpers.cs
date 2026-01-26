@@ -77,8 +77,20 @@ public static class TokenHelpers
         ArgumentNullException.ThrowIfNull(token);
 
         var text = token.Text ?? string.Empty;
-        var line = token.Start.Line;
-        var character = token.Start.Character;
+        var start = token.Start;
+        if (text.Length == 0)
+        {
+            return start;
+        }
+
+        // Fast path: most tokens are single-line.
+        if (text.AsSpan().IndexOfAny('\r', '\n') < 0)
+        {
+            return new Position(start.Line, start.Character + token.Length);
+        }
+
+        var line = start.Line;
+        var character = start.Character;
 
         for (var i = 0; i < text.Length; i++)
         {
