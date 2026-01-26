@@ -20,6 +20,7 @@ public static class CliParser
 
         var configPath = parseResult.GetValue(Model.ConfigOption);
         var ignorePath = parseResult.GetValue(Model.IgnoreListOption);
+        var detectEncoding = parseResult.GetValue(Model.DetectEncodingOption);
         var stdin = parseResult.GetValue(Model.StdinOption);
         var stdinFilePath = parseResult.GetValue(Model.StdinFilePathOption);
         var output = parseResult.GetValue(Model.OutputOption) ?? "text";
@@ -39,6 +40,7 @@ public static class CliParser
             ShowVersion: parseResult.GetValue(Model.VersionOption),
             ConfigPath: configPath,
             IgnoreListPath: ignorePath,
+            DetectEncoding: detectEncoding,
             Stdin: stdin,
             StdinFilePath: stdinFilePath,
             Output: output,
@@ -119,6 +121,7 @@ public static class CliParser
 
         var configOption = CreateOptionalStringOption("--config", "-c");
         var ignoreListOption = CreateOptionalStringOption("--ignorelist", "-g");
+        var detectEncodingOption = CreateBoolOption("--detect-encoding");
         var stdinOption = CreateBoolOption("--stdin");
         var stdinFilePathOption = CreateOptionalStringOption("--stdin-filepath");
         var outputOption = CreateOptionalStringOption("--output");
@@ -138,6 +141,7 @@ public static class CliParser
 
         root.Add(configOption);
         root.Add(ignoreListOption);
+        root.Add(detectEncodingOption);
         root.Add(stdinOption);
         root.Add(stdinFilePathOption);
         root.Add(outputOption);
@@ -182,6 +186,7 @@ public static class CliParser
             Root: root,
             ConfigOption: configOption,
             IgnoreListOption: ignoreListOption,
+            DetectEncodingOption: detectEncodingOption,
             StdinOption: stdinOption,
             StdinFilePathOption: stdinFilePathOption,
             OutputOption: outputOption,
@@ -224,6 +229,7 @@ public static class CliParser
         RootCommand Root,
         Option<string?> ConfigOption,
         Option<string?> IgnoreListOption,
+        Option<bool> DetectEncodingOption,
         Option<bool> StdinOption,
         Option<string?> StdinFilePathOption,
         Option<string?> OutputOption,

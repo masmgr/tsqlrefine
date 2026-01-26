@@ -48,6 +48,8 @@ tsqlrefine <command> [options] [paths...]
 - `--stdin-filepath <path>`: stdin の “仮想パス” を指定（診断出力の filePath 用）
 - `--output <text|json>`: 出力形式（既定: `text`）
 - `--severity <error|warning|info|hint>`: これ未満を出力しない（既定: すべて）
+- `--detect-encoding`: 入力の文字コードを自動判定する（BOM 優先。BOM が無い場合は `UTF.Unknown` による推定）
+- `--detect-encoding` を指定した場合、`format --write` / `fix --write` の上書きは入力ファイルの文字コード（および BOM 有無）を保持します
 
 実行モード:
 

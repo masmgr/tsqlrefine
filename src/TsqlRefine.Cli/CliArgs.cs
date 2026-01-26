@@ -9,6 +9,7 @@ public sealed record CliArgs(
     bool ShowVersion,
     string? ConfigPath,
     string? IgnoreListPath,
+    bool DetectEncoding,
     bool Stdin,
     string? StdinFilePath,
     string Output,
@@ -22,4 +23,3 @@ public sealed record CliArgs(
     int? IndentSize,
     IReadOnlyList<string> Paths
 );
-

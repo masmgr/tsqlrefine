@@ -19,6 +19,8 @@ namespace TsqlRefine.Cli;
 
 public static class CliApp
 {
+    private sealed record ReadInputsResult(List<SqlInput> Inputs, IReadOnlyDictionary<string, Encoding> WriteEncodings);
+
     private static string GetVersionString()
     {
         var assembly = typeof(CliApp).Assembly;
@@ -38,7 +40,40 @@ public static class CliApp
 
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
+        EnsureEncodingProvidersRegistered();
         var parsed = CliParser.Parse(args);
+        return await RunParsedAsync(parsed, stdin, stdout, stderr);
+    }
+
+    public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
+    {
+        EnsureEncodingProvidersRegistered();
+        var parsed = CliParser.Parse(args);
+
+        if (parsed.Stdin || parsed.Paths.Any(p => p == "-"))
+        {
+            if (parsed.DetectEncoding)
+            {
+                var decoded = await CharsetDetection.ReadStreamAsync(stdin);
+                using var decodedReader = new StringReader(decoded.Text);
+                return await RunParsedAsync(parsed, decodedReader, stdout, stderr);
+            }
+
+            using var streamReader = new StreamReader(
+                stdin,
+                encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+                detectEncodingFromByteOrderMarks: true,
+                leaveOpen: true);
+
+            return await RunParsedAsync(parsed, streamReader, stdout, stderr);
+        }
+
+        return await RunParsedAsync(parsed, TextReader.Null, stdout, stderr);
+    }
+
+    private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        EnsureEncodingProvidersRegistered();
 
         if (parsed.ShowVersion)
         {
@@ -196,8 +231,8 @@ public static class CliApp
 
     private static async Task<int> RunLintAsync(string command, CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var inputs = await ReadInputsAsync(args, stdin, stderr);
-        if (inputs.Count == 0)
+        var read = await ReadInputsAsync(args, stdin, stderr);
+        if (read.Inputs.Count == 0)
         {
             return await WriteErrorAsync(stderr, "No input.");
         }
@@ -208,7 +243,7 @@ public static class CliApp
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
-        var result = engine.Run(command, inputs, options);
+        var result = engine.Run(command, read.Inputs, options);
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -231,17 +266,17 @@ public static class CliApp
 
     private static async Task<int> RunFormatAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var inputs = await ReadInputsAsync(args, stdin, stderr);
-        if (inputs.Count == 0)
+        var read = await ReadInputsAsync(args, stdin, stderr);
+        if (read.Inputs.Count == 0)
         {
             return await WriteErrorAsync(stderr, "No input.");
         }
 
-        var optionError = await ValidateFormatFixOptionsAsync(args, inputs.Count, outputJson: false, stderr);
+        var optionError = await ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson: false, stderr);
         if (optionError.HasValue)
             return optionError.Value;
 
-        foreach (var input in inputs)
+        foreach (var input in read.Inputs)
         {
             var options = ResolveFormattingOptions(args, input);
             var formatted = SqlFormatter.Format(input.Text, options);
@@ -254,7 +289,10 @@ public static class CliApp
             }
             else if (args.Write && input.FilePath != "<stdin>")
             {
-                await File.WriteAllTextAsync(input.FilePath, formatted, Encoding.UTF8);
+                var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
+                    ? resolved
+                    : Encoding.UTF8;
+                await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
             }
             else
             {
@@ -371,14 +409,14 @@ public static class CliApp
 
     private static async Task<int> RunFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var inputs = await ReadInputsAsync(args, stdin, stderr);
-        if (inputs.Count == 0)
+        var read = await ReadInputsAsync(args, stdin, stderr);
+        if (read.Inputs.Count == 0)
         {
             return await WriteErrorAsync(stderr, "No input.");
         }
 
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
-        var optionError = await ValidateFormatFixOptionsAsync(args, inputs.Count, outputJson, stderr);
+        var optionError = await ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson, stderr);
         if (optionError.HasValue)
             return optionError.Value;
 
@@ -388,7 +426,7 @@ public static class CliApp
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
-        var result = engine.Fix(inputs, options);
+        var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
         {
@@ -414,7 +452,10 @@ public static class CliApp
                 {
                     if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
                     {
-                        await File.WriteAllTextAsync(file.FilePath, file.FixedText, Encoding.UTF8);
+                        var encoding = read.WriteEncodings.TryGetValue(file.FilePath, out var resolved)
+                            ? resolved
+                            : Encoding.UTF8;
+                        await File.WriteAllTextAsync(file.FilePath, file.FixedText, encoding);
                     }
                 }
                 else
@@ -573,9 +614,10 @@ public static class CliApp
         return rules;
     }
 
-    private static async Task<List<SqlInput>> ReadInputsAsync(CliArgs args, TextReader stdin, TextWriter stderr)
+    private static async Task<ReadInputsResult> ReadInputsAsync(CliArgs args, TextReader stdin, TextWriter stderr)
     {
         var inputs = new List<SqlInput>();
+        var encodings = new Dictionary<string, Encoding>(StringComparer.OrdinalIgnoreCase);
         var paths = args.Paths.ToArray();
 
         if (args.Stdin || paths.Any(p => p == "-"))
@@ -595,11 +637,20 @@ public static class CliApp
                 continue;
             }
 
-            var sql = await File.ReadAllTextAsync(path, Encoding.UTF8);
-            inputs.Add(new SqlInput(path, sql));
+            if (args.DetectEncoding)
+            {
+                var decoded = await CharsetDetection.ReadFileAsync(path);
+                inputs.Add(new SqlInput(path, decoded.Text));
+                encodings[path] = decoded.WriteEncoding;
+            }
+            else
+            {
+                var sql = await File.ReadAllTextAsync(path, Encoding.UTF8);
+                inputs.Add(new SqlInput(path, sql));
+            }
         }
 
-        return inputs;
+        return new ReadInputsResult(inputs, encodings);
     }
 
     private static IEnumerable<string> ExpandPaths(IEnumerable<string> paths, List<string> ignorePatterns)
@@ -676,6 +727,18 @@ public static class CliApp
         }
     }
 
+    private static int _encodingProvidersRegistered;
+
+    private static void EnsureEncodingProvidersRegistered()
+    {
+        if (Interlocked.Exchange(ref _encodingProvidersRegistered, 1) == 1)
+        {
+            return;
+        }
+
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     private static async Task<int> WriteErrorAsync(TextWriter stderr, string message)
     {
         await stderr.WriteLineAsync(message);
@@ -724,6 +787,7 @@ public static class CliApp
         Options:
           -c, --config <path>
           -g, --ignorelist <path>
+              --detect-encoding            (auto-detect input file/stdin encodings)
               --stdin
               --stdin-filepath <path>
               --output <text|json>
