@@ -159,4 +159,62 @@ public static class TokenHelpers
 
         return true;
     }
+
+    /// <summary>
+    /// Skips trivia tokens starting from the given index and returns the index of the next non-trivia token.
+    /// </summary>
+    /// <param name="tokens">The token list to search.</param>
+    /// <param name="startIndex">The index to start skipping from.</param>
+    /// <returns>The index of the next non-trivia token, or tokens.Count if no non-trivia token is found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens is null.</exception>
+    public static int SkipTrivia(IReadOnlyList<Token> tokens, int startIndex)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+
+        var index = startIndex;
+        while (index < tokens.Count && IsTrivia(tokens[index]))
+        {
+            index++;
+        }
+
+        return index;
+    }
+
+    /// <summary>
+    /// Creates a Range from start and end token indices in the token list.
+    /// The range spans from the start of the start token to the end of the end token.
+    /// </summary>
+    /// <param name="tokens">The token list.</param>
+    /// <param name="startIndex">The index of the start token.</param>
+    /// <param name="endIndex">The index of the end token.</param>
+    /// <returns>A Range spanning the specified tokens.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens is null.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when indices are invalid.</exception>
+    public static TsqlRefine.PluginSdk.Range GetTokenRange(
+        IReadOnlyList<Token> tokens,
+        int startIndex,
+        int endIndex)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+
+        if (startIndex < 0 || startIndex >= tokens.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(startIndex));
+        }
+
+        if (endIndex < 0 || endIndex >= tokens.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(endIndex));
+        }
+
+        if (startIndex > endIndex)
+        {
+            throw new ArgumentException("startIndex must be less than or equal to endIndex");
+        }
+
+        var start = tokens[startIndex].Start;
+        var end = GetTokenEnd(tokens[endIndex]);
+
+        return new TsqlRefine.PluginSdk.Range(start, end);
+    }
 }

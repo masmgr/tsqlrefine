@@ -23,12 +23,12 @@ public sealed class AvoidSelectStarRule : IRule
             yield break;
         }
 
-        yield return new Diagnostic(
-            Range: range,
-            Message: "Avoid SELECT *; explicitly list required columns.",
-            Severity: null,
-            Code: Metadata.RuleId,
-            Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
+        yield return RuleHelpers.CreateDiagnostic(
+            range: range,
+            message: "Avoid SELECT *; explicitly list required columns.",
+            code: Metadata.RuleId,
+            category: Metadata.Category,
+            fixable: Metadata.Fixable
         );
     }
 
@@ -77,9 +77,7 @@ public sealed class AvoidSelectStarRule : IRule
 
                 if (depth == 0 && text == "*" && !TokenHelpers.IsPrefixedByDot(tokens, j))
                 {
-                    var start = tokens[j].Start;
-                    var end = TokenHelpers.GetTokenEnd(tokens[j]);
-                    return new TsqlRefine.PluginSdk.Range(start, end);
+                    return TokenHelpers.GetTokenRange(tokens, j, j);
                 }
             }
         }

@@ -18,12 +18,12 @@ public sealed class DuplicateGoRule : IRule
         ArgumentNullException.ThrowIfNull(context);
 
         var sql = context.Ast.RawSql;
-        if (string.IsNullOrEmpty(sql))
+        var lines = TextAnalysisHelpers.SplitSqlLines(sql);
+        if (lines.Length == 0)
         {
             yield break;
         }
 
-        var lines = sql.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         var lastGoLine = -1;
 
         for (var i = 0; i < lines.Length; i++)
@@ -37,15 +37,13 @@ public sealed class DuplicateGoRule : IRule
                 if (lastGoLine >= 0)
                 {
                     // Found consecutive GO statements
-                    yield return new Diagnostic(
-                        Range: new TsqlRefine.PluginSdk.Range(
-                            new Position(i, 0),
-                            new Position(i, line.Length)
-                        ),
-                        Message: "Consecutive GO batch separators found. Remove duplicate GO statements.",
-                        Severity: null,
-                        Code: Metadata.RuleId,
-                        Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
+                    yield return TextAnalysisHelpers.CreateLineRangeDiagnostic(
+                        lineNumber: i,
+                        lineLength: line.Length,
+                        message: "Consecutive GO batch separators found. Remove duplicate GO statements.",
+                        code: Metadata.RuleId,
+                        category: Metadata.Category,
+                        fixable: Metadata.Fixable
                     );
                 }
 

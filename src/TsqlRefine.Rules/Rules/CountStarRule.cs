@@ -21,12 +21,12 @@ public sealed class CountStarRule : IRule
         var ranges = FindCountStarRanges(context.Tokens);
         foreach (var range in ranges)
         {
-            yield return new Diagnostic(
-                Range: range,
-                Message: "Avoid COUNT(*). Use COUNT(1) for row counting or COUNT(column_name) to count non-null values for better clarity and consistency.",
-                Severity: null,
-                Code: Metadata.RuleId,
-                Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
+            yield return RuleHelpers.CreateDiagnostic(
+                range: range,
+                message: "Avoid COUNT(*). Use COUNT(1) for row counting or COUNT(column_name) to count non-null values for better clarity and consistency.",
+                code: Metadata.RuleId,
+                category: Metadata.Category,
+                fixable: Metadata.Fixable
             );
         }
     }
@@ -52,11 +52,7 @@ public sealed class CountStarRule : IRule
             }
 
             // Skip trivia between COUNT and (
-            var j = i + 1;
-            while (j < tokens.Count && TokenHelpers.IsTrivia(tokens[j]))
-            {
-                j++;
-            }
+            var j = TokenHelpers.SkipTrivia(tokens, i + 1);
 
             if (j >= tokens.Count || tokens[j].Text != "(")
             {
@@ -64,11 +60,7 @@ public sealed class CountStarRule : IRule
             }
 
             // Skip trivia after (
-            j++;
-            while (j < tokens.Count && TokenHelpers.IsTrivia(tokens[j]))
-            {
-                j++;
-            }
+            j = TokenHelpers.SkipTrivia(tokens, j + 1);
 
             if (j >= tokens.Count || tokens[j].Text != "*")
             {
@@ -76,9 +68,7 @@ public sealed class CountStarRule : IRule
             }
 
             // Found COUNT(*)
-            var start = tokens[i].Start;
-            var end = TokenHelpers.GetTokenEnd(tokens[j]);
-            ranges.Add(new TsqlRefine.PluginSdk.Range(start, end));
+            ranges.Add(TokenHelpers.GetTokenRange(tokens, i, j));
         }
 
         return ranges;
