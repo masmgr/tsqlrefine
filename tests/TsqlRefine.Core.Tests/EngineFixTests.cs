@@ -1,10 +1,45 @@
 using TsqlRefine.Core.Engine;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Rules;
 
 namespace TsqlRefine.Core.Tests;
 
 public sealed class EngineFixTests
 {
+    [Fact]
+    public void Fix_WhenRequireAsForColumnAliasRule_InsertsAsKeyword()
+    {
+        var rules = new IRule[] { new RequireAsForColumnAliasRule() };
+        var engine = new TsqlRefineEngine(rules);
+
+        var result = engine.Fix(
+            inputs: new[] { new SqlInput("a.sql", "SELECT id userId FROM users;") },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.Equal("SELECT id AS userId FROM users;", result.Files[0].FixedText);
+        Assert.Empty(result.Files[0].Diagnostics);
+        Assert.Single(result.Files[0].AppliedFixes);
+    }
+
+    [Fact]
+    public void Fix_WhenRequireAsForTableAliasRule_InsertsAsKeyword()
+    {
+        var rules = new IRule[] { new RequireAsForTableAliasRule() };
+        var engine = new TsqlRefineEngine(rules);
+
+        var result = engine.Fix(
+            inputs: new[] { new SqlInput("a.sql", "SELECT * FROM users u;") },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.Equal("SELECT * FROM users AS u;", result.Files[0].FixedText);
+        Assert.Empty(result.Files[0].Diagnostics);
+        Assert.Single(result.Files[0].AppliedFixes);
+    }
+
     [Fact]
     public void Fix_WhenFixableRule_AppliesFixAndClearsDiagnostics()
     {

@@ -145,7 +145,7 @@ public sealed class RequireAsForColumnAliasRuleTests
         Assert.Equal("require-as-for-column-alias", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
-        Assert.False(_rule.Metadata.Fixable);
+        Assert.True(_rule.Metadata.Fixable);
     }
 
     private static RuleContext CreateContext(string sql)

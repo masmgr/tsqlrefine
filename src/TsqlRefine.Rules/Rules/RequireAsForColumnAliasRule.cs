@@ -11,7 +11,7 @@ public sealed class RequireAsForColumnAliasRule : IRule
         Description: "Column aliases should use the AS keyword",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
-        Fixable: false
+        Fixable: true
     );
 
     public IEnumerable<Diagnostic> Analyze(RuleContext context)
@@ -38,7 +38,31 @@ public sealed class RequireAsForColumnAliasRule : IRule
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        RuleHelpers.NoFixes(context, diagnostic);
+        GetFixesCore(context, diagnostic);
+
+    private IEnumerable<Fix> GetFixesCore(RuleContext context, Diagnostic diagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(diagnostic);
+
+        if (!string.Equals(diagnostic.Code, Metadata.RuleId, StringComparison.Ordinal))
+        {
+            yield break;
+        }
+
+        if (diagnostic.Data?.Fixable is not true)
+        {
+            yield break;
+        }
+
+        var insertAt = diagnostic.Range.Start;
+        var insertRange = new TsqlRefine.PluginSdk.Range(insertAt, insertAt);
+
+        yield return new Fix(
+            Title: "Insert AS for column alias",
+            Edits: new[] { new TextEdit(insertRange, "AS ") }
+        );
+    }
 
     private sealed class RequireAsForColumnAliasVisitor : DiagnosticVisitorBase
     {
@@ -59,7 +83,7 @@ public sealed class RequireAsForColumnAliasRule : IRule
                     message: "Column alias should use the AS keyword",
                     code: "require-as-for-column-alias",
                     category: "Style",
-                    fixable: false
+                    fixable: true
                 );
             }
 
