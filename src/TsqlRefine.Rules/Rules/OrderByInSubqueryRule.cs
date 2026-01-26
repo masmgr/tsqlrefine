@@ -1,0 +1,94 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers;
+
+namespace TsqlRefine.Rules.Rules;
+
+public sealed class OrderByInSubqueryRule : IRule
+{
+    public RuleMetadata Metadata { get; } = new(
+        RuleId: "order-by-in-subquery",
+        Description: "Disallows invalid ORDER BY in subqueries unless paired with TOP, OFFSET, FOR XML, or FOR JSON (SQL Server error Msg 1033).",
+        Category: "Correctness",
+        DefaultSeverity: RuleSeverity.Error,
+        Fixable: false
+    );
+
+    public IEnumerable<Diagnostic> Analyze(RuleContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Ast.Fragment is null)
+        {
+            yield break;
+        }
+
+        var visitor = new OrderByInSubqueryVisitor();
+        context.Ast.Fragment.Accept(visitor);
+
+        foreach (var diagnostic in visitor.Diagnostics)
+        {
+            yield return diagnostic;
+        }
+    }
+
+    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+        RuleHelpers.NoFixes(context, diagnostic);
+
+    private sealed class OrderByInSubqueryVisitor : DiagnosticVisitorBase
+    {
+        private int _queryDepth = 0;
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            _queryDepth++;
+
+            // Check if this is a subquery (depth > 1) with ORDER BY
+            if (_queryDepth > 1 && node.QueryExpression is QuerySpecification querySpec)
+            {
+                if (querySpec.OrderByClause != null)
+                {
+                    // Check for valid exceptions: TOP, OFFSET, FOR XML, FOR JSON
+                    bool hasValidException = querySpec.TopRowFilter != null ||
+                                           querySpec.OffsetClause != null ||
+                                           (node.ComputeClauses != null && node.ComputeClauses.Count > 0);
+
+                    // Check for FOR XML or FOR JSON
+                    if (querySpec.ForClause != null)
+                    {
+                        hasValidException = true;
+                    }
+
+                    if (!hasValidException)
+                    {
+                        AddDiagnostic(
+                            fragment: querySpec.OrderByClause,
+                            message: "ORDER BY in subquery is invalid unless paired with TOP, OFFSET, FOR XML, or FOR JSON.",
+                            code: "order-by-in-subquery",
+                            category: "Correctness",
+                            fixable: false
+                        );
+                    }
+                }
+            }
+
+            base.ExplicitVisit(node);
+
+            _queryDepth--;
+        }
+
+        public override void ExplicitVisit(QueryDerivedTable node)
+        {
+            _queryDepth++;
+            base.ExplicitVisit(node);
+            _queryDepth--;
+        }
+
+        public override void ExplicitVisit(ScalarSubquery node)
+        {
+            _queryDepth++;
+            base.ExplicitVisit(node);
+            _queryDepth--;
+        }
+    }
+}

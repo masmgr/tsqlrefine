@@ -63,7 +63,33 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new CountStarRule(),
             new NonSargableRule(),
             new UtcDatetimeRule(),
-            new JoinKeywordRule()
+            new JoinKeywordRule(),
+            // New rules from tsqllint-extend-rules
+            new RequireBeginEndForWhileRule(),
+            new RequireBeginEndForIfWithControlflowExceptionRule(),
+            new DisallowSelectIntoRule(),
+            new AvoidTopInDmlRule(),
+            new AvoidAtatIdentityRule(),
+            new AvoidMagicConvertStyleForDatetimeRule(),
+            new PreferTrimOverLtrimRtrimRule(),
+            new RequireExplicitJoinTypeRule(),
+            new ForbidTop100PercentOrderByRule(),
+            new RequirePrimaryKeyOrUniqueConstraintRule(),
+            new AvoidHeapTableRule(),
+            new AvoidAmbiguousDatetimeLiteralRule(),
+            new PreferCoalesceOverNestedIsnullRule(),
+            new PreferConcatOverPlusRule(),
+            new PreferConcatOverPlusWhenNullableOrConvertRule(),
+            new PreferTryConvertPatternsRule(),
+            new QualifiedSelectColumnsRule(),
+            new RequireQualifiedColumnsEverywhereRule(),
+            new OrderByInSubqueryRule(),
+            new RequireMsDescriptionForTableDefinitionFileRule(),
+            new RequireTryCatchForTransactionRule(),
+            new RequireXactAbortOnRule(),
+            new PreferConcatWsRule(),
+            new PreferStringAggOverStuffRule(),
+            new PreferJsonFunctionsRule()
         };
 }
 
