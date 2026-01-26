@@ -2,6 +2,7 @@ using System.IO;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules;
+using Xunit;
 
 namespace TsqlRefine.Rules.Tests;
 
@@ -9,183 +10,30 @@ public sealed class RequireExplicitJoinTypeRuleTests
 {
     private readonly RequireExplicitJoinTypeRule _rule = new();
 
-    [Theory]
-    [InlineData("SELECT * FROM users, orders;")]
-    [InlineData("SELECT * FROM users, orders, products;")]
-    [InlineData("SELECT u.name, o.total FROM users u, orders o;")]
-    [InlineData("SELECT * FROM dbo.users, dbo.orders;")]
-    [InlineData("select * from users, orders;")]  // lowercase
-    public void Analyze_WhenCommaSeparatedTables_ReturnsDiagnostic(string sql)
-    {
-        // Arrange
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Single(diagnostics);
-        Assert.Equal("require-explicit-join-type", diagnostics[0].Code);
-        Assert.Contains("explicit JOIN", diagnostics[0].Message);
-    }
-
-    [Theory]
-    [InlineData("SELECT * FROM users INNER JOIN orders ON users.id = orders.user_id;")]
-    [InlineData("SELECT * FROM users LEFT JOIN orders ON users.id = orders.user_id;")]
-    [InlineData("SELECT * FROM users RIGHT JOIN orders ON users.id = orders.user_id;")]
-    [InlineData("SELECT * FROM users FULL JOIN orders ON users.id = orders.user_id;")]
-    [InlineData("SELECT * FROM users FULL OUTER JOIN orders ON users.id = orders.user_id;")]
-    [InlineData("SELECT * FROM users CROSS JOIN orders;")]
-    [InlineData("SELECT * FROM users;")]  // Single table
-    [InlineData("SELECT name, email FROM users;")]
-    [InlineData("")]  // Empty
-    public void Analyze_WhenExplicitJoin_ReturnsEmpty(string sql)
-    {
-        // Arrange
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Empty(diagnostics);
-    }
-
-    [Fact]
-    public void Analyze_MultipleCommaSeparatedTables_ReturnsDiagnostic()
-    {
-        // Arrange
-        const string sql = "SELECT * FROM users, orders, products, categories;";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Single(diagnostics);
-        Assert.Equal("require-explicit-join-type", diagnostics[0].Code);
-    }
-
-    [Fact]
-    public void Analyze_SingleTable_ReturnsEmpty()
-    {
-        // Arrange
-        const string sql = "SELECT id, name, email FROM users WHERE active = 1;";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Empty(diagnostics);
-    }
-
-    [Fact]
-    public void Analyze_CommaSeparatedWithWhere_ReturnsDiagnostic()
-    {
-        // Arrange
-        const string sql = @"
-            SELECT u.name, o.total
-            FROM users u, orders o
-            WHERE u.id = o.user_id;";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Single(diagnostics);
-        Assert.Equal("require-explicit-join-type", diagnostics[0].Code);
-    }
-
-    [Fact]
-    public void Analyze_ExplicitJoinChain_ReturnsEmpty()
-    {
-        // Arrange
-        const string sql = @"
-            SELECT u.name, o.total, p.name
-            FROM users u
-            INNER JOIN orders o ON u.id = o.user_id
-            INNER JOIN products p ON o.product_id = p.id;";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Empty(diagnostics);
-    }
-
-    [Fact]
-    public void Analyze_SubqueryWithCommaSeparated_ReturnsDiagnostic()
-    {
-        // Arrange
-        const string sql = @"
-            SELECT * FROM (
-                SELECT * FROM users, orders
-            ) AS subquery;";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.NotEmpty(diagnostics);
-        Assert.Equal("require-explicit-join-type", diagnostics[0].Code);
-    }
-
-    [Fact]
-    public void Analyze_EmptyInput_ReturnsEmpty()
-    {
-        // Arrange
-        var context = CreateContext("");
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Empty(diagnostics);
-    }
-
-    [Fact]
-    public void Metadata_HasCorrectProperties()
-    {
-        // Assert
-        Assert.Equal("require-explicit-join-type", _rule.Metadata.RuleId);
-        Assert.Equal("Query Structure", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
-        Assert.False(_rule.Metadata.Fixable);
-    }
-
-    [Fact]
-    public void GetFixes_ReturnsEmpty()
-    {
-        // Arrange
-        var context = CreateContext("SELECT * FROM users, orders;");
-        var diagnostic = new Diagnostic(
-            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
-            Message: "test",
-            Code: "require-explicit-join-type"
-        );
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        Assert.Empty(fixes);
-    }
-
     private static RuleContext CreateContext(string sql)
     {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
+        using var reader = new StringReader(sql);
+        var fragment = parser.Parse(reader, out var parseErrors);
 
-        using var fragmentReader = new StringReader(sql);
-        var fragment = parser.Parse(fragmentReader, out IList<ParseError> parseErrors);
+        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
+        var tokens = Tokenize(sql);
 
-        using var tokenReader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
+        return new RuleContext(
+            FilePath: "<test>",
+            CompatLevel: 150,
+            Ast: ast,
+            Tokens: tokens,
+            Settings: new RuleSettings()
+        );
+    }
 
-        var tokens = tokenStream
+    private static IReadOnlyList<Token> Tokenize(string sql)
+    {
+        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
+        using var reader = new StringReader(sql);
+        var tokenStream = parser.GetTokenStream(reader, out _);
+        return tokenStream
             .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
             .Select(token =>
             {
@@ -197,15 +45,163 @@ public sealed class RequireExplicitJoinTypeRuleTests
                     token.TokenType.ToString());
             })
             .ToArray();
+    }
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors.ToArray(), tokenErrors.ToArray());
+    [Fact]
+    public void Analyze_ImplicitInnerJoin_ReturnsDiagnostic()
+    {
+        var sql = "SELECT * FROM dbo.TableA JOIN dbo.TableB ON TableA.Id = TableB.Id;";
+        var context = CreateContext(sql);
 
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+        Assert.Equal("require-explicit-join-type", diagnostic.Code);
+        Assert.Equal(
+            "JOIN must be explicit: use INNER JOIN, LEFT OUTER JOIN, RIGHT OUTER JOIN, or FULL OUTER JOIN.",
+            diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_ImplicitOuterJoin_ReturnsDiagnostic()
+    {
+        var sql = "SELECT * FROM dbo.TableA LEFT JOIN dbo.TableB ON TableA.Id = TableB.Id;";
+        var context = CreateContext(sql);
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+        Assert.Equal("require-explicit-join-type", diagnostic.Code);
+    }
+
+    [Fact]
+    public void Analyze_ExplicitJoinTypes_NoDiagnostics()
+    {
+        var sql = """
+                  SELECT *
+                  FROM dbo.TableA
+                  INNER JOIN dbo.TableB ON TableA.Id = TableB.Id
+                  LEFT OUTER JOIN dbo.TableC ON TableA.Id = TableC.Id
+                  RIGHT OUTER JOIN dbo.TableD ON TableA.Id = TableD.Id
+                  FULL OUTER JOIN dbo.TableE ON TableA.Id = TableE.Id;
+                  """;
+        var context = CreateContext(sql);
+
+        Assert.Empty(_rule.Analyze(context));
+    }
+
+    [Fact]
+    public void Analyze_CrossJoin_NoDiagnostics()
+    {
+        var sql = "SELECT * FROM dbo.TableA CROSS JOIN dbo.TableB;";
+        var context = CreateContext(sql);
+
+        Assert.Empty(_rule.Analyze(context));
+    }
+
+    [Fact]
+    public void Analyze_CommaSeparatedTables_NoDiagnostics()
+    {
+        var sql = "SELECT * FROM dbo.TableA, dbo.TableB;";
+        var context = CreateContext(sql);
+
+        Assert.Empty(_rule.Analyze(context));
+    }
+
+    [Fact]
+    public void GetFixes_ImplicitInnerJoin_InsertsInnerKeyword()
+    {
+        var sql = "SELECT * FROM dbo.TableA JOIN dbo.TableB ON TableA.Id = TableB.Id;";
+        var context = CreateContext(sql);
+        var diagnostic = _rule.Analyze(context).Single();
+
+        var fix = Assert.Single(_rule.GetFixes(context, diagnostic));
+        var edit = Assert.Single(fix.Edits);
+
+        var updated = Apply(sql, edit);
+        Assert.Equal("SELECT * FROM dbo.TableA INNER JOIN dbo.TableB ON TableA.Id = TableB.Id;", updated);
+    }
+
+    [Fact]
+    public void GetFixes_LeftJoinWithoutOuter_InsertsOuterKeyword()
+    {
+        var sql = "SELECT * FROM dbo.TableA LEFT JOIN dbo.TableB ON TableA.Id = TableB.Id;";
+        var context = CreateContext(sql);
+        var diagnostic = _rule.Analyze(context).Single();
+
+        var fix = Assert.Single(_rule.GetFixes(context, diagnostic));
+        var edit = Assert.Single(fix.Edits);
+
+        var updated = Apply(sql, edit);
+        Assert.Equal("SELECT * FROM dbo.TableA LEFT OUTER JOIN dbo.TableB ON TableA.Id = TableB.Id;", updated);
+    }
+
+    [Fact]
+    public void GetFixes_LeftJoinHintWithoutOuter_InsertsOuterBeforeHint()
+    {
+        var sql = "SELECT * FROM dbo.TableA LEFT HASH JOIN dbo.TableB ON TableA.Id = TableB.Id;";
+        var context = CreateContext(sql);
+        var diagnostic = _rule.Analyze(context).Single();
+
+        var fix = Assert.Single(_rule.GetFixes(context, diagnostic));
+        var edit = Assert.Single(fix.Edits);
+
+        var updated = Apply(sql, edit);
+        Assert.Equal("SELECT * FROM dbo.TableA LEFT OUTER HASH JOIN dbo.TableB ON TableA.Id = TableB.Id;", updated);
+    }
+
+    [Fact]
+    public void Metadata_HasCorrectProperties()
+    {
+        Assert.Equal("require-explicit-join-type", _rule.Metadata.RuleId);
+        Assert.Equal("Query Structure", _rule.Metadata.Category);
+        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
+        Assert.True(_rule.Metadata.Fixable);
+    }
+
+    private static string Apply(string text, TextEdit edit)
+    {
+        var startIndex = IndexFromPosition(text, edit.Range.Start);
+        var endIndex = IndexFromPosition(text, edit.Range.End);
+        return string.Concat(text.AsSpan(0, startIndex), edit.NewText, text.AsSpan(endIndex));
+    }
+
+    private static int IndexFromPosition(string text, Position position)
+    {
+        var line = 0;
+        var character = 0;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (line == position.Line && character == position.Character)
+            {
+                return i;
+            }
+
+            var ch = text[i];
+            if (ch == '\r')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                }
+
+                line++;
+                character = 0;
+                continue;
+            }
+
+            if (ch == '\n')
+            {
+                line++;
+                character = 0;
+                continue;
+            }
+
+            character++;
+        }
+
+        if (line == position.Line && character == position.Character)
+        {
+            return text.Length;
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(position), $"Position {position.Line}:{position.Character} is outside the text.");
     }
 }
