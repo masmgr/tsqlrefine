@@ -45,6 +45,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new LinkedServerRule(),
             new NamedConstraintRule(),
             new CrossDatabaseTransactionRule(),
+            new EscapeKeywordIdentifierRule(),
             new KeywordCapitalizationRule(),
             new DuplicateEmptyLineRule(),
             new DuplicateGoRule(),
