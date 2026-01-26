@@ -11,7 +11,7 @@ public sealed class SemicolonTerminationRule : IRule
         Description: "SQL statements should be terminated with a semicolon",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
-        Fixable: false
+        Fixable: true
     );
 
     public IEnumerable<Diagnostic> Analyze(RuleContext context)
@@ -44,15 +44,58 @@ public sealed class SemicolonTerminationRule : IRule
                         Message: "Statement should be terminated with a semicolon",
                         Severity: null,
                         Code: Metadata.RuleId,
-                        Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
+                        Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Fixable: true)
                     );
                 }
             }
         }
     }
 
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        RuleHelpers.NoFixes(context, diagnostic);
+    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(diagnostic);
+
+        if (context.Ast.Fragment is null || context.Ast.Fragment is not TSqlScript script)
+        {
+            return Array.Empty<Fix>();
+        }
+
+        if (script.ScriptTokenStream is null || script.ScriptTokenStream.Count == 0)
+        {
+            return Array.Empty<Fix>();
+        }
+
+        foreach (var batch in script.Batches)
+        {
+            foreach (var statement in batch.Statements)
+            {
+                var range = ScriptDomHelpers.GetRange(statement);
+                if (range != diagnostic.Range)
+                {
+                    continue;
+                }
+
+                if (HasSemicolonTerminator(statement, script.ScriptTokenStream))
+                {
+                    return Array.Empty<Fix>();
+                }
+
+                var insertAt = range.End;
+                var insertRange = new TsqlRefine.PluginSdk.Range(insertAt, insertAt);
+
+                return new[]
+                {
+                    new Fix(
+                        Title: "Insert semicolon",
+                        Edits: new[] { new TextEdit(insertRange, ";") }
+                    )
+                };
+            }
+        }
+
+        return Array.Empty<Fix>();
+    }
 
     private static bool HasSemicolonTerminator(TSqlStatement statement, IList<TSqlParserToken> tokenStream)
     {
