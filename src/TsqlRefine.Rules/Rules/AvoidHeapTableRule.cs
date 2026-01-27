@@ -39,6 +39,14 @@ public sealed class AvoidHeapTableRule : IRule
     {
         public override void ExplicitVisit(CreateTableStatement node)
         {
+            // Skip temporary tables (#temp, ##temp)
+            var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
+            if (tableName != null && tableName.StartsWith("#"))
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
             bool hasClusteredIndex = false;
 
             // Check for clustered primary key constraint

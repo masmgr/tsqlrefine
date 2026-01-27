@@ -90,12 +90,28 @@ CREATE TABLE order_items (
     product_id INT,
     CONSTRAINT PK_OrderItems PRIMARY KEY CLUSTERED (order_id, line_number)
 );
+
+-- Temporary tables (automatically excluded from this rule)
+CREATE TABLE #temp_staging (
+    id INT,
+    data VARCHAR(100)
+);
+
+CREATE TABLE ##global_temp (
+    id INT,
+    value DECIMAL(10,2)
+);
 ```
+
+## Exclusions
+
+This rule does **not** apply to:
+- **Temporary tables**: Local temporary tables (`#temp`) and global temporary tables (`##temp`) are automatically excluded from this rule, as they are typically used for short-lived staging scenarios where heap storage is acceptable.
 
 ## Valid Use Cases for Heaps
 
-In rare cases, heaps may be appropriate:
-- **Staging tables**: Temporary tables for bulk loading where data will be immediately processed and deleted
+In rare cases, heaps may be appropriate for permanent tables:
+- **Staging tables**: Tables for bulk loading where data will be immediately processed and deleted
 - **Very small tables**: Tables with only a few rows where index overhead exceeds benefits
 - **Write-heavy workloads**: Tables with extremely high insert rates and no queries (rare)
 

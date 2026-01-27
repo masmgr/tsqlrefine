@@ -151,6 +151,26 @@ public sealed class AvoidHeapTableRuleTests
         Assert.Empty(diagnostics);
     }
 
+    [Theory]
+    [InlineData("CREATE TABLE #temp (id INT, name VARCHAR(50));")]
+    [InlineData("CREATE TABLE ##global_temp (id INT, description VARCHAR(100));")]
+    [InlineData(@"CREATE TABLE #orders (
+        order_id INT NOT NULL,
+        customer_id INT,
+        order_date DATE
+    );")]
+    public void Analyze_TemporaryTableWithoutClusteredIndex_ReturnsEmpty(string sql)
+    {
+        // Arrange
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
     [Fact]
     public void Analyze_EmptyInput_ReturnsEmpty()
     {

@@ -52,7 +52,7 @@ This page is a catalog of rules provided by this plugin. Each item links to a pe
 ## Schema Design
 
 - [`require-primary-key-or-unique-constraint`](require-primary-key-or-unique-constraint.md): Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.
-- [`avoid-heap-table`](avoid-heap-table.md): Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.
+- [`avoid-heap-table`](avoid-heap-table.md): Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs. Temporary tables (`#temp`, `##temp`) are excluded.
 - [`require-ms-description-for-table-definition-file`](require-ms-description-for-table-definition-file.md): Ensures table definition files include an `MS_Description` extended property so schema intent is captured alongside DDL.
 - [`disallow-select-into`](disallow-select-into.md): Warns on `SELECT ... INTO`; it implicitly creates schema and can produce fragile, environment-dependent results.
 

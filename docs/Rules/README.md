@@ -113,7 +113,7 @@ Rules that flag patterns that can cause performance issues.
 | [avoid-top-in-dml](performance/avoid-top-in-dml.md) | Disallows TOP in UPDATE/DELETE | Warning | No |
 | [disallow-select-into](performance/disallow-select-into.md) | Warns on SELECT ... INTO | Warning | No |
 | [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md) | Forbids TOP 100 PERCENT ORDER BY | Warning | No |
-| [avoid-heap-table](performance/avoid-heap-table.md) | Warns when tables are created as heaps (no clustered index) | Warning | No |
+| [avoid-heap-table](performance/avoid-heap-table.md) | Warns when tables are created as heaps (excludes temporary tables) | Warning | No |
 
 ### Naming (1 rule)
 
@@ -178,7 +178,7 @@ Rules that enforce database schema best practices.
 |---------|-------------|----------|---------|
 | [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md) | Requires PRIMARY KEY or UNIQUE constraints for user tables | Warning | No |
 | [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md) | Ensures table definition files include MS_Description extended property | Information | No |
-| [avoid-heap-table](schema/avoid-heap-table.md) | Warns when tables are created as heaps | Warning | No |
+| [avoid-heap-table](schema/avoid-heap-table.md) | Warns when tables are created as heaps (excludes temporary tables) | Warning | No |
 
 ### Debug (1 rule)
 
