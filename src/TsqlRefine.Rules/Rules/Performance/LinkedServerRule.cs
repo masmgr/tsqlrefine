@@ -10,7 +10,7 @@ public sealed class LinkedServerRule : IRule
         RuleId: "linked-server",
         Description: "Prohibit linked server queries (4-part identifiers); use alternative data access patterns",
         Category: "Performance",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

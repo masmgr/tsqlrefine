@@ -49,7 +49,7 @@ Common options:
 - `--config <path>`: override config discovery
 - `--ignorelist <path>`: override ignore list discovery
 - `--ruleset <path>`: override the ruleset file from config
-- `--preset <recommended|strict|security-only>`: use a preset ruleset from `rulesets/`
+- `--preset <recommended|strict|pragmatic|security-only>`: use a preset ruleset from `rulesets/`
 - `--output <text|json>`: choose output format (for `lint`/`check`)
 
 ## Rules and plugins

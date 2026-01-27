@@ -1,0 +1,28 @@
+{
+  "rules": [
+    { "id": "dml-without-where", "enabled": true },
+    { "id": "top-without-order-by", "enabled": true },
+    { "id": "avoid-merge", "enabled": true },
+    { "id": "semantic/undefined-alias", "enabled": true },
+    { "id": "semantic/duplicate-alias", "enabled": true },
+    { "id": "semantic/cte-name-conflict", "enabled": true },
+    { "id": "semantic/insert-column-count-mismatch", "enabled": true },
+    { "id": "escape-keyword-identifier", "enabled": true },
+    { "id": "avoid-null-comparison", "enabled": true },
+    { "id": "require-parentheses-for-mixed-and-or", "enabled": true },
+    { "id": "avoid-nolock", "enabled": true },
+    { "id": "require-column-list-for-insert-values", "enabled": true },
+    { "id": "require-column-list-for-insert-select", "enabled": true },
+    { "id": "avoid-atat-identity", "enabled": true },
+    { "id": "order-by-in-subquery", "enabled": true },
+    { "id": "avoid-exec-dynamic-sql", "enabled": true },
+    { "id": "require-try-catch-for-transaction", "enabled": true },
+    { "id": "require-xact-abort-on", "enabled": true },
+    { "id": "set-ansi", "enabled": true },
+    { "id": "set-nocount", "enabled": true },
+    { "id": "set-quoted-identifier", "enabled": true },
+    { "id": "avoid-implicit-conversion-in-predicate", "enabled": true },
+    { "id": "non-sargable", "enabled": true },
+    { "id": "disallow-cursors", "enabled": true }
+  ]
+}

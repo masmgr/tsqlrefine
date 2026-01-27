@@ -10,7 +10,7 @@ public sealed class QualifiedSelectColumnsRule : IRule
         RuleId: "qualified-select-columns",
         Description: "Requires qualifying columns in SELECT lists when multiple tables are referenced; prevents subtle 'wrong table' mistakes when column names overlap.",
         Category: "Style",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

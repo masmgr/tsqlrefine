@@ -10,7 +10,7 @@ public sealed class FullTextRule : IRule
         RuleId: "full-text",
         Description: "Prohibit full-text search predicates; use alternative search strategies for better performance",
         Category: "Performance",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

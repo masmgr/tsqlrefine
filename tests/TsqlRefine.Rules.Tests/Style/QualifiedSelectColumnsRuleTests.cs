@@ -183,7 +183,7 @@ public sealed class QualifiedSelectColumnsRuleTests
         // Assert
         Assert.Equal("qualified-select-columns", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 

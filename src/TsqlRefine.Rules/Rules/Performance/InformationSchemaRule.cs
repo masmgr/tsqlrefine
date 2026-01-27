@@ -10,7 +10,7 @@ public sealed class InformationSchemaRule : IRule
         RuleId: "information-schema",
         Description: "Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance",
         Category: "Performance",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

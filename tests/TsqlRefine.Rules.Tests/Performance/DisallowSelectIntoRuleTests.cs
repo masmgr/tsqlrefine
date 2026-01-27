@@ -92,7 +92,7 @@ public sealed class DisallowSelectIntoRuleTests
         // Assert
         Assert.Equal("disallow-select-into", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 

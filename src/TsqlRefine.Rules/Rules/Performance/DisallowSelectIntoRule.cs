@@ -10,7 +10,7 @@ public sealed class DisallowSelectIntoRule : IRule
         RuleId: "disallow-select-into",
         Description: "Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.",
         Category: "Performance",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

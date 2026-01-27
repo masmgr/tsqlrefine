@@ -206,7 +206,7 @@ Command-line interface built on System.CommandLine.
 - `--stdin-filepath`: Set filepath for stdin input
 - `--output`: Output format (text/json)
 - `--severity`: Minimum severity level (error/warning/info/hint)
-- `--preset`: Use preset ruleset (recommended/strict/security-only)
+- `--preset`: Use preset ruleset (recommended/strict/pragmatic/security-only)
 - `--compat-level`: SQL Server compatibility level
 - `--ruleset`: Custom ruleset path
 - `--write`: Apply changes in-place (format/fix commands)
@@ -309,11 +309,11 @@ JSON schema available at `schemas/ruleset.schema.json`.
 }
 ```
 
-**Preset rulesets** in `samples/rulesets/`:
-- `recommended.json`: All 7 rules enabled (default)
-- `strict.json`: All 7 rules enabled (same as recommended)
-- `security-only.json`: Only `dml-without-where` rule enabled
-- `custom.json`: Example of selective rule enabling
+**Preset rulesets** in `rulesets/`:
+- `recommended.json`: Balanced production use (~43 rules) - High-value rules with minimal false positives
+- `strict.json`: Maximum enforcement (~78 rules) - All rules except demonstrably incorrect ones (excludes count-star)
+- `pragmatic.json`: Production-ready minimum (~26 rules) - Prevent bugs and data loss, minimize style noise
+- `security-only.json`: Security and critical safety (~10 rules) - Prevent security vulnerabilities and destructive operations
 
 **Config load order**: CLI args → tsqlrefine.json → defaults
 
@@ -571,7 +571,7 @@ Key docs in `docs/`:
 
 Sample files in `samples/`:
 - `configs/`: Configuration file examples (basic, advanced, minimal, sql-server-2012)
-- `rulesets/`: Preset ruleset files (recommended, strict, security-only, custom)
+- `rulesets/`: Preset ruleset files (recommended, strict, pragmatic, security-only)
 - `sql/`: SQL examples demonstrating each rule violation
 - `README.md`: Comprehensive guide to samples
 

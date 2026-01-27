@@ -8,7 +8,7 @@ public sealed class PrintStatementRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "print-statement",
-        Description: "Prohibit PRINT statements; use RAISERROR for error messages and debugging",
+        Description: "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
         Category: "Debug",
         DefaultSeverity: RuleSeverity.Information,
         Fixable: false
@@ -41,7 +41,7 @@ public sealed class PrintStatementRule : IRule
         {
             AddDiagnostic(
                 fragment: node,
-                message: "PRINT statement found. Use RAISERROR for error messages and debugging instead.",
+                message: "PRINT statement found. Use THROW or RAISERROR WITH NOWAIT for error messages. For debugging, use RAISERROR WITH NOWAIT to ensure immediate output.",
                 code: "print-statement",
                 category: "Debug",
                 fixable: false

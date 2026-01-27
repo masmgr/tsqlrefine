@@ -8,7 +8,7 @@ public sealed class AvoidMergeRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-merge",
-        Description: "Avoid using MERGE statement due to known bugs and unpredictable behavior",
+        Description: "Avoid using MERGE statement due to known bugs (see KB 3180087, KB 4519788)",
         Category: "Safety",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
@@ -41,7 +41,7 @@ public sealed class AvoidMergeRule : IRule
         {
             AddDiagnostic(
                 fragment: node,
-                message: "Avoid using MERGE statement. MERGE has known bugs and can produce unpredictable results. Consider using separate INSERT, UPDATE, and DELETE statements instead.",
+                message: "Avoid MERGE statement due to known bugs (see KB 3180087, KB 4519788). MERGE can cause data corruption, race conditions, and non-deterministic behavior. Use explicit INSERT, UPDATE, DELETE statements with proper transaction handling instead.",
                 code: "avoid-merge",
                 category: "Safety",
                 fixable: false

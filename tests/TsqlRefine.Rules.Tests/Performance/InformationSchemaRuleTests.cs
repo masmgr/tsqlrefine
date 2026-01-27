@@ -15,7 +15,7 @@ public sealed class InformationSchemaRuleTests
 
         Assert.Equal("information-schema", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
     }
 

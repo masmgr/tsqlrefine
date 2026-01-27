@@ -35,7 +35,7 @@ public sealed class PrintStatementRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("print-statement", diagnostics[0].Code);
-        Assert.Contains("RAISERROR", diagnostics[0].Message);
+        Assert.Contains("THROW", diagnostics[0].Message);
     }
 
     [Theory]
