@@ -311,7 +311,7 @@ JSON schema available at `schemas/ruleset.schema.json`.
 
 **Preset rulesets** in `rulesets/`:
 - `recommended.json`: Balanced production use (~43 rules) - High-value rules with minimal false positives
-- `strict.json`: Maximum enforcement (~78 rules) - All rules except demonstrably incorrect ones (excludes count-star)
+- `strict.json`: Maximum enforcement (~75 rules) - All rules except demonstrably incorrect ones
 - `pragmatic.json`: Production-ready minimum (~26 rules) - Prevent bugs and data loss, minimize style noise
 - `security-only.json`: Security and critical safety (~10 rules) - Prevent security vulnerabilities and destructive operations
 

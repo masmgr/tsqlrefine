@@ -30,7 +30,6 @@ This page is a catalog of rules provided by this plugin. Each item links to a pe
 
 - [`require-as-for-column-alias`](require-as-for-column-alias.md): Requires `AS` for column aliases to make intent explicit and reduce "is this an alias?" ambiguity.
 - [`require-as-for-table-alias`](require-as-for-table-alias.md): Requires `AS` for table/derived-table aliases for consistent, scan-friendly FROM/JOIN clauses.
-- [`meaningful-alias`](meaningful-alias.md): Warns on single-character table aliases in multi-table queries; short aliases can obscure meaning and make reviews harder.
 
 ## Control Flow Safety
 

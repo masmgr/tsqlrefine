@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 83 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 80 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -23,7 +23,7 @@ TsqlRefine provides a comprehensive set of rules to enforce T-SQL best practices
 
 ### Rule Statistics
 
-- **Total Rules**: 83
+- **Total Rules**: 80
 - **Fixable Rules**: 8 (10%)
 - **Error Severity**: 13 rules (16%)
 - **Warning Severity**: 35 rules (42%)
@@ -39,8 +39,8 @@ TsqlRefine organizes rules into the following categories:
 | **Safety** | 3 | Prevents destructive or dangerous operations |
 | **Security** | 1 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 16 | Flags patterns that can cause performance issues |
-| **Naming** | 1 | Enforces naming conventions and readability |
-| **Style** | 12 | Maintains code formatting and consistency |
+| **Naming** | 0 | Enforces naming conventions and readability |
+| **Style** | 11 | Maintains code formatting and consistency |
 | **Transactions** | 6 | Ensures proper transaction handling and session settings |
 | **Schema** | 3 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
@@ -115,15 +115,13 @@ Rules that flag patterns that can cause performance issues.
 | [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md) | Forbids TOP 100 PERCENT ORDER BY | Warning | No |
 | [avoid-heap-table](performance/avoid-heap-table.md) | Warns when tables are created as heaps (excludes temporary tables) | Warning | No |
 
-### Naming (1 rule)
+### Naming (0 rules)
 
 Rules that enforce naming conventions and readability.
 
-| Rule ID | Description | Severity | Fixable |
-|---------|-------------|----------|---------|
-| [meaningful-alias](naming/meaningful-alias.md) | Use meaningful aliases instead of single-character aliases in multi-table queries | Information | No |
+No rules in this category.
 
-### Style (22 rules)
+### Style (20 rules)
 
 Rules that maintain code formatting and consistency.
 
@@ -132,11 +130,9 @@ Rules that maintain code formatting and consistency.
 | [conditional-begin-end](style/conditional-begin-end.md) | Require BEGIN/END blocks in conditional statements | Information | No |
 | [require-begin-end-for-if-with-controlflow-exception](style/require-begin-end-for-if-with-controlflow-exception.md) | Enforces BEGIN/END for IF/ELSE blocks | Warning | No |
 | [require-begin-end-for-while](style/require-begin-end-for-while.md) | Enforces BEGIN/END for every WHILE body | Warning | No |
-| [keyword-capitalization](style/keyword-capitalization.md) | SQL keywords should be in uppercase | Information | No |
 | [duplicate-empty-line](style/duplicate-empty-line.md) | Avoid consecutive empty lines | Information | No |
 | [nested-block-comments](style/nested-block-comments.md) | Avoid nested block comments | Warning | No |
 | [join-keyword](style/join-keyword.md) | Detects comma-separated table lists in FROM clause | Warning | No |
-| [count-star](style/count-star.md) | Detects COUNT(*) usage and suggests COUNT(1) or COUNT(column_name) | Information | No |
 | [duplicate-go](style/duplicate-go.md) | Avoid consecutive GO batch separators | Information | No |
 | [require-as-for-column-alias](style/require-as-for-column-alias.md) | Column aliases should use the AS keyword | Information | **Yes** |
 | [require-as-for-table-alias](style/require-as-for-table-alias.md) | Table aliases should use the AS keyword | Information | **Yes** |

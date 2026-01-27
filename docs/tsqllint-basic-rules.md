@@ -19,23 +19,6 @@
 
 ## コードスタイルとフォーマット
 
-### keyword-capitalization
-**目的**: SQLキーワードを大文字で記述することを要求
-
-**理由**: キーワードを大文字にすることで可読性が向上し、キーワードとオブジェクトの明確な区別が可能
-
-**不正な例**:
-```sql
-select * from foo;
-```
-
-**正しい例**:
-```sql
-SELECT * FROM foo;
-```
-
----
-
 ### semicolon-termination
 **目的**: クエリをセミコロンで終了することを強制
 
@@ -232,25 +215,6 @@ SELECT * FROM dbo.MyTable;
 **正しい例**:
 ```sql
 SELECT user_id, user_name, created_on FROM dbo.MyTable;
-```
-
----
-
-### count-star
-**目的**: COUNT(*)の使用を禁止
-
-**理由**: より明確にするためCOUNT(1)またはCOUNT(column_name)を使用
-
-**不正な例**:
-```sql
-SELECT COUNT(*) FROM Production.Product;
-```
-
-**正しい例**:
-```sql
-SELECT COUNT(1) FROM Production.Product;
--- または
-SELECT COUNT([ProductID]) FROM Production.Product;
 ```
 
 ---
