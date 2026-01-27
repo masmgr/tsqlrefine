@@ -2,7 +2,6 @@ using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
 using TsqlRefine.Rules.Rules.Debug;
-using TsqlRefine.Rules.Rules.Naming;
 using TsqlRefine.Rules.Rules.Performance;
 using TsqlRefine.Rules.Rules.Safety;
 using TsqlRefine.Rules.Rules.Schema;
