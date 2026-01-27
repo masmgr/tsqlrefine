@@ -49,6 +49,61 @@ public sealed class AvoidSelectStarRuleTests
         Assert.Empty(diagnostics);
     }
 
+    [Fact]
+    public void Analyze_WhenSelectStarInExists_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "select id from t1 where exists (select * from t2 where t2.id = t1.id);";
+        var context = new RuleContext(
+            FilePath: "<test>",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst(sql),
+            Tokens: Tokenize(sql),
+            Settings: new RuleSettings()
+        );
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectStarInNotExists_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "select id from t1 where not exists (select * from t2 where t2.id = t1.id);";
+        var context = new RuleContext(
+            FilePath: "<test>",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst(sql),
+            Tokens: Tokenize(sql),
+            Settings: new RuleSettings()
+        );
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectStarOutsideExists_ReturnsDiagnostic()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "select * from t1 where exists (select 1 from t2);";
+        var context = new RuleContext(
+            FilePath: "<test>",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst(sql),
+            Tokens: Tokenize(sql),
+            Settings: new RuleSettings()
+        );
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-select-star", diagnostics[0].Data?.RuleId);
+    }
+
     private static IReadOnlyList<Token> Tokenize(string sql)
     {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
