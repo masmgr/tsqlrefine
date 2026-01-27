@@ -1,6 +1,7 @@
 using TsqlRefine.Core.Engine;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
+using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Rules.Style;
 
 namespace TsqlRefine.Core.Tests;
 
