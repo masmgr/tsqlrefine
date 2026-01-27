@@ -8,7 +8,7 @@ public sealed class NonSargableRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "non-sargable",
-        Description: "Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (excluding UPPER/LOWER and CAST/CONVERT)",
+        Description: "Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates)",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
@@ -86,13 +86,13 @@ public sealed class NonSargableRule : IRule
             if (expression == null)
                 return;
 
-            // Check for functions on columns
+            // Check for functions on columns (excluding CAST/CONVERT which are handled by avoid-implicit-conversion-in-predicate)
             if (expression is FunctionCall functionCall)
             {
                 var functionName = functionCall.FunctionName?.Value?.ToUpperInvariant();
 
-                // Exclude UPPER/LOWER (covered by upper-lower rule) and CAST/CONVERT (covered by avoid-implicit-conversion-in-predicate)
-                if (functionName is "UPPER" or "LOWER" or "CAST" or "CONVERT")
+                // CAST/CONVERT are covered by avoid-implicit-conversion-in-predicate rule
+                if (functionName is "CAST" or "CONVERT")
                 {
                     return;
                 }

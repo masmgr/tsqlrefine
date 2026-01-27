@@ -8,7 +8,7 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-implicit-conversion-in-predicate",
-        Description: "Detects functions or conversions applied to columns in predicates which can prevent index usage and cause performance issues",
+        Description: "Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
@@ -86,14 +86,14 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
             if (expression == null)
                 return;
 
-            // Check for CAST/CONVERT
+            // Check for CAST/CONVERT only
             if (expression is CastCall castCall)
             {
                 if (ContainsColumnReference(castCall.Parameter))
                 {
                     AddDiagnostic(
                         fragment: castCall,
-                        message: "Avoid CAST/CONVERT on columns in predicates. This prevents index usage and can cause implicit conversions. Consider storing data in the appropriate type or applying conversion to the literal value instead.",
+                        message: "Avoid CAST on columns in predicates. This prevents index usage and can cause implicit type conversions. Consider storing data in the appropriate type or applying conversion to the literal value instead.",
                         code: "avoid-implicit-conversion-in-predicate",
                         category: "Performance",
                         fixable: false
@@ -106,23 +106,7 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
                 {
                     AddDiagnostic(
                         fragment: convertCall,
-                        message: "Avoid CAST/CONVERT on columns in predicates. This prevents index usage and can cause implicit conversions. Consider storing data in the appropriate type or applying conversion to the literal value instead.",
-                        code: "avoid-implicit-conversion-in-predicate",
-                        category: "Performance",
-                        fixable: false
-                    );
-                }
-            }
-            // Check for function calls
-            else if (expression is FunctionCall functionCall)
-            {
-                // Check if any parameter contains a column reference
-                if (functionCall.Parameters != null && functionCall.Parameters.Any(p => ContainsColumnReference(p)))
-                {
-                    var functionName = functionCall.FunctionName?.Value ?? "function";
-                    AddDiagnostic(
-                        fragment: functionCall,
-                        message: $"Avoid applying function '{functionName}' to columns in predicates. This prevents index usage and may cause performance issues. Consider using computed columns with indexes or rewriting the query.",
+                        message: "Avoid CONVERT on columns in predicates. This prevents index usage and can cause implicit type conversions. Consider storing data in the appropriate type or applying conversion to the literal value instead.",
                         code: "avoid-implicit-conversion-in-predicate",
                         category: "Performance",
                         fixable: false

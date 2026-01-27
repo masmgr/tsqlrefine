@@ -23,7 +23,7 @@ public sealed class AvoidImplicitConversionInPredicateRuleTests
         // Assert
         Assert.Single(diagnostics);
         Assert.Equal("avoid-implicit-conversion-in-predicate", diagnostics[0].Code);
-        Assert.Contains("CAST/CONVERT", diagnostics[0].Message);
+        Assert.Contains("CONVERT", diagnostics[0].Message);
     }
 
     [Fact]
@@ -42,40 +42,10 @@ public sealed class AvoidImplicitConversionInPredicateRuleTests
     }
 
     [Fact]
-    public void Analyze_UpperOnColumnInWhere_ReturnsDiagnostic()
+    public void Analyze_MultipleCastConvertInWhere_ReturnsMultipleDiagnostics()
     {
         // Arrange
-        const string sql = "SELECT * FROM users WHERE UPPER(name) = 'JOHN';";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Single(diagnostics);
-        Assert.Equal("avoid-implicit-conversion-in-predicate", diagnostics[0].Code);
-    }
-
-    [Fact]
-    public void Analyze_SubstringOnColumnInWhere_ReturnsDiagnostic()
-    {
-        // Arrange
-        const string sql = "SELECT * FROM users WHERE SUBSTRING(name, 1, 3) = 'Joh';";
-        var context = CreateContext(sql);
-
-        // Act
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Assert
-        Assert.Single(diagnostics);
-        Assert.Equal("avoid-implicit-conversion-in-predicate", diagnostics[0].Code);
-    }
-
-    [Fact]
-    public void Analyze_MultipleFunctionsInWhere_ReturnsMultipleDiagnostics()
-    {
-        // Arrange
-        const string sql = "SELECT * FROM users WHERE UPPER(name) = 'JOHN' AND YEAR(created_date) = 2023;";
+        const string sql = "SELECT * FROM users WHERE CAST(id AS VARCHAR) = '123' AND CONVERT(VARCHAR, user_id) = '456';";
         var context = CreateContext(sql);
 
         // Act
@@ -158,18 +128,31 @@ public sealed class AvoidImplicitConversionInPredicateRuleTests
     }
 
     [Fact]
-    public void Analyze_FunctionOnBothSides_NoDiagnostic()
+    public void Analyze_FunctionOnColumnInWhere_NoDiagnostic()
     {
-        // Arrange
-        const string sql = "SELECT * FROM users WHERE UPPER(name) = UPPER('john');";
+        // Arrange - Regular functions are handled by non-sargable rule
+        const string sql = "SELECT * FROM users WHERE UPPER(name) = 'JOHN';";
         var context = CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
 
         // Assert
-        // Only the left side (column) should trigger
-        Assert.Single(diagnostics);
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_YearFunctionOnColumnInWhere_NoDiagnostic()
+    {
+        // Arrange - Regular functions are handled by non-sargable rule
+        const string sql = "SELECT * FROM orders WHERE YEAR(created_date) = 2023;";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
     }
 
     [Fact]
@@ -189,7 +172,7 @@ public sealed class AvoidImplicitConversionInPredicateRuleTests
     public void GetFixes_ReturnsEmptyCollection()
     {
         // Arrange
-        const string sql = "SELECT * FROM users WHERE UPPER(name) = 'JOHN';";
+        const string sql = "SELECT * FROM users WHERE CAST(id AS VARCHAR) = '123';";
         var context = CreateContext(sql);
         var diagnostic = _rule.Analyze(context).First();
 

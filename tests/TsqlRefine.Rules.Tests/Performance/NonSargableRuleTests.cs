@@ -101,9 +101,9 @@ public sealed class NonSargableRuleTests
     }
 
     [Fact]
-    public void Analyze_UpperLowerInPredicate_NoDiagnostic()
+    public void Analyze_UpperInPredicate_ReturnsDiagnostic()
     {
-        // Arrange - UPPER/LOWER are handled by upper-lower rule
+        // Arrange
         var sql = "SELECT * FROM users WHERE UPPER(username) = 'ADMIN';";
         var context = CreateContext(sql);
 
@@ -111,7 +111,25 @@ public sealed class NonSargableRuleTests
         var diagnostics = _rule.Analyze(context).ToList();
 
         // Assert
-        Assert.Empty(diagnostics);
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("non-sargable", diagnostic.Code);
+        Assert.Contains("UPPER", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_LowerInPredicate_ReturnsDiagnostic()
+    {
+        // Arrange
+        var sql = "SELECT * FROM users WHERE LOWER(username) = 'admin';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("non-sargable", diagnostic.Code);
+        Assert.Contains("LOWER", diagnostic.Message);
     }
 
     [Fact]
