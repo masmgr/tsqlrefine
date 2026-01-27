@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 80 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 74 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -23,11 +23,11 @@ TsqlRefine provides a comprehensive set of rules to enforce T-SQL best practices
 
 ### Rule Statistics
 
-- **Total Rules**: 80
-- **Fixable Rules**: 8 (10%)
-- **Error Severity**: 13 rules (16%)
-- **Warning Severity**: 35 rules (42%)
-- **Information Severity**: 35 rules (42%)
+- **Total Rules**: 74
+- **Fixable Rules**: 8 (11%)
+- **Error Severity**: 10 rules (14%)
+- **Warning Severity**: 46 rules (62%)
+- **Information Severity**: 18 rules (24%)
 
 ## Rule Categories
 
@@ -38,7 +38,7 @@ TsqlRefine organizes rules into the following categories:
 | **Correctness** | 20 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 3 | Prevents destructive or dangerous operations |
 | **Security** | 1 | Identifies security vulnerabilities like SQL injection |
-| **Performance** | 16 | Flags patterns that can cause performance issues |
+| **Performance** | 15 | Flags patterns that can cause performance issues |
 | **Naming** | 0 | Enforces naming conventions and readability |
 | **Style** | 11 | Maintains code formatting and consistency |
 | **Transactions** | 6 | Ensures proper transaction handling and session settings |
@@ -92,7 +92,7 @@ Rules that identify security vulnerabilities.
 |---------|-------------|----------|---------|
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL which can be vulnerable to SQL injection | Warning | No |
 
-### Performance (16 rules)
+### Performance (15 rules)
 
 Rules that flag patterns that can cause performance issues.
 
@@ -113,7 +113,6 @@ Rules that flag patterns that can cause performance issues.
 | [avoid-top-in-dml](performance/avoid-top-in-dml.md) | Disallows TOP in UPDATE/DELETE | Warning | No |
 | [disallow-select-into](performance/disallow-select-into.md) | Warns on SELECT ... INTO | Warning | No |
 | [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md) | Forbids TOP 100 PERCENT ORDER BY | Warning | No |
-| [avoid-heap-table](performance/avoid-heap-table.md) | Warns when tables are created as heaps (excludes temporary tables) | Warning | No |
 
 ### Naming (0 rules)
 
@@ -121,7 +120,7 @@ Rules that enforce naming conventions and readability.
 
 No rules in this category.
 
-### Style (20 rules)
+### Style (25 rules)
 
 Rules that maintain code formatting and consistency.
 
@@ -186,7 +185,7 @@ Rules that control debug and output statements.
 
 ## Rules by Severity
 
-### Error (13 rules)
+### Error (10 rules)
 
 Critical issues that should be fixed immediately.
 
@@ -200,15 +199,14 @@ Critical issues that should be fixed immediately.
 - [order-by-in-subquery](correctness/order-by-in-subquery.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
-- [semantic/set-variable](correctness/semantic-set-variable.md)
 
-### Warning (35 rules)
+### Warning (46 rules)
 
 Issues that should be reviewed and potentially fixed.
 
 See individual category sections above for the complete list.
 
-### Information (35 rules)
+### Information (18 rules)
 
 Informational suggestions for code quality improvements.
 
