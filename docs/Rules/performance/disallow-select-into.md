@@ -1,8 +1,8 @@
 ﻿# Disallow Select Into
 
 **Rule ID:** `disallow-select-into`
-**Category:** Schema Design
-**Severity:** Warning
+**Category:** Performance
+**Severity:** Information
 **Fixable:** No
 
 ## Description
@@ -11,7 +11,7 @@ Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, 
 
 ## Rationale
 
-This rule enforces database schema best practices. Following this rule helps create robust, maintainable database schemas.
+SELECT...INTO implicitly creates schema based on the query result, which can make deployments fragile and the resulting schema harder to reason about. Prefer explicitly defining the table schema and then inserting data to improve predictability and maintainability.
 
 ## Examples
 
@@ -24,7 +24,15 @@ SELECT * INTO #temp FROM users;
 ### Good
 
 ```sql
-SELECT * FROM users;
+CREATE TABLE #temp
+(
+    user_id INT NOT NULL,
+    user_name NVARCHAR(100) NOT NULL
+);
+
+INSERT INTO #temp (user_id, user_name)
+SELECT user_id, user_name
+FROM users;
 ```
 
 ## Configuration

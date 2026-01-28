@@ -1,8 +1,8 @@
 ﻿# Semantic Set Variable
 
 **Rule ID:** `semantic/set-variable`
-**Category:** Style
-**Severity:** Information
+**Category:** Correctness
+**Severity:** Error
 **Fixable:** No
 
 ## Description
@@ -11,7 +11,7 @@ Recommends using SELECT for variable assignment instead of SET for better perfor
 
 ## Rationale
 
-This rule maintains code formatting and consistency. Following this rule improves code readability and makes it easier to maintain.
+Using a consistent variable-assignment pattern improves readability, and SELECT-based assignment can be preferable when assignments come from queries (including multi-variable assignment patterns). This rule encourages that consistency.
 
 ## Examples
 
