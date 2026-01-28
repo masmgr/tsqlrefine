@@ -20,7 +20,9 @@ public sealed record PluginLoadDiagnostic(
     int? ActualApiVersion = null,
     int? ExpectedApiVersion = null,
     string? ExceptionType = null,
-    string? StackTrace = null
+    string? StackTrace = null,
+    IReadOnlyList<string>? NativeDllProbeAttempts = null,
+    string? MissingNativeDll = null
 );
 
 public sealed record LoadedPlugin(
@@ -35,8 +37,41 @@ public sealed record LoadedPlugin(
     public string? Error => Diagnostic.Status == PluginLoadStatus.Success ? null : Diagnostic.Message;
 };
 
+public sealed record PluginLoadSummary(
+    int TotalPlugins,
+    int SuccessCount,
+    int DisabledCount,
+    int ErrorCount,
+    IReadOnlyDictionary<PluginLoadStatus, int> StatusBreakdown
+)
+{
+    public static PluginLoadSummary Create(IEnumerable<LoadedPlugin> plugins)
+    {
+        var pluginList = plugins.ToList();
+        var total = pluginList.Count;
+        var successCount = pluginList.Count(p => p.Diagnostic.Status == PluginLoadStatus.Success);
+        var disabledCount = pluginList.Count(p => p.Diagnostic.Status == PluginLoadStatus.Disabled);
+        var errorCount = pluginList.Count(p =>
+            p.Diagnostic.Status != PluginLoadStatus.Success &&
+            p.Diagnostic.Status != PluginLoadStatus.Disabled);
+
+        var breakdown = pluginList
+            .GroupBy(p => p.Diagnostic.Status)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return new PluginLoadSummary(total, successCount, disabledCount, errorCount, breakdown);
+    }
+};
+
 public sealed class PluginLoader
 {
+    public static (IReadOnlyList<LoadedPlugin> Plugins, PluginLoadSummary Summary) LoadWithSummary(IEnumerable<PluginDescriptor> plugins)
+    {
+        var loadedPlugins = Load(plugins);
+        var summary = PluginLoadSummary.Create(loadedPlugins);
+        return (loadedPlugins, summary);
+    }
+
     public static IReadOnlyList<LoadedPlugin> Load(IEnumerable<PluginDescriptor> plugins)
     {
         var results = new List<LoadedPlugin>();
@@ -53,6 +88,8 @@ public sealed class PluginLoader
                 continue;
             }
 
+            PluginLoadContext? loadContext = null;
+
             try
             {
                 var fullPath = Path.GetFullPath(plugin.Path);
@@ -68,7 +105,7 @@ public sealed class PluginLoader
                     continue;
                 }
 
-                var loadContext = new PluginLoadContext(fullPath);
+                loadContext = new PluginLoadContext(fullPath);
                 var assembly = loadContext.LoadFromAssemblyPath(fullPath);
 
                 var (compatibleProviders, incompatibleProviders) = DiscoverProviders(assembly);
@@ -111,6 +148,47 @@ public sealed class PluginLoader
                         PluginLoadStatus.Success,
                         $"Successfully loaded {compatibleProviders.Count} provider(s)."),
                     loadContext));
+            }
+            catch (DllNotFoundException dllEx)
+            {
+                var missingDll = ExtractMissingDllName(dllEx.Message);
+                var probeAttempts = loadContext?.NativeDllProbeAttempts ?? Array.Empty<string>();
+
+                results.Add(new LoadedPlugin(
+                    plugin.Path,
+                    true,
+                    Array.Empty<IRuleProvider>(),
+                    new PluginLoadDiagnostic(
+                        PluginLoadStatus.LoadError,
+                        $"Missing native dependency: {missingDll ?? "unknown"}",
+                        ExceptionType: nameof(DllNotFoundException),
+                        StackTrace: dllEx.StackTrace,
+                        NativeDllProbeAttempts: probeAttempts,
+                        MissingNativeDll: missingDll)));
+            }
+            catch (BadImageFormatException badImageEx)
+            {
+                results.Add(new LoadedPlugin(
+                    plugin.Path,
+                    true,
+                    Array.Empty<IRuleProvider>(),
+                    new PluginLoadDiagnostic(
+                        PluginLoadStatus.LoadError,
+                        "Invalid assembly format (check architecture: x64/x86/arm64)",
+                        ExceptionType: nameof(BadImageFormatException),
+                        StackTrace: badImageEx.StackTrace)));
+            }
+            catch (FileLoadException fileLoadEx)
+            {
+                results.Add(new LoadedPlugin(
+                    plugin.Path,
+                    true,
+                    Array.Empty<IRuleProvider>(),
+                    new PluginLoadDiagnostic(
+                        PluginLoadStatus.LoadError,
+                        $"Assembly load conflict: {fileLoadEx.Message}",
+                        ExceptionType: nameof(FileLoadException),
+                        StackTrace: fileLoadEx.StackTrace)));
             }
 #pragma warning disable CA1031 // Plugin load failures must not crash the core process.
             catch (Exception ex)
@@ -191,5 +269,42 @@ public sealed class PluginLoader
         {
             return ex.Types.Where(t => t is not null)!;
         }
+    }
+
+    private static string? ExtractMissingDllName(string exceptionMessage)
+    {
+        // Common patterns in DllNotFoundException messages:
+        // "Unable to load DLL 'native_lib.dll': ..."
+        // "Unable to load DLL 'native_lib' or one of its dependencies. ..."
+        // "The specified module could not be found. (Exception from HRESULT: 0x8007007E)"
+
+        if (string.IsNullOrEmpty(exceptionMessage))
+        {
+            return null;
+        }
+
+        // Try to extract DLL name from single quotes
+        var startQuote = exceptionMessage.IndexOf('\'');
+        if (startQuote >= 0)
+        {
+            var endQuote = exceptionMessage.IndexOf('\'', startQuote + 1);
+            if (endQuote > startQuote)
+            {
+                return exceptionMessage.Substring(startQuote + 1, endQuote - startQuote - 1);
+            }
+        }
+
+        // Try to extract from double quotes as fallback
+        var startDoubleQuote = exceptionMessage.IndexOf('"');
+        if (startDoubleQuote >= 0)
+        {
+            var endDoubleQuote = exceptionMessage.IndexOf('"', startDoubleQuote + 1);
+            if (endDoubleQuote > startDoubleQuote)
+            {
+                return exceptionMessage.Substring(startDoubleQuote + 1, endDoubleQuote - startDoubleQuote - 1);
+            }
+        }
+
+        return null;
     }
 }

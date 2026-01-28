@@ -172,9 +172,34 @@ public static class CliApp
             .Select(p => new PluginDescriptor(p.Path, p.Enabled))
             .ToArray();
 
-        var loaded = PluginLoader.Load(plugins);
+        var (loaded, summary) = PluginLoader.LoadWithSummary(plugins);
 
-        foreach (var p in loaded)
+        // Display summary header
+        stdout.WriteLine("Plugin Load Summary:");
+        stdout.WriteLine($"  Total: {summary.TotalPlugins} plugin{(summary.TotalPlugins == 1 ? "" : "s")}");
+        if (summary.TotalPlugins > 0)
+        {
+            stdout.WriteLine($"  Loaded: {summary.SuccessCount} ({summary.SuccessCount * 100 / summary.TotalPlugins}%)");
+            stdout.WriteLine($"  Disabled: {summary.DisabledCount} ({summary.DisabledCount * 100 / summary.TotalPlugins}%)");
+            stdout.WriteLine($"  Failed: {summary.ErrorCount} ({summary.ErrorCount * 100 / summary.TotalPlugins}%)");
+        }
+        stdout.WriteLine();
+
+        // Group plugins by status
+        var grouped = loaded
+            .OrderBy(p => p.Diagnostic.Status switch
+            {
+                PluginLoadStatus.Success => 0,
+                PluginLoadStatus.VersionMismatch => 1,
+                PluginLoadStatus.LoadError => 2,
+                PluginLoadStatus.FileNotFound => 3,
+                PluginLoadStatus.NoProviders => 4,
+                PluginLoadStatus.Disabled => 5,
+                _ => 6
+            })
+            .ToList();
+
+        foreach (var p in grouped)
         {
             var statusIcon = p.Diagnostic.Status switch
             {
@@ -205,11 +230,36 @@ public static class CliApp
                 stdout.WriteLine($"  Message: {p.Diagnostic.Message}");
                 stdout.WriteLine($"  Expected API Version: {p.Diagnostic.ExpectedApiVersion}");
                 stdout.WriteLine($"  Actual API Version: {p.Diagnostic.ActualApiVersion}");
+
+                // Add remediation hint
+                var hint = GetRemediationHint(p.Diagnostic);
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    stdout.WriteLine($"  Hint: {hint}");
+                }
             }
             else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
             {
                 stdout.WriteLine($"  Error: {p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
-                if (!string.IsNullOrWhiteSpace(p.Diagnostic.StackTrace))
+
+                // Show native DLL probe attempts if available
+                if (p.Diagnostic.MissingNativeDll is not null && p.Diagnostic.NativeDllProbeAttempts is not null)
+                {
+                    stdout.WriteLine($"  Missing Native DLL: {p.Diagnostic.MissingNativeDll}");
+                    stdout.WriteLine($"  Probe Attempts ({p.Diagnostic.NativeDllProbeAttempts.Count}):");
+                    var attempts = p.Diagnostic.NativeDllProbeAttempts.Take(args.Verbose ? int.MaxValue : 5);
+                    foreach (var attempt in attempts)
+                    {
+                        stdout.WriteLine($"    {attempt}");
+                    }
+                    if (!args.Verbose && p.Diagnostic.NativeDllProbeAttempts.Count > 5)
+                    {
+                        stdout.WriteLine($"    ... ({p.Diagnostic.NativeDllProbeAttempts.Count - 5} more, use --verbose to see all)");
+                    }
+                }
+
+                // Show stack trace (simplified unless --verbose)
+                if (!string.IsNullOrWhiteSpace(p.Diagnostic.StackTrace) && args.Verbose)
                 {
                     stdout.WriteLine($"  Stack Trace:");
                     foreach (var line in p.Diagnostic.StackTrace.Split('\n'))
@@ -217,10 +267,36 @@ public static class CliApp
                         stdout.WriteLine($"    {line.TrimEnd()}");
                     }
                 }
+                else if (!string.IsNullOrWhiteSpace(p.Diagnostic.StackTrace) && !args.Verbose)
+                {
+                    var lines = p.Diagnostic.StackTrace.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).Take(3).ToList();
+                    if (lines.Count > 0)
+                    {
+                        stdout.WriteLine($"  Stack Trace (top 3 frames, use --verbose for full trace):");
+                        foreach (var line in lines)
+                        {
+                            stdout.WriteLine($"    {line.TrimEnd()}");
+                        }
+                    }
+                }
+
+                // Add remediation hint
+                var hint = GetRemediationHint(p.Diagnostic);
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    stdout.WriteLine($"  Hint: {hint}");
+                }
             }
             else
             {
                 stdout.WriteLine($"  Message: {p.Diagnostic.Message}");
+
+                // Add remediation hint
+                var hint = GetRemediationHint(p.Diagnostic);
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    stdout.WriteLine($"  Hint: {hint}");
+                }
             }
 
             stdout.WriteLine();
@@ -577,34 +653,56 @@ public static class CliApp
 
         var loaded = PluginLoader.Load(plugins);
 
-        foreach (var p in loaded)
+        // Report plugin loading issues with summary
+        if (stderr is not null)
         {
-            // Report plugin loading issues to stderr if available
-            if (stderr is not null && p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled)
+            var failedPlugins = loaded.Where(p => p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled).ToList();
+            if (failedPlugins.Count > 0)
             {
-                var warningPrefix = "Warning: Plugin loading issue - ";
-                stderr.WriteLine($"{warningPrefix}{p.Path}");
+                var totalPlugins = loaded.Count(p => p.Enabled);
+                stderr.WriteLine($"Warning: {failedPlugins.Count} of {totalPlugins} plugin{(totalPlugins == 1 ? "" : "s")} failed to load. Run 'tsqlrefine list-plugins' for details.");
 
-                if (p.Diagnostic.Status == PluginLoadStatus.VersionMismatch)
+                foreach (var p in failedPlugins)
                 {
-                    stderr.WriteLine($"  API version mismatch: plugin uses v{p.Diagnostic.ActualApiVersion}, host expects v{p.Diagnostic.ExpectedApiVersion}");
-                }
-                else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
-                {
-                    stderr.WriteLine($"  Load error: {p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
-                }
-                else if (p.Diagnostic.Status == PluginLoadStatus.FileNotFound)
-                {
-                    stderr.WriteLine($"  File not found");
-                }
-                else if (p.Diagnostic.Status == PluginLoadStatus.NoProviders)
-                {
-                    stderr.WriteLine($"  No rule providers found in assembly");
+                    stderr.Write($"  {p.Path}: ");
+
+                    if (p.Diagnostic.Status == PluginLoadStatus.VersionMismatch)
+                    {
+                        stderr.WriteLine($"API version mismatch (plugin uses v{p.Diagnostic.ActualApiVersion}, host expects v{p.Diagnostic.ExpectedApiVersion})");
+                        stderr.WriteLine($"    Hint: Rebuild plugin against TsqlRefine.PluginSdk v{p.Diagnostic.ExpectedApiVersion}.x.x");
+                    }
+                    else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
+                    {
+                        stderr.WriteLine($"{p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
+                        if (p.Diagnostic.MissingNativeDll is not null)
+                        {
+                            stderr.WriteLine($"    Hint: Install native library '{p.Diagnostic.MissingNativeDll}'");
+                        }
+                        else if (p.Diagnostic.ExceptionType == "BadImageFormatException")
+                        {
+                            stderr.WriteLine($"    Hint: Check plugin architecture matches host (x64/x86/arm64)");
+                        }
+                    }
+                    else if (p.Diagnostic.Status == PluginLoadStatus.FileNotFound)
+                    {
+                        stderr.WriteLine($"File not found");
+                    }
+                    else if (p.Diagnostic.Status == PluginLoadStatus.NoProviders)
+                    {
+                        stderr.WriteLine($"No rule providers found");
+                    }
+                    else
+                    {
+                        stderr.WriteLine(p.Diagnostic.Message ?? "Unknown error");
+                    }
                 }
 
                 stderr.WriteLine();
             }
+        }
 
+        foreach (var p in loaded)
+        {
             foreach (var provider in p.Providers)
             {
                 rules.AddRange(provider.GetRules());
@@ -805,4 +903,27 @@ public static class CliApp
     private sealed record EditorConfigFormattingOptions(
         IndentStyle? IndentStyle,
         int? IndentSize);
+
+    private static string GetRemediationHint(PluginLoadDiagnostic diagnostic)
+    {
+        return diagnostic.Status switch
+        {
+            PluginLoadStatus.FileNotFound =>
+                "Check the plugin path in your tsqlrefine.json configuration.",
+
+            PluginLoadStatus.VersionMismatch =>
+                $"Rebuild the plugin targeting PluginSdk API version {diagnostic.ExpectedApiVersion}.",
+
+            PluginLoadStatus.LoadError when diagnostic.MissingNativeDll is not null =>
+                $"Install or provide the native library '{diagnostic.MissingNativeDll}' in the plugin directory or runtimes/ folder.",
+
+            PluginLoadStatus.LoadError when diagnostic.ExceptionType == "BadImageFormatException" =>
+                "Ensure the plugin DLL matches the host architecture (x64/x86/arm64).",
+
+            PluginLoadStatus.NoProviders =>
+                "Ensure the plugin assembly contains a public class implementing IRuleProvider.",
+
+            _ => string.Empty
+        };
+    }
 }

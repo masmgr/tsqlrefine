@@ -32,6 +32,7 @@ public static class CliParser
         var diff = parseResult.GetValue(Model.DiffOption);
         var indentStyle = ParseIndentStyle(parseResult.GetValue(Model.IndentStyleOption));
         var indentSize = ParseInt(parseResult.GetValue(Model.IndentSizeOption));
+        var verbose = parseResult.GetValue(Model.VerboseOption);
         var paths = GetPaths(parseResult);
 
         return new CliArgs(
@@ -52,6 +53,7 @@ public static class CliParser
             Diff: diff,
             IndentStyle: indentStyle,
             IndentSize: indentSize,
+            Verbose: verbose,
             Paths: paths
         );
     }
@@ -138,6 +140,7 @@ public static class CliParser
         var initOption = CreateBoolOption("--init", "-i");
         var printConfigOption = CreateBoolOption("--print-config", "-p");
         var listPluginsOption = CreateBoolOption("--list-plugins", "-l");
+        var verboseOption = CreateBoolOption("--verbose");
 
         root.Add(configOption);
         root.Add(ignoreListOption);
@@ -158,6 +161,7 @@ public static class CliParser
         root.Add(initOption);
         root.Add(printConfigOption);
         root.Add(listPluginsOption);
+        root.Add(verboseOption);
 
         var rootPaths = CreatePathsArgument();
         root.Add(rootPaths);
@@ -203,6 +207,7 @@ public static class CliParser
             InitOption: initOption,
             PrintConfigOption: printConfigOption,
             ListPluginsOption: listPluginsOption,
+            VerboseOption: verboseOption,
             RootPathsArgument: rootPaths,
             PathsByCommand: pathsByCommand
         );
@@ -246,6 +251,7 @@ public static class CliParser
         Option<bool> InitOption,
         Option<bool> PrintConfigOption,
         Option<bool> ListPluginsOption,
+        Option<bool> VerboseOption,
         Argument<string[]> RootPathsArgument,
         IReadOnlyDictionary<string, Argument<string[]>> PathsByCommand);
 }
