@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -10,42 +8,7 @@ public sealed class SetVariableRuleTests
 {
     private readonly SetVariableRule _rule = new();
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 
     [Fact]
     public void Analyze_SelectVariableAssignment_NoDiagnostics()
@@ -54,7 +17,7 @@ public sealed class SetVariableRuleTests
         var sql = "DECLARE @Count INT; SELECT @Count = COUNT(*) FROM Users;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         Assert.Empty(diagnostics);
@@ -67,7 +30,7 @@ public sealed class SetVariableRuleTests
         var sql = "DECLARE @Count INT; SET @Count = 10;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
@@ -83,7 +46,7 @@ public sealed class SetVariableRuleTests
         var sql = "DECLARE @Total DECIMAL; SET @Total = 100 * 1.08;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
@@ -100,7 +63,7 @@ SET @A = 1;
 SET @B = 2;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         Assert.Equal(2, diagnostics.Length);
@@ -114,7 +77,7 @@ SET @B = 2;";
         var sql = "SET NOCOUNT ON;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         Assert.Empty(diagnostics);
@@ -127,7 +90,7 @@ SET @B = 2;";
         var sql = "SET ANSI_NULLS ON;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         Assert.Empty(diagnostics);
@@ -140,7 +103,7 @@ SET @B = 2;";
         var sql = "SET QUOTED_IDENTIFIER ON;";
 
         // Act
-        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
         Assert.Empty(diagnostics);

@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -20,7 +18,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
     public void Analyze_WhenSlashDelimitedDateLiteral_ReturnsDiagnostic(string sql)
     {
         // Arrange
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -45,7 +43,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
     public void Analyze_WhenValid_ReturnsEmpty(string sql)
     {
         // Arrange
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -61,7 +59,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
         const string sql = @"
             SELECT * FROM orders
             WHERE order_date BETWEEN '1/1/2023' AND '12/31/2023';";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -78,7 +76,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
         const string sql = @"
             -- Date format: 12/31/2023
             SELECT * FROM users WHERE created_at > '2023-12-31';";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -95,7 +93,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
             SELECT * FROM orders
             WHERE order_date = '12/31/2023'
                OR order_date = '2023-12-31';";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -109,7 +107,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         // Arrange
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -133,7 +131,7 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
     public void GetFixes_ReturnsEmpty()
     {
         // Arrange
-        var context = CreateContext("SELECT * FROM orders WHERE order_date = '12/31/2023';");
+        var context = RuleTestContext.CreateContext("SELECT * FROM orders WHERE order_date = '12/31/2023';");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
@@ -147,37 +145,4 @@ public sealed class AvoidAmbiguousDatetimeLiteralRuleTests
         Assert.Empty(fixes);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-
-        using var fragmentReader = new StringReader(sql);
-        var fragment = parser.Parse(fragmentReader, out IList<ParseError> parseErrors);
-
-        using var tokenReader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
-
-        var tokens = tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-
-        var ast = new ScriptDomAst(sql, fragment, parseErrors.ToArray(), tokenErrors.ToArray());
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
 }

@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -20,7 +18,7 @@ public sealed class AvoidNullComparisonRuleTests
     public void Analyze_WhenNullComparison_ReturnsDiagnostic(string sql)
     {
         var rule = new AvoidNullComparisonRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -44,7 +42,7 @@ public sealed class AvoidNullComparisonRuleTests
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new AvoidNullComparisonRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -56,7 +54,7 @@ public sealed class AvoidNullComparisonRuleTests
     {
         var rule = new AvoidNullComparisonRule();
         var sql = "SELECT * FROM users WHERE name = NULL;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -73,7 +71,7 @@ public sealed class AvoidNullComparisonRuleTests
     {
         var rule = new AvoidNullComparisonRule();
         var sql = "SELECT * FROM users WHERE status <> NULL;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -86,7 +84,7 @@ public sealed class AvoidNullComparisonRuleTests
     {
         var rule = new AvoidNullComparisonRule();
         var sql = "SELECT * FROM users WHERE email != NULL;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -100,7 +98,7 @@ public sealed class AvoidNullComparisonRuleTests
         var rule = new AvoidNullComparisonRule();
         var sql = @"SELECT * FROM users WHERE name = NULL AND status <> NULL;
 UPDATE users SET active = 0 WHERE last_login = NULL;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -112,7 +110,7 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new AvoidNullComparisonRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -123,7 +121,7 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new AvoidNullComparisonRule();
-        var context = CreateContext("SELECT * FROM users WHERE name = NULL;");
+        var context = RuleTestContext.CreateContext("SELECT * FROM users WHERE name = NULL;");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 6)),
             Message: "test",
@@ -147,40 +145,5 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
         Assert.Contains("NULL", rule.Metadata.Description);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

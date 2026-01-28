@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -18,7 +16,7 @@ public sealed class RequireColumnListForInsertValuesRuleTests
     public void Analyze_WhenInsertValuesWithoutColumnList_ReturnsDiagnostic(string sql)
     {
         var rule = new RequireColumnListForInsertValuesRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -39,7 +37,7 @@ public sealed class RequireColumnListForInsertValuesRuleTests
     public void Analyze_WhenInsertValuesWithColumnList_ReturnsEmpty(string sql)
     {
         var rule = new RequireColumnListForInsertValuesRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -54,7 +52,7 @@ public sealed class RequireColumnListForInsertValuesRuleTests
     public void Analyze_WhenNotInsertValues_ReturnsEmpty(string sql)
     {
         var rule = new RequireColumnListForInsertValuesRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -66,7 +64,7 @@ public sealed class RequireColumnListForInsertValuesRuleTests
     {
         var rule = new RequireColumnListForInsertValuesRule();
         var sql = "INSERT INTO users VALUES (1, 'John');";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -84,7 +82,7 @@ public sealed class RequireColumnListForInsertValuesRuleTests
         var rule = new RequireColumnListForInsertValuesRule();
         var sql = @"INSERT INTO users VALUES (1, 'John');
 INSERT INTO orders VALUES (100, 'Order1');";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -99,7 +97,7 @@ INSERT INTO orders VALUES (100, 'Order1');";
         var sql = @"INSERT INTO users VALUES (1, 'John');
 INSERT INTO users (id, name) VALUES (2, 'Jane');
 INSERT INTO orders VALUES (100, 'Order1');";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -115,7 +113,7 @@ INSERT INTO orders VALUES (100, 'Order1');";
     (1, 'John'),
     (2, 'Jane'),
     (3, 'Bob');";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -132,7 +130,7 @@ AS
 BEGIN
     INSERT INTO users VALUES (1, 'John');
 END;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -146,7 +144,7 @@ END;";
         var rule = new RequireColumnListForInsertValuesRule();
         var sql = @"WITH temp AS (SELECT 1 AS id)
 INSERT INTO users VALUES (1, 'John');";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -158,7 +156,7 @@ INSERT INTO users VALUES (1, 'John');";
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new RequireColumnListForInsertValuesRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -169,7 +167,7 @@ INSERT INTO users VALUES (1, 'John');";
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new RequireColumnListForInsertValuesRule();
-        var context = CreateContext("INSERT INTO users VALUES (1, 'John');");
+        var context = RuleTestContext.CreateContext("INSERT INTO users VALUES (1, 'John');");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 6)),
             Message: "test",
@@ -194,40 +192,5 @@ INSERT INTO users VALUES (1, 'John');";
         Assert.Contains("VALUES", rule.Metadata.Description);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

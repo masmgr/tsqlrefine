@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -19,7 +17,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     public void Analyze_WhenJoinConditionAlwaysTrue_ReturnsDiagnostic(string sql)
     {
         var rule = new JoinConditionAlwaysTrueRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -43,7 +41,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     public void Analyze_WhenJoinConditionValid_ReturnsEmpty(string sql)
     {
         var rule = new JoinConditionAlwaysTrueRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
 
@@ -55,7 +53,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     {
         var rule = new JoinConditionAlwaysTrueRule();
         var sql = "SELECT * FROM t1 JOIN t2 ON 1=1 JOIN t3 ON 1=1";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
 
@@ -67,7 +65,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     {
         var rule = new JoinConditionAlwaysTrueRule();
         var sql = "SELECT * FROM t1 JOIN t2 ON 1=1 JOIN t3 ON t1.id = t3.id";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
 
@@ -80,7 +78,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     {
         var rule = new JoinConditionAlwaysTrueRule();
         var sql = "SELECT * FROM t1 JOIN t2 ON t1.a = t1.b";  // same table, different columns
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
 
@@ -92,7 +90,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new JoinConditionAlwaysTrueRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -103,7 +101,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new JoinConditionAlwaysTrueRule();
-        var context = CreateContext("SELECT * FROM t1 JOIN t2 ON 1=1");
+        var context = RuleTestContext.CreateContext("SELECT * FROM t1 JOIN t2 ON 1=1");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
@@ -127,40 +125,5 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         Assert.Contains("JOIN", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

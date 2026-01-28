@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -18,7 +16,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     public void Analyze_WhenColumnCountMismatch_ReturnsDiagnostic(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -43,7 +41,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     public void Analyze_WhenColumnCountMatches_ReturnsEmpty(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
 
@@ -56,7 +54,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var rule = new InsertColumnCountMismatchRule();
         // First row has 2 values, target has 3 columns
         var sql = "INSERT INTO t (a, b, c) VALUES (1, 2), (3, 4)";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
 
@@ -68,7 +66,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     {
         var rule = new InsertColumnCountMismatchRule();
         var sql = "INSERT INTO t (a, b) VALUES (1, 2), (3, 4), (5, 6)";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
 
@@ -80,7 +78,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     {
         var rule = new InsertColumnCountMismatchRule();
         var sql = "INSERT INTO t (a, b) SELECT (SELECT x FROM t2), y, z FROM t3";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
 
@@ -92,7 +90,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new InsertColumnCountMismatchRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -103,7 +101,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new InsertColumnCountMismatchRule();
-        var context = CreateContext("INSERT INTO t (a, b) VALUES (1, 2, 3)");
+        var context = RuleTestContext.CreateContext("INSERT INTO t (a, b) VALUES (1, 2, 3)");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
@@ -127,40 +125,5 @@ public sealed class InsertColumnCountMismatchRuleTests
         Assert.Contains("column count", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

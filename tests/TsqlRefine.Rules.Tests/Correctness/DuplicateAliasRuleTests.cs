@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -17,7 +15,7 @@ public sealed class DuplicateAliasRuleTests
     public void Analyze_WhenDuplicateAlias_ReturnsDiagnostic(string sql)
     {
         var rule = new DuplicateAliasRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -40,7 +38,7 @@ public sealed class DuplicateAliasRuleTests
     public void Analyze_WhenNoDuplicateAlias_ReturnsEmpty(string sql)
     {
         var rule = new DuplicateAliasRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -52,7 +50,7 @@ public sealed class DuplicateAliasRuleTests
     {
         var rule = new DuplicateAliasRule();
         var sql = "SELECT * FROM users u JOIN orders u ON u.id = u.user_id;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -68,7 +66,7 @@ public sealed class DuplicateAliasRuleTests
         var rule = new DuplicateAliasRule();
         var sql = @"SELECT * FROM users a JOIN orders a ON a.id = a.user_id;
 SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -80,7 +78,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     {
         var rule = new DuplicateAliasRule();
         var sql = "SELECT * FROM users t JOIN orders t ON t.id = t.user_id JOIN products t ON t.id = t.product_id;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -93,7 +91,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var rule = new DuplicateAliasRule();
         // When joining users to users, the implicit table name is "users" for both
         var sql = "SELECT * FROM users, users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -106,7 +104,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     {
         var rule = new DuplicateAliasRule();
         var sql = "SELECT * FROM (SELECT * FROM users u) AS u;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -121,7 +119,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     {
         var rule = new DuplicateAliasRule();
         var sql = "SELECT * FROM users MyAlias JOIN orders myalias ON MyAlias.id = myalias.user_id;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
 
@@ -133,7 +131,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new DuplicateAliasRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -144,7 +142,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new DuplicateAliasRule();
-        var context = CreateContext("SELECT * FROM users u JOIN orders u ON u.id = u.user_id;");
+        var context = RuleTestContext.CreateContext("SELECT * FROM users u JOIN orders u ON u.id = u.user_id;");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
@@ -169,40 +167,5 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         Assert.Contains("alias", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

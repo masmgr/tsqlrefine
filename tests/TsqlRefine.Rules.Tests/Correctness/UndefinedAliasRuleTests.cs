@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -16,7 +14,7 @@ public sealed class UndefinedAliasRuleTests
     public void Analyze_WhenUndefinedAlias_ReturnsDiagnostic(string sql)
     {
         var rule = new UndefinedAliasRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -40,7 +38,7 @@ public sealed class UndefinedAliasRuleTests
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new UndefinedAliasRule();
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -52,7 +50,7 @@ public sealed class UndefinedAliasRuleTests
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT x.id FROM users u;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -66,7 +64,7 @@ public sealed class UndefinedAliasRuleTests
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT a.id, b.name FROM users u WHERE c.active = 1;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -81,7 +79,7 @@ public sealed class UndefinedAliasRuleTests
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT MyAlias.id FROM users myalias;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -94,7 +92,7 @@ public sealed class UndefinedAliasRuleTests
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT users.id FROM dbo.users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -107,7 +105,7 @@ public sealed class UndefinedAliasRuleTests
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT users.id FROM users u;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -122,7 +120,7 @@ public sealed class UndefinedAliasRuleTests
         var rule = new UndefinedAliasRule();
         var sql = @"SELECT u.id FROM users u;
 SELECT x.id FROM orders o;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -139,7 +137,7 @@ SELECT x.id FROM orders o;";
         // Inner subquery references 'u', which is defined in inner scope
         // This is valid (each SELECT has its own scope)
         var sql = "SELECT u.id FROM (SELECT id FROM users u) AS u;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -156,7 +154,7 @@ SELECT x.id FROM orders o;";
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT * FROM users u JOIN orders o ON x.id = o.user_id;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -169,7 +167,7 @@ SELECT x.id FROM orders o;";
     {
         var rule = new UndefinedAliasRule();
         var sql = "SELECT u.id FROM users u ORDER BY x.created_at;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
 
@@ -181,7 +179,7 @@ SELECT x.id FROM orders o;";
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new UndefinedAliasRule();
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         var diagnostics = rule.Analyze(context).ToArray();
 
@@ -192,7 +190,7 @@ SELECT x.id FROM orders o;";
     public void GetFixes_ReturnsEmpty()
     {
         var rule = new UndefinedAliasRule();
-        var context = CreateContext("SELECT x.id FROM users u;");
+        var context = RuleTestContext.CreateContext("SELECT x.id FROM users u;");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 7), new Position(0, 11)),
             Message: "test",
@@ -217,40 +215,5 @@ SELECT x.id FROM orders o;";
         Assert.Contains("alias", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
-
-    private static IReadOnlyList<Token> Tokenize(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(reader, out _);
-        return tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-    }
 }

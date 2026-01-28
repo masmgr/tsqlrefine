@@ -1,8 +1,6 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -17,7 +15,7 @@ public sealed class OrderByInSubqueryRuleTests
     public void Analyze_OrderByInSubqueryWithoutTop_ReturnsDiagnostic(string sql)
     {
         // Arrange
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -40,7 +38,7 @@ public sealed class OrderByInSubqueryRuleTests
     public void Analyze_WhenValid_ReturnsEmpty(string sql)
     {
         // Arrange
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -59,7 +57,7 @@ public sealed class OrderByInSubqueryRuleTests
                 FROM users
                 ORDER BY created_at DESC
             ) AS recent_users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -79,7 +77,7 @@ public sealed class OrderByInSubqueryRuleTests
                 ORDER BY name
                 OFFSET 10 ROWS FETCH NEXT 20 ROWS ONLY
             ) AS paged_users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -93,7 +91,7 @@ public sealed class OrderByInSubqueryRuleTests
     {
         // Arrange
         const string sql = "SELECT id, name FROM users ORDER BY name;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -112,7 +110,7 @@ public sealed class OrderByInSubqueryRuleTests
                     SELECT id FROM users ORDER BY id
                 ) AS inner_sub ORDER BY id
             ) AS outer_sub;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -133,7 +131,7 @@ public sealed class OrderByInSubqueryRuleTests
                 id,
                 (SELECT TOP 1 name FROM users ORDER BY created_at) AS latest_name
             FROM orders;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -153,7 +151,7 @@ public sealed class OrderByInSubqueryRuleTests
                 FROM users
                 ORDER BY name
             ) AS dt;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -174,7 +172,7 @@ public sealed class OrderByInSubqueryRuleTests
                 SELECT id, name FROM users ORDER BY name
             )
             SELECT * FROM UsersCte;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -188,7 +186,7 @@ public sealed class OrderByInSubqueryRuleTests
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         // Arrange
-        var context = CreateContext("");
+        var context = RuleTestContext.CreateContext("");
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -211,7 +209,7 @@ public sealed class OrderByInSubqueryRuleTests
     public void GetFixes_ReturnsEmpty()
     {
         // Arrange
-        var context = CreateContext("SELECT * FROM (SELECT id FROM users ORDER BY id) AS sub;");
+        var context = RuleTestContext.CreateContext("SELECT * FROM (SELECT id FROM users ORDER BY id) AS sub;");
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
@@ -225,37 +223,4 @@ public sealed class OrderByInSubqueryRuleTests
         Assert.Empty(fixes);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-
-        using var fragmentReader = new StringReader(sql);
-        var fragment = parser.Parse(fragmentReader, out IList<ParseError> parseErrors);
-
-        using var tokenReader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
-
-        var tokens = tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-
-        var ast = new ScriptDomAst(sql, fragment, parseErrors.ToArray(), tokenErrors.ToArray());
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
 }
