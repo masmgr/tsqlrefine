@@ -139,6 +139,24 @@ public sealed class NonSargableRuleTests
     }
 
     [Fact]
+    public void Analyze_DateAddConstantsInPredicate_NoDiagnostic()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT [Name]
+            FROM Foo
+            WHERE Foo.DateCreated BETWEEN DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)
+              AND DATEADD(DAY, 1, EOMONTH(DATEADD(MONTH, 0, GETDATE())));";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_MultipleFunctionsInWhere_ReturnsMultipleDiagnostics()
     {
         // Arrange

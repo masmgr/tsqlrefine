@@ -92,6 +92,23 @@ public sealed class UpperLowerRuleTests
     }
 
     [Fact]
+    public void Analyze_UpperWithDateAddConstants_NoDiagnostic()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT *
+            FROM Foo
+            WHERE UPPER(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0)) = 'CONSTANT';";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_LowerInHavingClause_ReturnsDiagnostic()
     {
         // Arrange

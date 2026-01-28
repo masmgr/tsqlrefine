@@ -128,7 +128,22 @@ public sealed class NonSargableRule : IRule
                 return ContainsColumnReference(convertCall.Parameter);
 
             if (expression is FunctionCall functionCall && functionCall.Parameters != null)
-                return functionCall.Parameters.Any(ContainsColumnReference);
+            {
+                for (var i = 0; i < functionCall.Parameters.Count; i++)
+                {
+                    var parameter = functionCall.Parameters[i];
+                    if (DatePartHelper.IsDatePartLiteralParameter(functionCall, i, parameter))
+                    {
+                        continue;
+                    }
+
+                    if (ContainsColumnReference(parameter))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
 
             if (expression is BinaryExpression binaryExpr)
                 return ContainsColumnReference(binaryExpr.FirstExpression) ||

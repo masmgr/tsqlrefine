@@ -99,6 +99,23 @@ public sealed class AvoidImplicitConversionInPredicateRuleTests
     }
 
     [Fact]
+    public void Analyze_CastDateAddConstants_NoDiagnostic()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT *
+            FROM Foo
+            WHERE CAST(DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0) AS DATETIME) = '2025-01-01';";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_SimpleColumnComparison_NoDiagnostic()
     {
         // Arrange
