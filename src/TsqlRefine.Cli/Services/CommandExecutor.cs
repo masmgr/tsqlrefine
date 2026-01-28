@@ -1,0 +1,240 @@
+using System.Reflection;
+using System.Text;
+using TsqlRefine.Core;
+using TsqlRefine.Core.Config;
+using TsqlRefine.Core.Engine;
+using TsqlRefine.Core.Model;
+using TsqlRefine.Formatting;
+using TsqlRefine.PluginHost;
+using TsqlRefine.PluginSdk;
+
+namespace TsqlRefine.Cli.Services;
+
+public sealed class CommandExecutor
+{
+    private readonly ConfigLoader _configLoader;
+    private readonly InputReader _inputReader;
+    private readonly FormattingOptionsResolver _formattingOptionsResolver;
+    private readonly OutputWriter _outputWriter;
+    private readonly PluginDiagnostics _pluginDiagnostics;
+
+    public CommandExecutor(
+        ConfigLoader configLoader,
+        InputReader inputReader,
+        FormattingOptionsResolver formattingOptionsResolver,
+        OutputWriter outputWriter,
+        PluginDiagnostics pluginDiagnostics)
+    {
+        _configLoader = configLoader;
+        _inputReader = inputReader;
+        _formattingOptionsResolver = formattingOptionsResolver;
+        _outputWriter = outputWriter;
+        _pluginDiagnostics = pluginDiagnostics;
+    }
+
+    public async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        _ = stdout;
+        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
+        var ignorePath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
+
+        if (File.Exists(configPath) || File.Exists(ignorePath))
+        {
+            await stderr.WriteLineAsync("Config files already exist.");
+            return ExitCodes.Fatal;
+        }
+
+        var config = new TsqlRefineConfig(
+            CompatLevel: args.CompatLevel ?? 150,
+            Ruleset: "rulesets/recommended.json",
+            Plugins: Array.Empty<PluginConfig>()
+        );
+
+        await File.WriteAllTextAsync(configPath, System.Text.Json.JsonSerializer.Serialize(config, JsonDefaults.Options), Encoding.UTF8);
+        await File.WriteAllTextAsync(ignorePath, "# One glob per line\nbin/\nobj/\n", Encoding.UTF8);
+        return 0;
+    }
+
+    public async Task<int> ExecutePrintConfigAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        var config = _configLoader.LoadConfig(args);
+        _ = stderr;
+        await _outputWriter.WriteJsonOutputAsync(stdout, config);
+        return 0;
+    }
+
+    public Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        var config = _configLoader.LoadConfig(args);
+        var rules = _configLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
+        foreach (var rule in rules)
+        {
+            stdout.WriteLine($"{rule.Metadata.RuleId}\t{rule.Metadata.Category}\t{rule.Metadata.DefaultSeverity}\tfixable={rule.Metadata.Fixable}");
+        }
+
+        return Task.FromResult(0);
+    }
+
+    public async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        _ = stderr;
+        var config = _configLoader.LoadConfig(args);
+        var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
+            .Select(p => new PluginDescriptor(p.Path, p.Enabled))
+            .ToArray();
+
+        var (loaded, _) = PluginLoader.LoadWithSummary(plugins);
+        await _pluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+
+        return 0;
+    }
+
+    public async Task<int> ExecuteLintAsync(string command, CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
+        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
+        if (read.Inputs.Count == 0)
+        {
+            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+        }
+
+        var config = _configLoader.LoadConfig(args);
+        var ruleset = _configLoader.LoadRuleset(args, config);
+        var rules = _configLoader.LoadRules(args, config, stderr);
+
+        var engine = new TsqlRefineEngine(rules);
+        var options = CreateEngineOptions(args, config, ruleset);
+        var result = engine.Run(command, read.Inputs, options);
+
+        if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            await _outputWriter.WriteJsonOutputAsync(stdout, result);
+        }
+        else
+        {
+            foreach (var file in result.Files)
+            {
+                foreach (var d in file.Diagnostics)
+                {
+                    await stdout.WriteLineAsync($"{file.FilePath}: {d.Severity}: {d.Message} ({d.Data?.RuleId ?? d.Code})");
+                }
+            }
+        }
+
+        var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
+        return hasIssues ? ExitCodes.Violations : 0;
+    }
+
+    public async Task<int> ExecuteFormatAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
+        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
+        if (read.Inputs.Count == 0)
+        {
+            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+        }
+
+        var optionError = await _outputWriter.ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson: false, stderr);
+        if (optionError.HasValue)
+            return optionError.Value;
+
+        foreach (var input in read.Inputs)
+        {
+            var options = _formattingOptionsResolver.ResolveFormattingOptions(args, input);
+            var formatted = SqlFormatter.Format(input.Text, options);
+
+            if (args.Diff)
+            {
+                var diff = _outputWriter.GenerateUnifiedDiff(input.FilePath, input.Text, formatted);
+                if (!string.IsNullOrEmpty(diff))
+                    await stdout.WriteAsync(diff);
+            }
+            else if (args.Write && input.FilePath != "<stdin>")
+            {
+                var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
+                    ? resolved
+                    : Encoding.UTF8;
+                await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
+            }
+            else
+            {
+                await stdout.WriteAsync(formatted);
+            }
+        }
+
+        return 0;
+    }
+
+    public async Task<int> ExecuteFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
+        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
+        if (read.Inputs.Count == 0)
+        {
+            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+        }
+
+        var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
+        var optionError = await _outputWriter.ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson, stderr);
+        if (optionError.HasValue)
+            return optionError.Value;
+
+        var config = _configLoader.LoadConfig(args);
+        var ruleset = _configLoader.LoadRuleset(args, config);
+        var rules = _configLoader.LoadRules(args, config, stderr);
+
+        var engine = new TsqlRefineEngine(rules);
+        var options = CreateEngineOptions(args, config, ruleset);
+        var result = engine.Fix(read.Inputs, options);
+
+        if (outputJson)
+        {
+            var lintResult = new LintResult(
+                Tool: result.Tool,
+                Version: result.Version,
+                Command: result.Command,
+                Files: result.Files.Select(f => new FileResult(f.FilePath, f.Diagnostics)).ToArray()
+            );
+            await _outputWriter.WriteJsonOutputAsync(stdout, lintResult);
+        }
+        else
+        {
+            foreach (var file in result.Files)
+            {
+                if (args.Diff)
+                {
+                    var diff = _outputWriter.GenerateUnifiedDiff(file.FilePath, file.OriginalText, file.FixedText);
+                    if (!string.IsNullOrEmpty(diff))
+                        await stdout.WriteAsync(diff);
+                }
+                else if (args.Write && file.FilePath != "<stdin>")
+                {
+                    if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
+                    {
+                        var encoding = read.WriteEncodings.TryGetValue(file.FilePath, out var resolved)
+                            ? resolved
+                            : Encoding.UTF8;
+                        await File.WriteAllTextAsync(file.FilePath, file.FixedText, encoding);
+                    }
+                }
+                else
+                {
+                    await stdout.WriteAsync(file.FixedText);
+                }
+            }
+        }
+
+        var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
+        return hasIssues ? ExitCodes.Violations : 0;
+    }
+
+    private EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
+    {
+        var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
+        return new EngineOptions(
+            CompatLevel: args.CompatLevel ?? config.CompatLevel,
+            MinimumSeverity: minimumSeverity,
+            Ruleset: ruleset
+        );
+    }
+}
