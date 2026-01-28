@@ -95,7 +95,15 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new RequireXactAbortOnRule(),
             new PreferConcatWsRule(),
             new PreferStringAggOverStuffRule(),
-            new PreferJsonFunctionsRule()
+            new PreferJsonFunctionsRule(),
+            // New high-value production rules
+            new BanLegacyJoinSyntaxRule(),
+            new NoTopWithoutOrderByInSelectIntoRule(),
+            new DangerousDdlRule(),
+            new DisallowSelectDistinctRule(),
+            new CatchSwallowingRule(),
+            new BanQueryHintsRule(),
+            new TransactionWithoutCommitOrRollbackRule()
         };
 }
 

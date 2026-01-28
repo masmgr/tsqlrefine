@@ -74,6 +74,13 @@
     { "id": "require-primary-key-or-unique-constraint", "enabled": true },
     { "id": "avoid-heap-table", "enabled": true },
     { "id": "require-ms-description-for-table-definition-file", "enabled": true },
-    { "id": "print-statement", "enabled": true }
+    { "id": "print-statement", "enabled": true },
+    { "id": "ban-legacy-join-syntax", "enabled": true },
+    { "id": "no-top-without-order-by-in-select-into", "enabled": true },
+    { "id": "dangerous-ddl", "enabled": true },
+    { "id": "disallow-select-distinct", "enabled": true },
+    { "id": "catch-swallowing", "enabled": true },
+    { "id": "ban-query-hints", "enabled": true },
+    { "id": "transaction-without-commit-or-rollback", "enabled": true }
   ]
 }

@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 74 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides a comprehensive overview of all built-in rules in TsqlRefine. TsqlRefine includes 81 rules covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -23,11 +23,11 @@ TsqlRefine provides a comprehensive set of rules to enforce T-SQL best practices
 
 ### Rule Statistics
 
-- **Total Rules**: 74
-- **Fixable Rules**: 8 (11%)
-- **Error Severity**: 10 rules (14%)
-- **Warning Severity**: 46 rules (62%)
-- **Information Severity**: 18 rules (24%)
+- **Total Rules**: 81
+- **Fixable Rules**: 8 (10%)
+- **Error Severity**: 14 rules (17%)
+- **Warning Severity**: 50 rules (62%)
+- **Information Severity**: 17 rules (21%)
 
 ## Rule Categories
 
@@ -35,25 +35,27 @@ TsqlRefine organizes rules into the following categories:
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 20 | Detects code that may produce incorrect results or runtime errors |
-| **Safety** | 3 | Prevents destructive or dangerous operations |
+| **Correctness** | 22 | Detects code that may produce incorrect results or runtime errors |
+| **Safety** | 4 | Prevents destructive or dangerous operations |
 | **Security** | 1 | Identifies security vulnerabilities like SQL injection |
-| **Performance** | 15 | Flags patterns that can cause performance issues |
+| **Performance** | 18 | Flags patterns that can cause performance issues |
 | **Naming** | 0 | Enforces naming conventions and readability |
-| **Style** | 11 | Maintains code formatting and consistency |
-| **Transactions** | 6 | Ensures proper transaction handling and session settings |
+| **Style** | 25 | Maintains code formatting and consistency |
+| **Transactions** | 8 | Ensures proper transaction handling and session settings |
 | **Schema** | 3 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Category
 
-### Correctness (20 rules)
+### Correctness (22 rules)
 
 Rules that detect code patterns that may produce incorrect results or runtime errors.
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
+| [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated since SQL Server 2000 | Error | No |
+| [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data | Error | No |
 | [require-column-list-for-insert-select](correctness/require-column-list-for-insert-select.md) | INSERT SELECT statements must explicitly specify the column list | Warning | No |
 | [require-column-list-for-insert-values](correctness/require-column-list-for-insert-values.md) | INSERT VALUES statements must explicitly specify the column list | Warning | No |
 | [avoid-null-comparison](correctness/avoid-null-comparison.md) | Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL | Warning | No |
@@ -74,7 +76,7 @@ Rules that detect code patterns that may produce incorrect results or runtime er
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode variables | Error | **Yes** |
 | [semantic/data-type-length](correctness/semantic-data-type-length.md) | Requires explicit length specification for variable-length data types | Error | No |
 
-### Safety (3 rules)
+### Safety (4 rules)
 
 Rules that prevent destructive or dangerous operations.
 
@@ -83,6 +85,7 @@ Rules that prevent destructive or dangerous operations.
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause | Error | No |
 | [avoid-merge](safety/avoid-merge.md) | Avoid using MERGE statement due to known bugs and unpredictable behavior | Warning | No |
 | [cross-database-transaction](safety/cross-database-transaction.md) | Discourage cross-database transactions | Warning | No |
+| [dangerous-ddl](safety/dangerous-ddl.md) | Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss | Warning | No |
 
 ### Security (1 rule)
 
@@ -92,13 +95,15 @@ Rules that identify security vulnerabilities.
 |---------|-------------|----------|---------|
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL which can be vulnerable to SQL injection | Warning | No |
 
-### Performance (15 rules)
+### Performance (18 rules)
 
 Rules that flag patterns that can cause performance issues.
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY | Error | No |
+| [ban-query-hints](performance/ban-query-hints.md) | Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues | Warning | No |
+| [disallow-select-distinct](performance/disallow-select-distinct.md) | Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY | Information | No |
 | [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md) | Detects functions or conversions applied to columns in predicates | Warning | No |
 | [disallow-cursors](performance/disallow-cursors.md) | Prohibit cursor usage; prefer set-based operations | Warning | No |
 | [full-text](performance/full-text.md) | Prohibit full-text search predicates | Warning | No |
@@ -152,12 +157,14 @@ Rules that maintain code formatting and consistency.
 | [prefer-concat-over-plus](style/prefer-concat-over-plus.md) | Recommends CONCAT() when + concatenation uses ISNULL/COALESCE | Information | No |
 | [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md) | Warns on datetime CONVERT style numbers (magic numbers) | Information | No |
 
-### Transactions (6 rules)
+### Transactions (8 rules)
 
 Rules that ensure proper transaction handling and session settings.
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [catch-swallowing](transactions/catch-swallowing.md) | Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures | Warning | No |
+| [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md) | Detects BEGIN TRANSACTION without corresponding COMMIT or ROLLBACK in the same batch | Error | No |
 | [require-try-catch-for-transaction](transactions/require-try-catch-for-transaction.md) | Requires TRY/CATCH around explicit transactions | Warning | No |
 | [require-xact-abort-on](transactions/require-xact-abort-on.md) | Requires SET XACT_ABORT ON with explicit transactions | Warning | No |
 | [set-ansi](transactions/set-ansi.md) | Files should start with SET ANSI_NULLS ON within the first 10 statements | Warning | No |

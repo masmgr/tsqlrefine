@@ -8,6 +8,7 @@
     { "id": "semantic/duplicate-alias", "enabled": true },
     { "id": "semantic/insert-column-count-mismatch", "enabled": true },
     { "id": "require-column-list-for-insert-values", "enabled": true },
-    { "id": "require-column-list-for-insert-select", "enabled": true }
+    { "id": "require-column-list-for-insert-select", "enabled": true },
+    { "id": "dangerous-ddl", "enabled": true }
   ]
 }

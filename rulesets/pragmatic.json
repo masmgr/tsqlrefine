@@ -23,6 +23,10 @@
     { "id": "set-quoted-identifier", "enabled": true },
     { "id": "avoid-implicit-conversion-in-predicate", "enabled": true },
     { "id": "non-sargable", "enabled": true },
-    { "id": "disallow-cursors", "enabled": true }
+    { "id": "disallow-cursors", "enabled": true },
+    { "id": "ban-legacy-join-syntax", "enabled": true },
+    { "id": "no-top-without-order-by-in-select-into", "enabled": true },
+    { "id": "dangerous-ddl", "enabled": true },
+    { "id": "transaction-without-commit-or-rollback", "enabled": true }
   ]
 }

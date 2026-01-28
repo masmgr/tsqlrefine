@@ -39,6 +39,12 @@
     { "id": "set-quoted-identifier", "enabled": true },
     { "id": "set-transaction-isolation-level", "enabled": true },
     { "id": "semantic/multi-table-alias", "enabled": true },
-    { "id": "require-qualified-columns-everywhere", "enabled": true }
+    { "id": "require-qualified-columns-everywhere", "enabled": true },
+    { "id": "ban-legacy-join-syntax", "enabled": true },
+    { "id": "no-top-without-order-by-in-select-into", "enabled": true },
+    { "id": "dangerous-ddl", "enabled": true },
+    { "id": "catch-swallowing", "enabled": true },
+    { "id": "ban-query-hints", "enabled": true },
+    { "id": "transaction-without-commit-or-rollback", "enabled": true }
   ]
 }
