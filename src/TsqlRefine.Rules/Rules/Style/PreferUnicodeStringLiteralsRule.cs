@@ -99,17 +99,13 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         {
             foreach (var declaration in node.Declarations)
             {
-                if (declaration.DataType is SqlDataTypeReference sqlDataType)
+                if (declaration.DataType is not SqlDataTypeReference sqlDataType)
                 {
-                    var varName = declaration.VariableName.Value;
-                    _variableTypes[varName] = sqlDataType;
-
-                    if (declaration.Value is StringLiteral literal &&
-                        IsNonUnicodeStringType(sqlDataType))
-                    {
-                        MarkUnsafe(literal);
-                    }
+                    continue;
                 }
+
+                TrackVariableType(declaration.VariableName.Value, sqlDataType);
+                MarkValueIfNonUnicode(declaration.Value as StringLiteral, sqlDataType);
             }
 
             base.ExplicitVisit(node);
@@ -119,8 +115,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         {
             if (node.DataType is SqlDataTypeReference sqlDataType)
             {
-                var varName = node.VariableName.Value;
-                _variableTypes[varName] = sqlDataType;
+                TrackVariableType(node.VariableName.Value, sqlDataType);
             }
 
             base.ExplicitVisit(node);
@@ -128,25 +123,13 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         public override void ExplicitVisit(SetVariableStatement node)
         {
-            if (node.Expression is StringLiteral literal &&
-                _variableTypes.TryGetValue(node.Variable.Name, out var dataType) &&
-                IsNonUnicodeStringType(dataType))
-            {
-                MarkUnsafe(literal);
-            }
-
+            MarkLiteralForVariable(node.Variable.Name, node.Expression as StringLiteral);
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(SelectSetVariable node)
         {
-            if (node.Expression is StringLiteral literal &&
-                _variableTypes.TryGetValue(node.Variable.Name, out var dataType) &&
-                IsNonUnicodeStringType(dataType))
-            {
-                MarkUnsafe(literal);
-            }
-
+            MarkLiteralForVariable(node.Variable.Name, node.Expression as StringLiteral);
             base.ExplicitVisit(node);
         }
 
@@ -254,13 +237,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         public override void ExplicitVisit(StringLiteral node)
         {
-            if (IsUnicodeLiteral(node, _tokens))
-            {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            if (_unsafeLiterals.Contains(LiteralKey.From(node)))
+            if (ShouldSkipLiteral(node))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -269,12 +246,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
             var fixable = TryCreateUnicodePrefixEdit(_tokens, node, out _);
 
             _issues.Add(new Issue(
-                Diagnostic: new Diagnostic(
-                    Range: ScriptDomHelpers.GetRange(node),
-                    Message: "Prefer Unicode string literals (N'...') to avoid encoding and collation issues.",
-                    Code: "prefer-unicode-string-literals",
-                    Data: new DiagnosticData("prefer-unicode-string-literals", "Style", fixable)
-                ),
+                Diagnostic: CreateDiagnostic(node, fixable),
                 Literal: node
             ));
 
@@ -328,6 +300,54 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
                 base.ExplicitVisit(node);
             }
+        }
+
+        private void TrackVariableType(string variableName, SqlDataTypeReference dataType)
+        {
+            _variableTypes[variableName] = dataType;
+        }
+
+        private void MarkValueIfNonUnicode(StringLiteral? literal, SqlDataTypeReference dataType)
+        {
+            if (literal is null)
+            {
+                return;
+            }
+
+            if (IsNonUnicodeStringType(dataType))
+            {
+                MarkUnsafe(literal);
+            }
+        }
+
+        private void MarkLiteralForVariable(string variableName, StringLiteral? literal)
+        {
+            if (literal is null)
+            {
+                return;
+            }
+
+            if (_variableTypes.TryGetValue(variableName, out var dataType) &&
+                IsNonUnicodeStringType(dataType))
+            {
+                MarkUnsafe(literal);
+            }
+        }
+
+        private bool ShouldSkipLiteral(StringLiteral literal)
+        {
+            return IsUnicodeLiteral(literal, _tokens)
+                || _unsafeLiterals.Contains(LiteralKey.From(literal));
+        }
+
+        private static Diagnostic CreateDiagnostic(StringLiteral literal, bool fixable)
+        {
+            return new Diagnostic(
+                Range: ScriptDomHelpers.GetRange(literal),
+                Message: "Prefer Unicode string literals (N'...') to avoid encoding and collation issues.",
+                Code: "prefer-unicode-string-literals",
+                Data: new DiagnosticData("prefer-unicode-string-literals", "Style", fixable)
+            );
         }
     }
 
