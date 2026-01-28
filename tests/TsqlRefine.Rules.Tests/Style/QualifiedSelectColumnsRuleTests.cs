@@ -131,6 +131,40 @@ public sealed class QualifiedSelectColumnsRuleTests
     }
 
     [Fact]
+    public void Analyze_DateAddDatePartLiteral_DoesNotReport()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT DATEADD(day, 1, u.created_at) AS next_date
+            FROM users u
+            INNER JOIN orders o ON u.id = o.user_id;";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InPredicateList_DoesNotReport()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT CASE WHEN u.id IN (user_id) THEN 1 ELSE 0 END AS is_match
+            FROM users u
+            INNER JOIN orders o ON u.id = o.user_id;";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_SubqueryWithMultipleTables_ReturnsDiagnostic()
     {
         // Arrange

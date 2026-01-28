@@ -71,9 +71,19 @@ public sealed class QualifiedSelectColumnsRule : IRule
             base.ExplicitVisit(node);
         }
 
-        private void CheckExpressionForUnqualifiedColumns(ScalarExpression expression)
+        private void CheckExpressionForUnqualifiedColumns(TSqlFragment? fragment)
         {
-            if (expression is ColumnReferenceExpression colRef)
+            if (fragment is null)
+            {
+                return;
+            }
+
+            if (fragment is ScalarSubquery)
+            {
+                return;
+            }
+
+            if (fragment is ColumnReferenceExpression colRef)
             {
                 // Check if column is unqualified (no table/alias prefix)
                 if (colRef.MultiPartIdentifier != null && colRef.MultiPartIdentifier.Count == 1)
@@ -87,30 +97,134 @@ public sealed class QualifiedSelectColumnsRule : IRule
                     );
                 }
             }
-            else if (expression is BinaryExpression binary)
+            else if (fragment is IIfCall iifCall)
+            {
+                CheckBooleanExpressionForUnqualifiedColumns(iifCall.Predicate);
+                CheckExpressionForUnqualifiedColumns(iifCall.ThenExpression);
+                CheckExpressionForUnqualifiedColumns(iifCall.ElseExpression);
+            }
+            else if (fragment is SearchedCaseExpression searchedCase)
+            {
+                if (searchedCase.WhenClauses != null)
+                {
+                    foreach (var whenClause in searchedCase.WhenClauses)
+                    {
+                        CheckBooleanExpressionForUnqualifiedColumns(whenClause.WhenExpression);
+                        CheckExpressionForUnqualifiedColumns(whenClause.ThenExpression);
+                    }
+                }
+
+                CheckExpressionForUnqualifiedColumns(searchedCase.ElseExpression);
+            }
+            else if (fragment is SimpleCaseExpression simpleCase)
+            {
+                CheckExpressionForUnqualifiedColumns(simpleCase.InputExpression);
+
+                if (simpleCase.WhenClauses != null)
+                {
+                    foreach (var whenClause in simpleCase.WhenClauses)
+                    {
+                        CheckExpressionForUnqualifiedColumns(whenClause.WhenExpression);
+                        CheckExpressionForUnqualifiedColumns(whenClause.ThenExpression);
+                    }
+                }
+
+                CheckExpressionForUnqualifiedColumns(simpleCase.ElseExpression);
+            }
+            else if (fragment is BinaryExpression binary)
             {
                 CheckExpressionForUnqualifiedColumns(binary.FirstExpression);
                 CheckExpressionForUnqualifiedColumns(binary.SecondExpression);
             }
-            else if (expression is FunctionCall func)
+            else if (fragment is FunctionCall func)
             {
                 if (func.Parameters != null)
                 {
-                    foreach (var param in func.Parameters)
+                    for (var i = 0; i < func.Parameters.Count; i++)
                     {
+                        var param = func.Parameters[i];
+                        if (DatePartHelper.IsDatePartLiteralParameter(func, i, param))
+                        {
+                            continue;
+                        }
+
                         CheckExpressionForUnqualifiedColumns(param);
                     }
                 }
             }
-            else if (expression is CastCall castCall)
+            else if (fragment is CastCall castCall)
             {
                 CheckExpressionForUnqualifiedColumns(castCall.Parameter);
             }
-            else if (expression is ConvertCall convertCall)
+            else if (fragment is ConvertCall convertCall)
             {
                 CheckExpressionForUnqualifiedColumns(convertCall.Parameter);
             }
+            else if (fragment is ParenthesisExpression parenthesis)
+            {
+                CheckExpressionForUnqualifiedColumns(parenthesis.Expression);
+            }
+            else if (fragment is UnaryExpression unary)
+            {
+                CheckExpressionForUnqualifiedColumns(unary.Expression);
+            }
         }
+
+        private void CheckBooleanExpressionForUnqualifiedColumns(BooleanExpression? expression)
+        {
+            if (expression is null)
+            {
+                return;
+            }
+
+            if (expression is InPredicate inPredicate)
+            {
+                CheckExpressionForUnqualifiedColumns(inPredicate.Expression);
+                return;
+            }
+
+            if (expression is BooleanComparisonExpression comparison)
+            {
+                CheckExpressionForUnqualifiedColumns(comparison.FirstExpression);
+                CheckExpressionForUnqualifiedColumns(comparison.SecondExpression);
+                return;
+            }
+
+            if (expression is BooleanBinaryExpression binary)
+            {
+                CheckBooleanExpressionForUnqualifiedColumns(binary.FirstExpression);
+                CheckBooleanExpressionForUnqualifiedColumns(binary.SecondExpression);
+                return;
+            }
+
+            if (expression is BooleanParenthesisExpression parenthesis)
+            {
+                CheckBooleanExpressionForUnqualifiedColumns(parenthesis.Expression);
+                return;
+            }
+
+            if (expression is BooleanNotExpression notExpression)
+            {
+                CheckBooleanExpressionForUnqualifiedColumns(notExpression.Expression);
+                return;
+            }
+
+            if (expression is BooleanIsNullExpression isNull)
+            {
+                CheckExpressionForUnqualifiedColumns(isNull.Expression);
+                return;
+            }
+
+            if (expression is LikePredicate like)
+            {
+                CheckExpressionForUnqualifiedColumns(like.FirstExpression);
+                CheckExpressionForUnqualifiedColumns(like.SecondExpression);
+                return;
+            }
+
+        }
+
+        // Date-part handling has been moved to DatePartHelper.
 
         private static void CollectTableReferences(IList<TableReference> tableRefs, List<TableReference> collected)
         {
