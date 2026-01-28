@@ -52,11 +52,13 @@ VALUES ('John');
 SELECT IDENT_CURRENT('users');
 
 -- Store identity in variable using OUTPUT
-DECLARE @NewId INT;
+DECLARE @NewIds TABLE (id INT);
+
 INSERT INTO users (name)
-OUTPUT INSERTED.id INTO @NewId
+OUTPUT INSERTED.id INTO @NewIds(id)
 VALUES ('John');
-SELECT @NewId;
+
+SELECT id FROM @NewIds;
 ```
 
 ## Configuration

@@ -45,7 +45,7 @@ public sealed class SetVariableRule : IRule
                 fragment: node,
                 message: "Use SELECT for variable assignment instead of SET. SELECT is preferred for consistency and can be more performant when assigning multiple variables.",
                 code: "semantic/set-variable",
-                category: "Style",
+                category: "Correctness",
                 fixable: false
             );
 

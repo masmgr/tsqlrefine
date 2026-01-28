@@ -7,11 +7,13 @@
 
 ## Description
 
-Recommends using SELECT for variable assignment instead of SET for better performance and consistency.
+Recommends using `SELECT` for variable assignment instead of `SET`, to keep variable-assignment style consistent across a codebase.
 
 ## Rationale
 
-Using a consistent variable-assignment pattern improves readability, and SELECT-based assignment can be preferable when assignments come from queries (including multi-variable assignment patterns). This rule encourages that consistency.
+Using a consistent variable-assignment pattern improves readability, especially in codebases that commonly assign variables from queries and/or assign multiple variables at once.
+
+Note: `SET` and `SELECT` do not behave identically in all cases (e.g., multi-row assignments). If your team prefers stricter semantics, consider disabling this rule.
 
 ## Examples
 

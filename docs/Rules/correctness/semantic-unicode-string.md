@@ -18,13 +18,13 @@ This rule prevents code that may produce incorrect results or runtime errors. Fo
 ### Bad
 
 ```sql
-DECLARE @Name VARCHAR(50); SET @Name = '縺薙ｓ縺ｫ縺｡縺ｯ';
+DECLARE @Name VARCHAR(50); SET @Name = 'こんにちは';
 ```
 
 ### Good
 
 ```sql
-DECLARE @Name NVARCHAR(50); SET @Name = '縺薙ｓ縺ｫ縺｡縺ｯ';
+DECLARE @Name NVARCHAR(50); SET @Name = 'こんにちは';
 ```
 
 ## Configuration

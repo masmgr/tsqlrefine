@@ -20,9 +20,9 @@ In SQL, `NULL` represents an unknown or missing value. Comparisons with `NULL` u
 - **Common beginner mistake**: Many developers expect `= NULL` to work like other languages
 
 **SQL three-valued logic:**
-- `NULL = NULL` 竊・UNKNOWN (not TRUE!)
-- `NULL <> NULL` 竊・UNKNOWN
-- `NULL != NULL` 竊・UNKNOWN
+- `NULL = NULL` => UNKNOWN (not TRUE!)
+- `NULL <> NULL` => UNKNOWN
+- `NULL != NULL` => UNKNOWN
 
 **Correct approach:** Use `IS NULL` or `IS NOT NULL` operators which explicitly handle NULL values and return TRUE or FALSE.
 
