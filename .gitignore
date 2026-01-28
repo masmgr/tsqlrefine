@@ -9,6 +9,7 @@
 
 # Build results
 [Dd]ebug/
+!docs/Rules/debug/
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
