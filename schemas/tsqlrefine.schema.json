@@ -45,6 +45,61 @@
         "additionalProperties": false
       },
       "default": []
+    },
+    "formatting": {
+      "type": "object",
+      "description": "Formatting options for the SQL formatter",
+      "properties": {
+        "indentStyle": {
+          "type": "string",
+          "description": "Indentation style. Default: spaces",
+          "enum": ["spaces", "tabs"],
+          "default": "spaces"
+        },
+        "indentSize": {
+          "type": "integer",
+          "description": "Number of spaces per indent level (for spaces) or tab width (for tabs). Default: 4",
+          "minimum": 1,
+          "maximum": 16,
+          "default": 4
+        },
+        "keywordCasing": {
+          "type": "string",
+          "description": "Keyword casing style. Default: upper",
+          "enum": ["preserve", "upper", "lower", "pascal"],
+          "default": "upper"
+        },
+        "identifierCasing": {
+          "type": "string",
+          "description": "Identifier casing style. Default: preserve",
+          "enum": ["preserve", "upper", "lower", "pascal", "camel"],
+          "default": "preserve"
+        },
+        "commaStyle": {
+          "type": "string",
+          "description": "Comma placement style. Default: trailing",
+          "enum": ["trailing", "leading"],
+          "default": "trailing"
+        },
+        "maxLineLength": {
+          "type": "integer",
+          "description": "Maximum line length (0 = no limit). Default: 0",
+          "minimum": 0,
+          "maximum": 500,
+          "default": 0
+        },
+        "insertFinalNewline": {
+          "type": "boolean",
+          "description": "Insert final newline at end of file. Default: true",
+          "default": true
+        },
+        "trimTrailingWhitespace": {
+          "type": "boolean",
+          "description": "Trim trailing whitespace on lines. Default: true",
+          "default": true
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

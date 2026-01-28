@@ -26,9 +26,63 @@ Example:
   "ruleset": "rulesets/recommended.json",
   "plugins": [
     { "path": "plugins/custom-rules.dll", "enabled": true }
-  ]
+  ],
+  "formatting": {
+    "keywordCasing": "upper",
+    "identifierCasing": "preserve",
+    "indentStyle": "spaces",
+    "indentSize": 4
+  }
 }
 ```
+
+### Formatting Configuration
+
+The optional `formatting` section allows you to customize SQL formatting behavior:
+
+```json
+{
+  "formatting": {
+    "indentStyle": "spaces",
+    "indentSize": 4,
+    "keywordCasing": "upper",
+    "identifierCasing": "preserve",
+    "commaStyle": "trailing",
+    "maxLineLength": 0,
+    "insertFinalNewline": true,
+    "trimTrailingWhitespace": true
+  }
+}
+```
+
+**Available options:**
+
+- `indentStyle` (string): `"spaces"` or `"tabs"`. Default: `"spaces"`
+- `indentSize` (integer): Number of spaces per indent level (for spaces) or tab width (for tabs). Default: `4`
+- `keywordCasing` (string): Keyword casing style
+  - `"preserve"`: Keep original casing
+  - `"upper"`: UPPERCASE (default)
+  - `"lower"`: lowercase
+  - `"pascal"`: PascalCase
+- `identifierCasing` (string): Identifier casing style
+  - `"preserve"`: Keep original casing (default)
+  - `"upper"`: UPPERCASE
+  - `"lower"`: lowercase
+  - `"pascal"`: PascalCase
+  - `"camel"`: camelCase
+- `commaStyle` (string): Comma placement
+  - `"trailing"`: `SELECT a, b, c` (default)
+  - `"leading"`: `SELECT a ,b ,c`
+- `maxLineLength` (integer): Maximum line length (0 = no limit). Default: `0`
+- `insertFinalNewline` (boolean): Insert final newline at end of file. Default: `true`
+- `trimTrailingWhitespace` (boolean): Trim trailing whitespace on lines. Default: `true`
+
+**Priority order:**
+
+1. CLI arguments (`--indent-style`, `--indent-size`)
+2. `.editorconfig` settings (for indentation only)
+3. `tsqlrefine.json` formatting section
+4. Built-in defaults
 
 ## Ruleset file
 

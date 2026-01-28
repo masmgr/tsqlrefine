@@ -14,7 +14,7 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(new[] { "format", "--stdin" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Equal("SELECT *\n    FROM t\nWHERE id=1", stdout.ToString());
+        Assert.Equal("SELECT *\n    FROM t\nWHERE id=1\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -52,7 +52,7 @@ public sealed class CliFormatTests
             var code = await CliApp.RunAsync(new[] { "format", sqlPath }, TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            Assert.Equal("SELECT *\n\t\tFROM t", stdout.ToString());
+            Assert.Equal("SELECT *\n\t\tFROM t\n", stdout.ToString());
             Assert.Equal(string.Empty, stderr.ToString());
         }
         finally

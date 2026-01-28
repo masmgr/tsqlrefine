@@ -381,20 +381,40 @@ public static class CliApp
 
     private static FormattingOptions ResolveFormattingOptions(CliArgs args, SqlInput input)
     {
+        // Priority: CLI args > .editorconfig > tsqlrefine.json > defaults
         var options = new FormattingOptions();
+
+        // Load from tsqlrefine.json if available
+        try
+        {
+            var config = LoadConfig(args);
+            if (config.Formatting is not null)
+            {
+                options = FormattingConfigMapper.ToFormattingOptions(config.Formatting);
+            }
+        }
+        catch
+        {
+            // Ignore config load errors for formatting - use defaults
+        }
+
+        // Override with .editorconfig
         var editorConfig = TryReadEditorConfigOptions(input.FilePath);
         if (editorConfig is not null)
         {
-            options = new FormattingOptions(
-                IndentStyle: editorConfig.IndentStyle ?? options.IndentStyle,
-                IndentSize: editorConfig.IndentSize ?? options.IndentSize
-            );
+            options = options with
+            {
+                IndentStyle = editorConfig.IndentStyle ?? options.IndentStyle,
+                IndentSize = editorConfig.IndentSize ?? options.IndentSize
+            };
         }
 
-        return new FormattingOptions(
-            IndentStyle: args.IndentStyle ?? options.IndentStyle,
-            IndentSize: args.IndentSize ?? options.IndentSize
-        );
+        // Override with CLI args
+        return options with
+        {
+            IndentStyle = args.IndentStyle ?? options.IndentStyle,
+            IndentSize = args.IndentSize ?? options.IndentSize
+        };
     }
 
     private static EditorConfigFormattingOptions? TryReadEditorConfigOptions(string filePath)

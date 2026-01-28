@@ -1,0 +1,14 @@
+{
+  "$schema": "../../schemas/tsqlrefine.schema.json",
+  "compatLevel": 150,
+  "formatting": {
+    "indentStyle": "spaces",
+    "indentSize": 2,
+    "keywordCasing": "upper",
+    "identifierCasing": "preserve",
+    "commaStyle": "trailing",
+    "maxLineLength": 120,
+    "insertFinalNewline": true,
+    "trimTrailingWhitespace": true
+  }
+}

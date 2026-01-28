@@ -6,7 +6,7 @@ namespace TsqlRefine.Formatting;
 
 public static class SqlFormatter
 {
-    public static string Format(string sql, FormattingOptions options)
+    public static string Format(string sql, FormattingOptions? options = null)
     {
         if (string.IsNullOrEmpty(sql))
         {
@@ -14,8 +14,71 @@ public static class SqlFormatter
         }
 
         options ??= new FormattingOptions();
-        var keywordCased = ScriptDomKeywordCaser.Apply(sql);
-        return new MinimalWhitespaceNormalizer(options).Format(keywordCased);
+        var keywordCased = ScriptDomKeywordCaser.Apply(sql, options.KeywordCasing, options.IdentifierCasing);
+        var whitespaceNormalized = new MinimalWhitespaceNormalizer(options).Format(keywordCased);
+
+        // Apply comma style if not default trailing
+        if (options.CommaStyle == CommaStyle.Leading)
+        {
+            whitespaceNormalized = ApplyLeadingCommaStyle(whitespaceNormalized);
+        }
+
+        return whitespaceNormalized;
+    }
+
+    private static string ApplyLeadingCommaStyle(string input)
+    {
+        // Simple transformation: move trailing commas to leading position
+        // This is a basic implementation that handles simple cases
+        // For more complex scenarios, a full AST-based approach would be needed
+        var lines = input.Split('\n');
+        var result = new StringBuilder(input.Length);
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            var trimmed = line.TrimEnd();
+
+            if (trimmed.EndsWith(','))
+            {
+                // This line has a trailing comma
+                var withoutComma = trimmed[..^1].TrimEnd();
+                result.Append(withoutComma);
+
+                // If there's a next line, prepend the comma to it
+                if (i + 1 < lines.Length)
+                {
+                    result.Append('\n');
+                    var nextLine = lines[i + 1];
+                    var nextTrimStart = nextLine.TrimStart();
+                    var leadingWhitespace = nextLine[..^nextTrimStart.Length];
+                    result.Append(leadingWhitespace);
+                    result.Append(',');
+                    if (nextTrimStart.Length > 0)
+                    {
+                        result.Append(' ');
+                        result.Append(nextTrimStart);
+                    }
+                    i++; // Skip next line as we already processed it
+                }
+                else
+                {
+                    // Last line with comma, keep it trailing
+                    result.Append(',');
+                }
+            }
+            else
+            {
+                result.Append(line);
+            }
+
+            if (i < lines.Length - 1)
+            {
+                result.Append('\n');
+            }
+        }
+
+        return result.ToString();
     }
 
     private static class ScriptDomKeywordCaser
@@ -32,7 +95,7 @@ public static class SqlFormatter
             "Literal"
         };
 
-        public static string Apply(string input)
+        public static string Apply(string input, KeywordCasing keywordCasing, IdentifierCasing identifierCasing)
         {
             var parser = new TSql150Parser(initialQuotedIdentifiers: true);
             using var reader = new StringReader(input);
@@ -47,10 +110,63 @@ public static class SqlFormatter
                 }
 
                 var text = token.Text ?? string.Empty;
-                sb.Append(IsKeywordToken(token) ? text.ToUpperInvariant() : text);
+
+                if (IsKeywordToken(token))
+                {
+                    sb.Append(ApplyCasing(text, keywordCasing));
+                }
+                else if (IsIdentifierToken(token))
+                {
+                    sb.Append(ApplyCasing(text, identifierCasing));
+                }
+                else
+                {
+                    sb.Append(text);
+                }
             }
 
             return sb.ToString();
+        }
+
+        private static string ApplyCasing(string text, KeywordCasing casing) => casing switch
+        {
+            KeywordCasing.Upper => text.ToUpperInvariant(),
+            KeywordCasing.Lower => text.ToLowerInvariant(),
+            KeywordCasing.Pascal => ToPascalCase(text),
+            KeywordCasing.Preserve => text,
+            _ => text
+        };
+
+        private static string ApplyCasing(string text, IdentifierCasing casing) => casing switch
+        {
+            IdentifierCasing.Upper => text.ToUpperInvariant(),
+            IdentifierCasing.Lower => text.ToLowerInvariant(),
+            IdentifierCasing.Pascal => ToPascalCase(text),
+            IdentifierCasing.Camel => ToCamelCase(text),
+            IdentifierCasing.Preserve => text,
+            _ => text
+        };
+
+        private static string ToPascalCase(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var lower = text.ToLowerInvariant();
+            return char.ToUpperInvariant(lower[0]) + lower[1..];
+        }
+
+        private static string ToCamelCase(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            var lower = text.ToLowerInvariant();
+            return char.ToLowerInvariant(lower[0]) + lower[1..];
         }
 
         private static bool IsKeywordToken(TSqlParserToken token)
@@ -71,6 +187,20 @@ public static class SqlFormatter
             }
 
             return true;
+        }
+
+        private static bool IsIdentifierToken(TSqlParserToken token)
+        {
+            if (string.IsNullOrEmpty(token.Text))
+            {
+                return false;
+            }
+
+            var typeName = GetTokenTypeName(token.TokenType);
+            return typeName.Contains("Identifier", StringComparison.Ordinal) &&
+                   !typeName.Contains("Quoted", StringComparison.Ordinal) &&
+                   !token.Text.StartsWith('[') &&
+                   !token.Text.StartsWith('"');
         }
 
         private static bool IsNonKeywordTokenKind(TSqlParserToken token)
@@ -161,7 +291,15 @@ public static class SqlFormatter
                 AppendProcessedLine(sb, line);
             }
 
-            return sb.ToString();
+            var result = sb.ToString();
+
+            // Apply final newline option
+            if (_options.InsertFinalNewline && !result.EndsWith('\n'))
+            {
+                result += '\n';
+            }
+
+            return result;
         }
 
         private static bool TryConsumeNewline(string input, ref int index, char current)
@@ -247,7 +385,7 @@ public static class SqlFormatter
                 i++;
             }
 
-            if (!lineContainsProtected && !IsInProtectedRegion())
+            if (_options.TrimTrailingWhitespace && !lineContainsProtected && !IsInProtectedRegion())
             {
                 TrimTrailingWhitespace(sbLine);
             }

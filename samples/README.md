@@ -6,11 +6,12 @@ This directory contains sample files demonstrating how to configure and use tsql
 
 ```
 samples/
-├── config/              Configuration file examples
-│   ├── tsqlrefine.json         Basic configuration
+├── configs/             Configuration file examples
+│   ├── basic.json              Basic configuration
 │   ├── advanced.json           Advanced configuration with plugins
 │   ├── minimal.json            Minimal configuration (uses defaults)
-│   ├── sql-server-2012.json   SQL Server 2012 compatibility
+│   ├── sql-server-2012.json    SQL Server 2012 compatibility
+│   ├── formatting-options.json Complete formatting options example
 │   └── tsqlrefine.ignore       File ignore patterns
 ├── rulesets/            Ruleset examples
 │   ├── recommended.json        All rules enabled (recommended)
@@ -123,6 +124,32 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint samples/sql/rules/*.s
 ```
 
 **When to use**: Legacy projects targeting SQL Server 2012
+
+### Formatting Options ([configs/formatting-options.json](configs/formatting-options.json))
+
+```json
+{
+  "compatLevel": 150,
+  "formatting": {
+    "indentStyle": "spaces",
+    "indentSize": 2,
+    "keywordCasing": "upper",
+    "identifierCasing": "preserve",
+    "commaStyle": "trailing",
+    "maxLineLength": 120,
+    "insertFinalNewline": true,
+    "trimTrailingWhitespace": true
+  }
+}
+```
+
+**When to use**: Customize SQL formatting behavior
+
+**Available casing options:**
+- `keywordCasing`: `preserve`, `upper` (default), `lower`, `pascal`
+- `identifierCasing`: `preserve` (default), `upper`, `lower`, `pascal`, `camel`
+- `indentStyle`: `spaces` (default), `tabs`
+- `commaStyle`: `trailing` (default), `leading`
 
 ## Ruleset Samples
 

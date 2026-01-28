@@ -24,8 +24,8 @@ public class CliFormatDiffTests
     [Fact]
     public async Task Format_WithDiffNoChanges_OutputsNothing()
     {
-        // Already formatted SQL
-        var stdin = new StringReader("SELECT *\n    FROM t\nWHERE id = 1");
+        // Already formatted SQL (including final newline)
+        var stdin = new StringReader("SELECT *\n    FROM t\nWHERE id = 1\n");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 

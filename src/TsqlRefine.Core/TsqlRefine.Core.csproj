@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TsqlRefine.PluginSdk\TsqlRefine.PluginSdk.csproj" />
+    <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
