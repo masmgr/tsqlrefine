@@ -18,7 +18,7 @@ internal static class RuleTestContext
         var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
 
         var tokens = Tokenize(tokenStream);
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, tokenErrors);
+        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, tokenErrors.ToArray());
 
         return new RuleContext(
             FilePath: "<test>",
