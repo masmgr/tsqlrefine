@@ -8,6 +8,7 @@
     { "id": "semantic/duplicate-alias", "enabled": true },
     { "id": "semantic/cte-name-conflict", "enabled": true },
     { "id": "semantic/insert-column-count-mismatch", "enabled": true },
+    { "id": "insert-select-column-name-mismatch", "enabled": true },
     { "id": "escape-keyword-identifier", "enabled": true },
     { "id": "avoid-null-comparison", "enabled": true },
     { "id": "require-parentheses-for-mixed-and-or", "enabled": true },

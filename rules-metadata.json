@@ -252,6 +252,15 @@
     "FileName": "InformationSchemaRule.cs"
   },
   {
+    "RuleId": "insert-select-column-name-mismatch",
+    "Description": "Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "InsertSelectColumnNameMismatchRule.cs"
+  },
+  {
     "RuleId": "join-keyword",
     "Description": "Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability",
     "Category": "Style",

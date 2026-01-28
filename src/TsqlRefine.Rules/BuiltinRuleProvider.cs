@@ -37,6 +37,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new RequireAsForTableAliasRule(),
             new RequireAsForColumnAliasRule(),
             new InsertColumnCountMismatchRule(),
+            new InsertSelectColumnNameMismatchRule(),
             new CteNameConflictRule(),
             new ReturnAfterStatementsRule(),
             new JoinConditionAlwaysTrueRule(),
