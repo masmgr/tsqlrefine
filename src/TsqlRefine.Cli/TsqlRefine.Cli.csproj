@@ -5,8 +5,29 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.1.0</Version>
-    <InformationalVersion>0.1.0-alpha</InformationalVersion>
+
+    <!-- .NET Global Tool configuration -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>tsqlrefine</ToolCommandName>
+    <PackageId>TsqlRefine</PackageId>
+    <PackageOutputPath>../../nupkg</PackageOutputPath>
+
+    <!-- Package metadata -->
+    <Authors>imasa</Authors>
+    <Description>A SQL Server/T-SQL linter, static analyzer, and formatter</Description>
+    <PackageTags>tsql;sql-server;linter;formatter;static-analysis;code-quality</PackageTags>
+    <PackageProjectUrl>https://github.com/imasa/tsqlrefine</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/imasa/tsqlrefine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>See https://github.com/imasa/tsqlrefine/releases</PackageReleaseNotes>
+
+    <!-- Build options -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +40,10 @@
     <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
     <ProjectReference Include="..\TsqlRefine.PluginHost\TsqlRefine.PluginHost.csproj" />
     <ProjectReference Include="..\TsqlRefine.Rules\TsqlRefine.Rules.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

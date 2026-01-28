@@ -77,8 +77,8 @@
 
 ### 3.3 プラグインホスト強化（運用向け）
 
-- [ ] 依存 DLL / ネイティブ DLL の解決を強化（必要なら `AssemblyLoadContext.LoadUnmanagedDll` 等）
-- [ ] ロード結果の可観測性（エラー詳細、バージョン不整合など）を CLI 出力で分かりやすくする
+- [x] 依存 DLL / ネイティブ DLL の解決を強化（必要なら `AssemblyLoadContext.LoadUnmanagedDll` 等）
+- [x] ロード結果の可観測性（エラー詳細、バージョン不整合など）を CLI 出力で分かりやすくする
 
 ---
 
@@ -86,6 +86,6 @@
 
 - [ ] `check`（semantic）向けのスコープ解析基盤を拡張（`docs/semantic-check-rules.md`）
 - [ ] フォーマッタのオプション拡充（キーワード以外のポリシー、最小整形の範囲追加）
-- [ ] 配布（.NET tool / release pipeline）とバージョニング（タグ、リリースノート）
+- [x] 配布（.NET tool / release pipeline）とバージョニング（タグ、リリースノート）
 - [ ] パフォーマンス最適化（大規模 SQL/大量ファイル時の速度・メモリ）
 

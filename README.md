@@ -6,29 +6,96 @@ This repository contains the `.NET` CLI tool `tsqlrefine`, built-in rules, a for
 
 Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
 
-## Quickstart
+## Installation
 
-Build and test:
+### As a .NET Global Tool (Recommended)
 
-```powershell
-dotnet build src/TsqlRefine.sln -c Release
-dotnet test  src/TsqlRefine.sln -c Release
+Install from NuGet.org:
+
+```bash
+dotnet tool install --global TsqlRefine
 ```
 
-Run the CLI from source:
+Update to the latest version:
 
-```powershell
-# Lint from stdin (JSON output)
-"select * from t;" | dotnet run --project src/TsqlRefine.Cli -c Release -- lint --stdin --output json
+```bash
+dotnet tool update --global TsqlRefine
+```
 
+Uninstall:
+
+```bash
+dotnet tool uninstall --global TsqlRefine
+```
+
+After installation, the `tsqlrefine` command will be available globally:
+
+```bash
+tsqlrefine --version
+tsqlrefine --help
+```
+
+### As a Local Tool (Project-specific)
+
+For project-specific tool management:
+
+```bash
+# Create tool manifest (if not already present)
+dotnet new tool-manifest
+
+# Install as a local tool
+dotnet tool install TsqlRefine
+
+# Run using dotnet prefix
+dotnet tsqlrefine --help
+```
+
+### From Source
+
+Clone the repository and build from source:
+
+```bash
+git clone https://github.com/imasa/tsqlrefine.git
+cd tsqlrefine
+dotnet build src/TsqlRefine.sln -c Release
+dotnet test src/TsqlRefine.sln -c Release
+```
+
+## Quickstart
+
+### Basic Usage
+
+If installed as a global tool:
+
+```bash
 # Lint files/directories
-dotnet run --project src/TsqlRefine.Cli -c Release -- lint path\to\file.sql path\to\dir
+tsqlrefine lint path/to/file.sql path/to/dir
+
+# Lint from stdin with JSON output
+echo "select * from t;" | tsqlrefine lint --stdin --output json
+
+# Format files (show diff)
+tsqlrefine format --diff path/to/file.sql
 
 # Format in-place (writes files)
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --write path\to\dir
+tsqlrefine format --write path/to/dir
 
-# Show a diff instead of writing
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff path\to\file.sql
+# Auto-fix issues
+tsqlrefine fix --write path/to/file.sql
+```
+
+### Running from Source
+
+If running from source code:
+
+```bash
+# Build and test
+dotnet build src/TsqlRefine.sln -c Release
+dotnet test src/TsqlRefine.sln -c Release
+
+# Run the CLI
+dotnet run --project src/TsqlRefine.Cli -c Release -- lint path/to/file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff path/to/file.sql
 ```
 
 ## Configuration
@@ -69,3 +136,18 @@ Project docs live under `docs/` (currently written in Japanese):
 - CLI spec (I/O, JSON, exit codes): `docs/cli.md`
 - Plugin API (minimum contract: Rule): `docs/plugin-api.md`
 - Project structure: `docs/project-structure.md`
+- Release process: `docs/release.md`
+
+## Releases
+
+Release notes and downloads are available on the [Releases page](https://github.com/imasa/tsqlrefine/releases).
+
+For release process and versioning strategy, see [docs/release.md](docs/release.md).
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
