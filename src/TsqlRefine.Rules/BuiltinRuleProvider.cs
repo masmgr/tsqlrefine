@@ -71,6 +71,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new NonSargableRule(),
             new UtcDatetimeRule(),
             new JoinKeywordRule(),
+            new PreferUnicodeStringLiteralsRule(),
             // New rules from tsqllint-extend-rules
             new RequireBeginEndForWhileRule(),
             new RequireBeginEndForIfWithControlflowExceptionRule(),

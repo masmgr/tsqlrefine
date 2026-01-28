@@ -19,6 +19,7 @@
     { "id": "semantic/data-type-length", "enabled": true },
     { "id": "semantic/set-variable", "enabled": true },
     { "id": "semantic/unicode-string", "enabled": true },
+    { "id": "prefer-unicode-string-literals", "enabled": true },
     { "id": "avoid-atat-identity", "enabled": true },
     { "id": "avoid-ambiguous-datetime-literal", "enabled": true },
     { "id": "order-by-in-subquery", "enabled": true },

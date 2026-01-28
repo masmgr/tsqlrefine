@@ -405,6 +405,15 @@
     "FileName": "PreferTryConvertPatternsRule.cs"
   },
   {
+    "RuleId": "prefer-unicode-string-literals",
+    "Description": "Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": true,
+    "FileName": "PreferUnicodeStringLiteralsRule.cs"
+  },
+  {
     "RuleId": "print-statement",
     "Description": "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
     "Category": "Debug",
