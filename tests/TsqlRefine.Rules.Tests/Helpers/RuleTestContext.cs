@@ -10,11 +10,15 @@ internal static class RuleTestContext
     public static RuleContext CreateContext(string sql, int compatLevel = 150)
     {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-        using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out var parseErrors);
 
-        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, Array.Empty<ParseError>());
-        var tokens = Tokenize(sql);
+        using var fragmentReader = new StringReader(sql);
+        var fragment = parser.Parse(fragmentReader, out var parseErrors);
+
+        using var tokenReader = new StringReader(sql);
+        var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
+
+        var tokens = Tokenize(tokenStream);
+        var ast = new ScriptDomAst(sql, fragment, parseErrors as IReadOnlyList<ParseError>, tokenErrors);
 
         return new RuleContext(
             FilePath: "<test>",
@@ -31,6 +35,11 @@ internal static class RuleTestContext
         using var reader = new StringReader(sql);
         var tokenStream = parser.GetTokenStream(reader, out _);
 
+        return Tokenize(tokenStream);
+    }
+
+    private static IReadOnlyList<Token> Tokenize(IEnumerable<TSqlParserToken> tokenStream)
+    {
         return tokenStream
             .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
             .Select(token =>

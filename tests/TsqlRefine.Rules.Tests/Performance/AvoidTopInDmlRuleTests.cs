@@ -1,8 +1,7 @@
-using System.IO;
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Performance;
+using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Performance;
 
@@ -15,7 +14,7 @@ public sealed class AvoidTopInDmlRuleTests
     {
         // Arrange
         const string sql = "UPDATE TOP (10) users SET name = 'John';";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -31,7 +30,7 @@ public sealed class AvoidTopInDmlRuleTests
     {
         // Arrange
         const string sql = "DELETE TOP (10) FROM users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -47,7 +46,7 @@ public sealed class AvoidTopInDmlRuleTests
     {
         // Arrange
         const string sql = "UPDATE users SET name = 'John' WHERE id = 1;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -61,7 +60,7 @@ public sealed class AvoidTopInDmlRuleTests
     {
         // Arrange
         const string sql = "DELETE FROM users WHERE id = 1;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -75,7 +74,7 @@ public sealed class AvoidTopInDmlRuleTests
     {
         // Arrange
         const string sql = "SELECT TOP 10 * FROM users;";
-        var context = CreateContext(sql);
+        var context = RuleTestContext.CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
@@ -94,37 +93,4 @@ public sealed class AvoidTopInDmlRuleTests
         Assert.False(_rule.Metadata.Fixable);
     }
 
-    private static RuleContext CreateContext(string sql)
-    {
-        var parser = new TSql150Parser(initialQuotedIdentifiers: true);
-
-        using var fragmentReader = new StringReader(sql);
-        var fragment = parser.Parse(fragmentReader, out IList<ParseError> parseErrors);
-
-        using var tokenReader = new StringReader(sql);
-        var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
-
-        var tokens = tokenStream
-            .Where(token => token.TokenType != TSqlTokenType.EndOfFile)
-            .Select(token =>
-            {
-                var text = token.Text ?? string.Empty;
-                return new Token(
-                    text,
-                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
-                    text.Length,
-                    token.TokenType.ToString());
-            })
-            .ToArray();
-
-        var ast = new ScriptDomAst(sql, fragment, parseErrors.ToArray(), tokenErrors.ToArray());
-
-        return new RuleContext(
-            FilePath: "<test>",
-            CompatLevel: 150,
-            Ast: ast,
-            Tokens: tokens,
-            Settings: new RuleSettings()
-        );
-    }
 }
