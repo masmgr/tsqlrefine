@@ -158,17 +158,25 @@ All rules leverage shared helper utilities to reduce code duplication:
 **Benefits**: These helpers eliminate ~270 lines of duplicated code, provide single source of truth for common operations, and are available to external plugins.
 
 #### 4. **Formatting (Formatter Layer)**
-Independent SQL formatting engine.
+Independent SQL formatting engine with composable passes.
 
-`SqlFormatter` uses two-phase approach:
-1. `ScriptDomKeywordCaser`: Normalizes keywords to uppercase using ScriptDom tokens
-2. `MinimalWhitespaceNormalizer`: Normalizes indentation and whitespace
+`SqlFormatter` orchestrates formatting through helper classes:
+1. `ScriptDomKeywordCaser`: Keyword/identifier casing (compat level aware, 100-160)
+2. `WhitespaceNormalizer`: Indentation and whitespace (respects .editorconfig)
+3. `CommaStyleTransformer`: Comma style transformation (trailing ↔ leading, optional)
 
-**EditorConfig Support**: Respects `.editorconfig` settings for:
-- `indent_style` (tabs/spaces)
-- `indent_size` (number of spaces)
+**Helper Classes** (in `src/TsqlRefine.Formatting/Helpers/`):
+- `CasingHelpers`: Casing transformations (eliminates duplication)
+- `ScriptDomKeywordCaser`: Public, testable keyword/identifier casing
+- `WhitespaceNormalizer`: Public, testable whitespace normalization
+- `CommaStyleTransformer`: Public comma style transformation
+- `ProtectedRegionTracker`: State machine for strings/comments/brackets (internal)
+- All public helpers are available to plugins
 
-**Constraints**: Preserves comments, string literals, and structure. Minimal reformatting only.
+**EditorConfig Support**: Respects `.editorconfig` for indentation
+**Constraints**: Minimal formatting only, preserves comments/strings/structure
+
+**Architecture**: Refactored from monolithic 623-line file to 26-line orchestrator + 5 independently testable helpers (88% test coverage)
 
 #### 5. **PluginHost (Plugin Runtime)**
 Dynamically loads external rule plugins at runtime.
@@ -465,6 +473,47 @@ Defined in `ExitCodes.cs`:
 - **Token-based**: Fast pattern matching - use `TokenHelpers` utilities
 - **Always use helper classes**: `ScriptDomHelpers`, `TokenHelpers`, `DiagnosticVisitorBase`, `RuleHelpers`
 - **Never duplicate code**: GetRange(), IsKeyword(), etc. are provided by helpers
+
+### Adding a New Formatting Pass
+
+To add a new formatting transformation:
+
+1. Create helper class in `src/TsqlRefine.Formatting/Helpers/`
+2. Follow the established pattern:
+   - **Public static class** with descriptive name
+   - Single public method: `public static string Transform(string input, FormattingOptions options)` or similar
+   - XML documentation with constraints and limitations
+   - TODO comments for known limitations
+3. Add to `SqlFormatter.Format()` pipeline in appropriate order
+4. Add unit tests in `tests/TsqlRefine.Formatting.Tests/Helpers/`
+5. Update existing integration tests if behavior changes
+6. Document in `src/TsqlRefine.Formatting/README.md`
+
+**Example**:
+```csharp
+namespace TsqlRefine.Formatting.Helpers;
+
+/// <summary>
+/// Performs [description of transformation].
+///
+/// Known limitations:
+/// - [limitation 1]
+/// - [limitation 2]
+/// </summary>
+public static class MyFormattingHelper
+{
+    public static string Transform(string input, FormattingOptions options)
+    {
+        // Implementation
+        // Use ProtectedRegionTracker if you need to avoid transforming strings/comments
+    }
+}
+```
+
+**Available helpers to leverage**:
+- `ProtectedRegionTracker`: State machine for strings, comments, brackets
+- `CasingHelpers`: Common casing transformations
+- `ScriptDomKeywordCaser`: For token-based transformations
 
 ### Adding Tests
 

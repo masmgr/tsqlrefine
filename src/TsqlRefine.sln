@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Rules.Tests", ".
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Cli.Tests", "..\tests\TsqlRefine.Cli.Tests\TsqlRefine.Cli.Tests.csproj", "{743ECED9-76A6-4475-8743-68B34057468A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Formatting.Tests", "..\tests\TsqlRefine.Formatting.Tests\TsqlRefine.Formatting.Tests.csproj", "{548DFC57-D9D9-4E35-8439-D51F27C9214B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,18 @@ Global
 		{743ECED9-76A6-4475-8743-68B34057468A}.Release|x64.Build.0 = Release|Any CPU
 		{743ECED9-76A6-4475-8743-68B34057468A}.Release|x86.ActiveCfg = Release|Any CPU
 		{743ECED9-76A6-4475-8743-68B34057468A}.Release|x86.Build.0 = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|x64.Build.0 = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Debug|x86.Build.0 = Debug|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|x64.ActiveCfg = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|x64.Build.0 = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|x86.ActiveCfg = Release|Any CPU
+		{548DFC57-D9D9-4E35-8439-D51F27C9214B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
