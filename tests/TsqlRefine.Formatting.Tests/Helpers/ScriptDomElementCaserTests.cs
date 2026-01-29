@@ -231,12 +231,13 @@ public class ScriptDomElementCaserTests
         var sql = "select count(*) as ordercount, sum(total) as totalamount from orders";
         var options = new FormattingOptions
         {
-            ColumnCasing = ElementCasing.Upper
+            ColumnCasing = ElementCasing.Upper,
+            KeywordElementCasing = ElementCasing.Lower  // Keep AS lowercase
         };
 
         var result = ScriptDomElementCaser.Apply(sql, options);
 
-        // Column aliases after AS should follow column casing (AS keyword preserves case when not set)
+        // Column aliases after AS should follow column casing (AS keyword uses keyword casing)
         Assert.Contains("as ORDERCOUNT", result);
         Assert.Contains("as TOTALAMOUNT", result);
         // Verify columns are uppercase

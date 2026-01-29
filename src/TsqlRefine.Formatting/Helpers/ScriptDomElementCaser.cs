@@ -53,39 +53,25 @@ public static class ScriptDomElementCaser
             var casedText = category switch
             {
                 SqlElementCategorizer.ElementCategory.Keyword =>
-                    options.KeywordElementCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.KeywordElementCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.KeywordElementCasing),
 
                 SqlElementCategorizer.ElementCategory.BuiltInFunction =>
-                    options.BuiltInFunctionCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.BuiltInFunctionCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.BuiltInFunctionCasing),
 
                 SqlElementCategorizer.ElementCategory.DataType =>
-                    options.DataTypeCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.DataTypeCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.DataTypeCasing),
 
                 SqlElementCategorizer.ElementCategory.Schema =>
-                    options.SchemaCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.SchemaCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.SchemaCasing),
 
                 SqlElementCategorizer.ElementCategory.Table =>
-                    options.TableCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.TableCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.TableCasing),
 
                 SqlElementCategorizer.ElementCategory.Column =>
-                    options.ColumnCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.ColumnCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.ColumnCasing),
 
                 SqlElementCategorizer.ElementCategory.Variable =>
-                    options.VariableCasing.HasValue
-                        ? CasingHelpers.ApplyCasing(text, options.VariableCasing.Value)
-                        : text,
+                    CasingHelpers.ApplyCasing(text, options.VariableCasing),
 
                 _ => text
             };

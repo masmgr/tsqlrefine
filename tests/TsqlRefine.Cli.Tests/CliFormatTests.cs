@@ -14,7 +14,7 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(new[] { "format", "--stdin" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Equal("SELECT *\n    FROM t\nWHERE id=1\n", stdout.ToString());
+        Assert.Equal("SELECT *\n    FROM T\nWHERE ID=1\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -28,7 +28,8 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(new[] { "format", "--stdin" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Equal("SELECT '--select' AS s -- select\nSELECT [from] FROM t;\n", stdout.ToString());
+        // Column alias 's' becomes 'S' with default column casing (upper)
+        Assert.Equal("SELECT '--select' AS S -- select\nSELECT [from] FROM T;\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -52,7 +53,7 @@ public sealed class CliFormatTests
             var code = await CliApp.RunAsync(new[] { "format", sqlPath }, TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            Assert.Equal("SELECT *\n\t\tFROM t\n", stdout.ToString());
+            Assert.Equal("SELECT *\n\t\tFROM T\n", stdout.ToString());
             Assert.Equal(string.Empty, stderr.ToString());
         }
         finally

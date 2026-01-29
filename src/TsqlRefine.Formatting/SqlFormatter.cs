@@ -3,12 +3,12 @@ using TsqlRefine.Formatting.Helpers;
 namespace TsqlRefine.Formatting;
 
 /// <summary>
-/// Minimal SQL formatter that applies keyword casing, whitespace normalization,
+/// Minimal SQL formatter that applies granular element casing, whitespace normalization,
 /// and comma style transformations while preserving comments, string literals,
 /// and code structure.
 ///
 /// Formatting pipeline:
-/// 1. Keyword/Identifier casing (ScriptDomKeywordCaser)
+/// 1. Granular element casing (ScriptDomElementCaser)
 /// 2. Whitespace normalization (WhitespaceNormalizer)
 /// 3. Comma style transformation (CommaStyleTransformer, optional)
 /// </summary>
@@ -29,45 +29,8 @@ public static class SqlFormatter
 
         options ??= new FormattingOptions();
 
-        // Check if granular element casing is explicitly enabled (any property set)
-        var useGranularCasing = options.KeywordElementCasing.HasValue ||
-                               options.BuiltInFunctionCasing.HasValue ||
-                               options.DataTypeCasing.HasValue ||
-                               options.SchemaCasing.HasValue ||
-                               options.TableCasing.HasValue ||
-                               options.ColumnCasing.HasValue ||
-                               options.VariableCasing.HasValue;
-
-        string casedSql;
-        if (useGranularCasing)
-        {
-            // Use granular element-based casing with recommended defaults:
-            // Keywords: UPPER, Functions: UPPER, Types: lower, Schema: lower,
-            // Table: UPPER, Column: UPPER, Variables: lower
-            var effectiveOptions = new FormattingOptions
-            {
-                KeywordElementCasing = options.KeywordElementCasing ?? ElementCasing.Upper,
-                BuiltInFunctionCasing = options.BuiltInFunctionCasing ?? ElementCasing.Upper,
-                DataTypeCasing = options.DataTypeCasing ?? ElementCasing.Lower,
-                SchemaCasing = options.SchemaCasing ?? ElementCasing.Lower,
-                TableCasing = options.TableCasing ?? ElementCasing.Upper,
-                ColumnCasing = options.ColumnCasing ?? ElementCasing.Upper,
-                VariableCasing = options.VariableCasing ?? ElementCasing.Lower,
-                // Copy other settings
-                IndentStyle = options.IndentStyle,
-                IndentSize = options.IndentSize,
-                CommaStyle = options.CommaStyle,
-                MaxLineLength = options.MaxLineLength,
-                InsertFinalNewline = options.InsertFinalNewline,
-                TrimTrailingWhitespace = options.TrimTrailingWhitespace
-            };
-            casedSql = ScriptDomElementCaser.Apply(sql, effectiveOptions, compatLevel: 150);
-        }
-        else
-        {
-            // Use legacy keyword/identifier casing for backward compatibility
-            casedSql = ScriptDomKeywordCaser.Apply(sql, options.KeywordCasing, options.IdentifierCasing, compatLevel: 150);
-        }
+        // Apply granular element-based casing
+        var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: 150);
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 

@@ -18,14 +18,14 @@ public class CliFormatDiffTests
         Assert.Contains("---", output);
         Assert.Contains("+++", output);
         Assert.Contains("-select * from t", output);
-        Assert.Contains("+SELECT * FROM t", output);
+        Assert.Contains("+SELECT * FROM T", output);
     }
 
     [Fact]
     public async Task Format_WithDiffNoChanges_OutputsNothing()
     {
         // Already formatted SQL (including final newline)
-        var stdin = new StringReader("SELECT *\n    FROM t\nWHERE id = 1\n");
+        var stdin = new StringReader("SELECT *\n    FROM T\nWHERE ID = 1\n");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 

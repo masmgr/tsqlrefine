@@ -15,8 +15,13 @@ public static class FormattingConfigMapper
         {
             IndentStyle = ParseIndentStyle(config.IndentStyle),
             IndentSize = config.IndentSize,
-            KeywordCasing = ParseKeywordCasing(config.KeywordCasing),
-            IdentifierCasing = ParseIdentifierCasing(config.IdentifierCasing),
+            KeywordElementCasing = ParseElementCasing(config.KeywordCasing),
+            BuiltInFunctionCasing = ParseElementCasing(config.FunctionCasing),
+            DataTypeCasing = ParseElementCasing(config.DataTypeCasing),
+            SchemaCasing = ParseElementCasing(config.SchemaCasing),
+            TableCasing = ParseElementCasing(config.TableCasing),
+            ColumnCasing = ParseElementCasing(config.ColumnCasing),
+            VariableCasing = ParseElementCasing(config.VariableCasing),
             CommaStyle = ParseCommaStyle(config.CommaStyle),
             MaxLineLength = config.MaxLineLength,
             InsertFinalNewline = config.InsertFinalNewline,
@@ -31,23 +36,12 @@ public static class FormattingConfigMapper
         _ => IndentStyle.Spaces
     };
 
-    private static KeywordCasing ParseKeywordCasing(string value) => value.ToLowerInvariant() switch
+    private static ElementCasing ParseElementCasing(string value) => value.ToLowerInvariant() switch
     {
-        "preserve" => KeywordCasing.Preserve,
-        "upper" => KeywordCasing.Upper,
-        "lower" => KeywordCasing.Lower,
-        "pascal" => KeywordCasing.Pascal,
-        _ => KeywordCasing.Upper
-    };
-
-    private static IdentifierCasing ParseIdentifierCasing(string value) => value.ToLowerInvariant() switch
-    {
-        "preserve" => IdentifierCasing.Preserve,
-        "upper" => IdentifierCasing.Upper,
-        "lower" => IdentifierCasing.Lower,
-        "pascal" => IdentifierCasing.Pascal,
-        "camel" => IdentifierCasing.Camel,
-        _ => IdentifierCasing.Preserve
+        "none" => ElementCasing.None,
+        "upper" => ElementCasing.Upper,
+        "lower" => ElementCasing.Lower,
+        _ => ElementCasing.None
     };
 
     private static CommaStyle ParseCommaStyle(string value) => value.ToLowerInvariant() switch

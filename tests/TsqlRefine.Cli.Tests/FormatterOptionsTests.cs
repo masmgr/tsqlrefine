@@ -41,7 +41,7 @@ public class FormatterOptionsTests
     }
 
     [Fact]
-    public async Task Format_WithKeywordCasingPascal_ProducesPascalCaseKeywords()
+    public async Task Format_WithTableAndColumnCasingUpper_ProducesUppercaseIdentifiers()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), $"tsqlrefine-tests-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -53,43 +53,8 @@ public class FormatterOptionsTests
 
             File.WriteAllText(configPath, @"{
   ""formatting"": {
-    ""keywordCasing"": ""pascal""
-  }
-}");
-            File.WriteAllText(sqlPath, "SELECT * FROM users WHERE id = 1");
-
-            var stdout = new StringWriter();
-            var stderr = new StringWriter();
-
-            var code = await CliApp.RunAsync(
-                new[] { "format", "--config", configPath, sqlPath },
-                TextReader.Null, stdout, stderr);
-
-            Assert.Equal(0, code);
-            Assert.Contains("Select", stdout.ToString());
-            Assert.Contains("From", stdout.ToString());
-            Assert.Contains("Where", stdout.ToString());
-        }
-        finally
-        {
-            Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Fact]
-    public async Task Format_WithIdentifierCasingUpper_ProducesUppercaseIdentifiers()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"tsqlrefine-tests-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-
-        try
-        {
-            var configPath = Path.Combine(tempDir, "tsqlrefine.json");
-            var sqlPath = Path.Combine(tempDir, "test.sql");
-
-            File.WriteAllText(configPath, @"{
-  ""formatting"": {
-    ""identifierCasing"": ""upper""
+    ""tableCasing"": ""upper"",
+    ""columnCasing"": ""upper""
   }
 }");
             File.WriteAllText(sqlPath, "SELECT id, name FROM users");

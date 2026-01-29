@@ -6,32 +6,6 @@ public enum IndentStyle
     Spaces
 }
 
-public enum KeywordCasing
-{
-    /// <summary>Preserve original casing (no change)</summary>
-    Preserve,
-    /// <summary>Convert keywords to UPPERCASE</summary>
-    Upper,
-    /// <summary>Convert keywords to lowercase</summary>
-    Lower,
-    /// <summary>Convert keywords to PascalCase</summary>
-    Pascal
-}
-
-public enum IdentifierCasing
-{
-    /// <summary>Preserve original casing (no change)</summary>
-    Preserve,
-    /// <summary>Convert identifiers to UPPERCASE</summary>
-    Upper,
-    /// <summary>Convert identifiers to lowercase</summary>
-    Lower,
-    /// <summary>Convert identifiers to PascalCase</summary>
-    Pascal,
-    /// <summary>Convert identifiers to camelCase</summary>
-    Camel
-}
-
 public enum ElementCasing
 {
     /// <summary>No casing change (preserve original)</summary>
@@ -58,32 +32,26 @@ public sealed record FormattingOptions
     /// <summary>Number of spaces per indent level (for spaces) or tab width (for tabs)</summary>
     public int IndentSize { get; init; } = 4;
 
-    /// <summary>Keyword casing style (legacy, use KeywordElementCasing for granular control)</summary>
-    public KeywordCasing KeywordCasing { get; init; } = KeywordCasing.Upper;
-
-    /// <summary>Identifier casing style (legacy, use specific element casing properties for granular control)</summary>
-    public IdentifierCasing IdentifierCasing { get; init; } = IdentifierCasing.Preserve;
-
-    /// <summary>Casing for SQL keywords (SELECT, FROM, WHERE, etc.). Use None to disable granular casing.</summary>
-    public ElementCasing? KeywordElementCasing { get; init; } = null;
+    /// <summary>Casing for SQL keywords (SELECT, FROM, WHERE, etc.)</summary>
+    public ElementCasing KeywordElementCasing { get; init; } = ElementCasing.Upper;
 
     /// <summary>Casing for built-in functions (COUNT, SUM, GETDATE, etc.)</summary>
-    public ElementCasing? BuiltInFunctionCasing { get; init; } = null;
+    public ElementCasing BuiltInFunctionCasing { get; init; } = ElementCasing.Upper;
 
     /// <summary>Casing for data types (INT, VARCHAR, DATETIME, etc.)</summary>
-    public ElementCasing? DataTypeCasing { get; init; } = null;
+    public ElementCasing DataTypeCasing { get; init; } = ElementCasing.Lower;
 
     /// <summary>Casing for schema names (dbo, sys, etc.)</summary>
-    public ElementCasing? SchemaCasing { get; init; } = null;
+    public ElementCasing SchemaCasing { get; init; } = ElementCasing.Lower;
 
     /// <summary>Casing for table names and aliases</summary>
-    public ElementCasing? TableCasing { get; init; } = null;
+    public ElementCasing TableCasing { get; init; } = ElementCasing.Upper;
 
     /// <summary>Casing for column names and aliases</summary>
-    public ElementCasing? ColumnCasing { get; init; } = null;
+    public ElementCasing ColumnCasing { get; init; } = ElementCasing.Upper;
 
     /// <summary>Casing for variables (@var, @@rowcount, etc.)</summary>
-    public ElementCasing? VariableCasing { get; init; } = null;
+    public ElementCasing VariableCasing { get; init; } = ElementCasing.Lower;
 
     /// <summary>Comma placement style (trailing or leading)</summary>
     public CommaStyle CommaStyle { get; init; } = CommaStyle.Trailing;

@@ -35,8 +35,9 @@ public class SqlFormatterTests
         var sql = "SELECT ID FROM USERS";
         var options = new FormattingOptions
         {
-            KeywordCasing = KeywordCasing.Lower,
-            IdentifierCasing = IdentifierCasing.Lower
+            KeywordElementCasing = ElementCasing.Lower,
+            TableCasing = ElementCasing.Lower,
+            ColumnCasing = ElementCasing.Lower
         };
 
         var result = SqlFormatter.Format(sql, options);
@@ -181,10 +182,11 @@ FROM users";
         var result = SqlFormatter.Format(sql);
 
         // Should preserve the irregular indentation pattern
+        // Note: Column names will be uppercased due to default ColumnCasing = Upper
         var lines = result.Split('\n');
-        Assert.Contains(lines, line => line.Contains("    id"));
-        Assert.Contains(lines, line => line.Contains("        name"));
-        Assert.Contains(lines, line => line.Contains("            email"));
+        Assert.Contains(lines, line => line.Contains("    ID"));
+        Assert.Contains(lines, line => line.Contains("        NAME"));
+        Assert.Contains(lines, line => line.Contains("            EMAIL"));
     }
 
     [Fact]
@@ -220,7 +222,8 @@ FROM orders";
         var result = SqlFormatter.Format(sql);
 
         // Expression structure (CASE, parentheses, line breaks) should be preserved
-        Assert.Contains("(price * quantity)", result);
+        // Note: Column names will be uppercased due to default ColumnCasing = Upper
+        Assert.Contains("(PRICE * QUANTITY)", result);
         Assert.Contains("CASE", result);
         Assert.Contains("WHEN", result);
         Assert.Contains("THEN", result);
