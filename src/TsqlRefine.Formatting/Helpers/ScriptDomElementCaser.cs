@@ -1,0 +1,176 @@
+using System.Runtime.CompilerServices;
+using System.Text;
+using Microsoft.SqlServer.TransactSql.ScriptDom;
+
+namespace TsqlRefine.Formatting.Helpers;
+
+/// <summary>
+/// Applies granular casing transformations to SQL elements using ScriptDom token stream.
+/// Supports independent casing control for keywords, functions, data types, schemas,
+/// tables, columns, and variables.
+/// </summary>
+public static class ScriptDomElementCaser
+{
+    private static readonly IReadOnlyDictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
+
+    /// <summary>
+    /// Applies granular element casing to SQL text.
+    /// </summary>
+    /// <param name="input">The SQL text to transform</param>
+    /// <param name="options">Formatting options containing casing settings</param>
+    /// <param name="compatLevel">SQL Server compatibility level (100-160). Defaults to 150 (SQL Server 2019)</param>
+    /// <returns>SQL text with casing applied</returns>
+    public static string Apply(string input, FormattingOptions options, int compatLevel = 150)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var parser = CreateParser(compatLevel);
+        using var reader = new StringReader(input);
+        var tokens = parser.GetTokenStream(reader, out _).ToList();
+
+        var sb = new StringBuilder(input.Length + 16);
+        var context = new SqlElementCategorizer.CasingContext();
+
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            var token = tokens[i];
+
+            if (token.TokenType == TSqlTokenType.EndOfFile)
+            {
+                continue;
+            }
+
+            var text = token.Text ?? string.Empty;
+
+            // Get surrounding tokens for categorization
+            var previousToken = GetPreviousNonTriviaToken(tokens, i);
+            var nextToken = GetNextNonTriviaToken(tokens, i);
+
+            // Categorize token with context tracking
+            var category = SqlElementCategorizer.Categorize(token, previousToken, nextToken, context);
+
+            // Apply casing based on category
+            var casedText = category switch
+            {
+                SqlElementCategorizer.ElementCategory.Keyword =>
+                    options.KeywordElementCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.KeywordElementCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.BuiltInFunction =>
+                    options.BuiltInFunctionCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.BuiltInFunctionCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.DataType =>
+                    options.DataTypeCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.DataTypeCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.Schema =>
+                    options.SchemaCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.SchemaCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.Table =>
+                    options.TableCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.TableCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.Column =>
+                    options.ColumnCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.ColumnCasing.Value)
+                        : text,
+
+                SqlElementCategorizer.ElementCategory.Variable =>
+                    options.VariableCasing.HasValue
+                        ? CasingHelpers.ApplyCasing(text, options.VariableCasing.Value)
+                        : text,
+
+                _ => text
+            };
+
+            sb.Append(casedText);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Gets the previous non-trivia (non-whitespace, non-comment) token.
+    /// </summary>
+    private static TSqlParserToken? GetPreviousNonTriviaToken(List<TSqlParserToken> tokens, int currentIndex)
+    {
+        for (int i = currentIndex - 1; i >= 0; i--)
+        {
+            var token = tokens[i];
+            if (!IsTrivia(token))
+            {
+                return token;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the next non-trivia (non-whitespace, non-comment) token.
+    /// </summary>
+    private static TSqlParserToken? GetNextNonTriviaToken(List<TSqlParserToken> tokens, int currentIndex)
+    {
+        for (int i = currentIndex + 1; i < tokens.Count; i++)
+        {
+            var token = tokens[i];
+            if (!IsTrivia(token))
+            {
+                return token;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a token is trivia (whitespace or comment).
+    /// </summary>
+    private static bool IsTrivia(TSqlParserToken token)
+    {
+        var typeName = GetTokenTypeName(token.TokenType);
+        return typeName.Contains("WhiteSpace", StringComparison.Ordinal) ||
+               typeName.Contains("Whitespace", StringComparison.Ordinal) ||
+               typeName.Contains("Comment", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Creates a T-SQL parser for the specified compatibility level.
+    /// </summary>
+    /// <param name="compatLevel">SQL Server compatibility level (100-160)</param>
+    /// <returns>TSqlParser instance for the specified version</returns>
+    private static TSqlParser CreateParser(int compatLevel) =>
+        compatLevel switch
+        {
+            >= 160 => new TSql160Parser(initialQuotedIdentifiers: true),
+            >= 150 => new TSql150Parser(initialQuotedIdentifiers: true),
+            >= 140 => new TSql140Parser(initialQuotedIdentifiers: true),
+            >= 130 => new TSql130Parser(initialQuotedIdentifiers: true),
+            >= 120 => new TSql120Parser(initialQuotedIdentifiers: true),
+            >= 110 => new TSql110Parser(initialQuotedIdentifiers: true),
+            _ => new TSql100Parser(initialQuotedIdentifiers: true)
+        };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string GetTokenTypeName(TSqlTokenType tokenType) =>
+        TokenTypeNameCache.TryGetValue(tokenType, out var name) ? name : tokenType.ToString();
+
+    private static IReadOnlyDictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
+    {
+        var values = Enum.GetValues<TSqlTokenType>();
+        var map = new Dictionary<TSqlTokenType, string>(values.Length);
+        foreach (var value in values)
+        {
+            map[value] = value.ToString();
+        }
+
+        return map;
+    }
+}

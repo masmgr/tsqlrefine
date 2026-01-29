@@ -32,6 +32,16 @@ public enum IdentifierCasing
     Camel
 }
 
+public enum ElementCasing
+{
+    /// <summary>No casing change (preserve original)</summary>
+    None,
+    /// <summary>Convert to UPPERCASE</summary>
+    Upper,
+    /// <summary>Convert to lowercase</summary>
+    Lower
+}
+
 public enum CommaStyle
 {
     /// <summary>Trailing comma: SELECT a, b, c</summary>
@@ -48,11 +58,32 @@ public sealed record FormattingOptions
     /// <summary>Number of spaces per indent level (for spaces) or tab width (for tabs)</summary>
     public int IndentSize { get; init; } = 4;
 
-    /// <summary>Keyword casing style</summary>
+    /// <summary>Keyword casing style (legacy, use KeywordElementCasing for granular control)</summary>
     public KeywordCasing KeywordCasing { get; init; } = KeywordCasing.Upper;
 
-    /// <summary>Identifier casing style</summary>
+    /// <summary>Identifier casing style (legacy, use specific element casing properties for granular control)</summary>
     public IdentifierCasing IdentifierCasing { get; init; } = IdentifierCasing.Preserve;
+
+    /// <summary>Casing for SQL keywords (SELECT, FROM, WHERE, etc.). Use None to disable granular casing.</summary>
+    public ElementCasing? KeywordElementCasing { get; init; } = null;
+
+    /// <summary>Casing for built-in functions (COUNT, SUM, GETDATE, etc.)</summary>
+    public ElementCasing? BuiltInFunctionCasing { get; init; } = null;
+
+    /// <summary>Casing for data types (INT, VARCHAR, DATETIME, etc.)</summary>
+    public ElementCasing? DataTypeCasing { get; init; } = null;
+
+    /// <summary>Casing for schema names (dbo, sys, etc.)</summary>
+    public ElementCasing? SchemaCasing { get; init; } = null;
+
+    /// <summary>Casing for table names and aliases</summary>
+    public ElementCasing? TableCasing { get; init; } = null;
+
+    /// <summary>Casing for column names and aliases</summary>
+    public ElementCasing? ColumnCasing { get; init; } = null;
+
+    /// <summary>Casing for variables (@var, @@rowcount, etc.)</summary>
+    public ElementCasing? VariableCasing { get; init; } = null;
 
     /// <summary>Comma placement style (trailing or leading)</summary>
     public CommaStyle CommaStyle { get; init; } = CommaStyle.Trailing;

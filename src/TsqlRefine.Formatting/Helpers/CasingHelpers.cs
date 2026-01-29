@@ -8,9 +8,9 @@ public static class CasingHelpers
 {
     /// <summary>
     /// Applies the specified casing transformation to text.
-    /// Supports both KeywordCasing and IdentifierCasing enum types.
+    /// Supports KeywordCasing, IdentifierCasing, and ElementCasing enum types.
     /// </summary>
-    /// <typeparam name="T">The casing enum type (KeywordCasing or IdentifierCasing)</typeparam>
+    /// <typeparam name="T">The casing enum type</typeparam>
     /// <param name="text">The text to transform</param>
     /// <param name="casing">The casing style to apply</param>
     /// <returns>The transformed text</returns>
@@ -36,6 +36,15 @@ public static class CasingHelpers
                 IdentifierCasing.Pascal => ToPascalCase(text),
                 IdentifierCasing.Camel => ToCamelCase(text),
                 IdentifierCasing.Preserve => text,
+                _ => text
+            },
+
+            // Handle ElementCasing
+            ElementCasing elementCasing => elementCasing switch
+            {
+                ElementCasing.Upper => text.ToUpperInvariant(),
+                ElementCasing.Lower => text.ToLowerInvariant(),
+                ElementCasing.None => text,
                 _ => text
             },
 

@@ -28,8 +28,48 @@ public static class SqlFormatter
         }
 
         options ??= new FormattingOptions();
-        var keywordCased = ScriptDomKeywordCaser.Apply(sql, options.KeywordCasing, options.IdentifierCasing, compatLevel: 150);
-        var whitespaceNormalized = WhitespaceNormalizer.Normalize(keywordCased, options);
+
+        // Check if granular element casing is explicitly enabled (any property set)
+        var useGranularCasing = options.KeywordElementCasing.HasValue ||
+                               options.BuiltInFunctionCasing.HasValue ||
+                               options.DataTypeCasing.HasValue ||
+                               options.SchemaCasing.HasValue ||
+                               options.TableCasing.HasValue ||
+                               options.ColumnCasing.HasValue ||
+                               options.VariableCasing.HasValue;
+
+        string casedSql;
+        if (useGranularCasing)
+        {
+            // Use granular element-based casing with recommended defaults:
+            // Keywords: UPPER, Functions: UPPER, Types: lower, Schema: lower,
+            // Table: UPPER, Column: UPPER, Variables: lower
+            var effectiveOptions = new FormattingOptions
+            {
+                KeywordElementCasing = options.KeywordElementCasing ?? ElementCasing.Upper,
+                BuiltInFunctionCasing = options.BuiltInFunctionCasing ?? ElementCasing.Upper,
+                DataTypeCasing = options.DataTypeCasing ?? ElementCasing.Lower,
+                SchemaCasing = options.SchemaCasing ?? ElementCasing.Lower,
+                TableCasing = options.TableCasing ?? ElementCasing.Upper,
+                ColumnCasing = options.ColumnCasing ?? ElementCasing.Upper,
+                VariableCasing = options.VariableCasing ?? ElementCasing.Lower,
+                // Copy other settings
+                IndentStyle = options.IndentStyle,
+                IndentSize = options.IndentSize,
+                CommaStyle = options.CommaStyle,
+                MaxLineLength = options.MaxLineLength,
+                InsertFinalNewline = options.InsertFinalNewline,
+                TrimTrailingWhitespace = options.TrimTrailingWhitespace
+            };
+            casedSql = ScriptDomElementCaser.Apply(sql, effectiveOptions, compatLevel: 150);
+        }
+        else
+        {
+            // Use legacy keyword/identifier casing for backward compatibility
+            casedSql = ScriptDomKeywordCaser.Apply(sql, options.KeywordCasing, options.IdentifierCasing, compatLevel: 150);
+        }
+
+        var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 
         // Apply comma style if not default trailing
         if (options.CommaStyle == CommaStyle.Leading)
