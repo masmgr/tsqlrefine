@@ -129,12 +129,12 @@ Settings loaded in priority order:
 
 ### What Gets Preserved
 
-❌ Comments (-- line comments, /* block comments */)
-❌ String literals ('...' and "...")
-❌ Quoted identifiers ([Table Name], "Column")
-❌ Code structure (no reformatting of layout)
-❌ Parenthesis-internal line breaks
-❌ Expression structure
+✅ Comments (-- line comments, /* block comments */)
+✅ String literals ('...' and "...")
+✅ Quoted identifiers ([Table Name], "Column")
+✅ Code structure (no reformatting of layout)
+✅ Parenthesis-internal line breaks
+✅ Expression structure
 
 ### Minimal Formatting Philosophy
 
