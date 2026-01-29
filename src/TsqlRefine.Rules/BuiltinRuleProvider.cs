@@ -1,5 +1,4 @@
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
 using TsqlRefine.Rules.Rules.Correctness.Semantic;
 using TsqlRefine.Rules.Rules.Debug;
@@ -107,7 +106,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
             new DisallowSelectDistinctRule(),
             new CatchSwallowingRule(),
             new BanQueryHintsRule(),
-            new TransactionWithoutCommitOrRollbackRule()
+            new TransactionWithoutCommitOrRollbackRule(),
+            new UncommittedTransactionRule()
         };
 }
 
