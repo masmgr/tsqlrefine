@@ -10,7 +10,7 @@ public sealed class TopWithoutOrderByRule : IRule
         RuleId: "top-without-order-by",
         Description: "Detects TOP clause without ORDER BY, which produces non-deterministic results.",
         Category: "Performance",
-        DefaultSeverity: RuleSeverity.Error,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 

@@ -8,9 +8,9 @@ public sealed class OrderByInSubqueryRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "order-by-in-subquery",
-        Description: "Disallows invalid ORDER BY in subqueries unless paired with TOP, OFFSET, FOR XML, or FOR JSON (SQL Server error Msg 1033).",
+        Description: "Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it.",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Error,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 

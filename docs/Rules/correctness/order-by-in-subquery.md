@@ -2,18 +2,43 @@
 
 **Rule ID:** `order-by-in-subquery`
 **Category:** Correctness
-**Severity:** Error
+**Severity:** Warning
 **Fixable:** No
 
 ## Description
 
-Disallows invalid ORDER BY in subqueries unless paired with TOP, OFFSET, FOR XML, or FOR JSON (SQL Server error Msg 1033).
+Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it.
 
 ## Rationale
 
-In SQL Server, `ORDER BY` is only valid at the outermost query level unless it is paired with an operator that makes row ordering meaningful for the subquery itself (e.g., `TOP`, `OFFSET/FETCH`, `FOR XML`, `FOR JSON`).
+ORDER BY in subqueries without TOP/OFFSET/FOR XML/FOR JSON is problematic because:
 
-Without one of these, SQL Server raises error Msg 1033. This rule catches the issue early and nudges you toward moving the ordering to the correct level.
+1. **Optimizer ignores it**: SQL Server optimizer may discard the ORDER BY clause in subqueries, making it wasteful
+2. **SQL Server error in some contexts**: Without TOP/OFFSET/FOR XML/FOR JSON, SQL Server raises error Msg 1033 in derived tables and some subquery contexts
+3. **Performance overhead**: Unnecessary sorting consumes CPU and memory
+4. **Misleading code**: Suggests ordering affects outer query, but it doesn't
+
+**Why ORDER BY is ignored**:
+
+SQL has no concept of "ordered set" from subqueries. The relational model treats subquery results as unordered sets. Only the outermost ORDER BY determines final result order.
+
+**Error Msg 1033**:
+```
+The ORDER BY clause is invalid in views, inline functions, derived tables,
+subqueries, and common table expressions, unless TOP, OFFSET or FOR XML is also specified.
+```
+
+This error occurs in:
+- Derived tables (FROM subquery)
+- Common Table Expressions (CTEs)
+- Views
+- Inline table-valued functions
+
+**When ORDER BY in subquery IS valid**:
+- With TOP: `SELECT TOP 10 ... ORDER BY ...` (ordering determines which 10 rows)
+- With OFFSET/FETCH: `... ORDER BY ... OFFSET 0 ROWS` (paging requires ordering)
+- With FOR XML: `... FOR XML PATH('...') ORDER BY ...` (XML order matters)
+- With FOR JSON: `... FOR JSON PATH ORDER BY ...` (JSON order matters)
 
 ## Examples
 

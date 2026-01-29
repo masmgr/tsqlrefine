@@ -8,9 +8,9 @@ public sealed class SetVariableRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/set-variable",
-        Description: "Recommends using SELECT for variable assignment instead of SET for better performance and consistency.",
+        Description: "Recommends using SELECT for variable assignment instead of SET for consistency.",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Error,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 

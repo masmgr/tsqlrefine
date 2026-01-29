@@ -11,20 +11,77 @@ Require BEGIN/END blocks in conditional statements for clarity and maintainabili
 
 ## Rationale
 
-This rule maintains code formatting and consistency. Following this rule improves code readability and makes it easier to maintain.
+BEGIN/END blocks in conditional statements improve maintainability and prevent common bugs.
+
+**Benefits**:
+
+1. **Maintainability**: Easy to add more statements later without introducing bugs
+2. **Clarity**: Explicit block boundaries make code structure obvious
+3. **Error prevention**: Avoids single-statement assumption bugs
+
+**Common bug without BEGIN/END**:
+
+```sql
+IF @x = 1
+    SELECT 1;
+    SELECT 2;  -- Always executes! Not part of IF block
+```
+
+Without BEGIN/END, only the first statement after IF is conditional. Additional statements are always executed, causing logic errors.
 
 ## Examples
 
 ### Bad
 
 ```sql
-IF @x = 1 SELECT 1
+-- Single-line IF without BEGIN/END (error-prone)
+IF @x = 1 SELECT 1;
+
+-- Multi-line IF without BEGIN/END (bug: second statement always executes)
+IF @Status = 'Active'
+    UPDATE Users SET LastSeen = GETDATE();
+    SELECT @@ROWCOUNT;  -- Always executes, not part of IF!
+
+-- ELSE without BEGIN/END
+IF @Count > 0
+    PRINT 'Has records';
+ELSE
+    PRINT 'No records';  -- OK for single statement, but inconsistent style
 ```
 
 ### Good
 
 ```sql
--- Example showing compliant code
+-- IF with explicit BEGIN/END (clear and safe)
+IF @x = 1
+BEGIN
+    SELECT 1;
+END;
+
+-- Multi-statement IF with BEGIN/END (correct)
+IF @Status = 'Active'
+BEGIN
+    UPDATE Users SET LastSeen = GETDATE();
+    SELECT @@ROWCOUNT;  -- Both statements in IF block
+END;
+
+-- Consistent BEGIN/END for all branches
+IF @Count > 0
+BEGIN
+    PRINT 'Has records';
+END
+ELSE
+BEGIN
+    PRINT 'No records';
+END;
+
+-- Complex conditional with BEGIN/END
+IF @OrderTotal > 1000
+BEGIN
+    UPDATE Orders SET DiscountPercent = 10 WHERE OrderId = @OrderId;
+    INSERT INTO OrderLog (OrderId, Message) VALUES (@OrderId, 'Applied bulk discount');
+    SELECT @OrderTotal = @OrderTotal * 0.9;  -- Apply 10% discount
+END;
 ```
 
 ## Configuration
