@@ -1,5 +1,5 @@
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Rules.Correctness.Semantic;
 using TsqlRefine.Rules.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;

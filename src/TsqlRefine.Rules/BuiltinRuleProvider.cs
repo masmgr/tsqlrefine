@@ -1,12 +1,14 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Correctness;
+using TsqlRefine.Rules.Rules.Correctness.Semantic;
 using TsqlRefine.Rules.Rules.Debug;
 using TsqlRefine.Rules.Rules.Performance;
 using TsqlRefine.Rules.Rules.Safety;
 using TsqlRefine.Rules.Rules.Schema;
 using TsqlRefine.Rules.Rules.Security;
 using TsqlRefine.Rules.Rules.Style;
+using TsqlRefine.Rules.Rules.Style.Semantic;
 using TsqlRefine.Rules.Rules.Transactions;
 
 namespace TsqlRefine.Rules;

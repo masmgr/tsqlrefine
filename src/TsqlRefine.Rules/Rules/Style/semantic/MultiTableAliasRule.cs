@@ -2,7 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
 
-namespace TsqlRefine.Rules.Rules.Style;
+namespace TsqlRefine.Rules.Rules.Style.Semantic;
 
 public sealed class MultiTableAliasRule : IRule
 {

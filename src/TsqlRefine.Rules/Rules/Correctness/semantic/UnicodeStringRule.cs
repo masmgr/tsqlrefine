@@ -2,7 +2,7 @@ using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
 
-namespace TsqlRefine.Rules.Rules.Correctness;
+namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
 public sealed class UnicodeStringRule : IRule
 {
