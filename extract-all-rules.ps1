@@ -46,6 +46,51 @@ function Get-DocFileName([string]$ruleId)
     return (($ruleId -replace "/", "-") + ".md")
 }
 
+function Get-RelativePath([string]$basePath, [string]$fullPath)
+{
+    # Normalize paths
+    $basePath = $basePath.TrimEnd('\', '/')
+    $fullPath = $fullPath.TrimEnd('\', '/')
+
+    # Convert to absolute paths
+    $basePath = [System.IO.Path]::GetFullPath($basePath)
+    $fullPath = [System.IO.Path]::GetFullPath($fullPath)
+
+    # Split into parts
+    $baseParts = $basePath -split '[/\\]'
+    $fullParts = $fullPath -split '[/\\]'
+
+    # Find common prefix length
+    $commonLength = 0
+    for ($i = 0; $i -lt [Math]::Min($baseParts.Length, $fullParts.Length); $i++)
+    {
+        if ($baseParts[$i] -eq $fullParts[$i])
+        {
+            $commonLength++
+        }
+        else
+        {
+            break
+        }
+    }
+
+    # Build relative path
+    $upLevels = $baseParts.Length - $commonLength
+    $relativeParts = @()
+
+    for ($i = 0; $i -lt $upLevels; $i++)
+    {
+        $relativeParts += ".."
+    }
+
+    for ($i = $commonLength; $i -lt $fullParts.Length; $i++)
+    {
+        $relativeParts += $fullParts[$i]
+    }
+
+    return ($relativeParts -join '\')
+}
+
 function Get-CategoryDescription([string]$category)
 {
     switch ($category)
@@ -149,7 +194,7 @@ foreach ($r in $rules)
 }
 
 $actualDocs = Get-ChildItem -Path $docsRulesRoot -Recurse -File -Filter "*.md" | Where-Object { $_.Name -ne "README.md" }
-$extraDocRels = $actualDocs | ForEach-Object { [System.IO.Path]::GetRelativePath($docsRulesRoot, $_.FullName) } | Where-Object { -not $expectedDocRels.Contains($_) }
+$extraDocRels = $actualDocs | ForEach-Object { Get-RelativePath $docsRulesRoot $_.FullName } | Where-Object { -not $expectedDocRels.Contains($_) }
 
 if ($extraDocRels.Count -gt 0)
 {
