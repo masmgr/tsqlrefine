@@ -64,5 +64,8 @@ public sealed record FormattingOptions
 
     /// <summary>Trim trailing whitespace on lines</summary>
     public bool TrimTrailingWhitespace { get; init; } = true;
+
+    /// <summary>Normalize inline spacing (collapse duplicates, space after commas)</summary>
+    public bool NormalizeInlineSpacing { get; init; } = true;
 }
 

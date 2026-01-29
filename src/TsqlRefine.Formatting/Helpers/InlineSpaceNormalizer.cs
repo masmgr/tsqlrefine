@@ -1,0 +1,183 @@
+using System.Text;
+
+namespace TsqlRefine.Formatting.Helpers;
+
+/// <summary>
+/// Normalizes inline spacing within SQL lines while preserving protected regions.
+///
+/// Transformations:
+/// - Adds space after commas (e.g., "a,b" → "a, b")
+/// - Removes duplicate spaces (e.g., "SELECT  *" → "SELECT *")
+/// - Preserves spaces inside strings, comments, brackets
+/// - Does not modify leading indentation (handled by WhitespaceNormalizer)
+///
+/// Known limitations:
+/// - Does not preserve visual alignment (e.g., columnar spacing)
+/// - Simple character-by-character processing
+/// </summary>
+public static class InlineSpaceNormalizer
+{
+    /// <summary>
+    /// Normalizes inline spacing in SQL text.
+    /// </summary>
+    /// <param name="input">SQL text to normalize</param>
+    /// <param name="options">Formatting options</param>
+    /// <returns>SQL text with normalized inline spacing</returns>
+    public static string Normalize(string input, FormattingOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        if (!options.NormalizeInlineSpacing)
+        {
+            return input;
+        }
+
+        // Detect line ending style (\r\n or \n)
+        var hasWindowsLineEndings = input.Contains("\r\n");
+        var lineEnding = hasWindowsLineEndings ? "\r\n" : "\n";
+
+        // Split by newlines (handle both \r\n and \n)
+        var lines = input.Split('\n');
+        var result = new StringBuilder();
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+
+            // Handle \r\n line endings - remove \r if present
+            if (line.Length > 0 && line[^1] == '\r')
+            {
+                line = line[..^1];
+            }
+
+            var processedLine = NormalizeLine(line);
+            result.Append(processedLine);
+
+            // Add newline back if not the last line (preserve original line ending style)
+            if (i < lines.Length - 1)
+            {
+                result.Append(lineEnding);
+            }
+        }
+
+        return result.ToString();
+    }
+
+    private static string NormalizeLine(string line)
+    {
+        if (string.IsNullOrEmpty(line))
+        {
+            return line;
+        }
+
+        var tracker = new ProtectedRegionTracker();
+        var output = new StringBuilder();
+        var previousWasSpace = false;
+        var needsSpaceAfterComma = false;
+        var index = 0;
+
+        // Preserve leading whitespace - find first non-whitespace character
+        var leadingWhitespaceEnd = 0;
+        while (leadingWhitespaceEnd < line.Length && (line[leadingWhitespaceEnd] == ' ' || line[leadingWhitespaceEnd] == '\t'))
+        {
+            leadingWhitespaceEnd++;
+        }
+
+        // Copy leading whitespace as-is
+        if (leadingWhitespaceEnd > 0)
+        {
+            output.Append(line.AsSpan(0, leadingWhitespaceEnd));
+            index = leadingWhitespaceEnd;
+        }
+
+        while (index < line.Length)
+        {
+            // Try to consume characters in active protected region
+            if (tracker.TryConsume(line, output, ref index))
+            {
+                previousWasSpace = false;
+                needsSpaceAfterComma = false;
+                continue;
+            }
+
+            // Try to start a new protected region
+            if (tracker.TryStartProtectedRegion(line, output, ref index))
+            {
+                previousWasSpace = false;
+                needsSpaceAfterComma = false;
+                continue;
+            }
+
+            // Handle line comments specially - preserve rest of line as-is
+            var inLineComment = false;
+            if (ProtectedRegionTracker.TryStartLineComment(line, output, ref index, ref inLineComment))
+            {
+                break; // Line comment consumes rest of line
+            }
+
+            var c = line[index];
+
+            // Handle comma
+            if (c == ',')
+            {
+                // Remove trailing space before comma if present
+                if (output.Length > leadingWhitespaceEnd && output[^1] == ' ')
+                {
+                    output.Length--;
+                }
+
+                output.Append(c);
+                needsSpaceAfterComma = true;
+                previousWasSpace = false;
+                index++;
+                continue;
+            }
+
+            // Handle space or tab
+            if (c == ' ' || c == '\t')
+            {
+                if (needsSpaceAfterComma)
+                {
+                    // Preserve the original whitespace character (space or tab) after comma
+                    output.Append(c);
+                    needsSpaceAfterComma = false;
+                    previousWasSpace = true;
+                    index++;
+                    continue;
+                }
+
+                if (previousWasSpace)
+                {
+                    // Skip duplicate space
+                    index++;
+                    continue;
+                }
+
+                // Output the space/tab
+                output.Append(c);
+                previousWasSpace = true;
+                index++;
+                continue;
+            }
+
+            // Regular character
+            if (needsSpaceAfterComma)
+            {
+                // Add space before this character
+                output.Append(' ');
+                needsSpaceAfterComma = false;
+            }
+
+            output.Append(c);
+            previousWasSpace = false;
+            index++;
+        }
+
+        return output.ToString();
+    }
+}

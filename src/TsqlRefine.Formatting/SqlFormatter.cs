@@ -4,13 +4,14 @@ namespace TsqlRefine.Formatting;
 
 /// <summary>
 /// Minimal SQL formatter that applies granular element casing, whitespace normalization,
-/// and comma style transformations while preserving comments, string literals,
-/// and code structure.
+/// inline spacing normalization, and comma style transformations while preserving comments,
+/// string literals, and code structure.
 ///
 /// Formatting pipeline:
 /// 1. Granular element casing (ScriptDomElementCaser)
 /// 2. Whitespace normalization (WhitespaceNormalizer)
-/// 3. Comma style transformation (CommaStyleTransformer, optional)
+/// 3. Inline spacing normalization (InlineSpaceNormalizer)
+/// 4. Comma style transformation (CommaStyleTransformer, optional)
 /// </summary>
 public static class SqlFormatter
 {
@@ -34,12 +35,15 @@ public static class SqlFormatter
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 
+        // Apply inline spacing normalization
+        var inlineNormalized = InlineSpaceNormalizer.Normalize(whitespaceNormalized, options);
+
         // Apply comma style if not default trailing
         if (options.CommaStyle == CommaStyle.Leading)
         {
-            whitespaceNormalized = CommaStyleTransformer.ToLeadingCommas(whitespaceNormalized);
+            inlineNormalized = CommaStyleTransformer.ToLeadingCommas(inlineNormalized);
         }
 
-        return whitespaceNormalized;
+        return inlineNormalized;
     }
 }

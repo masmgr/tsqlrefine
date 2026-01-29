@@ -271,4 +271,61 @@ WHERE u.status IN (
         Assert.Contains("(\n", result.Replace("\r\n", "\n"));
         Assert.Contains("SELECT COUNT(*)", result);
     }
+
+    [Fact]
+    public void Format_WithInlineSpacing_NormalizesSpacing()
+    {
+        var sql = "SELECT  id,name,  email  FROM  users";
+        var result = SqlFormatter.Format(sql);
+
+        Assert.Contains("SELECT ID, NAME, EMAIL FROM USERS", result);
+    }
+
+    [Fact]
+    public void Format_InlineSpacingWithCommaStyle_WorksTogether()
+    {
+        var sql = "SELECT id,name,email FROM users";
+        var options = new FormattingOptions
+        {
+            CommaStyle = CommaStyle.Leading,
+            ColumnCasing = ElementCasing.Lower
+        };
+
+        var result = SqlFormatter.Format(sql, options);
+
+        // Should have inline spacing normalized first, then comma style applied
+        Assert.Contains("SELECT id", result);
+        Assert.Contains(", name", result);
+        Assert.Contains(", email", result);
+    }
+
+    [Fact]
+    public void Format_InlineSpacingDisabled_PreservesOriginalSpacing()
+    {
+        var sql = "SELECT  id,name  FROM  users";
+        var options = new FormattingOptions { NormalizeInlineSpacing = false };
+        var result = SqlFormatter.Format(sql, options);
+
+        // Should preserve double spaces and missing space after comma
+        // Note: Element casing still applies, so identifiers will be uppercased
+        Assert.Contains("  ", result);
+        Assert.Contains("ID,NAME", result);
+    }
+
+    [Fact]
+    public void Format_InlineSpacingWithStringsAndComments_PreservesProtectedRegions()
+    {
+        var sql = @"SELECT 'a,  b',  id,  /* test,  comment */  name  -- line,  comment
+FROM users";
+
+        var result = SqlFormatter.Format(sql);
+
+        // Protected regions should preserve their spacing
+        Assert.Contains("'a,  b'", result);
+        Assert.Contains("/* test,  comment */", result);
+        Assert.Contains("-- line,  comment", result);
+
+        // But unprotected regions should be normalized
+        Assert.Contains("ID, /* test,  comment */ NAME", result);
+    }
 }
