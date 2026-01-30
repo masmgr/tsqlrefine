@@ -7,24 +7,108 @@
 
 ## Description
 
-Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.
+Detects UPDATE/DELETE statements without WHERE clause to prevent catastrophic unintended mass data modifications.
 
 ## Rationale
 
-This rule prevents destructive or dangerous operations that could lead to data loss or corruption. Following this rule helps protect your database from accidental or unintended modifications.
+UPDATE/DELETE without WHERE clause affects **ALL rows in the table**, causing potentially catastrophic data loss.
+
+**Business impact of accidental mass operations**:
+
+1. **Catastrophic data loss**: Entire tables can be wiped or corrupted in milliseconds
+2. **Customer impact**: Loss of customer data, order history, user accounts
+3. **Financial records**: Deletion of financial transactions, invoices, payment records
+4. **Audit trails**: Loss of compliance data, audit logs, change history
+5. **Recovery costs**:
+   - Restore from backup may lose hours or days of work
+   - Downtime during recovery
+   - Manual data reconciliation
+   - Customer communication and reputation damage
+6. **Compliance violations**: May breach GDPR, HIPAA, SOX, PCI-DSS regulations
+
+**Common scenarios that cause this**:
+
+- **Development mistakes**: Forgot WHERE clause while testing in production
+- **Copy-paste errors**: Incomplete query copied from another context
+- **Wrong connection**: Accidentally executed on production instead of dev/test database
+- **Context confusion**: Wrong database selected in query tool
+- **Incomplete refactoring**: Removed WHERE clause during code changes
+
+**Real-world example**:
+
+```sql
+-- Developer meant to deactivate one test user
+DELETE FROM Users;  -- Accidentally deleted ALL users (millions of records)
+```
+
+**If you truly need to modify all rows**:
+
+1. **Add explicit WHERE 1=1** to signal intent:
+   ```sql
+   UPDATE Users SET Active = 1 WHERE 1=1;  -- Clearly intentional
+   ```
+
+2. **Use TRUNCATE TABLE for deletions** (faster, better logging):
+   ```sql
+   TRUNCATE TABLE TempData;  -- Explicit table-wide operation
+   ```
+
+3. **Document the reason in comments**:
+   ```sql
+   -- Business requirement: Reset all user passwords after security breach
+   UPDATE Users SET PasswordHash = NULL, MustChangePassword = 1 WHERE 1=1;
+   ```
+
+4. **Use transactions with verification**:
+   ```sql
+   BEGIN TRANSACTION;
+       UPDATE Users SET Active = 0 WHERE 1=1;
+
+       -- Verify count matches expectation
+       IF @@ROWCOUNT <> (SELECT COUNT(*) FROM Users)
+       BEGIN
+           ROLLBACK;
+           RAISERROR('Unexpected row count', 16, 1);
+           RETURN;
+       END
+   COMMIT;
+   ```
 
 ## Examples
 
 ### Bad
 
 ```sql
-UPDATE users SET active = 1;
+-- Accidentally deletes ALL users
+DELETE FROM Users;
+
+-- Updates ALL orders (likely unintended)
+UPDATE Orders SET Status = 'Cancelled';
+
+-- Wipes all financial records
+DELETE FROM Transactions;
+
+-- Common mistake: forgot to add WHERE clause
+UPDATE Products SET Price = Price * 1.1;  -- Increases ALL product prices
 ```
 
 ### Good
 
 ```sql
-UPDATE users SET active = 1 WHERE id = 5;
+-- Deletes specific user
+DELETE FROM Users WHERE UserId = 123;
+
+-- Updates orders for specific customer
+UPDATE Orders SET Status = 'Cancelled' WHERE CustomerId = 456;
+
+-- Deletes old transactions
+DELETE FROM Transactions WHERE TransactionDate < DATEADD(YEAR, -7, GETDATE());
+
+-- Intentional mass update (explicitly marked)
+UPDATE Products SET Price = Price * 1.1 WHERE 1=1;  -- Holiday sale: all products
+
+-- Better: Use TRUNCATE for table-wide deletion
+TRUNCATE TABLE TempImportData;  -- Explicit and faster
 ```
 
 ## Configuration
