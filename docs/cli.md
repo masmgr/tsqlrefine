@@ -59,7 +59,6 @@ tsqlrefine lint [options] [paths...]
 | `-g, --ignorelist <path>` | 無視パターンファイル |
 | `--detect-encoding` | 入力の文字コードを自動判定 |
 | `--stdin` | 標準入力から読み取り |
-| `--stdin-filepath <path>` | stdin の仮想パス |
 | `--output <text\|json>` | 出力形式（既定: `text`） |
 | `--compat-level <100-160>` | SQL Server 互換レベル |
 | `--severity <error\|warning\|info\|hint>` | 最低重要度フィルタ |
@@ -77,7 +76,6 @@ tsqlrefine format [options] [paths...]
 | `-g, --ignorelist <path>` | 無視パターンファイル |
 | `--detect-encoding` | 入力の文字コードを自動判定 |
 | `--stdin` | 標準入力から読み取り |
-| `--stdin-filepath <path>` | stdin の仮想パス |
 | `--output <text\|json>` | 出力形式（既定: `text`） |
 | `--compat-level <100-160>` | SQL Server 互換レベル |
 | `--write` | ファイルを上書き |
@@ -96,7 +94,6 @@ tsqlrefine fix [options] [paths...]
 | `-g, --ignorelist <path>` | 無視パターンファイル |
 | `--detect-encoding` | 入力の文字コードを自動判定 |
 | `--stdin` | 標準入力から読み取り |
-| `--stdin-filepath <path>` | stdin の仮想パス |
 | `--output <text\|json>` | 出力形式（既定: `text`） |
 | `--compat-level <100-160>` | SQL Server 互換レベル |
 | `--severity <error\|warning\|info\|hint>` | 最低重要度フィルタ |
@@ -165,7 +162,6 @@ tsqlrefine list-plugins [options]
 
 - `.editorconfig` の `indent_style` / `indent_size` を参照（`*.sql` のみ）
 - `--indent-style` / `--indent-size` は `.editorconfig` より優先
-- stdin の場合は `--stdin-filepath` で拡張子と探索起点を指定可能
 - 不変領域: **コメント / 文字列 / 括弧内改行は変更しない**
 
 #### fix コマンド
@@ -191,7 +187,7 @@ file.sql:1:8: Warning: Avoid SELECT *; explicitly list required columns. (avoid-
 file.sql:1:15: Warning: Table reference 'users' should include schema qualification. (semantic/schema-qualify)
 ```
 
-- `<filepath>`: ファイルパス（stdin の場合は `<stdin>` または `--stdin-filepath` で指定した値）
+- `<filepath>`: ファイルパス（stdin の場合は `<stdin>`）
 - `<line>`: 行番号（1-based）
 - `<column>`: 列番号（1-based）
 - `<severity>`: `Error` / `Warning` / `Information` / `Hint`
@@ -217,7 +213,7 @@ interface LintResult {
 }
 
 interface FileResult {
-  filePath: string;              // stdin の場合は --stdin-filepath または "<stdin>"
+  filePath: string;              // stdin の場合は "<stdin>"
   diagnostics: Diagnostic[];
 }
 ```

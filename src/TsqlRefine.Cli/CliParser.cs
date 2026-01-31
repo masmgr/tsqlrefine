@@ -40,12 +40,6 @@ public static class CliParser
         Description = "Read from stdin"
     };
 
-    private static Option<string?> CreateStdinFilePathOption() => new("--stdin-filepath")
-    {
-        Description = "Set filepath for stdin input",
-        Arity = ArgumentArity.ZeroOrOne
-    };
-
     private static Argument<string[]> CreatePathsArgument() => new("paths")
     {
         Description = "SQL files to process",
@@ -132,7 +126,6 @@ public static class CliParser
         command.Options.Add(CreateIgnoreListOption());
         command.Options.Add(CreateDetectEncodingOption());
         command.Options.Add(CreateStdinOption());
-        command.Options.Add(CreateStdinFilePathOption());
 
         // Output options
         command.Options.Add(CreateOutputOption());
@@ -159,7 +152,6 @@ public static class CliParser
         command.Options.Add(CreateIgnoreListOption());
         command.Options.Add(CreateDetectEncodingOption());
         command.Options.Add(CreateStdinOption());
-        command.Options.Add(CreateStdinFilePathOption());
 
         // Output options
         command.Options.Add(CreateOutputOption());
@@ -187,7 +179,6 @@ public static class CliParser
         command.Options.Add(CreateIgnoreListOption());
         command.Options.Add(CreateDetectEncodingOption());
         command.Options.Add(CreateStdinOption());
-        command.Options.Add(CreateStdinFilePathOption());
 
         // Output options
         command.Options.Add(CreateOutputOption());
@@ -336,7 +327,6 @@ public static class CliParser
             IgnoreListPath: GetOptionValue<string?>(parseResult, "--ignorelist"),
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
-            StdinFilePath: GetOptionValue<string?>(parseResult, "--stdin-filepath"),
             Output: GetOptionValue<string?>(parseResult, "--output") ?? "text",
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),

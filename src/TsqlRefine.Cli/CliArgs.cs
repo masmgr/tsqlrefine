@@ -10,7 +10,6 @@ public sealed record CliArgs(
     string? IgnoreListPath,
     bool DetectEncoding,
     bool Stdin,
-    string? StdinFilePath,
     string Output,
     DiagnosticSeverity? MinimumSeverity,
     string? Preset,

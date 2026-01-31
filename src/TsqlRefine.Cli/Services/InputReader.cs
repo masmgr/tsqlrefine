@@ -28,8 +28,7 @@ public sealed class InputReader
         if (args.Stdin || paths.Any(p => p == "-"))
         {
             var sql = await stdin.ReadToEndAsync();
-            var filePath = args.StdinFilePath ?? "<stdin>";
-            inputs.Add(new SqlInput(filePath, sql));
+            inputs.Add(new SqlInput("<stdin>", sql));
             paths = paths.Where(p => p != "-").ToArray();
         }
 
