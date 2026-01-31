@@ -196,6 +196,7 @@ Command-line interface built on System.CommandLine 2.0.0.
 - `CliParser`: Subcommand-based argument parsing with typed options per command
 - `CliArgs`: Parsed argument record
 - Handles file I/O, glob expansion, output formatting (text/JSON)
+- `--help` and `--version` are handled automatically by System.CommandLine (auto-generated help per subcommand)
 
 **Command structure** (subcommand-based):
 ```

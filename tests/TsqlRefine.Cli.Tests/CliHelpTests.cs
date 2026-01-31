@@ -5,16 +5,17 @@ namespace TsqlRefine.Cli.Tests;
 public sealed class CliHelpTests
 {
     [Fact]
-    public async Task Version_WithShortFlag_DisplaysVersionInfo()
+    public async Task Version_WithLongFlag_DisplaysVersionInfo()
     {
         using var stdin = new MemoryStream();
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var code = await CliApp.RunAsync(new[] { "-v" }, stdin, stdout, stderr);
+        var code = await CliApp.RunAsync(new[] { "--version" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Contains("tsqlrefine", stdout.ToString());
+        // System.CommandLine outputs version number (e.g., "0.1.0-alpha+hash")
+        Assert.Matches(@"\d+\.\d+\.\d+", stdout.ToString());
     }
 
     [Fact]

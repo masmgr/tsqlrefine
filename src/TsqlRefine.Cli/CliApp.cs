@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Text;
 using TsqlRefine.Cli.Services;
 using TsqlRefine.Core;
@@ -7,26 +6,16 @@ namespace TsqlRefine.Cli;
 
 public static class CliApp
 {
-    private static string GetVersionString()
-    {
-        var assembly = typeof(CliApp).Assembly;
-
-        // Try InformationalVersion first (includes pre-release tags)
-        var infoVersionAttr = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-        if (infoVersionAttr?.InformationalVersion is not null)
-            return infoVersionAttr.InformationalVersion;
-
-        // Fallback to AssemblyVersion
-        var version = assembly.GetName().Version;
-        if (version is not null)
-            return version.ToString();
-
-        return "unknown";
-    }
-
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
         EncodingProviderRegistry.EnsureRegistered();
+
+        // Let System.CommandLine handle --help and --version automatically
+        if (CliParser.IsHelpOrVersionRequest(args))
+        {
+            return await CliParser.InvokeAsync(args, stdout);
+        }
+
         var parsed = CliParser.Parse(args);
         return await RunParsedAsync(parsed, stdin, stdout, stderr);
     }
@@ -34,6 +23,13 @@ public static class CliApp
     public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
     {
         EncodingProviderRegistry.EnsureRegistered();
+
+        // Let System.CommandLine handle --help and --version automatically
+        if (CliParser.IsHelpOrVersionRequest(args))
+        {
+            return await CliParser.InvokeAsync(args, stdout);
+        }
+
         var parsed = CliParser.Parse(args);
 
         if (parsed.Stdin || parsed.Paths.Any(p => p == "-"))
@@ -61,34 +57,10 @@ public static class CliApp
     {
         EncodingProviderRegistry.EnsureRegistered();
 
-        if (parsed.ShowVersion)
-        {
-            await stdout.WriteLineAsync($"tsqlrefine {GetVersionString()}");
-            return 0;
-        }
-
-        if (parsed.ShowHelp)
-        {
-            // Show root help if no explicit command, otherwise show command-specific help
-            if (parsed.IsExplicitCommand)
-            {
-                var commandHelp = CliParser.GetCommandHelp(parsed.Command);
-                await stdout.WriteLineAsync(commandHelp ?? HelpText);
-            }
-            else
-            {
-                await stdout.WriteLineAsync(HelpText);
-            }
-
-            return 0;
-        }
-
         // Require explicit subcommand
         if (!parsed.IsExplicitCommand)
         {
-            await stderr.WriteLineAsync("Error: No command specified.");
-            await stderr.WriteLineAsync();
-            await stderr.WriteLineAsync(HelpText);
+            await stderr.WriteLineAsync("Error: No command specified. Run 'tsqlrefine --help' for usage.");
             return ExitCodes.Fatal;
         }
 
@@ -136,29 +108,4 @@ public static class CliApp
         await stderr.WriteLineAsync($"Unknown command: '{command}'. Run 'tsqlrefine --help' for available commands.");
         return ExitCodes.Fatal;
     }
-
-
-    private const string HelpText =
-        """
-        tsqlrefine - A SQL Server/T-SQL linter, static analyzer, and formatter
-
-        Usage:
-          tsqlrefine <command> [options] [paths...]
-
-        Commands:
-          lint          Analyze SQL files for rule violations
-          format        Format SQL files (keyword casing, whitespace)
-          fix           Auto-fix issues that support fixing
-          init          Initialize configuration files
-          print-config  Print effective configuration
-          list-rules    List available rules
-          list-plugins  List loaded plugins
-
-        Global Options:
-          -c, --config <path>       Configuration file path
-          -h, --help                Show help information
-          -v, --version             Show version information
-
-        Run 'tsqlrefine <command> --help' for more information on a command.
-        """;
 }

@@ -6,8 +6,6 @@ namespace TsqlRefine.Cli;
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
-    bool ShowHelp,
-    bool ShowVersion,
     string? ConfigPath,
     string? IgnoreListPath,
     bool DetectEncoding,

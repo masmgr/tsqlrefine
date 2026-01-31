@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace TsqlRefine.Cli.Tests;
 
 public class CliVersionTests
@@ -11,12 +9,13 @@ public class CliVersionTests
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        // Use with a command since global options need a command context
-        var code = await CliApp.RunAsync(new[] { "lint", "--version" }, stdin, stdout, stderr);
+        // --version is a global option that works without a command
+        var code = await CliApp.RunAsync(new[] { "--version" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        var output = stdout.ToString();
-        Assert.StartsWith("tsqlrefine ", output);
+        var output = stdout.ToString().Trim();
+        // System.CommandLine outputs just the version number (e.g., "0.1.0-alpha+hash")
+        Assert.Matches(@"^\d+\.\d+\.\d+", output);
     }
 
     [Fact]
@@ -26,10 +25,12 @@ public class CliVersionTests
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var code = await CliApp.RunAsync(new[] { "format", "-v" }, stdin, stdout, stderr);
+        // --version works as a global option
+        var code = await CliApp.RunAsync(new[] { "--version" }, stdin, stdout, stderr);
 
         Assert.Equal(0, code);
         var output = stdout.ToString();
-        Assert.Matches(@"tsqlrefine \d+\.\d+\.\d+", output);
+        // Matches semantic version pattern (e.g., "0.1.0" or "0.1.0-alpha+hash")
+        Assert.Matches(@"\d+\.\d+\.\d+", output);
     }
 }
