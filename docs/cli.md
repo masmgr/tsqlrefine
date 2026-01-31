@@ -9,7 +9,6 @@
 基本形:
 
 ```
-tsqlrefine [global options] [paths...]
 tsqlrefine <command> [options] [paths...]
 ```
 
@@ -19,55 +18,158 @@ tsqlrefine <command> [options] [paths...]
 
 コマンド:
 
-- `lint`: ルールベースの診断（静的解析）
-- `format`: 最小限整形のみ（出力はSQLテキスト）
-- `fix`: 診断 + "安全な範囲" の自動修正
-- `init`: 既定設定ファイルを生成
-- `print-config`: 探索された設定ファイルのパスを出力
-- `list-rules`: 利用可能ルール（ロード済）を一覧
-- `list-plugins`: ロード済プラグイン一覧（Rule プラグインのみ）
+| コマンド | 説明 |
+|----------|------|
+| `lint` | ルールベースの診断（静的解析）**[default]** |
+| `format` | 最小限整形のみ（出力はSQLテキスト） |
+| `fix` | 診断 + "安全な範囲" の自動修正 |
+| `init` | 既定設定ファイルを生成 |
+| `print-config` | 有効な設定をJSON形式で出力 |
+| `list-rules` | 利用可能ルール（ロード済）を一覧 |
+| `list-plugins` | ロード済プラグイン一覧（Rule プラグインのみ） |
 
 ---
 
-## 2. 主なオプション（tsqllint 互換を意識）
+## 2. オプション
 
-グローバル:
+### 2.1 グローバルオプション
 
-- `-c, --config <path>`: 設定ファイルのパス（既定探索を上書き）
-- `-g, --ignorelist <path>`: 無視するファイルのパターンリスト（glob形式、1行1パターン、#でコメント）
-- `-v, --version`: バージョン番号を表示
-- `-h, --help`: ヘルプ表示
+全コマンドで使用可能:
 
-入出力:
+| オプション | 説明 |
+|------------|------|
+| `-c, --config <path>` | 設定ファイルのパス（既定探索を上書き） |
+| `-h, --help` | ヘルプ表示 |
+| `-v, --version` | バージョン番号を表示 |
 
-- `--stdin`: 標準入力から 1 ファイル相当の SQL を読む（`-` でも可）
-- `--stdin-filepath <path>`: stdin の “仮想パス” を指定（診断出力の filePath 用）
-- `--output <text|json>`: 出力形式（既定: `text`）
-- `--severity <error|warning|info|hint>`: これ未満を出力しない（既定: すべて）
-- `--detect-encoding`: 入力の文字コードを自動判定する（BOM 優先。BOM が無い場合は `UTF.Unknown` による推定）
-- `--detect-encoding` を指定した場合、`format --write` / `fix --write` の上書きは入力ファイルの文字コード（および BOM 有無）を保持します
+### 2.2 コマンド別オプション
 
-実行モード:
+各コマンドで使用可能なオプションは以下の通りです:
 
-- `--preset <recommended|strict|pragmatic|security-only>`: プリセット選択（既定: `recommended`）
-- `--compat-level <110|120|130|140|150|160>`: SQL Server 互換レベル（設定ファイルでの指定を上書き）
-- `--ruleset <path>`: ルールセット設定を別ファイルで指定（将来）
+#### lint
 
-format / fix:
+```
+tsqlrefine lint [options] [paths...]
+```
 
-- `--write`: ファイルを上書き（指定しない場合は stdout に出力）
-- `--diff`: 差分を表示（`--write` と排他）
-- `--indent-style <tabs|spaces>`: インデントの種類（`.editorconfig` より優先）
-- `--indent-size <n>`: spaces の場合の幅（`.editorconfig` より優先）
+| オプション | 説明 |
+|------------|------|
+| `-g, --ignorelist <path>` | 無視パターンファイル |
+| `--detect-encoding` | 入力の文字コードを自動判定 |
+| `--stdin` | 標準入力から読み取り |
+| `--stdin-filepath <path>` | stdin の仮想パス |
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+| `--compat-level <100-160>` | SQL Server 互換レベル |
+| `--severity <error\|warning\|info\|hint>` | 最低重要度フィルタ |
+| `--preset <name>` | プリセット選択 |
+| `--ruleset <path>` | カスタムルールセットファイル |
 
-`format` は `.editorconfig` の `indent_style` / `indent_size` を参照します（対象: `*.sql` のみ）。
-stdin の場合は `--stdin-filepath` で拡張子と探索起点を指定できます。
+#### format
 
-`fix` は `format` と同様に、`--write`/`--diff` が未指定のときは stdout に修正後 SQL を出力します
-（複数入力の場合は `--write` または `--diff` が必要）。`--output json` を指定した場合は
-診断結果のみを出力し、`--write` と組み合わせて利用できます。
+```
+tsqlrefine format [options] [paths...]
+```
 
-> format の不変領域: **コメント / 文字列 / 括弧内改行は変更しない**（要件より）。
+| オプション | 説明 |
+|------------|------|
+| `-g, --ignorelist <path>` | 無視パターンファイル |
+| `--detect-encoding` | 入力の文字コードを自動判定 |
+| `--stdin` | 標準入力から読み取り |
+| `--stdin-filepath <path>` | stdin の仮想パス |
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+| `--compat-level <100-160>` | SQL Server 互換レベル |
+| `--write` | ファイルを上書き |
+| `--diff` | 差分を表示（`--write` と排他） |
+| `--indent-style <tabs\|spaces>` | インデントの種類 |
+| `--indent-size <n>` | インデント幅 |
+
+#### fix
+
+```
+tsqlrefine fix [options] [paths...]
+```
+
+| オプション | 説明 |
+|------------|------|
+| `-g, --ignorelist <path>` | 無視パターンファイル |
+| `--detect-encoding` | 入力の文字コードを自動判定 |
+| `--stdin` | 標準入力から読み取り |
+| `--stdin-filepath <path>` | stdin の仮想パス |
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+| `--compat-level <100-160>` | SQL Server 互換レベル |
+| `--severity <error\|warning\|info\|hint>` | 最低重要度フィルタ |
+| `--preset <name>` | プリセット選択 |
+| `--ruleset <path>` | カスタムルールセットファイル |
+| `--write` | ファイルを上書き |
+| `--diff` | 差分を表示（`--write` と排他） |
+
+#### init
+
+```
+tsqlrefine init
+```
+
+オプションなし。`tsqlrefine.json` と `tsqlrefine.ignore` を生成します。
+
+#### print-config
+
+```
+tsqlrefine print-config [options]
+```
+
+| オプション | 説明 |
+|------------|------|
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+
+#### list-rules
+
+```
+tsqlrefine list-rules [options]
+```
+
+| オプション | 説明 |
+|------------|------|
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+
+#### list-plugins
+
+```
+tsqlrefine list-plugins [options]
+```
+
+| オプション | 説明 |
+|------------|------|
+| `--output <text\|json>` | 出力形式（既定: `text`） |
+| `--verbose` | 詳細情報を表示 |
+
+### 2.3 オプション詳細
+
+#### プリセット (`--preset`)
+
+| プリセット | 説明 |
+|------------|------|
+| `recommended` | バランスの取れた本番向け（既定） |
+| `strict` | 最大限の検査 |
+| `pragmatic` | 本番最小限（バグ・データ損失防止） |
+| `security-only` | セキュリティと重要な安全性のみ |
+
+#### 文字コード検出 (`--detect-encoding`)
+
+- BOM 優先。BOM が無い場合は `UTF.Unknown` による推定
+- `format --write` / `fix --write` では入力ファイルの文字コード（BOM 有無含む）を保持
+
+#### フォーマット
+
+- `.editorconfig` の `indent_style` / `indent_size` を参照（`*.sql` のみ）
+- `--indent-style` / `--indent-size` は `.editorconfig` より優先
+- stdin の場合は `--stdin-filepath` で拡張子と探索起点を指定可能
+- 不変領域: **コメント / 文字列 / 括弧内改行は変更しない**
+
+#### fix コマンド
+
+- `--write`/`--diff` が未指定のときは stdout に修正後 SQL を出力
+- 複数入力の場合は `--write` または `--diff` が必要
+- `--output json` 指定時は診断結果のみを出力（`--write` と組み合わせ可能）
 
 ---
 

@@ -190,36 +190,47 @@ Dynamically loads external rule plugins at runtime.
 - Detailed diagnostic information for plugin load failures
 
 #### 6. **Cli (User Interface)**
-Command-line interface built on System.CommandLine.
+Command-line interface built on System.CommandLine 2.0.0.
 
 - `CliApp`: Main dispatcher for all commands
-- `CliParser`: Argument parsing
+- `CliParser`: Subcommand-based argument parsing with typed options per command
 - `CliArgs`: Parsed argument record
 - Handles file I/O, glob expansion, output formatting (text/JSON)
 
-**Available commands** (all fully implemented):
-- `lint`: Analyze SQL files for rule violations
-- `format`: Format SQL files with keyword casing and whitespace normalization
-- `fix`: Auto-fix issues (applies fixes from rules that support it)
-- `init`: Create default `tsqlrefine.json` and `tsqlrefine.ignore` files
-- `print-config`: Display effective configuration as JSON
-- `list-rules`: List all available rules with metadata
-- `list-plugins`: List loaded plugins with status information
+**Command structure** (subcommand-based):
+```
+tsqlrefine <command> [options] [paths...]
 
-**Global options**:
-- `-c, --config`: Configuration file path
-- `-g, --ignorelist`: Ignore patterns file
-- `--stdin`: Read from stdin
-- `--stdin-filepath`: Set filepath for stdin input
-- `--output`: Output format (text/json)
-- `--severity`: Minimum severity level (error/warning/info/hint)
-- `--preset`: Use preset ruleset (recommended/strict/pragmatic/security-only)
-- `--compat-level`: SQL Server compatibility level
-- `--ruleset`: Custom ruleset path
-- `--write`: Apply changes in-place (format/fix commands)
-- `--diff`: Show diff output (format/fix commands)
-- `--indent-style`: Indentation style (tabs/spaces)
-- `--indent-size`: Indentation size in spaces
+Commands:
+  lint          Analyze SQL files for rule violations (default)
+  format        Format SQL files (keyword casing, whitespace)
+  fix           Auto-fix issues that support fixing
+  init          Initialize configuration files
+  print-config  Print effective configuration
+  list-rules    List available rules
+  list-plugins  List loaded plugins
+```
+
+**Options by command**:
+
+| Option | lint | format | fix | init | print-config | list-rules | list-plugins |
+|--------|:----:|:------:|:---:|:----:|:------------:|:----------:|:------------:|
+| `-c, --config` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `-g, --ignorelist` | ✓ | ✓ | ✓ | - | - | - | - |
+| `--detect-encoding` | ✓ | ✓ | ✓ | - | - | - | - |
+| `--stdin` | ✓ | ✓ | ✓ | - | - | - | - |
+| `--stdin-filepath` | ✓ | ✓ | ✓ | - | - | - | - |
+| `--output` | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ |
+| `--severity` | ✓ | - | ✓ | - | - | - | - |
+| `--preset` | ✓ | - | ✓ | - | - | - | - |
+| `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - |
+| `--ruleset` | ✓ | - | ✓ | - | - | - | - |
+| `--write` | - | ✓ | ✓ | - | - | - | - |
+| `--diff` | - | ✓ | ✓ | - | - | - | - |
+| `--indent-style` | - | ✓ | - | - | - | - | - |
+| `--indent-size` | - | ✓ | - | - | - | - | - |
+| `--verbose` | - | - | - | - | - | - | ✓ |
+| `paths...` | ✓ | ✓ | ✓ | - | - | - | - |
 
 ### Data Flow
 

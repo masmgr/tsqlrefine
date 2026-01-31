@@ -121,30 +121,25 @@ public static class CliApp
 
     private const string HelpText =
         """
-        tsqlrefine [global options] [paths...]
-        tsqlrefine <command> [options] [paths...]
+        tsqlrefine - A SQL Server/T-SQL linter, static analyzer, and formatter
+
+        Usage:
+          tsqlrefine <command> [options] [paths...]
 
         Commands:
-          lint, format, fix, init, print-config, list-rules, list-plugins
+          lint          Analyze SQL files for rule violations (default)
+          format        Format SQL files (keyword casing, whitespace)
+          fix           Auto-fix issues that support fixing
+          init          Initialize configuration files
+          print-config  Print effective configuration
+          list-rules    List available rules
+          list-plugins  List loaded plugins
 
-        Options:
-          -c, --config <path>
-          -g, --ignorelist <path>
-              --detect-encoding            (auto-detect input file/stdin encodings)
-              --stdin
-              --stdin-filepath <path>
-              --output <text|json>
-              --severity <error|warning|info|hint>
-              --preset <recommended|strict|pragmatic|security-only>
-              --compat-level <110|120|130|140|150|160>
-              --ruleset <path>
-              --write                      (format/fix)
-              --diff                       (format/fix)
-              --indent-style <tabs|spaces> (format)
-              --indent-size <number>       (format)
-              --verbose                    (list-plugins)
+        Global Options:
+          -c, --config <path>       Configuration file path
+          -h, --help                Show help information
+          -v, --version             Show version information
 
-          -h, --help
-          -v, --version
+        Run 'tsqlrefine <command> --help' for more information on a command.
         """;
 }
