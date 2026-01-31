@@ -8,6 +8,9 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class InputReader
 {
+    private Matcher? _cachedIgnoreMatcher;
+    private List<string>? _cachedIgnorePatterns;
+
     public sealed record ReadInputsResult(
         List<SqlInput> Inputs,
         IReadOnlyDictionary<string, Encoding> WriteEncodings);
@@ -87,14 +90,31 @@ public sealed class InputReader
         if (ignorePatterns.Count == 0)
             return false;
 
-        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
-        foreach (var pattern in ignorePatterns)
-            matcher.AddInclude(pattern);
-
+        var matcher = GetIgnoreMatcher(ignorePatterns);
         var fileName = Path.GetFileName(filePath);
         var directoryPath = Path.GetDirectoryName(filePath) ?? string.Empty;
 
         var result = matcher.Match(directoryPath, new[] { fileName });
         return result.HasMatches;
+    }
+
+    private Matcher GetIgnoreMatcher(List<string> ignorePatterns)
+    {
+        if (_cachedIgnoreMatcher is not null &&
+            _cachedIgnorePatterns is not null &&
+            ReferenceEquals(_cachedIgnorePatterns, ignorePatterns))
+        {
+            return _cachedIgnoreMatcher;
+        }
+
+        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+        foreach (var pattern in ignorePatterns)
+        {
+            matcher.AddInclude(pattern);
+        }
+
+        _cachedIgnoreMatcher = matcher;
+        _cachedIgnorePatterns = ignorePatterns;
+        return matcher;
     }
 }

@@ -26,14 +26,14 @@ public static class CliApp
 
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        EnsureEncodingProvidersRegistered();
+        EncodingProviderRegistry.EnsureRegistered();
         var parsed = CliParser.Parse(args);
         return await RunParsedAsync(parsed, stdin, stdout, stderr);
     }
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
     {
-        EnsureEncodingProvidersRegistered();
+        EncodingProviderRegistry.EnsureRegistered();
         var parsed = CliParser.Parse(args);
 
         if (parsed.Stdin || parsed.Paths.Any(p => p == "-"))
@@ -59,7 +59,7 @@ public static class CliApp
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        EnsureEncodingProvidersRegistered();
+        EncodingProviderRegistry.EnsureRegistered();
 
         if (parsed.ShowVersion)
         {
@@ -115,22 +115,10 @@ public static class CliApp
 
     private static async Task<int> UnknownCommandAsync(string command, TextWriter stderr)
     {
-        _ = command;
-        await stderr.WriteLineAsync("Unknown command.");
+        await stderr.WriteLineAsync($"Unknown command: '{command}'. Run 'tsqlrefine --help' for available commands.");
         return ExitCodes.Fatal;
     }
 
-    private static int _encodingProvidersRegistered;
-
-    private static void EnsureEncodingProvidersRegistered()
-    {
-        if (Interlocked.Exchange(ref _encodingProvidersRegistered, 1) == 1)
-        {
-            return;
-        }
-
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
 
     private const string HelpText =
         """
@@ -148,11 +136,14 @@ public static class CliApp
               --stdin-filepath <path>
               --output <text|json>
               --severity <error|warning|info|hint>
-              --preset <recommended|strict|security-only>
+              --preset <recommended|strict|pragmatic|security-only>
               --compat-level <110|120|130|140|150|160>
               --ruleset <path>
               --write                      (format/fix)
               --diff                       (format/fix)
+              --indent-style <tabs|spaces> (format)
+              --indent-size <number>       (format)
+              --verbose                    (list-plugins)
 
           -h, --help
           -v, --version

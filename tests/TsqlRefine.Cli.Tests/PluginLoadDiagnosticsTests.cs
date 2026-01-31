@@ -26,26 +26,17 @@ public sealed class PluginLoadDiagnosticsTests
                 """;
             await File.WriteAllTextAsync(configPath, configContent, Encoding.UTF8);
 
-            var stdin = new StringReader("");
+            using var stdin = new MemoryStream();
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            var originalDir = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(tempDir);
+            // Use --config to specify config path instead of changing directory
+            var code = await CliApp.RunAsync(new[] { "list-plugins", "--config", configPath }, stdin, stdout, stderr);
 
-            try
-            {
-                var code = await CliApp.RunAsync(new[] { "list-plugins" }, stdin, stdout, stderr);
-
-                Assert.Equal(0, code);
-                var output = stdout.ToString();
-                Assert.Contains("disabled-plugin.dll", output);
-                Assert.Contains("Disabled", output);
-            }
-            finally
-            {
-                Directory.SetCurrentDirectory(originalDir);
-            }
+            Assert.Equal(0, code);
+            var output = stdout.ToString();
+            Assert.Contains("disabled-plugin.dll", output);
+            Assert.Contains("Disabled", output);
         }
         finally
         {
@@ -75,26 +66,17 @@ public sealed class PluginLoadDiagnosticsTests
                 """;
             await File.WriteAllTextAsync(configPath, configContent, Encoding.UTF8);
 
-            var stdin = new StringReader("");
+            using var stdin = new MemoryStream();
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            var originalDir = Directory.GetCurrentDirectory();
-            Directory.SetCurrentDirectory(tempDir);
+            // Use --config to specify config path instead of changing directory
+            var code = await CliApp.RunAsync(new[] { "list-plugins", "--config", configPath }, stdin, stdout, stderr);
 
-            try
-            {
-                var code = await CliApp.RunAsync(new[] { "list-plugins" }, stdin, stdout, stderr);
-
-                Assert.Equal(0, code);
-                var output = stdout.ToString();
-                Assert.Contains("missing-plugin.dll", output);
-                Assert.Contains("FileNotFound", output);
-            }
-            finally
-            {
-                Directory.SetCurrentDirectory(originalDir);
-            }
+            Assert.Equal(0, code);
+            var output = stdout.ToString();
+            Assert.Contains("missing-plugin.dll", output);
+            Assert.Contains("FileNotFound", output);
         }
         finally
         {

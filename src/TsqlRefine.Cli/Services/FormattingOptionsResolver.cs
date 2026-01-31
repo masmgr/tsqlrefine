@@ -32,9 +32,9 @@ public sealed class FormattingOptionsResolver
                 options = FormattingConfigMapper.ToFormattingOptions(config.Formatting);
             }
         }
-        catch
+        catch (ConfigException)
         {
-            // Ignore config load errors for formatting - use defaults
+            // Config load failure is expected when no config file exists - use defaults
         }
 
         // Override with .editorconfig

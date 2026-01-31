@@ -22,7 +22,7 @@ internal static class CharsetDetection
 
     public static DecodedText Decode(byte[] bytes)
     {
-        EnsureEncodingProvidersRegistered();
+        EncodingProviderRegistry.EnsureRegistered();
 
         if (bytes.Length == 0)
         {
@@ -147,15 +147,4 @@ internal static class CharsetDetection
         return false;
     }
 
-    private static int _encodingProvidersRegistered;
-
-    private static void EnsureEncodingProvidersRegistered()
-    {
-        if (Interlocked.Exchange(ref _encodingProvidersRegistered, 1) == 1)
-        {
-            return;
-        }
-
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-    }
 }

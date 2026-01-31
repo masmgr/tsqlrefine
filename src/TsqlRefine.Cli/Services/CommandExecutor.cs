@@ -63,16 +63,34 @@ public sealed class CommandExecutor
         return 0;
     }
 
-    public Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public async Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         var config = _configLoader.LoadConfig(args);
         var rules = _configLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
-        foreach (var rule in rules)
+
+        if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
-            stdout.WriteLine($"{rule.Metadata.RuleId}\t{rule.Metadata.Category}\t{rule.Metadata.DefaultSeverity}\tfixable={rule.Metadata.Fixable}");
+            var ruleInfos = rules.Select(r => new
+            {
+                id = r.Metadata.RuleId,
+                description = r.Metadata.Description,
+                category = r.Metadata.Category,
+                defaultSeverity = r.Metadata.DefaultSeverity.ToString().ToLowerInvariant(),
+                fixable = r.Metadata.Fixable,
+                minCompatLevel = r.Metadata.MinCompatLevel,
+                maxCompatLevel = r.Metadata.MaxCompatLevel
+            });
+            await _outputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
+        }
+        else
+        {
+            foreach (var rule in rules)
+            {
+                await stdout.WriteLineAsync($"{rule.Metadata.RuleId}\t{rule.Metadata.Category}\t{rule.Metadata.DefaultSeverity}\tfixable={rule.Metadata.Fixable}");
+            }
         }
 
-        return Task.FromResult(0);
+        return 0;
     }
 
     public async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
@@ -91,11 +109,10 @@ public sealed class CommandExecutor
 
     public async Task<int> ExecuteLintAsync(string command, CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
-        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
-        if (read.Inputs.Count == 0)
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
         {
-            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+            return errorCode!.Value;
         }
 
         var config = _configLoader.LoadConfig(args);
@@ -121,17 +138,23 @@ public sealed class CommandExecutor
             }
         }
 
+        var hasParseErrors = result.Files.Any(f =>
+            f.Diagnostics.Any(d => d.Code == TsqlRefineEngine.ParseErrorCode));
+        if (hasParseErrors)
+        {
+            return ExitCodes.AnalysisError;
+        }
+
         var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
         return hasIssues ? ExitCodes.Violations : 0;
     }
 
     public async Task<int> ExecuteFormatAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
-        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
-        if (read.Inputs.Count == 0)
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
         {
-            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+            return errorCode!.Value;
         }
 
         var optionError = await _outputWriter.ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson: false, stderr);
@@ -167,11 +190,10 @@ public sealed class CommandExecutor
 
     public async Task<int> ExecuteFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath, stderr);
-        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
-        if (read.Inputs.Count == 0)
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
         {
-            return await _outputWriter.WriteErrorAsync(stderr, "No input.");
+            return errorCode!.Value;
         }
 
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
@@ -224,6 +246,13 @@ public sealed class CommandExecutor
             }
         }
 
+        var hasParseErrors = result.Files.Any(f =>
+            f.Diagnostics.Any(d => d.Code == TsqlRefineEngine.ParseErrorCode));
+        if (hasParseErrors)
+        {
+            return ExitCodes.AnalysisError;
+        }
+
         var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
         return hasIssues ? ExitCodes.Violations : 0;
     }
@@ -236,5 +265,22 @@ public sealed class CommandExecutor
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset
         );
+    }
+
+    private async Task<(InputReader.ReadInputsResult? Read, int? ErrorCode)> LoadInputsAsync(
+        CliArgs args,
+        TextReader stdin,
+        TextWriter stderr)
+    {
+        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath);
+        var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
+
+        if (read.Inputs.Count == 0)
+        {
+            var errorCode = await _outputWriter.WriteErrorAsync(stderr, "No input.");
+            return (null, errorCode);
+        }
+
+        return (read, null);
     }
 }

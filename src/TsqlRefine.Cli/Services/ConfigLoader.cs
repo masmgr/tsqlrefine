@@ -142,7 +142,7 @@ public sealed class ConfigLoader
         return rules;
     }
 
-    public List<string> LoadIgnorePatterns(string? ignoreListPath, TextWriter stderr)
+    public List<string> LoadIgnorePatterns(string? ignoreListPath)
     {
         // Check explicit path first, then default tsqlrefine.ignore
         var path = ignoreListPath;
