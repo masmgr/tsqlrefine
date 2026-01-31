@@ -2,15 +2,16 @@ using TsqlRefine.Cli;
 
 namespace TsqlRefine.Cli.Tests;
 
-// Init command changes current directory, so tests need isolation
+/// <summary>
+/// Init command changes current directory, so tests need isolation.
+/// Uses DirectoryChanging collection for serial execution.
+/// </summary>
+[Collection("DirectoryChanging")]
 public sealed class CliInitTests
 {
-    private static readonly SemaphoreSlim _directoryLock = new(1, 1);
-
     [Fact]
     public async Task Init_WhenNoConfigExists_CreatesFiles()
     {
-        await _directoryLock.WaitAsync();
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var originalDir = Directory.GetCurrentDirectory();
 
@@ -43,14 +44,12 @@ public sealed class CliInitTests
             {
                 // Ignore cleanup errors
             }
-            _directoryLock.Release();
         }
     }
 
     [Fact]
     public async Task Init_WhenConfigExists_ReturnsFatal()
     {
-        await _directoryLock.WaitAsync();
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var originalDir = Directory.GetCurrentDirectory();
 
@@ -83,14 +82,12 @@ public sealed class CliInitTests
             {
                 // Ignore cleanup errors
             }
-            _directoryLock.Release();
         }
     }
 
     [Fact]
     public async Task Init_CreatesValidJsonConfig()
     {
-        await _directoryLock.WaitAsync();
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var originalDir = Directory.GetCurrentDirectory();
 
@@ -120,7 +117,6 @@ public sealed class CliInitTests
             {
                 // Ignore cleanup errors
             }
-            _directoryLock.Release();
         }
     }
 }

@@ -2,6 +2,7 @@ using TsqlRefine.Cli;
 
 namespace TsqlRefine.Cli.Tests;
 
+[Collection("DirectoryChanging")]
 public sealed class CliPresetTests
 {
     [Fact]
@@ -35,8 +36,17 @@ public sealed class CliPresetTests
         finally
         {
             Directory.SetCurrentDirectory(originalDir);
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+            // Wait a bit for file handles to be released
+            await Task.Delay(100);
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+            catch (IOException)
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 
@@ -62,8 +72,17 @@ public sealed class CliPresetTests
         finally
         {
             Directory.SetCurrentDirectory(originalDir);
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+            // Wait a bit for file handles to be released
+            await Task.Delay(100);
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+            catch (IOException)
+            {
+                // Ignore cleanup errors
+            }
         }
     }
 }
