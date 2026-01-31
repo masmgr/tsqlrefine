@@ -47,7 +47,7 @@ public sealed class QualifiedSelectColumnsRule : IRule
 
             // Count the number of tables in FROM/JOIN
             var tableReferences = new List<TableReference>();
-            CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
+            TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
 
             // Only check if multiple tables are present
             if (tableReferences.Count <= 1)
@@ -225,24 +225,5 @@ public sealed class QualifiedSelectColumnsRule : IRule
         }
 
         // Date-part handling has been moved to DatePartHelper.
-
-        private static void CollectTableReferences(IList<TableReference> tableRefs, List<TableReference> collected)
-        {
-            foreach (var tableRef in tableRefs)
-            {
-                if (tableRef is JoinTableReference join)
-                {
-                    var leftRefs = new List<TableReference> { join.FirstTableReference };
-                    CollectTableReferences(leftRefs, collected);
-
-                    var rightRefs = new List<TableReference> { join.SecondTableReference };
-                    CollectTableReferences(rightRefs, collected);
-                }
-                else
-                {
-                    collected.Add(tableRef);
-                }
-            }
-        }
     }
 }

@@ -35,50 +35,17 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class AvoidImplicitConversionInPredicateVisitor : DiagnosticVisitorBase
+    private sealed class AvoidImplicitConversionInPredicateVisitor : PredicateAwareVisitorBase
     {
-        private bool _isInPredicate = false;
-
-        public override void ExplicitVisit(WhereClause node)
-        {
-            _isInPredicate = true;
-            base.ExplicitVisit(node);
-            _isInPredicate = false;
-        }
-
         public override void ExplicitVisit(BooleanComparisonExpression node)
         {
-            if (_isInPredicate)
+            if (IsInPredicate)
             {
                 CheckForFunctionOnColumn(node.FirstExpression);
                 CheckForFunctionOnColumn(node.SecondExpression);
             }
 
             base.ExplicitVisit(node);
-        }
-
-        public override void ExplicitVisit(QualifiedJoin node)
-        {
-            // Check JOIN ON conditions
-            if (node.SearchCondition != null)
-            {
-                _isInPredicate = true;
-                node.SearchCondition.Accept(this);
-                _isInPredicate = false;
-            }
-
-            // Continue visiting other parts of the join
-            if (node.FirstTableReference != null)
-                node.FirstTableReference.Accept(this);
-            if (node.SecondTableReference != null)
-                node.SecondTableReference.Accept(this);
-        }
-
-        public override void ExplicitVisit(HavingClause node)
-        {
-            _isInPredicate = true;
-            base.ExplicitVisit(node);
-            _isInPredicate = false;
         }
 
         private void CheckForFunctionOnColumn(ScalarExpression? expression)
@@ -89,7 +56,7 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
             // Check for CAST/CONVERT only
             if (expression is CastCall castCall)
             {
-                if (ContainsColumnReference(castCall.Parameter))
+                if (ExpressionAnalysisHelpers.ContainsColumnReference(castCall.Parameter))
                 {
                     AddDiagnostic(
                         fragment: castCall,
@@ -102,7 +69,7 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
             }
             else if (expression is ConvertCall convertCall)
             {
-                if (ContainsColumnReference(convertCall.Parameter))
+                if (ExpressionAnalysisHelpers.ContainsColumnReference(convertCall.Parameter))
                 {
                     AddDiagnostic(
                         fragment: convertCall,
@@ -113,50 +80,6 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
                     );
                 }
             }
-        }
-
-        private static bool ContainsColumnReference(ScalarExpression? expression)
-        {
-            if (expression == null)
-                return false;
-
-            // Direct column reference
-            if (expression is ColumnReferenceExpression)
-                return true;
-
-            // Check nested expressions
-            if (expression is CastCall castCall)
-                return ContainsColumnReference(castCall.Parameter);
-
-            if (expression is ConvertCall convertCall)
-                return ContainsColumnReference(convertCall.Parameter);
-
-            if (expression is FunctionCall functionCall && functionCall.Parameters != null)
-            {
-                for (var i = 0; i < functionCall.Parameters.Count; i++)
-                {
-                    var parameter = functionCall.Parameters[i];
-                    if (DatePartHelper.IsDatePartLiteralParameter(functionCall, i, parameter))
-                    {
-                        continue;
-                    }
-
-                    if (ContainsColumnReference(parameter))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            if (expression is BinaryExpression binaryExpr)
-                return ContainsColumnReference(binaryExpr.FirstExpression) ||
-                       ContainsColumnReference(binaryExpr.SecondExpression);
-
-            if (expression is ParenthesisExpression parenExpr)
-                return ContainsColumnReference(parenExpr.Expression);
-
-            return false;
         }
     }
 }

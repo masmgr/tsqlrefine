@@ -116,11 +116,6 @@ public sealed class RequireAsForTableAliasRule : IRule
             // Check tokens between the table name and alias
             for (var i = precedingEndIndex + 1; i < aliasStartIndex; i++)
             {
-                if (i < 0 || i >= _tokenStream.Count)
-                {
-                    continue;
-                }
-
                 var token = _tokenStream[i];
 
                 // Skip whitespace and comments

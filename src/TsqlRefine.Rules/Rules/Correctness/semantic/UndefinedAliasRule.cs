@@ -47,11 +47,9 @@ public sealed class UndefinedAliasRule : IRule
             }
 
             // Phase 1: Collect declared aliases from FROM clause
-            var declaredAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (querySpec.FromClause != null)
-            {
-                CollectDeclaredAliases(querySpec.FromClause.TableReferences, declaredAliases);
-            }
+            var declaredAliases = querySpec.FromClause != null
+                ? TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // Phase 2: Check column references in the entire query
             var columnRefChecker = new ColumnReferenceChecker(declaredAliases, this);
@@ -87,42 +85,6 @@ public sealed class UndefinedAliasRule : IRule
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private static void CollectDeclaredAliases(IList<TableReference> tableRefs, HashSet<string> declaredAliases)
-        {
-            foreach (var tableRef in tableRefs)
-            {
-                if (tableRef is JoinTableReference join)
-                {
-                    // Recursively collect from both sides of the JOIN
-                    var leftRefs = new List<TableReference> { join.FirstTableReference };
-                    CollectDeclaredAliases(leftRefs, declaredAliases);
-
-                    var rightRefs = new List<TableReference> { join.SecondTableReference };
-                    CollectDeclaredAliases(rightRefs, declaredAliases);
-                }
-                else
-                {
-                    var alias = GetAliasOrTableName(tableRef);
-                    if (alias != null)
-                    {
-                        declaredAliases.Add(alias);
-                    }
-                }
-            }
-        }
-
-        private static string? GetAliasOrTableName(TableReference tableRef)
-        {
-            return tableRef switch
-            {
-                NamedTableReference namedTable =>
-                    namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value,
-                QueryDerivedTable derivedTable =>
-                    derivedTable.Alias?.Value,
-                _ => null
-            };
         }
 
         private static void CheckJoinConditions(TableReference tableRef, ColumnReferenceChecker checker)

@@ -51,12 +51,12 @@ public sealed class DuplicateAliasRule : IRule
 
             // Collect all table references from the FROM clause
             var tableReferences = new List<TableReference>();
-            CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
+            TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
 
             // Check for duplicates
             foreach (var tableRef in tableReferences)
             {
-                var alias = GetAliasOrTableName(tableRef);
+                var alias = TableReferenceHelpers.GetAliasOrTableName(tableRef);
                 if (alias == null)
                 {
                     continue;
@@ -80,39 +80,6 @@ public sealed class DuplicateAliasRule : IRule
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private static void CollectTableReferences(IList<TableReference> tableRefs, List<TableReference> collected)
-        {
-            foreach (var tableRef in tableRefs)
-            {
-                if (tableRef is JoinTableReference join)
-                {
-                    // Recursively collect from both sides of the JOIN
-                    var leftRefs = new List<TableReference> { join.FirstTableReference };
-                    CollectTableReferences(leftRefs, collected);
-
-                    var rightRefs = new List<TableReference> { join.SecondTableReference };
-                    CollectTableReferences(rightRefs, collected);
-                }
-                else
-                {
-                    // This is a leaf table reference (NamedTableReference, QueryDerivedTable, etc.)
-                    collected.Add(tableRef);
-                }
-            }
-        }
-
-        private static string? GetAliasOrTableName(TableReference tableRef)
-        {
-            return tableRef switch
-            {
-                NamedTableReference namedTable =>
-                    namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value,
-                QueryDerivedTable derivedTable =>
-                    derivedTable.Alias?.Value,
-                _ => null
-            };
         }
     }
 }
