@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.RegularExpressions;
 using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.PluginHost;
@@ -25,17 +26,46 @@ public sealed record PluginLoadDiagnostic(
     string? MissingNativeDll = null
 );
 
-public sealed record LoadedPlugin(
-    string Path,
-    bool Enabled,
-    IReadOnlyList<IRuleProvider> Providers,
-    PluginLoadDiagnostic Diagnostic,
-    AssemblyLoadContext? LoadContext = null
-)
+public sealed class LoadedPlugin : IDisposable
 {
+    private AssemblyLoadContext? _loadContext;
+    private bool _disposed;
+
+    public LoadedPlugin(
+        string path,
+        bool enabled,
+        IReadOnlyList<IRuleProvider> providers,
+        PluginLoadDiagnostic diagnostic,
+        AssemblyLoadContext? loadContext = null)
+    {
+        Path = path;
+        Enabled = enabled;
+        Providers = providers;
+        Diagnostic = diagnostic;
+        _loadContext = loadContext;
+    }
+
+    public string Path { get; }
+    public bool Enabled { get; }
+    public IReadOnlyList<IRuleProvider> Providers { get; }
+    public PluginLoadDiagnostic Diagnostic { get; }
+
     // Legacy error property for backwards compatibility
     public string? Error => Diagnostic.Status == PluginLoadStatus.Success ? null : Diagnostic.Message;
-};
+
+    /// <summary>
+    /// Unloads the plugin's AssemblyLoadContext, releasing loaded assemblies.
+    /// </summary>
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _loadContext?.Unload();
+            _loadContext = null;
+            _disposed = true;
+        }
+    }
+}
 
 public sealed record PluginLoadSummary(
     int TotalPlugins,
@@ -76,7 +106,9 @@ public sealed class PluginLoader
     {
         var results = new List<LoadedPlugin>();
 
-        foreach (var plugin in plugins ?? Array.Empty<PluginDescriptor>())
+        ArgumentNullException.ThrowIfNull(plugins);
+
+        foreach (var plugin in plugins)
         {
             if (!plugin.Enabled)
             {
@@ -271,6 +303,12 @@ public sealed class PluginLoader
         }
     }
 
+    // Regex to extract DLL names from exception messages
+    // Matches content inside single or double quotes (e.g., 'native_lib.dll' or "native_lib.dll")
+    private static readonly Regex DllNamePattern = new(
+        @"['""]([^'""]+)['""]",
+        RegexOptions.Compiled);
+
     private static string? ExtractMissingDllName(string exceptionMessage)
     {
         // Common patterns in DllNotFoundException messages:
@@ -283,28 +321,7 @@ public sealed class PluginLoader
             return null;
         }
 
-        // Try to extract DLL name from single quotes
-        var startQuote = exceptionMessage.IndexOf('\'');
-        if (startQuote >= 0)
-        {
-            var endQuote = exceptionMessage.IndexOf('\'', startQuote + 1);
-            if (endQuote > startQuote)
-            {
-                return exceptionMessage.Substring(startQuote + 1, endQuote - startQuote - 1);
-            }
-        }
-
-        // Try to extract from double quotes as fallback
-        var startDoubleQuote = exceptionMessage.IndexOf('"');
-        if (startDoubleQuote >= 0)
-        {
-            var endDoubleQuote = exceptionMessage.IndexOf('"', startDoubleQuote + 1);
-            if (endDoubleQuote > startDoubleQuote)
-            {
-                return exceptionMessage.Substring(startDoubleQuote + 1, endDoubleQuote - startDoubleQuote - 1);
-            }
-        }
-
-        return null;
+        var match = DllNamePattern.Match(exceptionMessage);
+        return match.Success ? match.Groups[1].Value : null;
     }
 }
