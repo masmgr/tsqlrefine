@@ -1,6 +1,6 @@
+using System.Text.RegularExpressions;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
-using System.Text.RegularExpressions;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 

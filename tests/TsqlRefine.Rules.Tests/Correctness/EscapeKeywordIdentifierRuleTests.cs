@@ -1,7 +1,7 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness;
-using Xunit;
 using TsqlRefine.Rules.Tests.Helpers;
+using Xunit;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 

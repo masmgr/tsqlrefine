@@ -201,7 +201,7 @@ public sealed class OrderByInSubqueryRuleTests
         // Assert
         Assert.Equal("order-by-in-subquery", _rule.Metadata.RuleId);
         Assert.Equal("Correctness", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Error, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 

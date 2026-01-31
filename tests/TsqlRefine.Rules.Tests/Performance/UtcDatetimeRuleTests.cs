@@ -1,8 +1,8 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Performance;
-using Xunit;
 using TsqlRefine.Rules.Tests.Helpers;
+using Xunit;
 
 namespace TsqlRefine.Rules.Tests.Performance;
 

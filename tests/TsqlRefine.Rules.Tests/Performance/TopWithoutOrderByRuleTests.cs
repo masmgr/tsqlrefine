@@ -152,7 +152,7 @@ SELECT TOP 5 * FROM orders;";
 
         Assert.Equal("top-without-order-by", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
         Assert.Contains("TOP", rule.Metadata.Description);
         Assert.Contains("ORDER BY", rule.Metadata.Description);
