@@ -60,12 +60,17 @@ public sealed class TsqlRefineEngine
         var diagnostics = new List<Diagnostic>();
         var context = CreateContext(input, options);
 
+        // Parse disable directives from comments
+        var directives = DisableDirectiveParser.ParseDirectives(context.Tokens);
+        var totalLines = DisableDirectiveParser.CountLines(input.Text);
+        var disabledRanges = DisableDirectiveParser.BuildDisabledRanges(directives, totalLines);
+
         // Convert parse errors to diagnostics
         AppendParseErrors(context.Ast, diagnostics);
 
         foreach (var rule in rules)
         {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups: null);
+            AppendDiagnostics(rule, context, options, diagnostics, fixGroups: null, disabledRanges);
         }
 
         return new FileResult(input.FilePath, diagnostics);
@@ -75,6 +80,11 @@ public sealed class TsqlRefineEngine
     {
         var context = CreateContext(input, options);
 
+        // Parse disable directives from comments
+        var directives = DisableDirectiveParser.ParseDirectives(context.Tokens);
+        var totalLines = DisableDirectiveParser.CountLines(input.Text);
+        var disabledRanges = DisableDirectiveParser.BuildDisabledRanges(directives, totalLines);
+
         var diagnostics = new List<Diagnostic>();
         var fixGroups = new List<DiagnosticFixGroup>();
 
@@ -83,7 +93,7 @@ public sealed class TsqlRefineEngine
 
         foreach (var rule in rules)
         {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups);
+            AppendDiagnostics(rule, context, options, diagnostics, fixGroups, disabledRanges);
         }
 
         var fixOutcome = FixApplier.ApplyFixes(input.Text, fixGroups);
@@ -214,7 +224,8 @@ public sealed class TsqlRefineEngine
         RuleContext context,
         EngineOptions options,
         List<Diagnostic> diagnostics,
-        List<DiagnosticFixGroup>? fixGroups)
+        List<DiagnosticFixGroup>? fixGroups,
+        IReadOnlyList<DisabledRange> disabledRanges)
     {
 #pragma warning disable CA1031 // We intentionally isolate rule failures into diagnostics.
         try
@@ -223,6 +234,12 @@ public sealed class TsqlRefineEngine
             {
                 var normalized = NormalizeDiagnostic(rule, diagnostic);
                 if (!IsAtOrAbove(normalized.Severity ?? DiagnosticSeverity.Warning, options.MinimumSeverity))
+                {
+                    continue;
+                }
+
+                // Check if suppressed by inline comment directive
+                if (DisableDirectiveParser.IsSuppressed(normalized, disabledRanges))
                 {
                     continue;
                 }

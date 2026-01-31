@@ -617,11 +617,13 @@ Key docs in `docs/`:
 - [cli.md](docs/cli.md): CLI specification (JSON output, exit codes)
 - [plugin-api.md](docs/plugin-api.md): Plugin API contract
 - [project-structure.md](docs/project-structure.md): Detailed project organization
+- [inline-disable.md](docs/inline-disable.md): Inline comment-based rule disabling
 
 Sample files in `samples/`:
 - `configs/`: Configuration file examples (basic, advanced, minimal, sql-server-2012)
 - `rulesets/`: Preset ruleset files (recommended, strict, pragmatic, security-only)
 - `sql/`: SQL examples demonstrating each rule violation
+- `sql/inline-disable/`: Examples of inline disable directives
 - `README.md`: Comprehensive guide to samples
 
 ## Technical Constraints
