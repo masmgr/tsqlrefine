@@ -1,767 +1,767 @@
 [
-    {
-        "RuleId":  "avoid-ambiguous-datetime-literal",
-        "Description":  "Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidAmbiguousDatetimeLiteralRule.cs"
-    },
-    {
-        "RuleId":  "avoid-atat-identity",
-        "Description":  "Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidAtatIdentityRule.cs"
-    },
-    {
-        "RuleId":  "avoid-exec-dynamic-sql",
-        "Description":  "Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection",
-        "Category":  "Security",
-        "CategoryFolder":  "security",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidExecDynamicSqlRule.cs"
-    },
-    {
-        "RuleId":  "avoid-heap-table",
-        "Description":  "Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.",
-        "Category":  "Schema",
-        "CategoryFolder":  "schema",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidHeapTableRule.cs"
-    },
-    {
-        "RuleId":  "avoid-implicit-conversion-in-predicate",
-        "Description":  "Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidImplicitConversionInPredicateRule.cs"
-    },
-    {
-        "RuleId":  "avoid-magic-convert-style-for-datetime",
-        "Description":  "Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "AvoidMagicConvertStyleForDatetimeRule.cs"
-    },
-    {
-        "RuleId":  "avoid-merge",
-        "Description":  "Avoid using MERGE statement due to known bugs (see KB 3180087, KB 4519788)",
-        "Category":  "Safety",
-        "CategoryFolder":  "safety",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidMergeRule.cs"
-    },
-    {
-        "RuleId":  "avoid-nolock",
-        "Description":  "Avoid using NOLOCK hint or READ UNCOMMITTED isolation level",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidNolockRule.cs"
-    },
-    {
-        "RuleId":  "avoid-null-comparison",
-        "Description":  "Detects NULL comparisons using = or \u003c\u003e instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidNullComparisonRule.cs"
-    },
-    {
-        "RuleId":  "avoid-select-star",
-        "Description":  "Avoid SELECT * in queries.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidSelectStarRule.cs"
-    },
-    {
-        "RuleId":  "avoid-top-in-dml",
-        "Description":  "Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AvoidTopInDmlRule.cs"
-    },
-    {
-        "RuleId":  "ban-legacy-join-syntax",
-        "Description":  "Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "BanLegacyJoinSyntaxRule.cs"
-    },
-    {
-        "RuleId":  "ban-query-hints",
-        "Description":  "Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "BanQueryHintsRule.cs"
-    },
-    {
-        "RuleId":  "catch-swallowing",
-        "Description":  "Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "CatchSwallowingRule.cs"
-    },
-    {
-        "RuleId":  "conditional-begin-end",
-        "Description":  "Require BEGIN/END blocks in conditional statements for clarity and maintainability",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "ConditionalBeginEndRule.cs"
-    },
-    {
-        "RuleId":  "cross-database-transaction",
-        "Description":  "Discourage cross-database transactions to avoid distributed transaction issues",
-        "Category":  "Safety",
-        "CategoryFolder":  "safety",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "CrossDatabaseTransactionRule.cs"
-    },
-    {
-        "RuleId":  "dangerous-ddl",
-        "Description":  "Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss.",
-        "Category":  "Safety",
-        "CategoryFolder":  "safety",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "DangerousDdlRule.cs"
-    },
-    {
-        "RuleId":  "data-compression",
-        "Description":  "Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "DataCompressionRule.cs"
-    },
-    {
-        "RuleId":  "disallow-cursors",
-        "Description":  "Prohibit cursor usage; prefer set-based operations for better performance",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "DisallowCursorsRule.cs"
-    },
-    {
-        "RuleId":  "disallow-select-distinct",
-        "Description":  "Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "DisallowSelectDistinctRule.cs"
-    },
-    {
-        "RuleId":  "disallow-select-into",
-        "Description":  "Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "DisallowSelectIntoRule.cs"
-    },
-    {
-        "RuleId":  "dml-without-where",
-        "Description":  "Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.",
-        "Category":  "Safety",
-        "CategoryFolder":  "safety",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "DmlWithoutWhereRule.cs"
-    },
-    {
-        "RuleId":  "duplicate-empty-line",
-        "Description":  "Avoid consecutive empty lines (more than one blank line in a row).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "DuplicateEmptyLineRule.cs"
-    },
-    {
-        "RuleId":  "duplicate-go",
-        "Description":  "Avoid consecutive GO batch separators.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "DuplicateGoRule.cs"
-    },
-    {
-        "RuleId":  "escape-keyword-identifier",
-        "Description":  "Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  true,
-        "FileName":  "EscapeKeywordIdentifierRule.cs"
-    },
-    {
-        "RuleId":  "forbid-top-100-percent-order-by",
-        "Description":  "Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "ForbidTop100PercentOrderByRule.cs"
-    },
-    {
-        "RuleId":  "full-text",
-        "Description":  "Prohibit full-text search predicates; use alternative search strategies for better performance",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "FullTextRule.cs"
-    },
-    {
-        "RuleId":  "information-schema",
-        "Description":  "Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "InformationSchemaRule.cs"
-    },
-    {
-        "RuleId":  "insert-select-column-name-mismatch",
-        "Description":  "Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "InsertSelectColumnNameMismatchRule.cs"
-    },
-    {
-        "RuleId":  "join-keyword",
-        "Description":  "Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "JoinKeywordRule.cs"
-    },
-    {
-        "RuleId":  "linked-server",
-        "Description":  "Prohibit linked server queries (4-part identifiers); use alternative data access patterns",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "LinkedServerRule.cs"
-    },
-    {
-        "RuleId":  "named-constraint",
-        "Description":  "Prohibit named constraints in temp tables to avoid naming conflicts",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "NamedConstraintRule.cs"
-    },
-    {
-        "RuleId":  "nested-block-comments",
-        "Description":  "Avoid nested block comments (/* /* */ */).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "NestedBlockCommentsRule.cs"
-    },
-    {
-        "RuleId":  "non-sargable",
-        "Description":  "Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates)",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "NonSargableRule.cs"
-    },
-    {
-        "RuleId":  "no-top-without-order-by-in-select-into",
-        "Description":  "Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "NoTopWithoutOrderByInSelectIntoRule.cs"
-    },
-    {
-        "RuleId":  "object-property",
-        "Description":  "Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "ObjectPropertyRule.cs"
-    },
-    {
-        "RuleId":  "order-by-in-subquery",
-        "Description":  "Disallows invalid ORDER BY in subqueries unless paired with TOP, OFFSET, FOR XML, or FOR JSON (SQL Server error Msg 1033).",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "OrderByInSubqueryRule.cs"
-    },
-    {
-        "RuleId":  "prefer-coalesce-over-nested-isnull",
-        "Description":  "Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferCoalesceOverNestedIsnullRule.cs"
-    },
-    {
-        "RuleId":  "prefer-concat-over-plus",
-        "Description":  "Recommends CONCAT() when + concatenation uses ISNULL/COALESCE; avoids subtle NULL propagation (SQL Server 2012+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferConcatOverPlusRule.cs"
-    },
-    {
-        "RuleId":  "prefer-concat-over-plus-when-nullable-or-convert",
-        "Description":  "Stricter variant that also detects CAST/CONVERT in concatenations; enable instead of prefer-concat-over-plus for comprehensive coverage (SQL Server 2012+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferConcatOverPlusWhenNullableOrConvertRule.cs"
-    },
-    {
-        "RuleId":  "prefer-concat-ws",
-        "Description":  "Recommends CONCAT_WS() when concatenation repeats the same separator literal; improves readability and reduces duplication (SQL Server 2017+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferConcatWsRule.cs"
-    },
-    {
-        "RuleId":  "prefer-json-functions",
-        "Description":  "Encourages built-in JSON features (OPENJSON, JSON_VALUE, FOR JSON, etc.) over manual string parsing/building (SQL Server 2016+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferJsonFunctionsRule.cs"
-    },
-    {
-        "RuleId":  "prefer-string-agg-over-stuff",
-        "Description":  "Recommends STRING_AGG() over STUFF(... FOR XML PATH(\u0027\u0027) ...); simpler and typically faster/safer (SQL Server 2017+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferStringAggOverStuffRule.cs"
-    },
-    {
-        "RuleId":  "prefer-trim-over-ltrim-rtrim",
-        "Description":  "Recommends TRIM(x) instead of LTRIM(RTRIM(x)); clearer and less error-prone (SQL Server 2017+).",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferTrimOverLtrimRtrimRule.cs"
-    },
-    {
-        "RuleId":  "prefer-try-convert-patterns",
-        "Description":  "Recommends TRY_CONVERT/TRY_CAST over CASE + ISNUMERIC/ISDATE; fewer false positives and clearer intent.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PreferTryConvertPatternsRule.cs"
-    },
-    {
-        "RuleId":  "prefer-unicode-string-literals",
-        "Description":  "Encourages Unicode string literals (N\u0027...\u0027) to avoid encoding issues, using conservative safe-mode autofixes.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  true,
-        "FileName":  "PreferUnicodeStringLiteralsRule.cs"
-    },
-    {
-        "RuleId":  "print-statement",
-        "Description":  "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
-        "Category":  "Debug",
-        "CategoryFolder":  "debug",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "PrintStatementRule.cs"
-    },
-    {
-        "RuleId":  "qualified-select-columns",
-        "Description":  "Requires qualifying columns in SELECT lists when multiple tables are referenced; prevents subtle \u0027wrong table\u0027 mistakes when column names overlap.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "QualifiedSelectColumnsRule.cs"
-    },
-    {
-        "RuleId":  "require-as-for-column-alias",
-        "Description":  "Column aliases should use the AS keyword",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  true,
-        "FileName":  "RequireAsForColumnAliasRule.cs"
-    },
-    {
-        "RuleId":  "require-as-for-table-alias",
-        "Description":  "Table aliases should use the AS keyword",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  true,
-        "FileName":  "RequireAsForTableAliasRule.cs"
-    },
-    {
-        "RuleId":  "require-begin-end-for-if-with-controlflow-exception",
-        "Description":  "Enforces BEGIN/END for IF/ELSE blocks, while allowing a single control-flow statement (e.g., RETURN) without a block.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireBeginEndForIfWithControlflowExceptionRule.cs"
-    },
-    {
-        "RuleId":  "require-begin-end-for-while",
-        "Description":  "Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireBeginEndForWhileRule.cs"
-    },
-    {
-        "RuleId":  "require-column-list-for-insert-select",
-        "Description":  "INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireColumnListForInsertSelectRule.cs"
-    },
-    {
-        "RuleId":  "require-column-list-for-insert-values",
-        "Description":  "INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireColumnListForInsertValuesRule.cs"
-    },
-    {
-        "RuleId":  "require-explicit-join-type",
-        "Description":  "Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  true,
-        "FileName":  "RequireExplicitJoinTypeRule.cs"
-    },
-    {
-        "RuleId":  "require-ms-description-for-table-definition-file",
-        "Description":  "Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.",
-        "Category":  "Schema",
-        "CategoryFolder":  "schema",
-        "Severity":  "Information",
-        "Fixable":  false,
-        "FileName":  "RequireMsDescriptionForTableDefinitionFileRule.cs"
-    },
-    {
-        "RuleId":  "require-parentheses-for-mixed-and-or",
-        "Description":  "Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireParenthesesForMixedAndOrRule.cs"
-    },
-    {
-        "RuleId":  "require-primary-key-or-unique-constraint",
-        "Description":  "Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.",
-        "Category":  "Schema",
-        "CategoryFolder":  "schema",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequirePrimaryKeyOrUniqueConstraintRule.cs"
-    },
-    {
-        "RuleId":  "require-qualified-columns-everywhere",
-        "Description":  "Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireQualifiedColumnsEverywhereRule.cs"
-    },
-    {
-        "RuleId":  "require-try-catch-for-transaction",
-        "Description":  "Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireTryCatchForTransactionRule.cs"
-    },
-    {
-        "RuleId":  "require-xact-abort-on",
-        "Description":  "Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "RequireXactAbortOnRule.cs"
-    },
-    {
-        "RuleId":  "semantic/alias-scope-violation",
-        "Description":  "Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "AliasScopeViolationRule.cs"
-    },
-    {
-        "RuleId":  "semantic/case-sensitive-variables",
-        "Description":  "Ensures variable references match the exact casing used in their declarations for consistency.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "CaseSensitiveVariablesRule.cs"
-    },
-    {
-        "RuleId":  "semantic/cte-name-conflict",
-        "Description":  "Detects CTE name conflicts with other CTEs or table aliases in the same scope.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "CteNameConflictRule.cs"
-    },
-    {
-        "RuleId":  "semantic/data-type-length",
-        "Description":  "Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "DataTypeLengthRule.cs"
-    },
-    {
-        "RuleId":  "semantic/duplicate-alias",
-        "Description":  "Detects duplicate table aliases in the same scope, which causes ambiguous references.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "DuplicateAliasRule.cs"
-    },
-    {
-        "RuleId":  "semantic/insert-column-count-mismatch",
-        "Description":  "Detects column count mismatches between the target column list and the source in INSERT statements.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "InsertColumnCountMismatchRule.cs"
-    },
-    {
-        "RuleId":  "semantic/join-condition-always-true",
-        "Description":  "Detects JOIN conditions that are always true or likely incorrect, such as \u0027ON 1=1\u0027 or self-comparisons.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "JoinConditionAlwaysTrueRule.cs"
-    },
-    {
-        "RuleId":  "semantic/left-join-filtered-by-where",
-        "Description":  "Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "LeftJoinFilteredByWhereRule.cs"
-    },
-    {
-        "RuleId":  "semantic/multi-table-alias",
-        "Description":  "Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "MultiTableAliasRule.cs"
-    },
-    {
-        "RuleId":  "semantic/return-after-statements",
-        "Description":  "Detects unreachable statements after a RETURN statement in stored procedures or functions.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "ReturnAfterStatementsRule.cs"
-    },
-    {
-        "RuleId":  "semantic/schema-qualify",
-        "Description":  "Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "SchemaQualifyRule.cs"
-    },
-    {
-        "RuleId":  "semantic/set-variable",
-        "Description":  "Recommends using SELECT for variable assignment instead of SET for better performance and consistency.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "SetVariableRule.cs"
-    },
-    {
-        "RuleId":  "semantic/undefined-alias",
-        "Description":  "Detects references to undefined table aliases in column qualifiers.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "UndefinedAliasRule.cs"
-    },
-    {
-        "RuleId":  "semantic/unicode-string",
-        "Description":  "Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.",
-        "Category":  "Correctness",
-        "CategoryFolder":  "correctness",
-        "Severity":  "Error",
-        "Fixable":  true,
-        "FileName":  "UnicodeStringRule.cs"
-    },
-    {
-        "RuleId":  "semicolon-termination",
-        "Description":  "SQL statements should be terminated with a semicolon",
-        "Category":  "Style",
-        "CategoryFolder":  "style",
-        "Severity":  "Information",
-        "Fixable":  true,
-        "FileName":  "SemicolonTerminationRule.cs"
-    },
-    {
-        "RuleId":  "set-ansi",
-        "Description":  "Files should start with SET ANSI_NULLS ON within the first 10 statements.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "SetAnsiRule.cs"
-    },
-    {
-        "RuleId":  "set-nocount",
-        "Description":  "Files should start with SET NOCOUNT ON within the first 10 statements.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "SetNocountRule.cs"
-    },
-    {
-        "RuleId":  "set-quoted-identifier",
-        "Description":  "Files should start with SET QUOTED_IDENTIFIER ON within the first 10 statements.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "SetQuotedIdentifierRule.cs"
-    },
-    {
-        "RuleId":  "set-transaction-isolation-level",
-        "Description":  "Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "SetTransactionIsolationLevelRule.cs"
-    },
-    {
-        "RuleId":  "top-without-order-by",
-        "Description":  "Detects TOP clause without ORDER BY, which produces non-deterministic results.",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "TopWithoutOrderByRule.cs"
-    },
-    {
-        "RuleId":  "transaction-without-commit-or-rollback",
-        "Description":  "Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Error",
-        "Fixable":  false,
-        "FileName":  "TransactionWithoutCommitOrRollbackRule.cs"
-    },
-    {
-        "RuleId":  "uncommitted-transaction",
-        "Description":  "BEGIN TRANSACTION requires corresponding COMMIT TRANSACTION in the same file",
-        "Category":  "Transactions",
-        "CategoryFolder":  "transactions",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "UncommittedTransactionRule.cs"
-    },
-    {
-        "RuleId":  "upper-lower",
-        "Description":  "Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "UpperLowerRule.cs"
-    },
-    {
-        "RuleId":  "utc-datetime",
-        "Description":  "Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones",
-        "Category":  "Performance",
-        "CategoryFolder":  "performance",
-        "Severity":  "Warning",
-        "Fixable":  false,
-        "FileName":  "UtcDatetimeRule.cs"
-    }
+  {
+    "RuleId": "avoid-ambiguous-datetime-literal",
+    "Description": "Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidAmbiguousDatetimeLiteralRule.cs"
+  },
+  {
+    "RuleId": "avoid-atat-identity",
+    "Description": "Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidAtatIdentityRule.cs"
+  },
+  {
+    "RuleId": "avoid-exec-dynamic-sql",
+    "Description": "Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection",
+    "Category": "Security",
+    "CategoryFolder": "security",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidExecDynamicSqlRule.cs"
+  },
+  {
+    "RuleId": "avoid-heap-table",
+    "Description": "Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.",
+    "Category": "Schema",
+    "CategoryFolder": "schema",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidHeapTableRule.cs"
+  },
+  {
+    "RuleId": "avoid-implicit-conversion-in-predicate",
+    "Description": "Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidImplicitConversionInPredicateRule.cs"
+  },
+  {
+    "RuleId": "avoid-magic-convert-style-for-datetime",
+    "Description": "Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "AvoidMagicConvertStyleForDatetimeRule.cs"
+  },
+  {
+    "RuleId": "avoid-merge",
+    "Description": "Avoid using MERGE statement due to known bugs (see KB 3180087, KB 4519788)",
+    "Category": "Safety",
+    "CategoryFolder": "safety",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidMergeRule.cs"
+  },
+  {
+    "RuleId": "avoid-nolock",
+    "Description": "Avoid using NOLOCK hint or READ UNCOMMITTED isolation level",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidNolockRule.cs"
+  },
+  {
+    "RuleId": "avoid-null-comparison",
+    "Description": "Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidNullComparisonRule.cs"
+  },
+  {
+    "RuleId": "avoid-select-star",
+    "Description": "Avoid SELECT * in queries.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidSelectStarRule.cs"
+  },
+  {
+    "RuleId": "avoid-top-in-dml",
+    "Description": "Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AvoidTopInDmlRule.cs"
+  },
+  {
+    "RuleId": "ban-legacy-join-syntax",
+    "Description": "Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "BanLegacyJoinSyntaxRule.cs"
+  },
+  {
+    "RuleId": "ban-query-hints",
+    "Description": "Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "BanQueryHintsRule.cs"
+  },
+  {
+    "RuleId": "catch-swallowing",
+    "Description": "Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "CatchSwallowingRule.cs"
+  },
+  {
+    "RuleId": "conditional-begin-end",
+    "Description": "Require BEGIN/END blocks in conditional statements for clarity and maintainability",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "ConditionalBeginEndRule.cs"
+  },
+  {
+    "RuleId": "cross-database-transaction",
+    "Description": "Discourage cross-database transactions to avoid distributed transaction issues",
+    "Category": "Safety",
+    "CategoryFolder": "safety",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "CrossDatabaseTransactionRule.cs"
+  },
+  {
+    "RuleId": "dangerous-ddl",
+    "Description": "Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss.",
+    "Category": "Safety",
+    "CategoryFolder": "safety",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "DangerousDdlRule.cs"
+  },
+  {
+    "RuleId": "data-compression",
+    "Description": "Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "DataCompressionRule.cs"
+  },
+  {
+    "RuleId": "disallow-cursors",
+    "Description": "Prohibit cursor usage; prefer set-based operations for better performance",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "DisallowCursorsRule.cs"
+  },
+  {
+    "RuleId": "disallow-select-distinct",
+    "Description": "Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "DisallowSelectDistinctRule.cs"
+  },
+  {
+    "RuleId": "disallow-select-into",
+    "Description": "Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "DisallowSelectIntoRule.cs"
+  },
+  {
+    "RuleId": "dml-without-where",
+    "Description": "Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.",
+    "Category": "Safety",
+    "CategoryFolder": "safety",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "DmlWithoutWhereRule.cs"
+  },
+  {
+    "RuleId": "duplicate-empty-line",
+    "Description": "Avoid consecutive empty lines (more than one blank line in a row).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "DuplicateEmptyLineRule.cs"
+  },
+  {
+    "RuleId": "duplicate-go",
+    "Description": "Avoid consecutive GO batch separators.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "DuplicateGoRule.cs"
+  },
+  {
+    "RuleId": "escape-keyword-identifier",
+    "Description": "Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": true,
+    "FileName": "EscapeKeywordIdentifierRule.cs"
+  },
+  {
+    "RuleId": "forbid-top-100-percent-order-by",
+    "Description": "Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "ForbidTop100PercentOrderByRule.cs"
+  },
+  {
+    "RuleId": "full-text",
+    "Description": "Prohibit full-text search predicates; use alternative search strategies for better performance",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "FullTextRule.cs"
+  },
+  {
+    "RuleId": "information-schema",
+    "Description": "Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "InformationSchemaRule.cs"
+  },
+  {
+    "RuleId": "insert-select-column-name-mismatch",
+    "Description": "Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "InsertSelectColumnNameMismatchRule.cs"
+  },
+  {
+    "RuleId": "join-keyword",
+    "Description": "Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "JoinKeywordRule.cs"
+  },
+  {
+    "RuleId": "linked-server",
+    "Description": "Prohibit linked server queries (4-part identifiers); use alternative data access patterns",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "LinkedServerRule.cs"
+  },
+  {
+    "RuleId": "named-constraint",
+    "Description": "Prohibit named constraints in temp tables to avoid naming conflicts",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "NamedConstraintRule.cs"
+  },
+  {
+    "RuleId": "nested-block-comments",
+    "Description": "Avoid nested block comments (/* /* */ */).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "NestedBlockCommentsRule.cs"
+  },
+  {
+    "RuleId": "no-top-without-order-by-in-select-into",
+    "Description": "Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "NoTopWithoutOrderByInSelectIntoRule.cs"
+  },
+  {
+    "RuleId": "non-sargable",
+    "Description": "Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates)",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "NonSargableRule.cs"
+  },
+  {
+    "RuleId": "object-property",
+    "Description": "Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "ObjectPropertyRule.cs"
+  },
+  {
+    "RuleId": "order-by-in-subquery",
+    "Description": "Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "OrderByInSubqueryRule.cs"
+  },
+  {
+    "RuleId": "prefer-coalesce-over-nested-isnull",
+    "Description": "Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferCoalesceOverNestedIsnullRule.cs"
+  },
+  {
+    "RuleId": "prefer-concat-over-plus",
+    "Description": "Recommends CONCAT() when + concatenation uses ISNULL/COALESCE; avoids subtle NULL propagation (SQL Server 2012+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferConcatOverPlusRule.cs"
+  },
+  {
+    "RuleId": "prefer-concat-over-plus-when-nullable-or-convert",
+    "Description": "Stricter variant that also detects CAST/CONVERT in concatenations; enable instead of prefer-concat-over-plus for comprehensive coverage (SQL Server 2012+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferConcatOverPlusWhenNullableOrConvertRule.cs"
+  },
+  {
+    "RuleId": "prefer-concat-ws",
+    "Description": "Recommends CONCAT_WS() when concatenation repeats the same separator literal; improves readability and reduces duplication (SQL Server 2017+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferConcatWsRule.cs"
+  },
+  {
+    "RuleId": "prefer-json-functions",
+    "Description": "Encourages built-in JSON features (OPENJSON, JSON_VALUE, FOR JSON, etc.) over manual string parsing/building (SQL Server 2016+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferJsonFunctionsRule.cs"
+  },
+  {
+    "RuleId": "prefer-string-agg-over-stuff",
+    "Description": "Recommends STRING_AGG() over STUFF(... FOR XML PATH('') ...); simpler and typically faster/safer (SQL Server 2017+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferStringAggOverStuffRule.cs"
+  },
+  {
+    "RuleId": "prefer-trim-over-ltrim-rtrim",
+    "Description": "Recommends TRIM(x) instead of LTRIM(RTRIM(x)); clearer and less error-prone (SQL Server 2017+).",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferTrimOverLtrimRtrimRule.cs"
+  },
+  {
+    "RuleId": "prefer-try-convert-patterns",
+    "Description": "Recommends TRY_CONVERT/TRY_CAST over CASE + ISNUMERIC/ISDATE; fewer false positives and clearer intent.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PreferTryConvertPatternsRule.cs"
+  },
+  {
+    "RuleId": "prefer-unicode-string-literals",
+    "Description": "Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": true,
+    "FileName": "PreferUnicodeStringLiteralsRule.cs"
+  },
+  {
+    "RuleId": "print-statement",
+    "Description": "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
+    "Category": "Debug",
+    "CategoryFolder": "debug",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "PrintStatementRule.cs"
+  },
+  {
+    "RuleId": "qualified-select-columns",
+    "Description": "Requires qualifying columns in SELECT lists when multiple tables are referenced; prevents subtle 'wrong table' mistakes when column names overlap.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "QualifiedSelectColumnsRule.cs"
+  },
+  {
+    "RuleId": "require-as-for-column-alias",
+    "Description": "Column aliases should use the AS keyword",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": true,
+    "FileName": "RequireAsForColumnAliasRule.cs"
+  },
+  {
+    "RuleId": "require-as-for-table-alias",
+    "Description": "Table aliases should use the AS keyword",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": true,
+    "FileName": "RequireAsForTableAliasRule.cs"
+  },
+  {
+    "RuleId": "require-begin-end-for-if-with-controlflow-exception",
+    "Description": "Enforces BEGIN/END for IF/ELSE blocks, while allowing a single control-flow statement (e.g., RETURN) without a block.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireBeginEndForIfWithControlflowExceptionRule.cs"
+  },
+  {
+    "RuleId": "require-begin-end-for-while",
+    "Description": "Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireBeginEndForWhileRule.cs"
+  },
+  {
+    "RuleId": "require-column-list-for-insert-select",
+    "Description": "INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireColumnListForInsertSelectRule.cs"
+  },
+  {
+    "RuleId": "require-column-list-for-insert-values",
+    "Description": "INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireColumnListForInsertValuesRule.cs"
+  },
+  {
+    "RuleId": "require-explicit-join-type",
+    "Description": "Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": true,
+    "FileName": "RequireExplicitJoinTypeRule.cs"
+  },
+  {
+    "RuleId": "require-ms-description-for-table-definition-file",
+    "Description": "Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.",
+    "Category": "Schema",
+    "CategoryFolder": "schema",
+    "Severity": "Information",
+    "Fixable": false,
+    "FileName": "RequireMsDescriptionForTableDefinitionFileRule.cs"
+  },
+  {
+    "RuleId": "require-parentheses-for-mixed-and-or",
+    "Description": "Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireParenthesesForMixedAndOrRule.cs"
+  },
+  {
+    "RuleId": "require-primary-key-or-unique-constraint",
+    "Description": "Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.",
+    "Category": "Schema",
+    "CategoryFolder": "schema",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequirePrimaryKeyOrUniqueConstraintRule.cs"
+  },
+  {
+    "RuleId": "require-qualified-columns-everywhere",
+    "Description": "Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireQualifiedColumnsEverywhereRule.cs"
+  },
+  {
+    "RuleId": "require-try-catch-for-transaction",
+    "Description": "Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireTryCatchForTransactionRule.cs"
+  },
+  {
+    "RuleId": "require-xact-abort-on",
+    "Description": "Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "RequireXactAbortOnRule.cs"
+  },
+  {
+    "RuleId": "semantic/alias-scope-violation",
+    "Description": "Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "AliasScopeViolationRule.cs"
+  },
+  {
+    "RuleId": "semantic/case-sensitive-variables",
+    "Description": "Ensures variable references match the exact casing used in their declarations for consistency.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "CaseSensitiveVariablesRule.cs"
+  },
+  {
+    "RuleId": "semantic/cte-name-conflict",
+    "Description": "Detects CTE name conflicts with other CTEs or table aliases in the same scope.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "CteNameConflictRule.cs"
+  },
+  {
+    "RuleId": "semantic/data-type-length",
+    "Description": "Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "DataTypeLengthRule.cs"
+  },
+  {
+    "RuleId": "semantic/duplicate-alias",
+    "Description": "Detects duplicate table aliases in the same scope, which causes ambiguous references.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "DuplicateAliasRule.cs"
+  },
+  {
+    "RuleId": "semantic/insert-column-count-mismatch",
+    "Description": "Detects column count mismatches between the target column list and the source in INSERT statements.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "InsertColumnCountMismatchRule.cs"
+  },
+  {
+    "RuleId": "semantic/join-condition-always-true",
+    "Description": "Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "JoinConditionAlwaysTrueRule.cs"
+  },
+  {
+    "RuleId": "semantic/left-join-filtered-by-where",
+    "Description": "Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "LeftJoinFilteredByWhereRule.cs"
+  },
+  {
+    "RuleId": "semantic/multi-table-alias",
+    "Description": "Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "MultiTableAliasRule.cs"
+  },
+  {
+    "RuleId": "semantic/return-after-statements",
+    "Description": "Detects unreachable statements after a RETURN statement in stored procedures or functions.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "ReturnAfterStatementsRule.cs"
+  },
+  {
+    "RuleId": "semantic/schema-qualify",
+    "Description": "Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SchemaQualifyRule.cs"
+  },
+  {
+    "RuleId": "semantic/set-variable",
+    "Description": "Recommends using SELECT for variable assignment instead of SET for consistency.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SetVariableRule.cs"
+  },
+  {
+    "RuleId": "semantic/undefined-alias",
+    "Description": "Detects references to undefined table aliases in column qualifiers.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "UndefinedAliasRule.cs"
+  },
+  {
+    "RuleId": "semantic/unicode-string",
+    "Description": "Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.",
+    "Category": "Correctness",
+    "CategoryFolder": "correctness",
+    "Severity": "Error",
+    "Fixable": true,
+    "FileName": "UnicodeStringRule.cs"
+  },
+  {
+    "RuleId": "semicolon-termination",
+    "Description": "SQL statements should be terminated with a semicolon",
+    "Category": "Style",
+    "CategoryFolder": "style",
+    "Severity": "Information",
+    "Fixable": true,
+    "FileName": "SemicolonTerminationRule.cs"
+  },
+  {
+    "RuleId": "set-ansi",
+    "Description": "Files should start with SET ANSI_NULLS ON within the first 10 statements.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SetAnsiRule.cs"
+  },
+  {
+    "RuleId": "set-nocount",
+    "Description": "Files should start with SET NOCOUNT ON within the first 10 statements.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SetNocountRule.cs"
+  },
+  {
+    "RuleId": "set-quoted-identifier",
+    "Description": "Files should start with SET QUOTED_IDENTIFIER ON within the first 10 statements.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SetQuotedIdentifierRule.cs"
+  },
+  {
+    "RuleId": "set-transaction-isolation-level",
+    "Description": "Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "SetTransactionIsolationLevelRule.cs"
+  },
+  {
+    "RuleId": "top-without-order-by",
+    "Description": "Detects TOP clause without ORDER BY, which produces non-deterministic results.",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "TopWithoutOrderByRule.cs"
+  },
+  {
+    "RuleId": "transaction-without-commit-or-rollback",
+    "Description": "Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Error",
+    "Fixable": false,
+    "FileName": "TransactionWithoutCommitOrRollbackRule.cs"
+  },
+  {
+    "RuleId": "uncommitted-transaction",
+    "Description": "BEGIN TRANSACTION requires corresponding COMMIT TRANSACTION in the same file",
+    "Category": "Transactions",
+    "CategoryFolder": "transactions",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "UncommittedTransactionRule.cs"
+  },
+  {
+    "RuleId": "upper-lower",
+    "Description": "Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "UpperLowerRule.cs"
+  },
+  {
+    "RuleId": "utc-datetime",
+    "Description": "Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones",
+    "Category": "Performance",
+    "CategoryFolder": "performance",
+    "Severity": "Warning",
+    "Fixable": false,
+    "FileName": "UtcDatetimeRule.cs"
+  }
 ]

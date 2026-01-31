@@ -27,8 +27,8 @@ TsqlRefine provides a comprehensive set of rules to enforce T-SQL best practices
 
 - **Total Rules**: 85
 - **Fixable Rules**: 7 (8%)
-- **Error Severity**: 14 rules (16%)
-- **Warning Severity**: 45 rules (53%)
+- **Error Severity**: 11 rules (13%)
+- **Warning Severity**: 48 rules (56%)
 - **Information Severity**: 26 rules (31%)
 
 ## Rule Categories
@@ -39,13 +39,13 @@ TsqlRefine organizes rules into the following categories:
 |----------|-------|-------------|
 | **Correctness** | 24 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 4 | Prevents destructive or dangerous operations |
-| **Security** |  | Identifies security vulnerabilities like SQL injection |
+| **Security** | 1 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 17 | Flags patterns that can cause performance issues |
 | **Naming** | 0 | Enforces naming conventions and readability |
 | **Style** | 26 | Maintains code formatting and consistency |
 | **Transactions** | 9 | Ensures proper transaction handling and session settings |
 | **Schema** | 3 | Enforces database schema best practices |
-| **Debug** |  | Controls debug and output statements |
+| **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Category
 
@@ -62,7 +62,7 @@ TsqlRefine organizes rules into the following categories:
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
 | [named-constraint](correctness/named-constraint.md) | Prohibit named constraints in temp tables to avoid naming conflicts | Error | No |
 | [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data. | Error | No |
-| [order-by-in-subquery](correctness/order-by-in-subquery.md) | Disallows invalid ORDER BY in subqueries unless paired with TOP, OFFSET, FOR XML, or FOR JSON (SQL Server error Msg 1033). | Error | No |
+| [order-by-in-subquery](correctness/order-by-in-subquery.md) | Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it. | Warning | No |
 | [require-column-list-for-insert-select](correctness/require-column-list-for-insert-select.md) | INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
 | [require-column-list-for-insert-values](correctness/require-column-list-for-insert-values.md) | INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
 | [require-parentheses-for-mixed-and-or](correctness/require-parentheses-for-mixed-and-or.md) | Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion. | Warning | No |
@@ -74,7 +74,7 @@ TsqlRefine organizes rules into the following categories:
 | [semantic/join-condition-always-true](correctness/semantic-join-condition-always-true.md) | Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons. | Warning | No |
 | [semantic/left-join-filtered-by-where](correctness/semantic-left-join-filtered-by-where.md) | Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN. | Warning | No |
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
-| [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for better performance and consistency. | Error | No |
+| [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 | [semantic/undefined-alias](correctness/semantic-undefined-alias.md) | Detects references to undefined table aliases in column qualifiers. | Error | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 
@@ -87,7 +87,7 @@ TsqlRefine organizes rules into the following categories:
 | [dangerous-ddl](safety/dangerous-ddl.md) | Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss. | Warning | No |
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications. | Error | No |
 
-### Security ( rules)
+### Security (1 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -111,7 +111,7 @@ TsqlRefine organizes rules into the following categories:
 | [linked-server](performance/linked-server.md) | Prohibit linked server queries (4-part identifiers); use alternative data access patterns | Information | No |
 | [non-sargable](performance/non-sargable.md) | Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates) | Warning | No |
 | [object-property](performance/object-property.md) | Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead | Warning | No |
-| [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY, which produces non-deterministic results. | Error | No |
+| [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY, which produces non-deterministic results. | Warning | No |
 | [upper-lower](performance/upper-lower.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
 | [utc-datetime](performance/utc-datetime.md) | Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones | Warning | No |
 
@@ -172,7 +172,7 @@ No rules in this category.
 | [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md) | Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL. | Information | No |
 | [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md) | Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity. | Warning | No |
 
-### Debug ( rules)
+### Debug (1 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -180,24 +180,21 @@ No rules in this category.
 
 ## Rules by Severity
 
-### Error (14 rules)
+### Error (11 rules)
 
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
 - [named-constraint](correctness/named-constraint.md)
 - [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md)
-- [order-by-in-subquery](correctness/order-by-in-subquery.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
 - [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md)
 - [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md)
-- [semantic/set-variable](correctness/semantic-set-variable.md)
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
-- [top-without-order-by](performance/top-without-order-by.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (45 rules)
+### Warning (48 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -220,6 +217,7 @@ No rules in this category.
 - [nested-block-comments](style/nested-block-comments.md)
 - [non-sargable](performance/non-sargable.md)
 - [object-property](performance/object-property.md)
+- [order-by-in-subquery](correctness/order-by-in-subquery.md)
 - [require-begin-end-for-if-with-controlflow-exception](style/require-begin-end-for-if-with-controlflow-exception.md)
 - [require-begin-end-for-while](style/require-begin-end-for-while.md)
 - [require-column-list-for-insert-select](correctness/require-column-list-for-insert-select.md)
@@ -237,10 +235,12 @@ No rules in this category.
 - [semantic/multi-table-alias](style/semantic-multi-table-alias.md)
 - [semantic/return-after-statements](correctness/semantic-return-after-statements.md)
 - [semantic/schema-qualify](style/semantic-schema-qualify.md)
+- [semantic/set-variable](correctness/semantic-set-variable.md)
 - [set-ansi](transactions/set-ansi.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-quoted-identifier](transactions/set-quoted-identifier.md)
 - [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
+- [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
 - [upper-lower](performance/upper-lower.md)
 - [utc-datetime](performance/utc-datetime.md)
