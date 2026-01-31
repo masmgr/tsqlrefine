@@ -137,9 +137,9 @@ public static class CliParser
         var indentSizeOption = CreateOptionalStringOption("--indent-size");
         var helpOption = CreateBoolOption("--help", "-h", "/?");
         var versionOption = CreateBoolOption("--version", "-v");
-        var initOption = CreateBoolOption("--init", "-i");
-        var printConfigOption = CreateBoolOption("--print-config", "-p");
-        var listPluginsOption = CreateBoolOption("--list-plugins", "-l");
+        var initOption = CreateBoolOption("--init");
+        var printConfigOption = CreateBoolOption("--print-config");
+        var listPluginsOption = CreateBoolOption("--list-plugins");
         var verboseOption = CreateBoolOption("--verbose");
 
         root.Add(configOption);
@@ -170,7 +170,6 @@ public static class CliParser
         foreach (var commandName in new[]
                  {
                      "lint",
-                     "check",
                      "format",
                      "fix",
                      "init",

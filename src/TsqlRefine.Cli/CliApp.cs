@@ -97,7 +97,6 @@ public static class CliApp
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
-                "check" => await commandExecutor.ExecuteLintAsync("check", parsed, stdin, stdout, stderr),
                 _ => await UnknownCommandAsync(parsed.Command, stderr)
             };
         }
@@ -126,7 +125,7 @@ public static class CliApp
         tsqlrefine <command> [options] [paths...]
 
         Commands:
-          lint, check, format, fix, init, print-config, list-rules, list-plugins
+          lint, format, fix, init, print-config, list-rules, list-plugins
 
         Options:
           -c, --config <path>

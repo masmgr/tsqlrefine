@@ -37,9 +37,8 @@ dotnet test -c Release --logger "console;verbosity=detailed"
 
 ### Run CLI
 ```powershell
-# Lint (check) SQL files
+# Lint SQL files
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- check file.sql  # alias for lint
 
 # Lint with JSON output
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint --output json file.sql
@@ -199,7 +198,7 @@ Command-line interface built on System.CommandLine.
 - Handles file I/O, glob expansion, output formatting (text/JSON)
 
 **Available commands** (all fully implemented):
-- `lint` / `check`: Analyze SQL files for rule violations
+- `lint`: Analyze SQL files for rule violations
 - `format`: Format SQL files with keyword casing and whitespace normalization
 - `fix`: Auto-fix issues (applies fixes from rules that support it)
 - `init`: Create default `tsqlrefine.json` and `tsqlrefine.ignore` files

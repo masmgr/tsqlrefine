@@ -1,6 +1,6 @@
 # CLI 仕様（入出力 / JSON / 終了コード）
 
-このドキュメントは `tsqllint` の操作感をベースに、`tsqlrefine` の CLI 仕様を固めるための案です。
+このドキュメントは `tsqlrefine` の CLI 仕様を定義します。
 
 ---
 
@@ -19,10 +19,9 @@ tsqlrefine <command> [options] [paths...]
 
 コマンド:
 
-- `lint`: ルールベースの診断のみ
-- `check`: `lint` + `semantic`（静的解析）
+- `lint`: ルールベースの診断（静的解析）
 - `format`: 最小限整形のみ（出力はSQLテキスト）
-- `fix`: 診断 + “安全な範囲” の自動修正
+- `fix`: 診断 + "安全な範囲" の自動修正
 - `init`: 既定設定ファイルを生成
 - `print-config`: 探索された設定ファイルのパスを出力
 - `list-rules`: 利用可能ルール（ロード済）を一覧
@@ -36,9 +35,6 @@ tsqlrefine <command> [options] [paths...]
 
 - `-c, --config <path>`: 設定ファイルのパス（既定探索を上書き）
 - `-g, --ignorelist <path>`: 無視するファイルのパターンリスト（glob形式、1行1パターン、#でコメント）
-- `-i, --init`: `init` の短縮（互換用。`tsqlrefine init` 推奨）
-- `-p, --print-config`: `print-config` の短縮
-- `-l, --list-plugins`: `list-plugins` の短縮
 - `-v, --version`: バージョン番号を表示
 - `-h, --help`: ヘルプ表示
 
@@ -53,7 +49,7 @@ tsqlrefine <command> [options] [paths...]
 
 実行モード:
 
-- `--preset <recommended|strict|security-only>`: プリセット選択（既定: `recommended`）
+- `--preset <recommended|strict|pragmatic|security-only>`: プリセット選択（既定: `recommended`）
 - `--compat-level <110|120|130|140|150|160>`: SQL Server 互換レベル（設定ファイルでの指定を上書き）
 - `--ruleset <path>`: ルールセット設定を別ファイルで指定（将来）
 
@@ -85,7 +81,7 @@ VSCode の `Diagnostic` 互換形を基本とし、ファイル単位で束ね�
 interface LintResult {
   tool: "tsqlrefine";
   version: string;
-  command: "lint" | "check" | "format" | "fix";
+  command: "lint" | "format" | "fix";
   files: FileResult[];
 }
 
