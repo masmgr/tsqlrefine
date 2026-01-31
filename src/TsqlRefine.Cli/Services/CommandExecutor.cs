@@ -218,8 +218,12 @@ public sealed class CommandExecutor
             return optionError.Value;
 
         var config = _configLoader.LoadConfig(args);
-        var ruleset = _configLoader.LoadRuleset(args, config);
         var rules = _configLoader.LoadRules(args, config, stderr);
+
+        // --rule オプションのバリデーション（存在確認 + Fixable 確認）
+        _configLoader.ValidateRuleIdForFix(args, rules);
+
+        var ruleset = _configLoader.LoadRuleset(args, config);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);

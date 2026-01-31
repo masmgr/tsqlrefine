@@ -84,6 +84,12 @@ public static class CliParser
         Arity = ArgumentArity.ZeroOrOne
     };
 
+    private static Option<string?> CreateRuleOption() => new("--rule")
+    {
+        Description = "Rule ID to apply",
+        Arity = ArgumentArity.ZeroOrOne
+    };
+
     // Format options
     private static Option<string?> CreateIndentStyleOption() => new("--indent-style")
     {
@@ -185,6 +191,7 @@ public static class CliParser
         command.Options.Add(CreateSeverityOption());
         command.Options.Add(CreatePresetOption());
         command.Options.Add(CreateRulesetOption());
+        command.Options.Add(CreateRuleOption());
 
         // Paths argument
         command.Arguments.Add(CreatePathsArgument());
@@ -330,7 +337,8 @@ public static class CliParser
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
             ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
-            Paths: GetPaths(parseResult)
+            Paths: GetPaths(parseResult),
+            RuleId: GetOptionValue<string?>(parseResult, "--rule")
         );
     }
 

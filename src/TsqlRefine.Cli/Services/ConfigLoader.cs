@@ -66,6 +66,13 @@ public sealed class ConfigLoader
 
     public Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
     {
+        // --rule が指定された場合、単一ルールのホワイトリストを作成
+        // バリデーションは ValidateRuleId で行う
+        if (!string.IsNullOrWhiteSpace(args.RuleId))
+        {
+            return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
+        }
+
         var path = args.RulesetPath ?? config.Ruleset;
 
         if (!string.IsNullOrWhiteSpace(args.Preset))
@@ -121,6 +128,32 @@ public sealed class ConfigLoader
         }
 
         return rules;
+    }
+
+    /// <summary>
+    /// fix コマンドで --rule オプションが指定された場合、ルールIDのバリデーションを行う。
+    /// 存在しないルールID、または Fixable でないルールの場合は ConfigException をスローする。
+    /// </summary>
+    public void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
+    {
+        if (string.IsNullOrWhiteSpace(args.RuleId))
+        {
+            return;
+        }
+
+        var ruleId = args.RuleId;
+        var rule = rules.FirstOrDefault(r =>
+            string.Equals(r.Metadata.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+
+        if (rule is null)
+        {
+            throw new ConfigException($"Unknown rule ID: {ruleId}");
+        }
+
+        if (!rule.Metadata.Fixable)
+        {
+            throw new ConfigException($"Rule '{ruleId}' does not support auto-fix.");
+        }
     }
 
     public List<string> LoadIgnorePatterns(string? ignoreListPath)

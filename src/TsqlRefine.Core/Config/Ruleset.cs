@@ -9,11 +9,17 @@ public sealed class Ruleset
 {
     private readonly IReadOnlyList<RulesetRule> _rules;
     private readonly Dictionary<string, bool>? _ruleCache;
+    private readonly string? _singleRuleWhitelist;
 
     [JsonConstructor]
-    public Ruleset(IReadOnlyList<RulesetRule>? rules)
+    public Ruleset(IReadOnlyList<RulesetRule>? rules) : this(rules, null)
+    {
+    }
+
+    private Ruleset(IReadOnlyList<RulesetRule>? rules, string? singleRuleWhitelist)
     {
         _rules = rules ?? Array.Empty<RulesetRule>();
+        _singleRuleWhitelist = singleRuleWhitelist;
 
         // Pre-build cache for O(1) lookup
         if (_rules.Count > 0)
@@ -25,6 +31,14 @@ public sealed class Ruleset
                 _ruleCache[rule.Id] = rule.Enabled;
             }
         }
+    }
+
+    /// <summary>
+    /// 指定したルールIDのみを有効にするホワイトリストルールセットを作成する。
+    /// </summary>
+    public static Ruleset CreateSingleRuleWhitelist(string ruleId)
+    {
+        return new Ruleset(null, ruleId);
     }
 
     [JsonPropertyName("rules")]
@@ -85,6 +99,12 @@ public sealed class Ruleset
     /// </summary>
     public bool IsRuleEnabled(string ruleId)
     {
+        // Single rule whitelist mode: only the specified rule is enabled
+        if (_singleRuleWhitelist is not null)
+        {
+            return string.Equals(_singleRuleWhitelist, ruleId, StringComparison.OrdinalIgnoreCase);
+        }
+
         if (_ruleCache is null)
         {
             return true; // No rules defined, all rules enabled by default

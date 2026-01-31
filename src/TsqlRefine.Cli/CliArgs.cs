@@ -20,5 +20,6 @@ public sealed record CliArgs(
     int? IndentSize,
     bool Verbose,
     bool ShowSources,
-    IReadOnlyList<string> Paths
+    IReadOnlyList<string> Paths,
+    string? RuleId
 );

@@ -98,6 +98,7 @@ tsqlrefine fix [options] [paths...]
 | `--severity <error\|warning\|info\|hint>` | 最低重要度フィルタ |
 | `--preset <name>` | プリセット選択 |
 | `--ruleset <path>` | カスタムルールセットファイル |
+| `--rule <id>` | 適用するルールID |
 | `--write` | ファイルを上書き |
 
 #### init
