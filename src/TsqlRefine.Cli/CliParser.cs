@@ -275,16 +275,176 @@ public static class CliParser
     }
 
     // =================================================================
+    // Help Text
+    // =================================================================
+
+    private static readonly Dictionary<string, string> CommandHelp = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["lint"] = """
+            Usage: tsqlrefine lint [options] [paths...]
+
+            Analyze SQL files for rule violations
+
+            Arguments:
+              paths                     SQL files to process (supports glob patterns)
+
+            Options:
+              -c, --config <path>       Configuration file path
+              -g, --ignorelist <path>   Ignore patterns file
+              --detect-encoding         Auto-detect file encoding
+              --stdin                   Read from stdin
+              --stdin-filepath <path>   Set filepath for stdin input
+              --output <format>         Output format (text/json)
+              --severity <level>        Minimum severity level (error/warning/info/hint)
+              --preset <name>           Preset ruleset (recommended/strict/pragmatic/security-only)
+              --compat-level <level>    SQL Server compatibility level (100-160)
+              --ruleset <path>          Custom ruleset file path
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine lint file.sql
+              tsqlrefine lint --output json *.sql
+              tsqlrefine lint --severity error src/**/*.sql
+              cat query.sql | tsqlrefine lint --stdin
+            """,
+        ["format"] = """
+            Usage: tsqlrefine format [options] [paths...]
+
+            Format SQL files (keyword casing, whitespace)
+
+            Arguments:
+              paths                     SQL files to process (supports glob patterns)
+
+            Options:
+              -c, --config <path>       Configuration file path
+              -g, --ignorelist <path>   Ignore patterns file
+              --detect-encoding         Auto-detect file encoding
+              --stdin                   Read from stdin
+              --stdin-filepath <path>   Set filepath for stdin input
+              --output <format>         Output format (text/json)
+              --write                   Apply changes in-place
+              --diff                    Show diff output
+              --compat-level <level>    SQL Server compatibility level (100-160)
+              --indent-style <style>    Indentation style (tabs/spaces)
+              --indent-size <size>      Indentation size in spaces
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine format file.sql
+              tsqlrefine format --write *.sql
+              tsqlrefine format --diff src/**/*.sql
+              cat query.sql | tsqlrefine format --stdin
+            """,
+        ["fix"] = """
+            Usage: tsqlrefine fix [options] [paths...]
+
+            Auto-fix issues that support fixing
+
+            Arguments:
+              paths                     SQL files to process (supports glob patterns)
+
+            Options:
+              -c, --config <path>       Configuration file path
+              -g, --ignorelist <path>   Ignore patterns file
+              --detect-encoding         Auto-detect file encoding
+              --stdin                   Read from stdin
+              --stdin-filepath <path>   Set filepath for stdin input
+              --output <format>         Output format (text/json)
+              --write                   Apply changes in-place
+              --diff                    Show diff output
+              --severity <level>        Minimum severity level (error/warning/info/hint)
+              --preset <name>           Preset ruleset (recommended/strict/pragmatic/security-only)
+              --compat-level <level>    SQL Server compatibility level (100-160)
+              --ruleset <path>          Custom ruleset file path
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine fix file.sql
+              tsqlrefine fix --write *.sql
+              tsqlrefine fix --diff src/**/*.sql
+            """,
+        ["init"] = """
+            Usage: tsqlrefine init [options]
+
+            Initialize configuration files
+
+            Creates default configuration files in the current directory:
+              - tsqlrefine.json         Main configuration file
+              - tsqlrefine.ignore       Ignore patterns file
+
+            Options:
+              -c, --config <path>       Configuration file path
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine init
+            """,
+        ["print-config"] = """
+            Usage: tsqlrefine print-config [options]
+
+            Print effective configuration
+
+            Displays the merged configuration from all sources.
+
+            Options:
+              -c, --config <path>       Configuration file path
+              --output <format>         Output format (text/json)
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine print-config
+              tsqlrefine print-config --output json
+            """,
+        ["list-rules"] = """
+            Usage: tsqlrefine list-rules [options]
+
+            List available rules
+
+            Shows all built-in and plugin rules with their metadata.
+
+            Options:
+              -c, --config <path>       Configuration file path
+              --output <format>         Output format (text/json)
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine list-rules
+              tsqlrefine list-rules --output json
+            """,
+        ["list-plugins"] = """
+            Usage: tsqlrefine list-plugins [options]
+
+            List loaded plugins
+
+            Shows all configured plugins and their load status.
+
+            Options:
+              -c, --config <path>       Configuration file path
+              --output <format>         Output format (text/json)
+              --verbose                 Show detailed information
+              -h, --help                Show help information
+
+            Examples:
+              tsqlrefine list-plugins
+              tsqlrefine list-plugins --verbose
+            """
+    };
+
+    public static string? GetCommandHelp(string command) =>
+        CommandHelp.TryGetValue(command, out var help) ? help : null;
+
+    // =================================================================
     // Parse
     // =================================================================
 
     public static CliArgs Parse(string[] args)
     {
         var parseResult = Root.Parse(args ?? []);
-        var command = GetCommandName(parseResult);
+        var (command, isExplicit) = GetCommandName(parseResult);
 
         return new CliArgs(
             Command: command,
+            IsExplicitCommand: isExplicit,
             ShowHelp: HasBoolOption(parseResult, "--help", "-h", "/?"),
             ShowVersion: HasBoolOption(parseResult, "--version", "-v"),
             ConfigPath: GetOptionValue<string?>(parseResult, "--config"),
@@ -306,12 +466,15 @@ public static class CliParser
         );
     }
 
-    private static string GetCommandName(ParseResult parseResult)
+    private static (string Command, bool IsExplicit) GetCommandName(ParseResult parseResult)
     {
-        // Default to "lint" if no subcommand specified
-        return parseResult.CommandResult.Command is RootCommand
-            ? "lint"
-            : parseResult.CommandResult.Command.Name;
+        // Require explicit subcommand
+        if (parseResult.CommandResult.Command is RootCommand)
+        {
+            return ("", false);
+        }
+
+        return (parseResult.CommandResult.Command.Name, true);
     }
 
     private static T? GetOptionValue<T>(ParseResult parseResult, string optionName)

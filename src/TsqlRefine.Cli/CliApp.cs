@@ -69,8 +69,27 @@ public static class CliApp
 
         if (parsed.ShowHelp)
         {
-            await stdout.WriteLineAsync(HelpText);
+            // Show root help if no explicit command, otherwise show command-specific help
+            if (parsed.IsExplicitCommand)
+            {
+                var commandHelp = CliParser.GetCommandHelp(parsed.Command);
+                await stdout.WriteLineAsync(commandHelp ?? HelpText);
+            }
+            else
+            {
+                await stdout.WriteLineAsync(HelpText);
+            }
+
             return 0;
+        }
+
+        // Require explicit subcommand
+        if (!parsed.IsExplicitCommand)
+        {
+            await stderr.WriteLineAsync("Error: No command specified.");
+            await stderr.WriteLineAsync();
+            await stderr.WriteLineAsync(HelpText);
+            return ExitCodes.Fatal;
         }
 
         try
@@ -127,7 +146,7 @@ public static class CliApp
           tsqlrefine <command> [options] [paths...]
 
         Commands:
-          lint          Analyze SQL files for rule violations (default)
+          lint          Analyze SQL files for rule violations
           format        Format SQL files (keyword casing, whitespace)
           fix           Auto-fix issues that support fixing
           init          Initialize configuration files
