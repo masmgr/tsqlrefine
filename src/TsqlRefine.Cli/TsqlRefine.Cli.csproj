@@ -46,4 +46,12 @@
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!-- Copy rulesets to output directory -->
+  <ItemGroup>
+    <Content Include="..\..\rulesets\*.json">
+      <Link>rulesets\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
