@@ -158,7 +158,8 @@ tsqlrefine list-plugins [options]
 #### 文字コード検出 (`--detect-encoding`)
 
 - BOM 優先。BOM が無い場合は `UTF.Unknown` による推定
-- `format --write` / `fix --write` では入力ファイルの文字コード（BOM 有無含む）を保持
+- `--detect-encoding` を指定しない場合、**読み込み**は UTF-8 として解釈
+- `format --write` / `fix --write` では `--detect-encoding` の有無に関わらず、入力ファイルの文字コード（BOM 有無含む）を保持
 
 #### フォーマット
 

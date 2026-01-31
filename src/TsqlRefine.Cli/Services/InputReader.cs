@@ -42,15 +42,23 @@ public sealed class InputReader
                 continue;
             }
 
+            // Read bytes once
+            var bytes = await File.ReadAllBytesAsync(path);
+
+            // Always detect encoding for write-back purposes
+            var decoded = CharsetDetection.Decode(bytes);
+            encodings[path] = decoded.WriteEncoding;
+
             if (args.DetectEncoding)
             {
-                var decoded = await CharsetDetection.ReadFileAsync(path);
+                // Use detected encoding for content
                 inputs.Add(new SqlInput(path, decoded.Text));
-                encodings[path] = decoded.WriteEncoding;
             }
             else
             {
-                var sql = await File.ReadAllTextAsync(path, Encoding.UTF8);
+                // Decode as UTF-8 (default behavior), skipping BOM if present
+                var offset = HasUtf8Bom(bytes) ? 3 : 0;
+                var sql = Encoding.UTF8.GetString(bytes, offset, bytes.Length - offset);
                 inputs.Add(new SqlInput(path, sql));
             }
         }
@@ -116,5 +124,10 @@ public sealed class InputReader
         _cachedIgnoreMatcher = matcher;
         _cachedIgnorePatterns = ignorePatterns;
         return matcher;
+    }
+
+    private static bool HasUtf8Bom(byte[] bytes)
+    {
+        return bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
     }
 }
