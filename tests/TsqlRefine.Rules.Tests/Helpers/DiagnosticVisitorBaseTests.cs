@@ -138,4 +138,67 @@ public sealed class DiagnosticVisitorBaseTests
         // Act & Assert
         Assert.Empty(visitor.Diagnostics);
     }
+
+    [Fact]
+    public void AddDiagnostic_WithSeverity_CreatesDiagnosticWithSeverity()
+    {
+        // Arrange
+        var visitor = new TestVisitorWithSeverity();
+        var sql = "SELECT * FROM users";
+        var parser = new TSql160Parser(true);
+        var fragment = parser.Parse(new System.IO.StringReader(sql), out var errors);
+
+        // Act
+        visitor.TestAddDiagnosticWithSeverity(
+            fragment,
+            "Test message",
+            "test-code",
+            "Test",
+            false,
+            PluginSdk.DiagnosticSeverity.Error
+        );
+
+        // Assert
+        Assert.Single(visitor.Diagnostics);
+        var diagnostic = visitor.Diagnostics[0];
+        Assert.Equal(PluginSdk.DiagnosticSeverity.Error, diagnostic.Severity);
+    }
+
+    [Fact]
+    public void AddDiagnostic_WithNullSeverity_CreatesDiagnosticWithNullSeverity()
+    {
+        // Arrange
+        var visitor = new TestVisitorWithSeverity();
+        var sql = "SELECT 1";
+        var parser = new TSql160Parser(true);
+        var fragment = parser.Parse(new System.IO.StringReader(sql), out var errors);
+
+        // Act
+        visitor.TestAddDiagnosticWithSeverity(
+            fragment,
+            "Test message",
+            "test-code",
+            "Test",
+            false,
+            null
+        );
+
+        // Assert
+        Assert.Single(visitor.Diagnostics);
+        Assert.Null(visitor.Diagnostics[0].Severity);
+    }
+
+    private sealed class TestVisitorWithSeverity : DiagnosticVisitorBase
+    {
+        public void TestAddDiagnosticWithSeverity(
+            TSqlFragment fragment,
+            string message,
+            string code,
+            string category,
+            bool fixable,
+            PluginSdk.DiagnosticSeverity? severity)
+        {
+            AddDiagnostic(fragment, message, code, category, fixable, severity);
+        }
+    }
 }

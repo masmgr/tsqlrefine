@@ -43,6 +43,28 @@ public abstract class DiagnosticVisitorBase : TSqlFragmentVisitor
         string category,
         bool fixable)
     {
+        AddDiagnostic(fragment, message, code, category, fixable, severity: null);
+    }
+
+    /// <summary>
+    /// Convenience method to create and add a diagnostic with a Range from a TSqlFragment
+    /// and an optional severity override.
+    /// </summary>
+    /// <param name="fragment">The TSqlFragment to get the range from.</param>
+    /// <param name="message">The diagnostic message.</param>
+    /// <param name="code">The diagnostic code (rule ID).</param>
+    /// <param name="category">The diagnostic category.</param>
+    /// <param name="fixable">Whether the diagnostic is fixable.</param>
+    /// <param name="severity">Optional severity override. If null, the rule's default severity is used.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any required parameter is null.</exception>
+    protected void AddDiagnostic(
+        TSqlFragment fragment,
+        string message,
+        string code,
+        string category,
+        bool fixable,
+        DiagnosticSeverity? severity)
+    {
         ArgumentNullException.ThrowIfNull(fragment);
         ArgumentNullException.ThrowIfNull(message);
         ArgumentNullException.ThrowIfNull(code);
@@ -51,6 +73,7 @@ public abstract class DiagnosticVisitorBase : TSqlFragmentVisitor
         _diagnostics.Add(new Diagnostic(
             Range: ScriptDomHelpers.GetRange(fragment),
             Message: message,
+            Severity: severity,
             Code: code,
             Data: new DiagnosticData(code, category, fixable)
         ));

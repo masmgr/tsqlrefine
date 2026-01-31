@@ -19,12 +19,11 @@ public sealed class DuplicateEmptyLineRule : IRule
 
         // We need to analyze the raw SQL text for consecutive newlines
         var sql = context.Ast.RawSql;
-        if (string.IsNullOrEmpty(sql))
+        var lines = TextAnalysisHelpers.SplitSqlLines(sql);
+        if (lines.Length == 0)
         {
             yield break;
         }
-
-        var lines = sql.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         var consecutiveEmptyCount = 0;
         var emptyLineStartIndex = -1;
 
