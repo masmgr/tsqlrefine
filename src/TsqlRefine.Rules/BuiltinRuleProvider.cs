@@ -14,100 +14,126 @@ namespace TsqlRefine.Rules;
 
 public sealed class BuiltinRuleProvider : IRuleProvider
 {
+    private static readonly Lazy<IRule[]> s_rules = new(CreateRules);
+
     public string Name => "tsqlrefine.builtin";
 
     public int PluginApiVersion => PluginApi.CurrentVersion;
 
-    public IReadOnlyList<IRule> GetRules() =>
-        new IRule[]
-        {
-            new AvoidSelectStarRule(),
-            new DmlWithoutWhereRule(),
-            new AvoidNullComparisonRule(),
-            new RequireParenthesesForMixedAndOrRule(),
-            new AvoidNolockRule(),
-            new RequireColumnListForInsertValuesRule(),
-            new RequireColumnListForInsertSelectRule(),
-            new TopWithoutOrderByRule(),
-            new DuplicateAliasRule(),
-            new UndefinedAliasRule(),
-            new AvoidExecDynamicSqlRule(),
-            new AvoidMergeRule(),
-            new AvoidImplicitConversionInPredicateRule(),
-            new SemicolonTerminationRule(),
-            new RequireAsForTableAliasRule(),
-            new RequireAsForColumnAliasRule(),
-            new InsertColumnCountMismatchRule(),
-            new InsertSelectColumnNameMismatchRule(),
-            new CteNameConflictRule(),
-            new ReturnAfterStatementsRule(),
-            new JoinConditionAlwaysTrueRule(),
-            new LeftJoinFilteredByWhereRule(),
-            new AliasScopeViolationRule(),
-            new PrintStatementRule(),
-            new DisallowCursorsRule(),
-            new ConditionalBeginEndRule(),
-            new FullTextRule(),
-            new DataCompressionRule(),
-            new InformationSchemaRule(),
-            new ObjectPropertyRule(),
-            new LinkedServerRule(),
-            new NamedConstraintRule(),
-            new CrossDatabaseTransactionRule(),
-            new EscapeKeywordIdentifierRule(),
-            new DuplicateEmptyLineRule(),
-            new DuplicateGoRule(),
-            new NestedBlockCommentsRule(),
-            new SetAnsiRule(),
-            new SetNocountRule(),
-            new SetQuotedIdentifierRule(),
-            new SetTransactionIsolationLevelRule(),
-            new CaseSensitiveVariablesRule(),
-            new DataTypeLengthRule(),
-            new SetVariableRule(),
-            new UnicodeStringRule(),
-            new SchemaQualifyRule(),
-            new MultiTableAliasRule(),
-            new UpperLowerRule(),
-            new NonSargableRule(),
-            new UtcDatetimeRule(),
-            new JoinKeywordRule(),
-            new PreferUnicodeStringLiteralsRule(),
-            // New rules from tsqllint-extend-rules
-            new RequireBeginEndForWhileRule(),
-            new RequireBeginEndForIfWithControlflowExceptionRule(),
-            new DisallowSelectIntoRule(),
-            new AvoidTopInDmlRule(),
-            new AvoidAtatIdentityRule(),
-            new AvoidMagicConvertStyleForDatetimeRule(),
-            new PreferTrimOverLtrimRtrimRule(),
-            new RequireExplicitJoinTypeRule(),
-            new ForbidTop100PercentOrderByRule(),
-            new RequirePrimaryKeyOrUniqueConstraintRule(),
-            new AvoidHeapTableRule(),
-            new AvoidAmbiguousDatetimeLiteralRule(),
-            new PreferCoalesceOverNestedIsnullRule(),
-            new PreferConcatOverPlusRule(),
-            new PreferConcatOverPlusWhenNullableOrConvertRule(),
-            new PreferTryConvertPatternsRule(),
-            new QualifiedSelectColumnsRule(),
-            new RequireQualifiedColumnsEverywhereRule(),
-            new OrderByInSubqueryRule(),
-            new RequireMsDescriptionForTableDefinitionFileRule(),
-            new RequireTryCatchForTransactionRule(),
-            new RequireXactAbortOnRule(),
-            new PreferConcatWsRule(),
-            new PreferStringAggOverStuffRule(),
-            new PreferJsonFunctionsRule(),
-            // New high-value production rules
-            new BanLegacyJoinSyntaxRule(),
-            new NoTopWithoutOrderByInSelectIntoRule(),
-            new DangerousDdlRule(),
-            new DisallowSelectDistinctRule(),
-            new CatchSwallowingRule(),
-            new BanQueryHintsRule(),
-            new TransactionWithoutCommitOrRollbackRule(),
-            new UncommittedTransactionRule()
-        };
+    public IReadOnlyList<IRule> GetRules() => s_rules.Value;
+
+    private static IRule[] CreateRules() =>
+    [
+        // === Correctness ===
+        new AvoidNullComparisonRule(),
+        new RequireParenthesesForMixedAndOrRule(),
+        new InsertColumnCountMismatchRule(),
+        new InsertSelectColumnNameMismatchRule(),
+        new CteNameConflictRule(),
+        new JoinConditionAlwaysTrueRule(),
+        new AliasScopeViolationRule(),
+        new CaseSensitiveVariablesRule(),
+        new DataTypeLengthRule(),
+        new AvoidAmbiguousDatetimeLiteralRule(),
+
+        // === Correctness (Semantic) ===
+        new DuplicateAliasRule(),
+        new UndefinedAliasRule(),
+
+        // === Performance ===
+        new AvoidSelectStarRule(),
+        new TopWithoutOrderByRule(),
+        new AvoidImplicitConversionInPredicateRule(),
+        new NonSargableRule(),
+        new DisallowSelectDistinctRule(),
+
+        // === Safety ===
+        new DmlWithoutWhereRule(),
+        new AvoidMergeRule(),
+        new ReturnAfterStatementsRule(),
+        new LeftJoinFilteredByWhereRule(),
+        new DangerousDdlRule(),
+        new AvoidTopInDmlRule(),
+        new NoTopWithoutOrderByInSelectIntoRule(),
+
+        // === Security ===
+        new AvoidExecDynamicSqlRule(),
+        new AvoidNolockRule(),
+        new LinkedServerRule(),
+
+        // === Schema ===
+        new NamedConstraintRule(),
+        new RequirePrimaryKeyOrUniqueConstraintRule(),
+        new AvoidHeapTableRule(),
+        new RequireMsDescriptionForTableDefinitionFileRule(),
+
+        // === Style ===
+        new SemicolonTerminationRule(),
+        new RequireAsForTableAliasRule(),
+        new RequireAsForColumnAliasRule(),
+        new ConditionalBeginEndRule(),
+        new EscapeKeywordIdentifierRule(),
+        new DuplicateEmptyLineRule(),
+        new DuplicateGoRule(),
+        new NestedBlockCommentsRule(),
+        new SchemaQualifyRule(),
+        new JoinKeywordRule(),
+        new RequireBeginEndForWhileRule(),
+        new RequireBeginEndForIfWithControlflowExceptionRule(),
+        new RequireExplicitJoinTypeRule(),
+        new BanLegacyJoinSyntaxRule(),
+
+        // === Style (Semantic) ===
+        new MultiTableAliasRule(),
+        new QualifiedSelectColumnsRule(),
+        new RequireQualifiedColumnsEverywhereRule(),
+
+        // === Style (Preferences) ===
+        new PreferUnicodeStringLiteralsRule(),
+        new UnicodeStringRule(),
+        new PreferTrimOverLtrimRtrimRule(),
+        new PreferCoalesceOverNestedIsnullRule(),
+        new PreferConcatOverPlusRule(),
+        new PreferConcatOverPlusWhenNullableOrConvertRule(),
+        new PreferTryConvertPatternsRule(),
+        new PreferConcatWsRule(),
+        new PreferStringAggOverStuffRule(),
+        new PreferJsonFunctionsRule(),
+        new UpperLowerRule(),
+        new UtcDatetimeRule(),
+
+        // === Transactions ===
+        new CrossDatabaseTransactionRule(),
+        new RequireTryCatchForTransactionRule(),
+        new RequireXactAbortOnRule(),
+        new TransactionWithoutCommitOrRollbackRule(),
+        new UncommittedTransactionRule(),
+        new CatchSwallowingRule(),
+
+        // === SET Options ===
+        new SetAnsiRule(),
+        new SetNocountRule(),
+        new SetQuotedIdentifierRule(),
+        new SetTransactionIsolationLevelRule(),
+        new SetVariableRule(),
+
+        // === Feature Usage ===
+        new RequireColumnListForInsertValuesRule(),
+        new RequireColumnListForInsertSelectRule(),
+        new DisallowCursorsRule(),
+        new FullTextRule(),
+        new DataCompressionRule(),
+        new InformationSchemaRule(),
+        new ObjectPropertyRule(),
+        new DisallowSelectIntoRule(),
+        new AvoidAtatIdentityRule(),
+        new AvoidMagicConvertStyleForDatetimeRule(),
+        new ForbidTop100PercentOrderByRule(),
+        new OrderByInSubqueryRule(),
+        new BanQueryHintsRule(),
+
+        // === Debug ===
+        new PrintStatementRule()
+    ];
 }
 
