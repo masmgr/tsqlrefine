@@ -127,7 +127,7 @@ Key components:
 #### 3. **Rules (Built-in Rules)**
 Ships with the tool. Each rule implements `IRule` interface.
 
-`BuiltinRuleProvider` discovers and exposes all built-in rules.
+`BuiltinRuleProvider` discovers and exposes all 85 built-in rules.
 
 **Rule Helper Classes** (in `src/TsqlRefine.Rules/Helpers/`):
 
@@ -148,34 +148,56 @@ All rules leverage shared helper utilities to reduce code duplication:
    - Extends `TSqlFragmentVisitor` with diagnostic collection
    - Provides `AddDiagnostic()` methods for creating diagnostics
    - Manages `Diagnostics` collection automatically
-   - Used by all 6 AST-based rules
 
 4. **RuleHelpers** - Common rule patterns
    - `NoFixes(RuleContext, Diagnostic)`: Standard implementation for non-fixable rules
-   - Used by all 7 rules
 
-**Benefits**: These helpers eliminate ~270 lines of duplicated code, provide single source of truth for common operations, and are available to external plugins.
+5. **DatePartHelper** - Identifies T-SQL date/time functions with datepart literals
+   - `IsDatePartFunction(FunctionCall)`: Checks for DATEADD, DATEDIFF, DATEPART, DATENAME
+   - `IsDatePartLiteralParameter(...)`: Detects datepart literal parameters to avoid false positives
+
+6. **ExpressionAnalysisHelpers** - Expression analysis utilities
+   - `ContainsColumnReference(ScalarExpression)`: Checks if expression contains column references
+   - Handles nested CAST, CONVERT, FunctionCall, BinaryExpression
+
+7. **PredicateAwareVisitorBase** - Visitor with predicate context tracking
+   - Extends `DiagnosticVisitorBase` with `IsInPredicate` property
+   - Tracks WHERE, JOIN ON, and HAVING clause contexts
+
+8. **TableReferenceHelpers** - Table reference utilities
+   - `CollectTableReferences(...)`: Recursively collects leaf table references from JOINs
+   - `CollectTableAliases(...)`: Collects all declared table aliases/names
+   - `GetAliasOrTableName(TableReference)`: Gets alias or base table name
+
+9. **TextAnalysisHelpers** - Raw text analysis utilities
+   - `SplitSqlLines(string)`: Splits SQL handling all line endings (CRLF, CR, LF)
+   - `CreateLineRangeDiagnostic(...)`: Creates diagnostics for specific lines
+
+**Benefits**: These 9 helpers provide single source of truth for common operations and are available to external plugins.
 
 #### 4. **Formatting (Formatter Layer)**
 Independent SQL formatting engine with composable passes.
 
-`SqlFormatter` orchestrates formatting through helper classes:
-1. `ScriptDomKeywordCaser`: Keyword/identifier casing (compat level aware, 100-160)
+`SqlFormatter` orchestrates formatting through a 4-step pipeline:
+1. `ScriptDomElementCaser`: Granular element casing (keywords, functions, data types, schemas, tables, columns, variables)
 2. `WhitespaceNormalizer`: Indentation and whitespace (respects .editorconfig)
-3. `CommaStyleTransformer`: Comma style transformation (trailing ↔ leading, optional)
+3. `InlineSpaceNormalizer`: Inline spacing normalization (space after commas, remove duplicate spaces)
+4. `CommaStyleTransformer`: Comma style transformation (trailing to leading, optional)
 
 **Helper Classes** (in `src/TsqlRefine.Formatting/Helpers/`):
-- `CasingHelpers`: Casing transformations (eliminates duplication)
-- `ScriptDomKeywordCaser`: Public, testable keyword/identifier casing
+- `ScriptDomElementCaser`: Granular element-based casing with token categorization
+- `SqlElementCategorizer`: Categorizes tokens into Keyword, BuiltInFunction, DataType, Schema, Table, Column, Variable
 - `WhitespaceNormalizer`: Public, testable whitespace normalization
-- `CommaStyleTransformer`: Public comma style transformation
+- `InlineSpaceNormalizer`: Adds space after commas, removes duplicate spaces
+- `CommaStyleTransformer`: Public comma style transformation (trailing to leading)
+- `CasingHelpers`: Casing transformations (eliminates duplication)
 - `ProtectedRegionTracker`: State machine for strings/comments/brackets (internal)
 - All public helpers are available to plugins
 
 **EditorConfig Support**: Respects `.editorconfig` for indentation
 **Constraints**: Minimal formatting only, preserves comments/strings/structure
 
-**Architecture**: Refactored from monolithic 623-line file to 26-line orchestrator + 5 independently testable helpers (88% test coverage)
+**Architecture**: 49-line orchestrator + 7 independently testable helpers
 
 #### 5. **PluginHost (Plugin Runtime)**
 Dynamically loads external rule plugins at runtime.
@@ -247,7 +269,8 @@ Collect results → Format output (text/JSON) → Exit code
 #### Format Command Flow
 ```
 CLI args → Parse → Load .editorconfig → For each SQL input:
-  Parse SQL → ScriptDomKeywordCaser → MinimalWhitespaceNormalizer →
+  Parse SQL → ScriptDomElementCaser → WhitespaceNormalizer →
+  InlineSpaceNormalizer → CommaStyleTransformer (optional) →
 Output (stdout/file/diff) → Exit
 ```
 
@@ -311,11 +334,12 @@ JSON schema available at `schemas/tsqlrefine.schema.json`.
 }
 ```
 
-**Sample configurations** in `samples/configs/`:
-- `basic.json`: Basic configuration example
-- `advanced.json`: Advanced configuration with plugins
-- `minimal.json`: Minimal configuration
-- `sql-server-2012.json`: SQL Server 2012 specific config
+**Sample configurations**:
+- `samples/config/tsqlrefine.json`: Default configuration example
+- `samples/config/advanced.json`: Advanced configuration with plugins
+- `samples/config/minimal.json`: Minimal configuration
+- `samples/config/sql-server-2012.json`: SQL Server 2012 specific config
+- `samples/configs/formatting-options.json`: Formatting options example
 
 #### Ruleset (enable/disable rules)
 JSON schema available at `schemas/ruleset.schema.json`.
@@ -329,10 +353,10 @@ JSON schema available at `schemas/ruleset.schema.json`.
 ```
 
 **Preset rulesets** in `rulesets/`:
-- `recommended.json`: Balanced production use (~43 rules) - High-value rules with minimal false positives
-- `strict.json`: Maximum enforcement (~75 rules) - All rules except demonstrably incorrect ones
-- `pragmatic.json`: Production-ready minimum (~26 rules) - Prevent bugs and data loss, minimize style noise
-- `security-only.json`: Security and critical safety (~10 rules) - Prevent security vulnerabilities and destructive operations
+- `recommended.json`: Balanced production use (49 rules) - High-value rules with minimal false positives
+- `strict.json`: Maximum enforcement (86 rules) - All rules except demonstrably incorrect ones
+- `pragmatic.json`: Production-ready minimum (30 rules) - Prevent bugs and data loss, minimize style noise
+- `security-only.json`: Security and critical safety (10 rules) - Prevent security vulnerabilities and destructive operations
 
 **Config load order**: CLI args → tsqlrefine.json → defaults
 
@@ -524,7 +548,9 @@ public static class MyFormattingHelper
 **Available helpers to leverage**:
 - `ProtectedRegionTracker`: State machine for strings, comments, brackets
 - `CasingHelpers`: Common casing transformations
-- `ScriptDomKeywordCaser`: For token-based transformations
+- `ScriptDomElementCaser`: For granular element-based casing transformations
+- `SqlElementCategorizer`: For categorizing tokens into element types
+- `InlineSpaceNormalizer`: For inline spacing normalization
 
 ### Adding Tests
 
@@ -534,6 +560,7 @@ Tests follow xUnit conventions:
   - Rule tests: `tests/TsqlRefine.Rules.Tests/*RuleTests.cs`
   - Helper tests: `tests/TsqlRefine.Rules.Tests/Helpers/*Tests.cs`
 - CLI tests: `tests/TsqlRefine.Cli.Tests/`
+- Formatting tests: `tests/TsqlRefine.Formatting.Tests/`
 
 Run single test:
 ```powershell
@@ -546,6 +573,11 @@ When adding or modifying helper utilities in `src/TsqlRefine.Rules/Helpers/`, ad
 - `TokenHelpersTests.cs` - Tests for token analysis utilities
 - `DiagnosticVisitorBaseTests.cs` - Tests for visitor base class
 - `RuleHelpersTests.cs` - Tests for common rule patterns
+- `DatePartHelperTests.cs` - Tests for date part function detection
+- `ExpressionAnalysisHelpersTests.cs` - Tests for expression analysis
+- `PredicateAwareVisitorBaseTests.cs` - Tests for predicate context tracking
+- `TableReferenceHelpersTests.cs` - Tests for table reference utilities
+- `TextAnalysisHelpersTests.cs` - Tests for raw text analysis
 
 ### Creating a Plugin
 
@@ -623,15 +655,19 @@ When adding or modifying helper utilities in `src/TsqlRefine.Rules/Helpers/`, ad
 ## Documentation
 
 Key docs in `docs/`:
-- [requirements.md](docs/requirements.md): Project scope and feature requirements
-- [rules.md](docs/rules.md): Rule categories, priorities, and presets
 - [cli.md](docs/cli.md): CLI specification (JSON output, exit codes)
+- [configuration.md](docs/configuration.md): Configuration file format and options
+- [formatting.md](docs/formatting.md): Formatting options and behavior
+- [granular-casing.md](docs/granular-casing.md): Granular element casing documentation
+- [inline-disable.md](docs/inline-disable.md): Inline comment-based rule disabling
 - [plugin-api.md](docs/plugin-api.md): Plugin API contract
 - [project-structure.md](docs/project-structure.md): Detailed project organization
-- [inline-disable.md](docs/inline-disable.md): Inline comment-based rule disabling
+- [release.md](docs/release.md): Release process and notes
+- [task-list.md](docs/task-list.md): Development task tracking
 
 Sample files in `samples/`:
-- `configs/`: Configuration file examples (basic, advanced, minimal, sql-server-2012)
+- `config/`: Configuration file examples (tsqlrefine.json, advanced, minimal, sql-server-2012)
+- `configs/`: Additional configuration examples (formatting-options.json)
 - `rulesets/`: Preset ruleset files (recommended, strict, pragmatic, security-only)
 - `sql/`: SQL examples demonstrating each rule violation
 - `sql/inline-disable/`: Examples of inline disable directives
