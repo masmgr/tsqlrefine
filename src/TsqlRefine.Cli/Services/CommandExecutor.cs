@@ -133,7 +133,8 @@ public sealed class CommandExecutor
             {
                 foreach (var d in file.Diagnostics)
                 {
-                    await stdout.WriteLineAsync($"{file.FilePath}: {d.Severity}: {d.Message} ({d.Data?.RuleId ?? d.Code})");
+                    var start = d.Range.Start;
+                    await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({d.Data?.RuleId ?? d.Code})");
                 }
             }
         }

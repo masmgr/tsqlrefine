@@ -173,11 +173,37 @@ tsqlrefine list-plugins [options]
 
 ---
 
-## 3. JSON 出力仕様（Diagnostics）
+## 3. テキスト出力形式
+
+`--output text`（既定）の場合、診断は以下の形式で出力されます:
+
+```
+<filepath>:<line>:<column>: <severity>: <message> (<rule-id>)
+```
+
+例:
+
+```
+file.sql:1:8: Warning: Avoid SELECT *; explicitly list required columns. (avoid-select-star)
+file.sql:1:15: Warning: Table reference 'users' should include schema qualification. (semantic/schema-qualify)
+```
+
+- `<filepath>`: ファイルパス（stdin の場合は `<stdin>` または `--stdin-filepath` で指定した値）
+- `<line>`: 行番号（1-based）
+- `<column>`: 列番号（1-based）
+- `<severity>`: `Error` / `Warning` / `Information` / `Hint`
+- `<message>`: 診断メッセージ
+- `<rule-id>`: ルールID
+
+この形式は ESLint / GCC / rustc などと同様で、多くのエディタ・IDE でクリック可能なリンクとして認識されます。
+
+---
+
+## 4. JSON 出力仕様（Diagnostics）
 
 VSCode の `Diagnostic` 互換形を基本とし、ファイル単位で束ねて出力します。
 
-### 3.1 トップレベル
+### 4.1 トップレベル
 
 ```ts
 interface LintResult {
@@ -193,7 +219,7 @@ interface FileResult {
 }
 ```
 
-### 3.2 Diagnostic（0-based）
+### 4.2 Diagnostic（0-based）
 
 ```ts
 interface Diagnostic {
@@ -235,7 +261,7 @@ enum DiagnosticTag {
 
 ---
 
-## 4. 終了コード
+## 5. 終了コード
 
 CI で扱いやすいように、結果種別で終了コードを固定します。
 

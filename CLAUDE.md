@@ -685,8 +685,8 @@ Commands are dispatched in `CliApp.RunAsync()`. To add a command:
 3. Update help text and documentation
 
 ### Change Output Format
-Output formatting is in `CliApp.cs`:
-- Text output: `FormatTextOutput()`
+Output formatting is in `CommandExecutor.cs`:
+- Text output: `file:line:col: Severity: Message (rule-id)` format (ESLint/GCC style)
 - JSON output: Uses System.Text.Json with `JsonDefaults.cs` options
 
 ### Debug Rule Execution
