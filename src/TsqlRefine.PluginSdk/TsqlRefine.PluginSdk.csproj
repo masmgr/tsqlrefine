@@ -4,6 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- XML documentation generation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Package metadata for NuGet publishing -->
+    <Description>Plugin SDK for TsqlRefine - T-SQL linter and static analyzer</Description>
+    <PackageTags>tsql;sql-server;linter;analyzer;plugin;sdk</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
