@@ -1,4 +1,0 @@
--- Test case: BEGIN with COMMIT
-BEGIN TRANSACTION;
-UPDATE Users SET Name = 'test' WHERE Id = 1;
-COMMIT TRANSACTION;
