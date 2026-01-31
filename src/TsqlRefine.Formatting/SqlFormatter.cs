@@ -31,7 +31,7 @@ public static class SqlFormatter
         options ??= new FormattingOptions();
 
         // Apply granular element-based casing
-        var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: 150);
+        var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: options.CompatLevel);
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 

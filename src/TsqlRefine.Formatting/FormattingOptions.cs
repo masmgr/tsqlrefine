@@ -26,6 +26,9 @@ public enum CommaStyle
 
 public sealed record FormattingOptions
 {
+    /// <summary>SQL Server compatibility level (100=2008, 110=2012, 120=2014, 150=2019, 160=2022). Default: 150</summary>
+    public int CompatLevel { get; init; } = 150;
+
     /// <summary>Indentation style: tabs or spaces</summary>
     public IndentStyle IndentStyle { get; init; } = IndentStyle.Spaces;
 

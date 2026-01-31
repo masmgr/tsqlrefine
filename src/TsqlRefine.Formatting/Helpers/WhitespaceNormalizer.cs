@@ -127,7 +127,10 @@ public static class WhitespaceNormalizer
             i++;
         }
 
-        if (options.TrimTrailingWhitespace && !lineContainsProtected && !tracker.IsInProtectedRegion())
+        // Trim trailing whitespace only if we're not currently in a protected region
+        // (e.g., inside a multi-line string or block comment that continues to next line).
+        // Lines that contained protected regions (but ended outside them) can still be trimmed.
+        if (options.TrimTrailingWhitespace && !tracker.IsInProtectedRegion())
         {
             TrimTrailingWhitespace(sbLine);
         }

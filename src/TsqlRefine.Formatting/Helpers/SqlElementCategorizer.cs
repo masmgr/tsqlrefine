@@ -349,16 +349,6 @@ public static class SqlElementCategorizer
     }
 
     /// <summary>
-    /// Gets the token text before a dot (for schema.table detection)
-    /// </summary>
-    private static string GetTokenBeforeDot(TSqlParserToken dotToken)
-    {
-        // This is a simplified heuristic - in a full implementation,
-        // we'd need to track token history more thoroughly
-        return "";
-    }
-
-    /// <summary>
     /// Checks if the next token is an opening parenthesis (function call indicator)
     /// </summary>
     private static bool IsFollowedByParenthesis(TSqlParserToken? nextToken)
