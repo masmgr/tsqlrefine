@@ -288,9 +288,6 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- format file.sql
 # ファイルを上書き
 dotnet run --project src/TsqlRefine.Cli -c Release -- format --write file.sql
 
-# 差分を表示
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff file.sql
-
 # 標準入力から
 echo "select * from users" | dotnet run --project src/TsqlRefine.Cli -c Release -- format --stdin
 ```

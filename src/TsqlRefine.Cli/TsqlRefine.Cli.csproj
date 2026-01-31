@@ -34,7 +34,6 @@
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" />
-    <PackageReference Include="DiffPlex" />
     <PackageReference Include="editorconfig" />
     <PackageReference Include="UTF.Unknown" />
     <ProjectReference Include="..\TsqlRefine.Core\TsqlRefine.Core.csproj" />

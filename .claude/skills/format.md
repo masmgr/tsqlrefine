@@ -8,7 +8,6 @@ Quickly format SQL code using tsqlrefine CLI.
 /format [options] <sql-or-file>
 
 Options:
-  --diff              Show diff instead of formatted output
   --write             Write changes to file (file input only)
   --indent-style <s>  Indentation style (spaces, tabs)
   --indent-size <n>   Indentation size (default: 4)
@@ -17,7 +16,6 @@ Options:
 Examples:
 - `/format select * from users` - Format inline SQL
 - `/format path/to/file.sql` - Format a file
-- `/format --diff path/to/file.sql` - Show diff
 - `/format --write path/to/file.sql` - Format in place
 
 ## Instructions
@@ -33,11 +31,10 @@ You are a SQL formatting assistant for tsqlrefine.
 2. **Run Format Command**
    - For inline SQL: Use `--stdin` with echo pipe
    - For file: Pass file path directly
-   - Apply any specified options (diff, write, indent)
+   - Apply any specified options (write, indent)
 
 3. **Show Results**
    - Display formatted SQL
-   - If --diff, show before/after comparison
    - If --write, confirm file was updated
 
 ### Commands
@@ -50,11 +47,6 @@ echo "select * from users where id=1" | dotnet run --project src/TsqlRefine.Cli 
 #### Format file
 ```powershell
 dotnet run --project src/TsqlRefine.Cli -c Release -- format path/to/file.sql
-```
-
-#### Format file with diff
-```powershell
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff path/to/file.sql
 ```
 
 #### Format file in place
@@ -96,4 +88,3 @@ WHERE id = 1
 - [other changes]
 ```
 
-If --diff mode, show side-by-side or unified diff.

@@ -188,13 +188,7 @@ public sealed class CommandExecutor
             var options = _formattingOptionsResolver.ResolveFormattingOptions(args, input);
             var formatted = SqlFormatter.Format(input.Text, options);
 
-            if (args.Diff)
-            {
-                var diff = _outputWriter.GenerateUnifiedDiff(input.FilePath, input.Text, formatted);
-                if (!string.IsNullOrEmpty(diff))
-                    await stdout.WriteAsync(diff);
-            }
-            else if (args.Write && input.FilePath != "<stdin>")
+            if (args.Write && input.FilePath != "<stdin>")
             {
                 var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
                     ? resolved
@@ -245,13 +239,7 @@ public sealed class CommandExecutor
         {
             foreach (var file in result.Files)
             {
-                if (args.Diff)
-                {
-                    var diff = _outputWriter.GenerateUnifiedDiff(file.FilePath, file.OriginalText, file.FixedText);
-                    if (!string.IsNullOrEmpty(diff))
-                        await stdout.WriteAsync(diff);
-                }
-                else if (args.Write && file.FilePath != "<stdin>")
+                if (args.Write && file.FilePath != "<stdin>")
                 {
                     if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
                     {

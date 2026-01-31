@@ -74,8 +74,8 @@ tsqlrefine lint path/to/file.sql path/to/dir
 # Lint from stdin with JSON output
 echo "select * from t;" | tsqlrefine lint --stdin --output json
 
-# Format files (show diff)
-tsqlrefine format --diff path/to/file.sql
+# Format to stdout
+tsqlrefine format path/to/file.sql
 
 # Format in-place (writes files)
 tsqlrefine format --write path/to/dir
@@ -95,7 +95,7 @@ dotnet test src/TsqlRefine.sln -c Release
 
 # Run the CLI
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint path/to/file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff path/to/file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- format path/to/file.sql
 ```
 
 ## Configuration

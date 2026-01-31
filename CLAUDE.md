@@ -52,12 +52,10 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint --severity error file
 # Format SQL
 dotnet run --project src/TsqlRefine.Cli -c Release -- format file.sql
 dotnet run --project src/TsqlRefine.Cli -c Release -- format --write file.sql  # in-place
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff file.sql   # show diff
 
 # Auto-fix issues
 dotnet run --project src/TsqlRefine.Cli -c Release -- fix file.sql
 dotnet run --project src/TsqlRefine.Cli -c Release -- fix --write file.sql    # apply fixes
-dotnet run --project src/TsqlRefine.Cli -c Release -- fix --diff file.sql     # show diff
 
 # Initialize configuration
 dotnet run --project src/TsqlRefine.Cli -c Release -- init
@@ -254,7 +252,6 @@ Commands:
 | `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - | - |
 | `--ruleset` | ✓ | - | ✓ | - | - | - | - | - |
 | `--write` | - | ✓ | ✓ | - | - | - | - | - |
-| `--diff` | - | ✓ | ✓ | - | - | - | - | - |
 | `--indent-style` | - | ✓ | - | - | - | ✓ | - | - |
 | `--indent-size` | - | ✓ | - | - | - | ✓ | - | - |
 | `--show-sources` | - | - | - | - | - | ✓ | - | - |

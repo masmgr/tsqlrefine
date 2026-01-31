@@ -30,7 +30,7 @@ public sealed class CliFixTests
     }
 
     [Fact]
-    public async Task Fix_WithDiff_RequiresDiffOrWriteForMultipleFiles()
+    public async Task Fix_RequiresWriteForMultipleFiles()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -52,33 +52,5 @@ public sealed class CliFixTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, true);
         }
-    }
-
-    [Fact]
-    public async Task Fix_WithDiffFlag_Succeeds()
-    {
-        // Currently no rules are fixable, so there should be no diff output for rule violations
-        // But the command should execute successfully (exit 0 when no unfixable violations, or 1 when violations remain)
-        using var stdin = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("SELECT id FROM t;"));
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
-
-        var code = await CliApp.RunAsync(new[] { "fix", "--stdin", "--diff" }, stdin, stdout, stderr);
-
-        // Should be 0 (no violations) or 1 (violations remain after fix)
-        Assert.True(code == 0 || code == ExitCodes.Violations);
-    }
-
-    [Fact]
-    public async Task Fix_DiffAndWriteMutuallyExclusive()
-    {
-        var stdin = new StringReader("SELECT 1;");
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
-
-        var code = await CliApp.RunAsync(new[] { "fix", "--stdin", "--diff", "--write" }, stdin, stdout, stderr);
-
-        Assert.Equal(ExitCodes.Fatal, code);
-        Assert.Contains("mutually exclusive", stderr.ToString());
     }
 }

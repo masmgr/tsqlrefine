@@ -318,9 +318,6 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- format samples/sql/select-
 
 # Format in place
 dotnet run --project src/TsqlRefine.Cli -c Release -- format samples/sql/select-star.sql --write
-
-# Show diff
-dotnet run --project src/TsqlRefine.Cli -c Release -- format samples/sql/select-star.sql --diff
 ```
 
 ## Further Reading

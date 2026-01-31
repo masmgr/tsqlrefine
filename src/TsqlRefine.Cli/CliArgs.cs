@@ -16,7 +16,6 @@ public sealed record CliArgs(
     int? CompatLevel,
     string? RulesetPath,
     bool Write,
-    bool Diff,
     IndentStyle? IndentStyle,
     int? IndentSize,
     bool Verbose,

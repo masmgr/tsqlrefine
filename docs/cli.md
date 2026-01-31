@@ -79,7 +79,6 @@ tsqlrefine format [options] [paths...]
 | `--output <text\|json>` | 出力形式（既定: `text`） |
 | `--compat-level <100-160>` | SQL Server 互換レベル |
 | `--write` | ファイルを上書き |
-| `--diff` | 差分を表示（`--write` と排他） |
 | `--indent-style <tabs\|spaces>` | インデントの種類 |
 | `--indent-size <n>` | インデント幅 |
 
@@ -100,7 +99,6 @@ tsqlrefine fix [options] [paths...]
 | `--preset <name>` | プリセット選択 |
 | `--ruleset <path>` | カスタムルールセットファイル |
 | `--write` | ファイルを上書き |
-| `--diff` | 差分を表示（`--write` と排他） |
 
 #### init
 
@@ -166,8 +164,8 @@ tsqlrefine list-plugins [options]
 
 #### fix コマンド
 
-- `--write`/`--diff` が未指定のときは stdout に修正後 SQL を出力
-- 複数入力の場合は `--write` または `--diff` が必要
+- `--write` が未指定のときは stdout に修正後 SQL を出力
+- 複数入力の場合は `--write` が必要
 - `--output json` 指定時は診断結果のみを出力（`--write` と組み合わせ可能）
 
 ---

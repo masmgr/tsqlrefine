@@ -34,7 +34,7 @@ dotnet test  src/TsqlRefine.sln -c Release
 "select * from t;" | dotnet run --project src/TsqlRefine.Cli -c Release -- lint --stdin --output json
 
 # format / fix
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --diff path\to\file.sql
+dotnet run --project src/TsqlRefine.Cli -c Release -- format path\to\file.sql
 dotnet run --project src/TsqlRefine.Cli -c Release -- fix --write path\to\dir
 
 # init / list

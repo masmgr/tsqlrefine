@@ -58,11 +58,6 @@ public static class CliParser
         Description = "Apply changes in-place"
     };
 
-    private static Option<bool> CreateDiffOption() => new("--diff")
-    {
-        Description = "Show diff output"
-    };
-
     // Analysis options
     private static Option<string?> CreateCompatLevelOption() => new("--compat-level")
     {
@@ -156,7 +151,6 @@ public static class CliParser
         // Output options
         command.Options.Add(CreateOutputOption());
         command.Options.Add(CreateWriteOption());
-        command.Options.Add(CreateDiffOption());
 
         // Analysis options
         command.Options.Add(CreateCompatLevelOption());
@@ -183,7 +177,6 @@ public static class CliParser
         // Output options
         command.Options.Add(CreateOutputOption());
         command.Options.Add(CreateWriteOption());
-        command.Options.Add(CreateDiffOption());
 
         // Analysis options
         command.Options.Add(CreateCompatLevelOption());
@@ -333,7 +326,6 @@ public static class CliParser
             CompatLevel: ParseInt(GetOptionValue<string?>(parseResult, "--compat-level")),
             RulesetPath: GetOptionValue<string?>(parseResult, "--ruleset"),
             Write: GetOptionValue<bool>(parseResult, "--write"),
-            Diff: GetOptionValue<bool>(parseResult, "--diff"),
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),

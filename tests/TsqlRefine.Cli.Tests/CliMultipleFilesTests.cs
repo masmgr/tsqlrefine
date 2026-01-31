@@ -35,7 +35,7 @@ public sealed class CliMultipleFilesTests
     }
 
     [Fact]
-    public async Task Format_MultipleFilesWithoutWriteOrDiff_ReturnsError()
+    public async Task Format_MultipleFilesWithoutWrite_ReturnsError()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
@@ -52,31 +52,6 @@ public sealed class CliMultipleFilesTests
 
             Assert.Equal(ExitCodes.Fatal, code);
             Assert.Contains("--write", stderr.ToString());
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
-        }
-    }
-
-    [Fact]
-    public async Task Format_MultipleFilesWithDiff_Succeeds()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-        try
-        {
-            Directory.CreateDirectory(tempDir);
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "file1.sql"), "select 1;");
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "file2.sql"), "select 2;");
-
-            var stdout = new StringWriter();
-            var stderr = new StringWriter();
-
-            var code = await CliApp.RunAsync(new[] { "format", "--diff", tempDir }, TextReader.Null, stdout, stderr);
-
-            Assert.Equal(0, code);
         }
         finally
         {
