@@ -27,7 +27,7 @@ public sealed record Token(string Text, Position Start, int Length, string? Toke
 public sealed class ScriptDomAst
 {
     public ScriptDomAst(string rawSql)
-        : this(rawSql, null, Array.Empty<ParseError>(), Array.Empty<ParseError>())
+        : this(rawSql, null, Array.Empty<ParseError>(), Array.Empty<ParseError>(), null)
     {
     }
 
@@ -35,12 +35,14 @@ public sealed class ScriptDomAst
         string rawSql,
         TSqlFragment? fragment,
         IReadOnlyList<ParseError>? parseErrors,
-        IReadOnlyList<ParseError>? tokenizationErrors)
+        IReadOnlyList<ParseError>? tokenizationErrors,
+        Exception? parserException = null)
     {
         RawSql = rawSql ?? string.Empty;
         Fragment = fragment;
         ParseErrors = parseErrors ?? Array.Empty<ParseError>();
         TokenizationErrors = tokenizationErrors ?? Array.Empty<ParseError>();
+        ParserException = parserException;
     }
 
     public string RawSql { get; }
@@ -50,6 +52,12 @@ public sealed class ScriptDomAst
     public IReadOnlyList<ParseError> ParseErrors { get; }
 
     public IReadOnlyList<ParseError> TokenizationErrors { get; }
+
+    /// <summary>
+    /// Gets the exception thrown by the parser, if any.
+    /// This is set when the parser throws an unexpected exception during parsing.
+    /// </summary>
+    public Exception? ParserException { get; }
 }
 
 public sealed record RuleContext(

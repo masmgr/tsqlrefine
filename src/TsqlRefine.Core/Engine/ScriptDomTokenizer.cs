@@ -29,9 +29,10 @@ internal static class ScriptDomTokenizer
             var ast = new ScriptDomAst(text, fragment, parseErrors.ToArray(), tokenErrors.ToArray());
             return new ScriptDomAnalysis(ast, tokens);
         }
-        catch
+        catch (Exception ex)
         {
-            return new ScriptDomAnalysis(new ScriptDomAst(text), Array.Empty<Token>());
+            var ast = new ScriptDomAst(text, null, Array.Empty<ParseError>(), Array.Empty<ParseError>(), ex);
+            return new ScriptDomAnalysis(ast, Array.Empty<Token>());
         }
     }
 

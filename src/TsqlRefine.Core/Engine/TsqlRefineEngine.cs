@@ -103,23 +103,21 @@ public sealed class TsqlRefineEngine
 
     private static Diagnostic NormalizeDiagnostic(IRule rule, Diagnostic diagnostic)
     {
-        var data = diagnostic.Data ?? new DiagnosticData();
-        if (data.RuleId is null || data.Category is null || data.Fixable is null)
-        {
-            data = data with
-            {
-                RuleId = data.RuleId ?? rule.Metadata.RuleId,
-                Category = data.Category ?? rule.Metadata.Category,
-                Fixable = data.Fixable ?? rule.Metadata.Fixable
-            };
-        }
+        var metadata = rule.Metadata;
+        var originalData = diagnostic.Data;
 
-        var severity = diagnostic.Severity ?? Map(rule.Metadata.DefaultSeverity);
+        // Build DiagnosticData with defaults from rule metadata
+        var normalizedData = new DiagnosticData(
+            RuleId: originalData?.RuleId ?? metadata.RuleId,
+            Category: originalData?.Category ?? metadata.Category,
+            Fixable: originalData?.Fixable ?? metadata.Fixable
+        );
+
         return diagnostic with
         {
-            Severity = severity,
-            Code = diagnostic.Code ?? rule.Metadata.RuleId,
-            Data = data
+            Severity = diagnostic.Severity ?? Map(metadata.DefaultSeverity),
+            Code = diagnostic.Code ?? metadata.RuleId,
+            Data = normalizedData
         };
     }
 
@@ -155,37 +153,47 @@ public sealed class TsqlRefineEngine
 
     public const string ParseErrorCode = "parse-error";
 
+    public const string ParserExceptionCode = "parser-exception";
+
     private static void AppendParseErrors(ScriptDomAst ast, List<Diagnostic> diagnostics)
     {
+        // Report parser exception if any
+        if (ast.ParserException is not null)
+        {
+            var ex = ast.ParserException;
+            diagnostics.Add(new Diagnostic(
+                Range: ZeroRange,
+                Message: $"Parser exception: {ex.GetType().Name}: {ex.Message}",
+                Severity: DiagnosticSeverity.Error,
+                Code: ParserExceptionCode,
+                Data: new DiagnosticData(ParserExceptionCode, "Syntax", false)
+            ));
+        }
+
         foreach (var parseError in ast.ParseErrors)
         {
-            var line = Math.Max(0, parseError.Line - 1);
-            var column = Math.Max(0, parseError.Column - 1);
-            diagnostics.Add(new Diagnostic(
-                Range: new TsqlRefine.PluginSdk.Range(
-                    new Position(line, column),
-                    new Position(line, column)),
-                Message: $"Parse error: {parseError.Message}",
-                Severity: DiagnosticSeverity.Error,
-                Code: ParseErrorCode,
-                Data: new DiagnosticData(ParseErrorCode, "Syntax", false)
-            ));
+            diagnostics.Add(CreateParseErrorDiagnostic("Parse error", parseError));
         }
 
         foreach (var tokenError in ast.TokenizationErrors)
         {
-            var line = Math.Max(0, tokenError.Line - 1);
-            var column = Math.Max(0, tokenError.Column - 1);
-            diagnostics.Add(new Diagnostic(
-                Range: new TsqlRefine.PluginSdk.Range(
-                    new Position(line, column),
-                    new Position(line, column)),
-                Message: $"Tokenization error: {tokenError.Message}",
-                Severity: DiagnosticSeverity.Error,
-                Code: ParseErrorCode,
-                Data: new DiagnosticData(ParseErrorCode, "Syntax", false)
-            ));
+            diagnostics.Add(CreateParseErrorDiagnostic("Tokenization error", tokenError));
         }
+    }
+
+    private static Diagnostic CreateParseErrorDiagnostic(string prefix, Microsoft.SqlServer.TransactSql.ScriptDom.ParseError error)
+    {
+        var line = Math.Max(0, error.Line - 1);
+        var column = Math.Max(0, error.Column - 1);
+        return new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(
+                new Position(line, column),
+                new Position(line, column)),
+            Message: $"{prefix}: {error.Message}",
+            Severity: DiagnosticSeverity.Error,
+            Code: ParseErrorCode,
+            Data: new DiagnosticData(ParseErrorCode, "Syntax", false)
+        );
     }
 
     private static RuleContext CreateContext(SqlInput input, EngineOptions options)

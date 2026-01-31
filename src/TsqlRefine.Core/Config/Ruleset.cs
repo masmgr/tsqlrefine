@@ -1,22 +1,96 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TsqlRefine.Core.Config;
 
 public sealed record RulesetRule(string Id, bool Enabled = true);
 
-public sealed record Ruleset(IReadOnlyList<RulesetRule> Rules)
+public sealed class Ruleset
 {
-    public static Ruleset Load(string path)
+    private readonly IReadOnlyList<RulesetRule> _rules;
+    private readonly Dictionary<string, bool>? _ruleCache;
+
+    [JsonConstructor]
+    public Ruleset(IReadOnlyList<RulesetRule>? rules)
     {
-        var json = File.ReadAllText(path);
-        var ruleset = JsonSerializer.Deserialize<Ruleset>(json, JsonDefaults.Options);
-        return ruleset ?? new Ruleset(Array.Empty<RulesetRule>());
+        _rules = rules ?? Array.Empty<RulesetRule>();
+
+        // Pre-build cache for O(1) lookup
+        if (_rules.Count > 0)
+        {
+            _ruleCache = new Dictionary<string, bool>(_rules.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var rule in _rules)
+            {
+                // Later entries override earlier ones
+                _ruleCache[rule.Id] = rule.Enabled;
+            }
+        }
     }
 
+    [JsonPropertyName("rules")]
+    public IReadOnlyList<RulesetRule> Rules => _rules;
+
+    public static readonly Ruleset Empty = new(Array.Empty<RulesetRule>());
+
+    /// <summary>
+    /// Loads ruleset from the specified path.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">The ruleset file was not found.</exception>
+    /// <exception cref="JsonException">The ruleset file contains invalid JSON.</exception>
+    public static Ruleset Load(string path)
+    {
+        var result = TryLoad(path);
+        if (!result.Success)
+        {
+            throw result.Exception ?? new InvalidOperationException(result.ErrorMessage);
+        }
+        return result.Value!;
+    }
+
+    /// <summary>
+    /// Attempts to load ruleset from the specified path.
+    /// </summary>
+    public static ConfigLoadResult<Ruleset> TryLoad(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return ConfigLoadResult<Ruleset>.Fail(
+                    $"Ruleset file not found: {path}",
+                    new FileNotFoundException("Ruleset file not found.", path));
+            }
+
+            var json = File.ReadAllText(path);
+            var ruleset = JsonSerializer.Deserialize<Ruleset>(json, JsonDefaults.Options);
+
+            return ConfigLoadResult<Ruleset>.Ok(ruleset ?? Empty);
+        }
+        catch (JsonException ex)
+        {
+            return ConfigLoadResult<Ruleset>.Fail(
+                $"Invalid JSON in ruleset file: {ex.Message}",
+                ex);
+        }
+        catch (IOException ex)
+        {
+            return ConfigLoadResult<Ruleset>.Fail(
+                $"Failed to read ruleset file: {ex.Message}",
+                ex);
+        }
+    }
+
+    /// <summary>
+    /// Checks if a rule is enabled. Returns true by default if the rule is not in the ruleset.
+    /// </summary>
     public bool IsRuleEnabled(string ruleId)
     {
-        var match = Rules.FirstOrDefault(r => string.Equals(r.Id, ruleId, StringComparison.OrdinalIgnoreCase));
-        return match?.Enabled ?? true;
+        if (_ruleCache is null)
+        {
+            return true; // No rules defined, all rules enabled by default
+        }
+
+        return _ruleCache.TryGetValue(ruleId, out var enabled) ? enabled : true;
     }
 }
 
