@@ -70,6 +70,11 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- list-plugins
 
 # Print effective configuration
 dotnet run --project src/TsqlRefine.Cli -c Release -- print-config
+
+# Print effective formatting options
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-format-config
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-format-config --show-sources  # with source info
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-format-config --output json   # JSON output
 ```
 
 ## Architecture
@@ -225,33 +230,35 @@ Command-line interface built on System.CommandLine 2.0.0.
 tsqlrefine <command> [options] [paths...]
 
 Commands:
-  lint          Analyze SQL files for rule violations (default)
-  format        Format SQL files (keyword casing, whitespace)
-  fix           Auto-fix issues that support fixing
-  init          Initialize configuration files
-  print-config  Print effective configuration
-  list-rules    List available rules
-  list-plugins  List loaded plugins
+  lint               Analyze SQL files for rule violations (default)
+  format             Format SQL files (keyword casing, whitespace)
+  fix                Auto-fix issues that support fixing
+  init               Initialize configuration files
+  print-config       Print effective configuration
+  print-format-config  Print effective formatting options
+  list-rules         List available rules
+  list-plugins       List loaded plugins
 ```
 
 **Options by command**:
 
-| Option | lint | format | fix | init | print-config | list-rules | list-plugins |
-|--------|:----:|:------:|:---:|:----:|:------------:|:----------:|:------------:|
-| `-c, --config` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `-g, --ignorelist` | ✓ | ✓ | ✓ | - | - | - | - |
-| `--detect-encoding` | ✓ | ✓ | ✓ | - | - | - | - |
-| `--stdin` | ✓ | ✓ | ✓ | - | - | - | - |
-| `--stdin-filepath` | ✓ | ✓ | ✓ | - | - | - | - |
-| `--output` | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ |
-| `--severity` | ✓ | - | ✓ | - | - | - | - |
-| `--preset` | ✓ | - | ✓ | - | - | - | - |
-| `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - |
-| `--ruleset` | ✓ | - | ✓ | - | - | - | - |
-| `--write` | - | ✓ | ✓ | - | - | - | - |
-| `--diff` | - | ✓ | ✓ | - | - | - | - |
-| `--indent-style` | - | ✓ | - | - | - | - | - |
-| `--indent-size` | - | ✓ | - | - | - | - | - |
+| Option | lint | format | fix | init | print-config | print-format-config | list-rules | list-plugins |
+|--------|:----:|:------:|:---:|:----:|:------------:|:-------------------:|:----------:|:------------:|
+| `-c, --config` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `-g, --ignorelist` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `--detect-encoding` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `--stdin` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `--stdin-filepath` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `--output` | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | ✓ |
+| `--severity` | ✓ | - | ✓ | - | - | - | - | - |
+| `--preset` | ✓ | - | ✓ | - | - | - | - | - |
+| `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `--ruleset` | ✓ | - | ✓ | - | - | - | - | - |
+| `--write` | - | ✓ | ✓ | - | - | - | - | - |
+| `--diff` | - | ✓ | ✓ | - | - | - | - | - |
+| `--indent-style` | - | ✓ | - | - | - | ✓ | - | - |
+| `--indent-size` | - | ✓ | - | - | - | ✓ | - | - |
+| `--show-sources` | - | - | - | - | - | ✓ | - | - |
 | `--verbose` | - | - | - | - | - | - | ✓ |
 | `paths...` | ✓ | ✓ | ✓ | - | - | - | - |
 

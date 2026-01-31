@@ -83,6 +83,7 @@ public static class CliApp
             {
                 "init" => await commandExecutor.ExecuteInitAsync(parsed, stdout, stderr),
                 "print-config" => await commandExecutor.ExecutePrintConfigAsync(parsed, stdout, stderr),
+                "print-format-config" => await commandExecutor.ExecutePrintFormatConfigAsync(parsed, stdout, stderr),
                 "list-rules" => await commandExecutor.ExecuteListRulesAsync(parsed, stdout, stderr),
                 "list-plugins" => await commandExecutor.ExecuteListPluginsAsync(parsed, stdout, stderr),
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),

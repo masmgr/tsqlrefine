@@ -9,6 +9,29 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class ConfigLoader
 {
+    /// <summary>
+    /// Gets the path to the config file that would be loaded, or null if using defaults.
+    /// </summary>
+    public string? GetConfigPath(CliArgs args)
+    {
+        var path = args.ConfigPath;
+        if (path is null)
+        {
+            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
+            if (File.Exists(defaultPath))
+            {
+                path = defaultPath;
+            }
+        }
+
+        if (path is not null && File.Exists(path))
+        {
+            return Path.GetFullPath(path);
+        }
+
+        return null;
+    }
+
     public TsqlRefineConfig LoadConfig(CliArgs args)
     {
         var path = args.ConfigPath;

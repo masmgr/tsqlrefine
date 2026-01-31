@@ -114,6 +114,12 @@ public static class CliParser
         Description = "Show detailed information"
     };
 
+    // Print-format-config options
+    private static Option<bool> CreateShowSourcesOption() => new("--show-sources")
+    {
+        Description = "Show where each option value originated"
+    };
+
     // =================================================================
     // Command Builders
     // =================================================================
@@ -238,6 +244,24 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildPrintFormatConfigCommand()
+    {
+        var command = new Command("print-format-config", "Print effective formatting options");
+
+        // Output options
+        command.Options.Add(CreateOutputOption());
+        command.Options.Add(CreateShowSourcesOption());
+
+        // Format options (to test CLI arg override)
+        command.Options.Add(CreateIndentStyleOption());
+        command.Options.Add(CreateIndentSizeOption());
+
+        // Paths argument (optional file path for .editorconfig resolution)
+        command.Arguments.Add(CreatePathsArgument());
+
+        return command;
+    }
+
     // =================================================================
     // Root Command
     // =================================================================
@@ -257,6 +281,7 @@ public static class CliParser
         root.Subcommands.Add(BuildFixCommand());
         root.Subcommands.Add(BuildInitCommand());
         root.Subcommands.Add(BuildPrintConfigCommand());
+        root.Subcommands.Add(BuildPrintFormatConfigCommand());
         root.Subcommands.Add(BuildListRulesCommand());
         root.Subcommands.Add(BuildListPluginsCommand());
 
@@ -322,6 +347,7 @@ public static class CliParser
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
+            ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
             Paths: GetPaths(parseResult)
         );
     }

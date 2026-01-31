@@ -21,5 +21,6 @@ public sealed record CliArgs(
     IndentStyle? IndentStyle,
     int? IndentSize,
     bool Verbose,
+    bool ShowSources,
     IReadOnlyList<string> Paths
 );
