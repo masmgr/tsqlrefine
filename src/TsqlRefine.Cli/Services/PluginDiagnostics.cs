@@ -4,7 +4,7 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class PluginDiagnostics
 {
-    public string GetRemediationHint(PluginLoadDiagnostic diagnostic)
+    public static string GetRemediationHint(PluginLoadDiagnostic diagnostic)
     {
         return diagnostic.Status switch
         {
@@ -25,6 +25,66 @@ public sealed class PluginDiagnostics
 
             _ => string.Empty
         };
+    }
+
+    /// <summary>
+    /// Writes a brief summary of plugin loading failures to stderr.
+    /// Used during lint/format/fix commands to warn about failed plugins.
+    /// </summary>
+    public static void WriteFailedPluginWarnings(IReadOnlyList<LoadedPlugin> plugins, TextWriter stderr)
+    {
+        var failedPlugins = plugins
+            .Where(p => p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled)
+            .ToList();
+
+        if (failedPlugins.Count == 0)
+            return;
+
+        var totalPlugins = plugins.Count(p => p.Enabled);
+        stderr.WriteLine($"Warning: {failedPlugins.Count} of {totalPlugins} plugin{(totalPlugins == 1 ? "" : "s")} failed to load. Run 'tsqlrefine list-plugins' for details.");
+
+        foreach (var p in failedPlugins)
+        {
+            stderr.Write($"  {p.Path}: ");
+            WritePluginErrorSummary(p, stderr);
+        }
+
+        stderr.WriteLine();
+    }
+
+    private static void WritePluginErrorSummary(LoadedPlugin plugin, TextWriter stderr)
+    {
+        switch (plugin.Diagnostic.Status)
+        {
+            case PluginLoadStatus.VersionMismatch:
+                stderr.WriteLine($"API version mismatch (plugin uses v{plugin.Diagnostic.ActualApiVersion}, host expects v{plugin.Diagnostic.ExpectedApiVersion})");
+                stderr.WriteLine($"    Hint: Rebuild plugin against TsqlRefine.PluginSdk v{plugin.Diagnostic.ExpectedApiVersion}.x.x");
+                break;
+
+            case PluginLoadStatus.LoadError:
+                stderr.WriteLine($"{plugin.Diagnostic.ExceptionType}: {plugin.Diagnostic.Message}");
+                if (plugin.Diagnostic.MissingNativeDll is not null)
+                {
+                    stderr.WriteLine($"    Hint: Install native library '{plugin.Diagnostic.MissingNativeDll}'");
+                }
+                else if (plugin.Diagnostic.ExceptionType == "BadImageFormatException")
+                {
+                    stderr.WriteLine($"    Hint: Check plugin architecture matches host (x64/x86/arm64)");
+                }
+                break;
+
+            case PluginLoadStatus.FileNotFound:
+                stderr.WriteLine("File not found");
+                break;
+
+            case PluginLoadStatus.NoProviders:
+                stderr.WriteLine("No rule providers found");
+                break;
+
+            default:
+                stderr.WriteLine(plugin.Diagnostic.Message ?? "Unknown error");
+                break;
+        }
     }
 
     public async Task WritePluginSummaryAsync(

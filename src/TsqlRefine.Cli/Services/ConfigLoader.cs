@@ -109,49 +109,7 @@ public sealed class ConfigLoader
         // Report plugin loading issues with summary
         if (stderr is not null)
         {
-            var failedPlugins = loaded.Where(p => p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled).ToList();
-            if (failedPlugins.Count > 0)
-            {
-                var totalPlugins = loaded.Count(p => p.Enabled);
-                stderr.WriteLine($"Warning: {failedPlugins.Count} of {totalPlugins} plugin{(totalPlugins == 1 ? "" : "s")} failed to load. Run 'tsqlrefine list-plugins' for details.");
-
-                foreach (var p in failedPlugins)
-                {
-                    stderr.Write($"  {p.Path}: ");
-
-                    if (p.Diagnostic.Status == PluginLoadStatus.VersionMismatch)
-                    {
-                        stderr.WriteLine($"API version mismatch (plugin uses v{p.Diagnostic.ActualApiVersion}, host expects v{p.Diagnostic.ExpectedApiVersion})");
-                        stderr.WriteLine($"    Hint: Rebuild plugin against TsqlRefine.PluginSdk v{p.Diagnostic.ExpectedApiVersion}.x.x");
-                    }
-                    else if (p.Diagnostic.Status == PluginLoadStatus.LoadError)
-                    {
-                        stderr.WriteLine($"{p.Diagnostic.ExceptionType}: {p.Diagnostic.Message}");
-                        if (p.Diagnostic.MissingNativeDll is not null)
-                        {
-                            stderr.WriteLine($"    Hint: Install native library '{p.Diagnostic.MissingNativeDll}'");
-                        }
-                        else if (p.Diagnostic.ExceptionType == "BadImageFormatException")
-                        {
-                            stderr.WriteLine($"    Hint: Check plugin architecture matches host (x64/x86/arm64)");
-                        }
-                    }
-                    else if (p.Diagnostic.Status == PluginLoadStatus.FileNotFound)
-                    {
-                        stderr.WriteLine($"File not found");
-                    }
-                    else if (p.Diagnostic.Status == PluginLoadStatus.NoProviders)
-                    {
-                        stderr.WriteLine($"No rule providers found");
-                    }
-                    else
-                    {
-                        stderr.WriteLine(p.Diagnostic.Message ?? "Unknown error");
-                    }
-                }
-
-                stderr.WriteLine();
-            }
+            PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
         }
 
         foreach (var p in loaded)
