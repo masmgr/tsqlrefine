@@ -28,7 +28,8 @@ public sealed class CliEncodingTests
             Assert.Equal(0, code);
             // File input now writes to file, so stdout should be empty
             Assert.Empty(stdout.ToString());
-            Assert.Equal(string.Empty, stderr.ToString());
+            // stderr should contain the change log
+            Assert.Contains("Formatted:", stderr.ToString());
 
             // Verify file content
             var actualBytes = await File.ReadAllBytesAsync(sqlPath);
@@ -66,7 +67,8 @@ public sealed class CliEncodingTests
 
             Assert.Equal(0, code);
             Assert.Equal(string.Empty, stdout.ToString());
-            Assert.Equal(string.Empty, stderr.ToString());
+            // stderr should contain the change log
+            Assert.Contains("Formatted:", stderr.ToString());
 
             // Verify file is still encoded with Shift-JIS
             var actualBytes = await File.ReadAllBytesAsync(sqlPath);
@@ -135,7 +137,8 @@ public sealed class CliEncodingTests
 
             Assert.Equal(0, code);
             Assert.Equal(string.Empty, stdout.ToString());
-            Assert.Equal(string.Empty, stderr.ToString());
+            // stderr should contain the change log
+            Assert.Contains("Formatted:", stderr.ToString());
 
             // Verify file is still encoded with Shift-JIS
             var actualBytes = await File.ReadAllBytesAsync(sqlPath);

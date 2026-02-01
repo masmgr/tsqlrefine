@@ -193,10 +193,19 @@ public sealed class CommandExecutor
 
             if (input.FilePath != "<stdin>")
             {
-                var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
-                    ? resolved
-                    : Encoding.UTF8;
-                await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
+                var hasChanges = !string.Equals(input.Text, formatted, StringComparison.Ordinal);
+                if (hasChanges)
+                {
+                    var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
+                        ? resolved
+                        : Encoding.UTF8;
+                    await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
+                    await stderr.WriteLineAsync($"Formatted: {input.FilePath}");
+                }
+                else
+                {
+                    await stderr.WriteLineAsync($"Unchanged: {input.FilePath}");
+                }
             }
             else
             {
@@ -245,12 +254,20 @@ public sealed class CommandExecutor
             {
                 if (file.FilePath != "<stdin>")
                 {
-                    if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
+                    var hasChanges = !string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal);
+                    if (hasChanges)
                     {
                         var encoding = read.WriteEncodings.TryGetValue(file.FilePath, out var resolved)
                             ? resolved
                             : Encoding.UTF8;
                         await File.WriteAllTextAsync(file.FilePath, file.FixedText, encoding);
+                        var fixCount = file.AppliedFixes.Count;
+                        var fixLabel = fixCount == 1 ? "fix" : "fixes";
+                        await stderr.WriteLineAsync($"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
+                    }
+                    else
+                    {
+                        await stderr.WriteLineAsync($"Unchanged: {file.FilePath}");
                     }
                 }
                 else

@@ -55,7 +55,8 @@ public sealed class CliMultipleFilesTests
             Assert.Equal(0, code);
             // stdout should be empty (file output, not stdout)
             Assert.Empty(stdout.ToString());
-            Assert.Empty(stderr.ToString());
+            // stderr should contain the change logs for both files
+            Assert.Contains("Formatted:", stderr.ToString());
 
             // Verify files are formatted
             Assert.Contains("SELECT 1", await File.ReadAllTextAsync(file1));

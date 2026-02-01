@@ -52,7 +52,8 @@ public sealed class CliFormatTests
             Assert.Equal(0, code);
             // stdout should be empty (file output, not stdout)
             Assert.Empty(stdout.ToString());
-            Assert.Equal(string.Empty, stderr.ToString());
+            // stderr should contain the change log
+            Assert.Contains("Formatted:", stderr.ToString());
             // File should be updated
             var content = await File.ReadAllTextAsync(sqlPath);
             Assert.Equal("SELECT * FROM T\n", content);
@@ -88,7 +89,8 @@ public sealed class CliFormatTests
             Assert.Equal(0, code);
             // stdout should be empty (file output, not stdout)
             Assert.Empty(stdout.ToString());
-            Assert.Equal(string.Empty, stderr.ToString());
+            // stderr should contain the change log
+            Assert.Contains("Formatted:", stderr.ToString());
             // File should be updated with tab indentation
             var content = await File.ReadAllTextAsync(sqlPath);
             Assert.Equal("SELECT *\n\t\tFROM T\n", content);
