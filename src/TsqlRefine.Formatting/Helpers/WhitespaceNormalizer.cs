@@ -84,6 +84,12 @@ public static class WhitespaceNormalizer
         var indentSize = GetIndentSize(options);
         GetLeadingWhitespace(text, indentSize, out var leadingLength, out var columns);
 
+        // Whitespace-only lines become empty lines (unless inside protected region)
+        if (!lineStartsInProtected && leadingLength == text.Length)
+        {
+            return;
+        }
+
         var sbLine = new StringBuilder(text.Length);
         if (lineStartsInProtected)
         {
