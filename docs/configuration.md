@@ -105,6 +105,7 @@ The repository includes preset rulesets under `rulesets/`:
 
 - `rulesets/recommended.json`
 - `rulesets/strict.json`
+- `rulesets/pragmatic.json`
 - `rulesets/security-only.json`
 
 You can reference them from `tsqlrefine.json` via `ruleset`, or use the CLI `--preset` option (if supported by your version of the CLI).

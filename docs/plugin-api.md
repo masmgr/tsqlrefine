@@ -91,7 +91,7 @@ public sealed record RuleContext(
 
 ---
 
-## 5. ロード仕様（案）
+## 5. ロード仕様
 
 設定ファイルでプラグインを指定します。
 
@@ -113,7 +113,7 @@ public sealed record RuleContext(
 
 ---
 
-## 6. 互換性（案）
+## 6. 互換性
 
 - コアは `pluginApiVersion` を持つ（例: `1`）
 - プラグインは `supportedApiVersions: [1]` を宣言
