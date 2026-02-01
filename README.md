@@ -1,153 +1,188 @@
 # tsqlrefine
 
-T-SQL lint / check / format / fix for SQL Server.
+T-SQL linter, auto-fixer, and formatter for SQL Server.
 
-This repository contains the `.NET` CLI tool `tsqlrefine`, built-in rules, a formatter, and a plugin host/SDK for external rule providers.
+> Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
 
-Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
+## Features
+
+### Lint - Static Analysis
+
+Detects issues in T-SQL code. Includes 86 built-in rules covering security, performance, and coding conventions.
+
+```bash
+# Lint a file
+tsqlrefine lint path/to/file.sql
+
+# Lint a directory recursively
+tsqlrefine lint path/to/dir
+
+# Lint from stdin
+echo "SELECT * FROM users;" | tsqlrefine lint --stdin
+
+# Output as JSON (for CI integration)
+tsqlrefine lint --output json path/to/file.sql
+```
+
+**Example output:**
+
+```
+path/to/file.sql:3:1: warning avoid-select-star: Avoid SELECT *; explicitly list columns
+path/to/file.sql:7:5: error missing-where-clause: UPDATE/DELETE without WHERE clause
+```
+
+### Fix - Auto-fix
+
+Automatically fixes detected issues. Rules with `fixable: true` can be auto-fixed.
+
+```bash
+# Preview fixes (dry run)
+tsqlrefine fix path/to/file.sql
+
+# Apply fixes to files
+tsqlrefine fix --write path/to/file.sql
+
+# Fix all .sql files in a directory
+tsqlrefine fix --write path/to/dir
+```
+
+**Auto-fix examples:**
+
+| Before | After |
+|--------|-------|
+| `select * from users` | `SELECT * FROM users` |
+| `IF @x = NULL` | `IF @x IS NULL` |
+| `EXEC('SELECT ...')` | `EXEC sp_executesql N'SELECT ...'` |
+
+### Format - Code Formatting
+
+Formats T-SQL code to a consistent style. Respects `.editorconfig` indentation settings.
+
+```bash
+# Print formatted output to stdout
+tsqlrefine format path/to/file.sql
+
+# Format files in-place
+tsqlrefine format --write path/to/file.sql
+
+# Format all .sql files in a directory
+tsqlrefine format --write path/to/dir
+```
+
+**Formatting features:**
+
+- Keyword uppercasing (`select` → `SELECT`)
+- Consistent indentation
+- Whitespace normalization
+- Trailing whitespace removal
 
 ## Installation
 
-### As a .NET Global Tool (Recommended)
-
-Install from NuGet.org:
+### .NET Global Tool (Recommended)
 
 ```bash
+# Install
 dotnet tool install --global TsqlRefine
-```
 
-Update to the latest version:
-
-```bash
+# Update
 dotnet tool update --global TsqlRefine
-```
 
-Uninstall:
-
-```bash
+# Uninstall
 dotnet tool uninstall --global TsqlRefine
 ```
 
-After installation, the `tsqlrefine` command will be available globally:
+### Local Tool (Project-specific)
 
 ```bash
-tsqlrefine --version
-tsqlrefine --help
-```
-
-### As a Local Tool (Project-specific)
-
-For project-specific tool management:
-
-```bash
-# Create tool manifest (if not already present)
 dotnet new tool-manifest
-
-# Install as a local tool
 dotnet tool install TsqlRefine
-
-# Run using dotnet prefix
 dotnet tsqlrefine --help
 ```
 
 ### From Source
 
-Clone the repository and build from source:
-
 ```bash
-git clone https://github.com/imasa/tsqlrefine.git
+git clone https://github.com/user/tsqlrefine.git
 cd tsqlrefine
 dotnet build src/TsqlRefine.sln -c Release
-dotnet test src/TsqlRefine.sln -c Release
-```
-
-## Quickstart
-
-### Basic Usage
-
-If installed as a global tool:
-
-```bash
-# Lint files/directories
-tsqlrefine lint path/to/file.sql path/to/dir
-
-# Lint from stdin with JSON output
-echo "select * from t;" | tsqlrefine lint --stdin --output json
-
-# Format to stdout
-tsqlrefine format path/to/file.sql
-
-# Format in-place (writes files)
-tsqlrefine format --write path/to/dir
-
-# Auto-fix issues
-tsqlrefine fix --write path/to/file.sql
-```
-
-### Running from Source
-
-If running from source code:
-
-```bash
-# Build and test
-dotnet build src/TsqlRefine.sln -c Release
-dotnet test src/TsqlRefine.sln -c Release
-
-# Run the CLI
-dotnet run --project src/TsqlRefine.Cli -c Release -- lint path/to/file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- format path/to/file.sql
 ```
 
 ## Configuration
 
-Generate default config files in the current directory:
+### Generate Config Files
 
-```powershell
-dotnet run --project src/TsqlRefine.Cli -c Release -- init
+```bash
+tsqlrefine init
 ```
 
-This creates:
+Creates the following files:
 
-- `tsqlrefine.json` (tool configuration; see schema in `schemas/tsqlrefine.schema.json`)
-- `tsqlrefine.ignore` (one glob per line; lines starting with `#` are comments)
+- `tsqlrefine.json` - Tool configuration
+- `tsqlrefine.ignore` - Exclusion patterns
 
-Common options:
+### tsqlrefine.json
 
-- `--config <path>`: override config discovery
-- `--ignorelist <path>`: override ignore list discovery
-- `--ruleset <path>`: override the ruleset file from config
-- `--preset <recommended|strict|pragmatic|security-only>`: use a preset ruleset from `rulesets/`
-- `--output <text|json>`: choose output format (for `lint`/`check`)
+```json
+{
+  "compatLevel": 150,
+  "ruleset": "rulesets/recommended.json",
+  "plugins": []
+}
+```
 
-## Rules and plugins
+### Preset Rulesets
 
-- List built-in and loaded rules: `tsqlrefine list-rules`
-- List loaded plugins: `tsqlrefine list-plugins`
-- Preset rulesets live in `rulesets/`
-- External rules can be loaded via `plugins` in `tsqlrefine.json` (see `docs/plugin-api.md`)
+| Preset | Rules | Use Case |
+|--------|-------|----------|
+| `recommended` | 49 | Balanced for production (default) |
+| `strict` | 86 | Maximum enforcement |
+| `pragmatic` | 30 | Production-ready minimum |
+| `security-only` | 10 | Security-focused |
 
-## Docs
+```bash
+tsqlrefine lint --preset strict path/to/file.sql
+```
 
-Project docs live under `docs/` (currently written in Japanese):
+### .editorconfig
 
-- Requirements: `docs/requirements.md`
-- Rules and presets: `docs/rules.md`
-- Task list / roadmap: `docs/task-list.md`
-- CLI spec (I/O, JSON, exit codes): `docs/cli.md`
-- Plugin API (minimum contract: Rule): `docs/plugin-api.md`
-- Project structure: `docs/project-structure.md`
-- Release process: `docs/release.md`
+The `format` command respects indentation settings:
 
-## Releases
+```ini
+[*.sql]
+indent_style = space
+indent_size = 4
+```
 
-Release notes and downloads are available on the [Releases page](https://github.com/imasa/tsqlrefine/releases).
+## Exit Codes
 
-For release process and versioning strategy, see [docs/release.md](docs/release.md).
+| Code | Meaning |
+|------|---------|
+| 0 | Success (no violations) |
+| 1 | Rule violations found |
+| 2 | Parse error |
+| 3 | Config error |
+| 4 | Runtime exception |
 
-## Contributing
+## Rules and Plugins
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+```bash
+# List built-in rules
+tsqlrefine list-rules
+
+# List loaded plugins
+tsqlrefine list-plugins
+```
+
+See [docs/Rules/README.md](docs/Rules/README.md) for the full rule reference.
+
+## Documentation
+
+- [CLI Specification](docs/cli.md)
+- [Configuration](docs/configuration.md)
+- [Formatting Options](docs/formatting.md)
+- [Plugin API](docs/plugin-api.md)
+- [Rule Reference](docs/Rules/README.md)
 
 ## License
 
-MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE)
