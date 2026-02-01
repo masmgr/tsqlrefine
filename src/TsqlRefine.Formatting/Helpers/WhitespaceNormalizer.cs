@@ -63,31 +63,12 @@ public static class WhitespaceNormalizer
         {
             LineEnding.CrLf => "\r\n",
             LineEnding.Lf => "\n",
-            LineEnding.Auto => DetectLineEnding(input),
+            // CR-only is rare; default to CRLF (Windows-preferred)
+            LineEnding.Auto => LineEndingHelpers.DetectLineEnding(input, "\r\n"),
             _ => "\r\n"
         };
     }
 
-    /// <summary>
-    /// Detects the line ending used in the input string.
-    /// </summary>
-    private static string DetectLineEnding(string input)
-    {
-        // Check for CRLF first (before checking for LF alone)
-        if (input.Contains("\r\n"))
-        {
-            return "\r\n";
-        }
-
-        if (input.Contains('\n'))
-        {
-            return "\n";
-        }
-
-        // CR-only is rare; treat as CRLF (Windows-preferred)
-        // Also, if no line ending is found, default to CRLF (Windows-preferred)
-        return "\r\n";
-    }
 
     private static bool EndsWithLineEnding(string text, string lineEnding)
     {

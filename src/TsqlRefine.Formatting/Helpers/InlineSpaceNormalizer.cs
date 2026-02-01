@@ -40,10 +40,10 @@ public static class InlineSpaceNormalizer
         // Detect the line ending used in input (after WhitespaceNormalizer processing)
         // WhitespaceNormalizer already normalizes to consistent line endings,
         // so we just need to detect and preserve them
-        var lineEnding = DetectLineEnding(input);
+        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
 
         // Split by the detected line ending
-        var lines = SplitByLineEnding(input, lineEnding);
+        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
         var result = new StringBuilder();
 
         for (var i = 0; i < lines.Length; i++)
@@ -174,32 +174,4 @@ public static class InlineSpaceNormalizer
         return output.ToString();
     }
 
-    private static string DetectLineEnding(string input)
-    {
-        // CRLF takes precedence over LF
-        if (input.Contains("\r\n"))
-        {
-            return "\r\n";
-        }
-
-        if (input.Contains('\n'))
-        {
-            return "\n";
-        }
-
-        // Default to LF for single-line or no newlines (will be consistent with input)
-        return "\n";
-    }
-
-    private static string[] SplitByLineEnding(string input, string lineEnding)
-    {
-        // For CRLF, split by \r\n directly
-        if (lineEnding == "\r\n")
-        {
-            return input.Split(["\r\n"], StringSplitOptions.None);
-        }
-
-        // For LF, split by \n
-        return input.Split('\n');
-    }
 }

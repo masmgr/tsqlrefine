@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Formatting.Helpers;
@@ -9,107 +8,6 @@ namespace TsqlRefine.Formatting.Helpers;
 /// </summary>
 public static class SqlElementCategorizer
 {
-    /// <summary>
-    /// Common T-SQL built-in functions (aggregate, string, date, system, etc.)
-    /// </summary>
-    private static readonly FrozenSet<string> BuiltInFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        // Aggregate functions
-        "COUNT", "SUM", "AVG", "MIN", "MAX", "STDEV", "STDEVP", "VAR", "VARP",
-        "CHECKSUM_AGG", "COUNT_BIG", "GROUPING", "GROUPING_ID",
-
-        // String functions
-        "LEN", "SUBSTRING", "LEFT", "RIGHT", "UPPER", "LOWER", "TRIM", "LTRIM", "RTRIM",
-        "REPLACE", "REPLICATE", "REVERSE", "STUFF", "CHARINDEX", "PATINDEX",
-        "CONCAT", "CONCAT_WS", "STRING_AGG", "FORMAT", "QUOTENAME", "SOUNDEX",
-        "SPACE", "STR", "UNICODE", "ASCII", "CHAR", "NCHAR",
-
-        // Date/time functions
-        "GETDATE", "GETUTCDATE", "SYSDATETIME", "SYSUTCDATETIME", "SYSDATETIMEOFFSET",
-        "CURRENT_TIMESTAMP", "DATEADD", "DATEDIFF", "DATEDIFF_BIG", "DATEFROMPARTS",
-        "DATETIME2FROMPARTS", "DATETIMEFROMPARTS", "DATETIMEOFFSETFROMPARTS",
-        "SMALLDATETIMEFROMPARTS", "TIMEFROMPARTS", "DATENAME", "DATEPART",
-        "DAY", "MONTH", "YEAR", "EOMONTH", "ISDATE",
-
-        // Conversion functions
-        "CAST", "CONVERT", "PARSE", "TRY_CAST", "TRY_CONVERT", "TRY_PARSE",
-
-        // Null handling functions
-        "ISNULL", "COALESCE", "NULLIF",
-
-        // Mathematical functions
-        "ABS", "CEILING", "FLOOR", "ROUND", "POWER", "SQRT", "SQUARE", "EXP", "LOG", "LOG10",
-        "SIGN", "RAND", "SIN", "COS", "TAN", "ASIN", "ACOS", "ATAN", "ATN2", "DEGREES", "RADIANS",
-
-        // Ranking functions
-        "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE", "PERCENT_RANK", "CUME_DIST",
-
-        // System functions
-        "@@IDENTITY", "@@ROWCOUNT", "@@ERROR", "@@TRANCOUNT", "@@VERSION",
-        "SCOPE_IDENTITY", "IDENT_CURRENT", "IDENT_INCR", "IDENT_SEED",
-        "NEWID", "NEWSEQUENTIALID", "SERVERPROPERTY", "CONNECTIONPROPERTY",
-        "CURRENT_USER", "SESSION_USER", "SYSTEM_USER", "USER_NAME", "SUSER_NAME",
-        "DB_ID", "DB_NAME", "OBJECT_ID", "OBJECT_NAME", "TYPE_ID", "TYPE_NAME",
-        "SCHEMA_ID", "SCHEMA_NAME", "COL_LENGTH", "COL_NAME", "COLUMNPROPERTY",
-
-        // JSON functions (SQL Server 2016+)
-        "ISJSON", "JSON_VALUE", "JSON_QUERY", "JSON_MODIFY",
-        "OPENJSON", "FOR JSON",
-
-        // XML functions
-        "OPENXML", "FOR XML",
-
-        // Other functions
-        "IIF", "CHOOSE", "CASE", "HASHBYTES", "CHECKSUM", "BINARY_CHECKSUM"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Built-in functions that do not require parentheses (niladic functions).
-    /// These are treated as functions even without following parentheses.
-    /// </summary>
-    private static readonly FrozenSet<string> ParenthesisFreeFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "CURRENT_TIMESTAMP", "CURRENT_USER", "SESSION_USER", "SYSTEM_USER", "USER"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// T-SQL data type keywords
-    /// </summary>
-    private static readonly FrozenSet<string> DataTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        // Exact numeric types
-        "BIT", "TINYINT", "SMALLINT", "INT", "INTEGER", "BIGINT", "DECIMAL", "NUMERIC", "MONEY", "SMALLMONEY",
-
-        // Approximate numeric types
-        "FLOAT", "REAL",
-
-        // Date and time types
-        "DATE", "TIME", "DATETIME", "DATETIME2", "DATETIMEOFFSET", "SMALLDATETIME",
-
-        // Character string types
-        "CHAR", "VARCHAR", "TEXT",
-
-        // Unicode character string types
-        "NCHAR", "NVARCHAR", "NTEXT",
-
-        // Binary string types
-        "BINARY", "VARBINARY", "IMAGE",
-
-        // Other data types
-        "UNIQUEIDENTIFIER", "XML", "SQL_VARIANT", "CURSOR", "TABLE", "HIERARCHYID",
-        "GEOMETRY", "GEOGRAPHY", "ROWVERSION", "TIMESTAMP"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// System schemas that contain system objects (sys.*, information_schema.*)
-    /// Note: dbo is NOT included as it's the default user schema, not a system schema
-    /// </summary>
-    private static readonly FrozenSet<string> SystemSchemas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "sys",
-        "information_schema"
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>
     /// Categories for SQL token elements
     /// </summary>
@@ -148,37 +46,6 @@ public static class SqlElementCategorizer
         Schema,
         Table,
         Column
-    }
-
-    /// <summary>
-    /// Tracks parsing state for categorization
-    /// </summary>
-    public class CasingContext
-    {
-        /// <summary>
-        /// Whether we're currently in a FROM/JOIN clause (expecting table names)
-        /// </summary>
-        public bool InTableContext { get; set; }
-
-        /// <summary>
-        /// Whether we're currently after an AS keyword (expecting an alias)
-        /// </summary>
-        public bool AfterAsKeyword { get; set; }
-
-        /// <summary>
-        /// The last schema name seen (for system table detection)
-        /// </summary>
-        public string? LastSchemaName { get; set; }
-
-        /// <summary>
-        /// Whether we're currently in a procedure/function call context (right after EXEC/EXECUTE)
-        /// </summary>
-        public bool InExecuteContext { get; set; }
-
-        /// <summary>
-        /// Whether we've already processed the procedure name after EXEC
-        /// </summary>
-        public bool ExecuteProcedureProcessed { get; set; }
     }
 
     /// <summary>
@@ -228,28 +95,28 @@ public static class SqlElementCategorizer
         // 3. Quoted identifiers → determine from context
         if (text.StartsWith('[') || text.StartsWith('"'))
         {
-            var category = CategorizeQuotedIdentifier(token, previousToken, nextToken, context);
+            var category = CategorizeQuotedIdentifier(previousToken, nextToken, context);
             UpdateContext(token, context);
             return category;
         }
 
         // 4. Built-in functions (check before keywords, as some overlap)
         // Check for parenthesis-free functions first (e.g., CURRENT_TIMESTAMP)
-        if (ParenthesisFreeFunctions.Contains(text))
+        if (BuiltInFunctionRegistry.IsParenthesisFreeFunction(text))
         {
             UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // Check for regular built-in functions that require parentheses
-        if (BuiltInFunctions.Contains(text) && IsFollowedByParenthesis(nextToken))
+        if (BuiltInFunctionRegistry.IsBuiltInFunction(text) && IsFollowedByParenthesis(nextToken))
         {
             UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // 5. Data types
-        if (DataTypes.Contains(text))
+        if (DataTypeRegistry.IsDataType(text))
         {
             UpdateContext(token, context);
             return ElementCategory.DataType;
@@ -348,7 +215,6 @@ public static class SqlElementCategorizer
     /// Categorizes a quoted identifier based on context
     /// </summary>
     private static ElementCategory CategorizeQuotedIdentifier(
-        TSqlParserToken token,
         TSqlParserToken? previousToken,
         TSqlParserToken? nextToken,
         CasingContext context)
@@ -394,7 +260,7 @@ public static class SqlElementCategorizer
         };
 
         // Check if this is a system table (after sys or information_schema)
-        if (baseCategory == ElementCategory.Table && SystemSchemas.Contains(context.LastSchemaName ?? ""))
+        if (baseCategory == ElementCategory.Table && SystemSchemaRegistry.IsSystemSchema(context.LastSchemaName))
         {
             return ElementCategory.SystemTable;
         }
@@ -455,16 +321,6 @@ public static class SqlElementCategorizer
     private static bool IsFollowedByParenthesis(TSqlParserToken? nextToken)
     {
         return nextToken?.Text == "(";
-    }
-
-    /// <summary>
-    /// Checks if the previous token indicates EXEC or EXECUTE context
-    /// </summary>
-    private static bool IsExecuteContext(TSqlParserToken? previousToken)
-    {
-        var text = previousToken?.Text ?? "";
-        return text.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("EXECUTE", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -42,8 +42,8 @@ public static class OperatorSpaceNormalizer
             return input;
         }
 
-        var lineEnding = DetectLineEnding(input);
-        var lines = SplitByLineEnding(input, lineEnding);
+        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
+        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
         var result = new StringBuilder();
 
         for (var i = 0; i < lines.Length; i++)
@@ -367,28 +367,4 @@ public static class OperatorSpaceNormalizer
         }
     }
 
-    private static string DetectLineEnding(string input)
-    {
-        if (input.Contains("\r\n"))
-        {
-            return "\r\n";
-        }
-
-        if (input.Contains('\n'))
-        {
-            return "\n";
-        }
-
-        return "\n";
-    }
-
-    private static string[] SplitByLineEnding(string input, string lineEnding)
-    {
-        if (lineEnding == "\r\n")
-        {
-            return input.Split(["\r\n"], StringSplitOptions.None);
-        }
-
-        return input.Split('\n');
-    }
 }

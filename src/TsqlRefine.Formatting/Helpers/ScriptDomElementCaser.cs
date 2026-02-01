@@ -29,7 +29,7 @@ public static class ScriptDomElementCaser
         var tokens = parser.GetTokenStream(reader, out _).ToList();
 
         var sb = new StringBuilder(input.Length + 16);
-        var context = new SqlElementCategorizer.CasingContext();
+        var context = new CasingContext();
 
         for (int i = 0; i < tokens.Count; i++)
         {
