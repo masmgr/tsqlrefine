@@ -9,7 +9,8 @@ public sealed class FormattingOptionsResolver
 {
     private sealed record EditorConfigFormattingOptions(
         IndentStyle? IndentStyle,
-        int? IndentSize);
+        int? IndentSize,
+        LineEnding? LineEnding);
 
     private sealed record EditorConfigResult(
         EditorConfigFormattingOptions? Options,
@@ -48,7 +49,8 @@ public sealed class FormattingOptionsResolver
             options = options with
             {
                 IndentStyle = editorConfigResult.Options.IndentStyle ?? options.IndentStyle,
-                IndentSize = editorConfigResult.Options.IndentSize ?? options.IndentSize
+                IndentSize = editorConfigResult.Options.IndentSize ?? options.IndentSize,
+                LineEnding = editorConfigResult.Options.LineEnding ?? options.LineEnding
             };
         }
 
@@ -56,7 +58,8 @@ public sealed class FormattingOptionsResolver
         return options with
         {
             IndentStyle = args.IndentStyle ?? options.IndentStyle,
-            IndentSize = args.IndentSize ?? options.IndentSize
+            IndentSize = args.IndentSize ?? options.IndentSize,
+            LineEnding = args.LineEnding ?? options.LineEnding
         };
     }
 
@@ -82,6 +85,7 @@ public sealed class FormattingOptionsResolver
         var insertFinalNewline = new ResolvedFormattingOption<bool>(defaults.InsertFinalNewline, FormattingOptionSource.Default);
         var trimTrailingWhitespace = new ResolvedFormattingOption<bool>(defaults.TrimTrailingWhitespace, FormattingOptionSource.Default);
         var normalizeInlineSpacing = new ResolvedFormattingOption<bool>(defaults.NormalizeInlineSpacing, FormattingOptionSource.Default);
+        var lineEnding = new ResolvedFormattingOption<LineEnding>(defaults.LineEnding, FormattingOptionSource.Default);
 
         string? configPath = null;
         string? editorConfigPath = null;
@@ -126,6 +130,8 @@ public sealed class FormattingOptionsResolver
                     trimTrailingWhitespace = new ResolvedFormattingOption<bool>(configOptions.TrimTrailingWhitespace, FormattingOptionSource.Config);
                 if (configOptions.NormalizeInlineSpacing != defaults.NormalizeInlineSpacing)
                     normalizeInlineSpacing = new ResolvedFormattingOption<bool>(configOptions.NormalizeInlineSpacing, FormattingOptionSource.Config);
+                if (configOptions.LineEnding != defaults.LineEnding)
+                    lineEnding = new ResolvedFormattingOption<LineEnding>(configOptions.LineEnding, FormattingOptionSource.Config);
             }
         }
         catch (ConfigException)
@@ -142,6 +148,8 @@ public sealed class FormattingOptionsResolver
                 indentStyle = new ResolvedFormattingOption<IndentStyle>(editorConfigResult.Options.IndentStyle.Value, FormattingOptionSource.EditorConfig);
             if (editorConfigResult.Options.IndentSize.HasValue)
                 indentSize = new ResolvedFormattingOption<int>(editorConfigResult.Options.IndentSize.Value, FormattingOptionSource.EditorConfig);
+            if (editorConfigResult.Options.LineEnding.HasValue)
+                lineEnding = new ResolvedFormattingOption<LineEnding>(editorConfigResult.Options.LineEnding.Value, FormattingOptionSource.EditorConfig);
         }
 
         // Layer CLI args
@@ -149,6 +157,8 @@ public sealed class FormattingOptionsResolver
             indentStyle = new ResolvedFormattingOption<IndentStyle>(args.IndentStyle.Value, FormattingOptionSource.CliArg);
         if (args.IndentSize.HasValue)
             indentSize = new ResolvedFormattingOption<int>(args.IndentSize.Value, FormattingOptionSource.CliArg);
+        if (args.LineEnding.HasValue)
+            lineEnding = new ResolvedFormattingOption<LineEnding>(args.LineEnding.Value, FormattingOptionSource.CliArg);
 
         return new ResolvedFormattingOptions(
             CompatLevel: compatLevel,
@@ -165,7 +175,8 @@ public sealed class FormattingOptionsResolver
             MaxLineLength: maxLineLength,
             InsertFinalNewline: insertFinalNewline,
             TrimTrailingWhitespace: trimTrailingWhitespace,
-            NormalizeInlineSpacing: normalizeInlineSpacing
+            NormalizeInlineSpacing: normalizeInlineSpacing,
+            LineEnding: lineEnding
         )
         {
             ConfigPath = configPath,
@@ -216,7 +227,8 @@ public sealed class FormattingOptionsResolver
 
             var indentStyleValue = ParseEditorConfigIndentStyle(properties);
             var indentSizeValue = ParseEditorConfigIndentSize(properties);
-            if (indentStyleValue is null && indentSizeValue is null)
+            var lineEndingValue = ParseEditorConfigLineEnding(properties);
+            if (indentStyleValue is null && indentSizeValue is null && lineEndingValue is null)
             {
                 return new EditorConfigResult(null, null);
             }
@@ -225,7 +237,7 @@ public sealed class FormattingOptionsResolver
             var editorConfigPath = FindEditorConfigPath(fullPath);
 
             return new EditorConfigResult(
-                new EditorConfigFormattingOptions(indentStyleValue, indentSizeValue),
+                new EditorConfigFormattingOptions(indentStyleValue, indentSizeValue, lineEndingValue),
                 editorConfigPath);
         }
         catch (Exception)
@@ -285,5 +297,21 @@ public sealed class FormattingOptionsResolver
         }
 
         return int.TryParse(sizeValue, out var parsed) && parsed > 0 ? parsed : null;
+    }
+
+    private static LineEnding? ParseEditorConfigLineEnding(IReadOnlyDictionary<string, string> properties)
+    {
+        if (!properties.TryGetValue("end_of_line", out var value))
+        {
+            return null;
+        }
+
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "lf" => LineEnding.Lf,
+            "crlf" => LineEnding.CrLf,
+            "cr" => LineEnding.Lf, // CR-only is rare, normalize to LF
+            _ => null
+        };
     }
 }

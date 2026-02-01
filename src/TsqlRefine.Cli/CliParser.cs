@@ -98,6 +98,12 @@ public static class CliParser
         Arity = ArgumentArity.ZeroOrOne
     };
 
+    private static Option<string?> CreateLineEndingOption() => new("--line-ending")
+    {
+        Description = "Line ending style (auto/lf/crlf)",
+        Arity = ArgumentArity.ZeroOrOne
+    };
+
     // List-plugins options
     private static Option<bool> CreateVerboseOption() => new("--verbose")
     {
@@ -158,6 +164,7 @@ public static class CliParser
         // Format options
         command.Options.Add(CreateIndentStyleOption());
         command.Options.Add(CreateIndentSizeOption());
+        command.Options.Add(CreateLineEndingOption());
 
         // Paths argument
         command.Arguments.Add(CreatePathsArgument());
@@ -239,6 +246,7 @@ public static class CliParser
         // Format options (to test CLI arg override)
         command.Options.Add(CreateIndentStyleOption());
         command.Options.Add(CreateIndentSizeOption());
+        command.Options.Add(CreateLineEndingOption());
 
         // Paths argument (optional file path for .editorconfig resolution)
         command.Arguments.Add(CreatePathsArgument());
@@ -327,6 +335,7 @@ public static class CliParser
             RulesetPath: GetOptionValue<string?>(parseResult, "--ruleset"),
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
+            LineEnding: ParseLineEnding(GetOptionValue<string?>(parseResult, "--line-ending")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
             ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
             Paths: GetPaths(parseResult),
@@ -397,6 +406,15 @@ public static class CliParser
         {
             "tabs" => IndentStyle.Tabs,
             "spaces" => IndentStyle.Spaces,
+            _ => null
+        };
+
+    private static LineEnding? ParseLineEnding(string? s) =>
+        s?.ToLowerInvariant() switch
+        {
+            "auto" => LineEnding.Auto,
+            "lf" => LineEnding.Lf,
+            "crlf" => LineEnding.CrLf,
             _ => null
         };
 }

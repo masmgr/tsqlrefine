@@ -23,12 +23,16 @@ public static class SqlFormatter
     /// <returns>The formatted SQL code, or empty string if input is null/empty.</returns>
     public static string Format(string sql, FormattingOptions? options = null)
     {
+        options ??= new FormattingOptions();
+
         if (string.IsNullOrEmpty(sql))
         {
-            return string.Empty;
+            // For empty input, apply InsertFinalNewline if configured
+            // Use CRLF as fallback for Auto mode (Windows-preferred)
+            return options.InsertFinalNewline
+                ? GetLineEndingString(options.LineEnding, fallback: "\r\n")
+                : string.Empty;
         }
-
-        options ??= new FormattingOptions();
 
         // Apply granular element-based casing
         var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: options.CompatLevel);
@@ -45,5 +49,16 @@ public static class SqlFormatter
         }
 
         return inlineNormalized;
+    }
+
+    private static string GetLineEndingString(LineEnding setting, string fallback)
+    {
+        return setting switch
+        {
+            LineEnding.CrLf => "\r\n",
+            LineEnding.Lf => "\n",
+            LineEnding.Auto => fallback,
+            _ => fallback
+        };
     }
 }

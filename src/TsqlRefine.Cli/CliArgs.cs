@@ -17,6 +17,7 @@ public sealed record CliArgs(
     string? RulesetPath,
     IndentStyle? IndentStyle,
     int? IndentSize,
+    LineEnding? LineEnding,
     bool Verbose,
     bool ShowSources,
     IReadOnlyList<string> Paths,

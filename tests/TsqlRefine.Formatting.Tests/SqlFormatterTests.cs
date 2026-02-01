@@ -6,17 +6,51 @@ namespace TsqlRefine.Formatting.Tests;
 public class SqlFormatterTests
 {
     [Fact]
-    public void Format_EmptyString_ReturnsEmpty()
+    public void Format_EmptyString_WithDefaultOptions_ReturnsCRLF()
     {
+        // Default InsertFinalNewline=true with Auto mode falls back to CRLF
         var result = SqlFormatter.Format("");
+        Assert.Equal("\r\n", result);
+    }
+
+    [Fact]
+    public void Format_EmptyString_WithNoFinalNewline_ReturnsEmpty()
+    {
+        var options = new FormattingOptions { InsertFinalNewline = false };
+        var result = SqlFormatter.Format("", options);
         Assert.Equal("", result);
     }
 
     [Fact]
-    public void Format_NullString_ReturnsEmpty()
+    public void Format_NullString_WithDefaultOptions_ReturnsCRLF()
     {
+        // Default InsertFinalNewline=true with Auto mode falls back to CRLF
         var result = SqlFormatter.Format(null!);
+        Assert.Equal("\r\n", result);
+    }
+
+    [Fact]
+    public void Format_NullString_WithNoFinalNewline_ReturnsEmpty()
+    {
+        var options = new FormattingOptions { InsertFinalNewline = false };
+        var result = SqlFormatter.Format(null!, options);
         Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void Format_EmptyString_WithExplicitLf_ReturnsLf()
+    {
+        var options = new FormattingOptions { LineEnding = LineEnding.Lf };
+        var result = SqlFormatter.Format("", options);
+        Assert.Equal("\n", result);
+    }
+
+    [Fact]
+    public void Format_EmptyString_WithExplicitCrLf_ReturnsCrLf()
+    {
+        var options = new FormattingOptions { LineEnding = LineEnding.CrLf };
+        var result = SqlFormatter.Format("", options);
+        Assert.Equal("\r\n", result);
     }
 
     [Fact]

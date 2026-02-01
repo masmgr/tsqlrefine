@@ -16,6 +16,9 @@ public static class WhitespaceNormalizer
     /// <returns>SQL text with normalized whitespace</returns>
     public static string Normalize(string input, FormattingOptions options)
     {
+        // Resolve output line ending based on setting and input detection
+        var lineEnding = ResolveLineEnding(input, options.LineEnding);
+
         var sb = new StringBuilder(input.Length + 16);
         var line = new StringBuilder();
         var tracker = new ProtectedRegionTracker();
@@ -27,7 +30,7 @@ public static class WhitespaceNormalizer
             if (TryConsumeNewline(input, ref i, c))
             {
                 AppendProcessedLine(sb, line, options, tracker);
-                sb.Append('\n');
+                sb.Append(lineEnding);
                 line.Clear();
                 continue;
             }
@@ -42,13 +45,53 @@ public static class WhitespaceNormalizer
 
         var result = sb.ToString();
 
-        // Apply final newline option
-        if (options.InsertFinalNewline && !result.EndsWith('\n'))
+        // Apply final newline option using the resolved line ending
+        if (options.InsertFinalNewline && !EndsWithLineEnding(result, lineEnding))
         {
-            result += '\n';
+            result += lineEnding;
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Resolves the output line ending based on the setting and input content.
+    /// </summary>
+    internal static string ResolveLineEnding(string input, LineEnding setting)
+    {
+        return setting switch
+        {
+            LineEnding.CrLf => "\r\n",
+            LineEnding.Lf => "\n",
+            LineEnding.Auto => DetectLineEnding(input),
+            _ => "\r\n"
+        };
+    }
+
+    /// <summary>
+    /// Detects the line ending used in the input string.
+    /// </summary>
+    private static string DetectLineEnding(string input)
+    {
+        // Check for CRLF first (before checking for LF alone)
+        if (input.Contains("\r\n"))
+        {
+            return "\r\n";
+        }
+
+        if (input.Contains('\n'))
+        {
+            return "\n";
+        }
+
+        // CR-only is rare; treat as CRLF (Windows-preferred)
+        // Also, if no line ending is found, default to CRLF (Windows-preferred)
+        return "\r\n";
+    }
+
+    private static bool EndsWithLineEnding(string text, string lineEnding)
+    {
+        return text.EndsWith(lineEnding, StringComparison.Ordinal);
     }
 
     private static bool TryConsumeNewline(string input, ref int index, char current)

@@ -7,10 +7,11 @@ namespace TsqlRefine.Formatting.Tests.Helpers;
 public class WhitespaceNormalizerTests
 {
     // Default options have InsertFinalNewline=true and TrimTrailingWhitespace=true
-    private readonly FormattingOptions _defaultOptions = new();
+    // Use LF explicitly for predictable test behavior
+    private readonly FormattingOptions _defaultOptions = new() { LineEnding = LineEnding.Lf };
 
     // Options without final newline for testing specific behaviors
-    private readonly FormattingOptions _noFinalNewlineOptions = new() { InsertFinalNewline = false };
+    private readonly FormattingOptions _noFinalNewlineOptions = new() { InsertFinalNewline = false, LineEnding = LineEnding.Lf };
 
     #region Basic Input Processing
 
@@ -202,13 +203,26 @@ public class WhitespaceNormalizerTests
         var input = "SELECT *\nFROM Users\nWHERE id = 1";
         var result = WhitespaceNormalizer.Normalize(input, options);
         Assert.Contains("\n", result);
+        Assert.DoesNotContain("\r", result); // Auto mode detects LF and uses LF
         Assert.Equal(2, result.Count(c => c == '\n'));
     }
 
     [Fact]
-    public void Normalize_CRLF_ConvertsToLF()
+    public void Normalize_CRLF_PreservesCRLF()
     {
+        // Auto mode detects CRLF and preserves it
         var options = new FormattingOptions { InsertFinalNewline = false };
+        var input = "SELECT *\r\nFROM Users\r\nWHERE id = 1";
+        var result = WhitespaceNormalizer.Normalize(input, options);
+        Assert.Contains("\r\n", result);
+        Assert.Equal(2, CountOccurrences(result, "\r\n"));
+    }
+
+    [Fact]
+    public void Normalize_CRLF_WithExplicitLf_ConvertsToLF()
+    {
+        // Explicit LF mode converts CRLF to LF
+        var options = new FormattingOptions { InsertFinalNewline = false, LineEnding = LineEnding.Lf };
         var input = "SELECT *\r\nFROM Users\r\nWHERE id = 1";
         var result = WhitespaceNormalizer.Normalize(input, options);
         Assert.DoesNotContain("\r", result);
@@ -216,13 +230,47 @@ public class WhitespaceNormalizerTests
     }
 
     [Fact]
-    public void Normalize_MixedLineEndings_NormalizesToLF()
+    public void Normalize_LF_WithExplicitCrLf_ConvertsToCRLF()
     {
+        // Explicit CRLF mode converts LF to CRLF
+        var options = new FormattingOptions { InsertFinalNewline = false, LineEnding = LineEnding.CrLf };
+        var input = "SELECT *\nFROM Users\nWHERE id = 1";
+        var result = WhitespaceNormalizer.Normalize(input, options);
+        Assert.Contains("\r\n", result);
+        Assert.Equal(2, CountOccurrences(result, "\r\n"));
+    }
+
+    [Fact]
+    public void Normalize_MixedLineEndings_NormalizesToDetectedCRLF()
+    {
+        // Auto mode: CRLF appears first, so output uses CRLF
         var options = new FormattingOptions { InsertFinalNewline = false };
         var input = "SELECT *\r\nFROM Users\nWHERE id = 1";
         var result = WhitespaceNormalizer.Normalize(input, options);
-        Assert.DoesNotContain("\r", result);
-        Assert.Equal(2, result.Count(c => c == '\n'));
+        Assert.Contains("\r\n", result); // CRLF detected from first occurrence
+        Assert.Equal(2, CountOccurrences(result, "\r\n"));
+    }
+
+    [Fact]
+    public void Normalize_NoLineEndings_FallbackToCRLF()
+    {
+        // Auto mode with no line endings falls back to CRLF (Windows-preferred)
+        var options = new FormattingOptions { InsertFinalNewline = true };
+        var input = "SELECT * FROM Users";
+        var result = WhitespaceNormalizer.Normalize(input, options);
+        Assert.EndsWith("\r\n", result);
+    }
+
+    private static int CountOccurrences(string text, string pattern)
+    {
+        var count = 0;
+        var index = 0;
+        while ((index = text.IndexOf(pattern, index, StringComparison.Ordinal)) != -1)
+        {
+            count++;
+            index += pattern.Length;
+        }
+        return count;
     }
 
     #endregion

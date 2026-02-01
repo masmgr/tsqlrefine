@@ -43,7 +43,8 @@ public sealed record ResolvedFormattingOptions(
     ResolvedFormattingOption<int> MaxLineLength,
     ResolvedFormattingOption<bool> InsertFinalNewline,
     ResolvedFormattingOption<bool> TrimTrailingWhitespace,
-    ResolvedFormattingOption<bool> NormalizeInlineSpacing
+    ResolvedFormattingOption<bool> NormalizeInlineSpacing,
+    ResolvedFormattingOption<LineEnding> LineEnding
 )
 {
     /// <summary>

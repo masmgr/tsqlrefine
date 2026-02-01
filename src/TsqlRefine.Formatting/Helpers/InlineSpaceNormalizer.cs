@@ -37,28 +37,21 @@ public static class InlineSpaceNormalizer
             return input;
         }
 
-        // Detect line ending style (\r\n or \n)
-        var hasWindowsLineEndings = input.Contains("\r\n");
-        var lineEnding = hasWindowsLineEndings ? "\r\n" : "\n";
+        // Detect the line ending used in input (after WhitespaceNormalizer processing)
+        // WhitespaceNormalizer already normalizes to consistent line endings,
+        // so we just need to detect and preserve them
+        var lineEnding = DetectLineEnding(input);
 
-        // Split by newlines (handle both \r\n and \n)
-        var lines = input.Split('\n');
+        // Split by the detected line ending
+        var lines = SplitByLineEnding(input, lineEnding);
         var result = new StringBuilder();
 
         for (var i = 0; i < lines.Length; i++)
         {
-            var line = lines[i];
-
-            // Handle \r\n line endings - remove \r if present
-            if (line.Length > 0 && line[^1] == '\r')
-            {
-                line = line[..^1];
-            }
-
-            var processedLine = NormalizeLine(line);
+            var processedLine = NormalizeLine(lines[i]);
             result.Append(processedLine);
 
-            // Add newline back if not the last line (preserve original line ending style)
+            // Add newline back if not the last line
             if (i < lines.Length - 1)
             {
                 result.Append(lineEnding);
@@ -179,5 +172,34 @@ public static class InlineSpaceNormalizer
         }
 
         return output.ToString();
+    }
+
+    private static string DetectLineEnding(string input)
+    {
+        // CRLF takes precedence over LF
+        if (input.Contains("\r\n"))
+        {
+            return "\r\n";
+        }
+
+        if (input.Contains('\n'))
+        {
+            return "\n";
+        }
+
+        // Default to LF for single-line or no newlines (will be consistent with input)
+        return "\n";
+    }
+
+    private static string[] SplitByLineEnding(string input, string lineEnding)
+    {
+        // For CRLF, split by \r\n directly
+        if (lineEnding == "\r\n")
+        {
+            return input.Split(["\r\n"], StringSplitOptions.None);
+        }
+
+        // For LF, split by \n
+        return input.Split('\n');
     }
 }

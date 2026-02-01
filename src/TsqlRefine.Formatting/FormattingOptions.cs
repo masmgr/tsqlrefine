@@ -29,6 +29,16 @@ public enum CommaStyle
     Leading
 }
 
+public enum LineEnding
+{
+    /// <summary>Auto-detect from input, fallback to CRLF (Windows-preferred)</summary>
+    Auto,
+    /// <summary>Unix style (LF)</summary>
+    Lf,
+    /// <summary>Windows style (CRLF)</summary>
+    CrLf
+}
+
 public sealed record FormattingOptions
 {
     /// <summary>SQL Server compatibility level (100=2008, 110=2012, 120=2014, 150=2019, 160=2022). Default: 150</summary>
@@ -96,5 +106,8 @@ public sealed record FormattingOptions
 
     /// <summary>Normalize inline spacing (collapse duplicates, space after commas)</summary>
     public bool NormalizeInlineSpacing { get; init; } = true;
+
+    /// <summary>Line ending style for output (Auto = detect from input, fallback to CRLF)</summary>
+    public LineEnding LineEnding { get; init; } = LineEnding.Auto;
 }
 
