@@ -83,6 +83,9 @@
     { "id": "disallow-select-distinct", "enabled": true },
     { "id": "catch-swallowing", "enabled": true },
     { "id": "ban-query-hints", "enabled": true },
-    { "id": "transaction-without-commit-or-rollback", "enabled": true }
+    { "id": "transaction-without-commit-or-rollback", "enabled": true },
+    { "id": "normalize-execute-keyword", "enabled": true },
+    { "id": "normalize-procedure-keyword", "enabled": true },
+    { "id": "normalize-transaction-keyword", "enabled": true }
   ]
 }

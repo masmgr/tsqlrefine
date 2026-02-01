@@ -82,6 +82,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new RequireBeginEndForIfWithControlflowExceptionRule(),
         new RequireExplicitJoinTypeRule(),
         new BanLegacyJoinSyntaxRule(),
+        new NormalizeExecuteKeywordRule(),
+        new NormalizeProcedureKeywordRule(),
+        new NormalizeTransactionKeywordRule(),
 
         // === Style (Semantic) ===
         new MultiTableAliasRule(),
