@@ -15,18 +15,4 @@ public sealed class OutputWriter
     {
         await stdout.WriteLineAsync(JsonSerializer.Serialize(data, JsonDefaults.Options));
     }
-
-    public async Task<int?> ValidateFormatFixOptionsAsync(
-        CliArgs args,
-        int inputCount,
-        bool outputJson,
-        TextWriter stderr)
-    {
-        if (!outputJson && !args.Write && inputCount > 1)
-        {
-            return await WriteErrorAsync(stderr, "Multiple inputs require --write.");
-        }
-
-        return null;
-    }
 }

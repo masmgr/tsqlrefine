@@ -78,9 +78,10 @@ tsqlrefine format [options] [paths...]
 | `--stdin` | 標準入力から読み取り |
 | `--output <text\|json>` | 出力形式（既定: `text`） |
 | `--compat-level <100-160>` | SQL Server 互換レベル |
-| `--write` | ファイルを上書き |
 | `--indent-style <tabs\|spaces>` | インデントの種類 |
 | `--indent-size <n>` | インデント幅 |
+
+> **Note**: ファイルを指定した場合、整形結果は自動的にファイルに書き込まれます。標準入力 (`--stdin`) を使用した場合は、結果は標準出力に出力されます。
 
 #### fix
 
@@ -99,7 +100,8 @@ tsqlrefine fix [options] [paths...]
 | `--preset <name>` | プリセット選択 |
 | `--ruleset <path>` | カスタムルールセットファイル |
 | `--rule <id>` | 適用するルールID |
-| `--write` | ファイルを上書き |
+
+> **Note**: ファイルを指定した場合、修正結果は自動的にファイルに書き込まれます。標準入力 (`--stdin`) を使用した場合は、結果は標準出力に出力されます。
 
 #### init
 
@@ -155,7 +157,7 @@ tsqlrefine list-plugins [options]
 
 - BOM 優先。BOM が無い場合は `UTF.Unknown` による推定
 - `--detect-encoding` を指定しない場合、**読み込み**は UTF-8 として解釈
-- `format --write` / `fix --write` では `--detect-encoding` の有無に関わらず、入力ファイルの文字コード（BOM 有無含む）を保持
+- `format` / `fix` では `--detect-encoding` の有無に関わらず、入力ファイルの文字コード（BOM 有無含む）を保持
 
 #### フォーマット
 
@@ -163,11 +165,11 @@ tsqlrefine list-plugins [options]
 - `--indent-style` / `--indent-size` は `.editorconfig` より優先
 - 不変領域: **コメント / 文字列 / 括弧内改行は変更しない**
 
-#### fix コマンド
+#### fix / format コマンドの出力
 
-- `--write` が未指定のときは stdout に修正後 SQL を出力
-- 複数入力の場合は `--write` が必要
-- `--output json` 指定時は診断結果のみを出力（`--write` と組み合わせ可能）
+- ファイル入力の場合: 結果は自動的にファイルに書き込まれる
+- `--stdin` 入力の場合: 結果は stdout に出力
+- `--output json` 指定時は診断結果のみを出力
 
 ---
 

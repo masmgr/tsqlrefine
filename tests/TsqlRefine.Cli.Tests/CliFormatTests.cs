@@ -5,13 +5,13 @@ namespace TsqlRefine.Cli.Tests;
 public sealed class CliFormatTests
 {
     [Fact]
-    public async Task Format_WhenRun_UppercasesKeywordsAndNormalizesWhitespace()
+    public async Task Format_OutputsToStdoutForStdin()
     {
         var stdin = new StringReader("select *\r\n\tfrom t\r\nwhere id=1  ");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var code = await CliApp.RunAsync(new[] { "format", "--stdin" }, stdin, stdout, stderr);
+        var code = await CliApp.RunAsync(["format", "--stdin"], stdin, stdout, stderr);
 
         Assert.Equal(0, code);
         Assert.Equal("SELECT *\n    FROM T\nWHERE ID=1\n", stdout.ToString());
@@ -25,12 +25,45 @@ public sealed class CliFormatTests
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        var code = await CliApp.RunAsync(new[] { "format", "--stdin" }, stdin, stdout, stderr);
+        var code = await CliApp.RunAsync(["format", "--stdin"], stdin, stdout, stderr);
 
         Assert.Equal(0, code);
         // Column alias 's' becomes 'S' with default column casing (upper)
         Assert.Equal("SELECT '--select' AS S -- select\nSELECT [from] FROM T;\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Format_WritesToFileWhenFileInput()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"tsqlrefine-tests-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var sqlPath = Path.Combine(tempDir, "sample.sql");
+            await File.WriteAllTextAsync(sqlPath, "select * from t");
+
+            var stdout = new StringWriter();
+            var stderr = new StringWriter();
+
+            var code = await CliApp.RunAsync(["format", sqlPath], TextReader.Null, stdout, stderr);
+
+            Assert.Equal(0, code);
+            // stdout should be empty (file output, not stdout)
+            Assert.Empty(stdout.ToString());
+            Assert.Equal(string.Empty, stderr.ToString());
+            // File should be updated
+            var content = await File.ReadAllTextAsync(sqlPath);
+            Assert.Equal("SELECT * FROM T\n", content);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
     }
 
     [Fact]
@@ -44,17 +77,21 @@ public sealed class CliFormatTests
             var editorConfigPath = Path.Combine(tempDir, ".editorconfig");
             var sqlPath = Path.Combine(tempDir, "sample.sql");
 
-            File.WriteAllText(editorConfigPath, "root = true\n[*.sql]\nindent_style = tab\nindent_size = 2\n");
-            File.WriteAllText(sqlPath, "select *\n    from t");
+            await File.WriteAllTextAsync(editorConfigPath, "root = true\n[*.sql]\nindent_style = tab\nindent_size = 2\n");
+            await File.WriteAllTextAsync(sqlPath, "select *\n    from t");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            var code = await CliApp.RunAsync(new[] { "format", sqlPath }, TextReader.Null, stdout, stderr);
+            var code = await CliApp.RunAsync(["format", sqlPath], TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            Assert.Equal("SELECT *\n\t\tFROM T\n", stdout.ToString());
+            // stdout should be empty (file output, not stdout)
+            Assert.Empty(stdout.ToString());
             Assert.Equal(string.Empty, stderr.ToString());
+            // File should be updated with tab indentation
+            var content = await File.ReadAllTextAsync(sqlPath);
+            Assert.Equal("SELECT *\n\t\tFROM T\n", content);
         }
         finally
         {

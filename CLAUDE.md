@@ -49,13 +49,11 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint --output json file.sq
 # Lint with severity filtering
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint --severity error file.sql
 
-# Format SQL
+# Format SQL (writes to file automatically)
 dotnet run --project src/TsqlRefine.Cli -c Release -- format file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- format --write file.sql  # in-place
 
-# Auto-fix issues
+# Auto-fix issues (writes to file automatically)
 dotnet run --project src/TsqlRefine.Cli -c Release -- fix file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- fix --write file.sql    # apply fixes
 
 # Initialize configuration
 dotnet run --project src/TsqlRefine.Cli -c Release -- init
@@ -252,7 +250,6 @@ Commands:
 | `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - | - |
 | `--ruleset` | ✓ | - | ✓ | - | - | - | - | - |
 | `--rule` | - | - | ✓ | - | - | - | - | - |
-| `--write` | - | ✓ | ✓ | - | - | - | - | - |
 | `--indent-style` | - | ✓ | - | - | - | ✓ | - | - |
 | `--indent-size` | - | ✓ | - | - | - | ✓ | - | - |
 | `--show-sources` | - | - | - | - | - | ✓ | - | - |

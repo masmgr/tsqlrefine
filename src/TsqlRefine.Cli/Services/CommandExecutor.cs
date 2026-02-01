@@ -186,16 +186,12 @@ public sealed class CommandExecutor
             return errorCode!.Value;
         }
 
-        var optionError = await _outputWriter.ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson: false, stderr);
-        if (optionError.HasValue)
-            return optionError.Value;
-
         foreach (var input in read.Inputs)
         {
             var options = _formattingOptionsResolver.ResolveFormattingOptions(args, input);
             var formatted = SqlFormatter.Format(input.Text, options);
 
-            if (args.Write && input.FilePath != "<stdin>")
+            if (input.FilePath != "<stdin>")
             {
                 var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
                     ? resolved
@@ -220,9 +216,6 @@ public sealed class CommandExecutor
         }
 
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
-        var optionError = await _outputWriter.ValidateFormatFixOptionsAsync(args, read.Inputs.Count, outputJson, stderr);
-        if (optionError.HasValue)
-            return optionError.Value;
 
         var config = _configLoader.LoadConfig(args);
         var rules = _configLoader.LoadRules(args, config, stderr);
@@ -250,7 +243,7 @@ public sealed class CommandExecutor
         {
             foreach (var file in result.Files)
             {
-                if (args.Write && file.FilePath != "<stdin>")
+                if (file.FilePath != "<stdin>")
                 {
                     if (!string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal))
                     {

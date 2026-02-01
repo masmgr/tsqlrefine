@@ -15,24 +15,26 @@ public class FormatterOptionsTests
             var configPath = Path.Combine(tempDir, "tsqlrefine.json");
             var sqlPath = Path.Combine(tempDir, "test.sql");
 
-            File.WriteAllText(configPath, @"{
+            await File.WriteAllTextAsync(configPath, @"{
   ""formatting"": {
     ""keywordCasing"": ""lower""
   }
 }");
-            File.WriteAllText(sqlPath, "SELECT * FROM users WHERE id = 1");
+            await File.WriteAllTextAsync(sqlPath, "SELECT * FROM users WHERE id = 1");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "format", "--config", configPath, sqlPath },
+                ["format", "--config", configPath, sqlPath],
                 TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            Assert.Contains("select", stdout.ToString());
-            Assert.Contains("from", stdout.ToString());
-            Assert.Contains("where", stdout.ToString());
+            // File input writes to file, so read from file
+            var output = await File.ReadAllTextAsync(sqlPath);
+            Assert.Contains("select", output);
+            Assert.Contains("from", output);
+            Assert.Contains("where", output);
         }
         finally
         {
@@ -51,23 +53,24 @@ public class FormatterOptionsTests
             var configPath = Path.Combine(tempDir, "tsqlrefine.json");
             var sqlPath = Path.Combine(tempDir, "test.sql");
 
-            File.WriteAllText(configPath, @"{
+            await File.WriteAllTextAsync(configPath, @"{
   ""formatting"": {
     ""tableCasing"": ""upper"",
     ""columnCasing"": ""upper""
   }
 }");
-            File.WriteAllText(sqlPath, "SELECT id, name FROM users");
+            await File.WriteAllTextAsync(sqlPath, "SELECT id, name FROM users");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "format", "--config", configPath, sqlPath },
+                ["format", "--config", configPath, sqlPath],
                 TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            var output = stdout.ToString();
+            // File input writes to file, so read from file
+            var output = await File.ReadAllTextAsync(sqlPath);
             Assert.Contains("ID", output);
             Assert.Contains("NAME", output);
             Assert.Contains("USERS", output);
@@ -89,22 +92,23 @@ public class FormatterOptionsTests
             var configPath = Path.Combine(tempDir, "tsqlrefine.json");
             var sqlPath = Path.Combine(tempDir, "test.sql");
 
-            File.WriteAllText(configPath, @"{
+            await File.WriteAllTextAsync(configPath, @"{
   ""formatting"": {
     ""insertFinalNewline"": false
   }
 }");
-            File.WriteAllText(sqlPath, "SELECT * FROM users");
+            await File.WriteAllTextAsync(sqlPath, "SELECT * FROM users");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "format", "--config", configPath, sqlPath },
+                ["format", "--config", configPath, sqlPath],
                 TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            var output = stdout.ToString();
+            // File input writes to file, so read from file
+            var output = await File.ReadAllTextAsync(sqlPath);
             Assert.False(output.EndsWith('\n'), "Output should not end with newline when insertFinalNewline is false");
         }
         finally
@@ -124,23 +128,24 @@ public class FormatterOptionsTests
             var configPath = Path.Combine(tempDir, "tsqlrefine.json");
             var sqlPath = Path.Combine(tempDir, "test.sql");
 
-            File.WriteAllText(configPath, @"{
+            await File.WriteAllTextAsync(configPath, @"{
   ""formatting"": {
     ""trimTrailingWhitespace"": false,
     ""insertFinalNewline"": false
   }
 }");
-            File.WriteAllText(sqlPath, "SELECT *  \nFROM users  ");
+            await File.WriteAllTextAsync(sqlPath, "SELECT *  \nFROM users  ");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "format", "--config", configPath, sqlPath },
+                ["format", "--config", configPath, sqlPath],
                 TextReader.Null, stdout, stderr);
 
             Assert.Equal(0, code);
-            var output = stdout.ToString();
+            // File input writes to file, so read from file
+            var output = await File.ReadAllTextAsync(sqlPath);
             // Note: Trailing whitespace preservation may be partial due to formatter logic
             // This test verifies the option is being read
             Assert.Contains("SELECT", output);

@@ -35,23 +35,31 @@ public sealed class CliMultipleFilesTests
     }
 
     [Fact]
-    public async Task Format_MultipleFilesWithoutWrite_ReturnsError()
+    public async Task Format_MultipleFiles_WritesToAllFiles()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
 
         try
         {
             Directory.CreateDirectory(tempDir);
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "file1.sql"), "SELECT 1;");
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "file2.sql"), "SELECT 2;");
+            var file1 = Path.Combine(tempDir, "file1.sql");
+            var file2 = Path.Combine(tempDir, "file2.sql");
+            await File.WriteAllTextAsync(file1, "select 1;");
+            await File.WriteAllTextAsync(file2, "select 2;");
 
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            var code = await CliApp.RunAsync(new[] { "format", tempDir }, TextReader.Null, stdout, stderr);
+            var code = await CliApp.RunAsync(["format", tempDir], TextReader.Null, stdout, stderr);
 
-            Assert.Equal(ExitCodes.Fatal, code);
-            Assert.Contains("--write", stderr.ToString());
+            Assert.Equal(0, code);
+            // stdout should be empty (file output, not stdout)
+            Assert.Empty(stdout.ToString());
+            Assert.Empty(stderr.ToString());
+
+            // Verify files are formatted
+            Assert.Contains("SELECT 1", await File.ReadAllTextAsync(file1));
+            Assert.Contains("SELECT 2", await File.ReadAllTextAsync(file2));
         }
         finally
         {

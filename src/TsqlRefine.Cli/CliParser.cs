@@ -53,11 +53,6 @@ public static class CliParser
         Arity = ArgumentArity.ZeroOrOne
     };
 
-    private static Option<bool> CreateWriteOption() => new("--write")
-    {
-        Description = "Apply changes in-place"
-    };
-
     // Analysis options
     private static Option<string?> CreateCompatLevelOption() => new("--compat-level")
     {
@@ -156,7 +151,6 @@ public static class CliParser
 
         // Output options
         command.Options.Add(CreateOutputOption());
-        command.Options.Add(CreateWriteOption());
 
         // Analysis options
         command.Options.Add(CreateCompatLevelOption());
@@ -182,7 +176,6 @@ public static class CliParser
 
         // Output options
         command.Options.Add(CreateOutputOption());
-        command.Options.Add(CreateWriteOption());
 
         // Analysis options
         command.Options.Add(CreateCompatLevelOption());
@@ -332,7 +325,6 @@ public static class CliParser
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
             CompatLevel: ParseInt(GetOptionValue<string?>(parseResult, "--compat-level")),
             RulesetPath: GetOptionValue<string?>(parseResult, "--ruleset"),
-            Write: GetOptionValue<bool>(parseResult, "--write"),
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
