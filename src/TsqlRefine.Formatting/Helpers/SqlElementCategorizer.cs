@@ -64,6 +64,15 @@ public static class SqlElementCategorizer
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Built-in functions that do not require parentheses (niladic functions).
+    /// These are treated as functions even without following parentheses.
+    /// </summary>
+    private static readonly FrozenSet<string> ParenthesisFreeFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "CURRENT_TIMESTAMP", "CURRENT_USER", "SESSION_USER", "SYSTEM_USER", "USER"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// T-SQL data type keywords
     /// </summary>
     private static readonly FrozenSet<string> DataTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -225,6 +234,14 @@ public static class SqlElementCategorizer
         }
 
         // 4. Built-in functions (check before keywords, as some overlap)
+        // Check for parenthesis-free functions first (e.g., CURRENT_TIMESTAMP)
+        if (ParenthesisFreeFunctions.Contains(text))
+        {
+            UpdateContext(token, context);
+            return ElementCategory.BuiltInFunction;
+        }
+
+        // Check for regular built-in functions that require parentheses
         if (BuiltInFunctions.Contains(text) && IsFollowedByParenthesis(nextToken))
         {
             UpdateContext(token, context);
