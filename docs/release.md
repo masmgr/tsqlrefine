@@ -1,215 +1,215 @@
-# リリース手順
+# Release Procedure
 
-このドキュメントでは、tsqlrefineの新しいバージョンをリリースする手順を説明します。
+This document describes the procedure for releasing a new version of tsqlrefine.
 
-## バージョニング方針
+## Versioning Policy
 
-tsqlrefineは[Semantic Versioning 2.0.0](https://semver.org/)に従います。
+tsqlrefine follows [Semantic Versioning 2.0.0](https://semver.org/).
 
-### バージョン番号の形式
+### Version Number Format
 
-- **MAJOR.MINOR.PATCH** (例: `1.0.0`)
-- **MAJOR.MINOR.PATCH-prerelease** (例: `0.1.0-alpha`, `1.0.0-beta.1`)
+- **MAJOR.MINOR.PATCH** (e.g., `1.0.0`)
+- **MAJOR.MINOR.PATCH-prerelease** (e.g., `0.1.0-alpha`, `1.0.0-beta.1`)
 
-### バージョンの更新ルール
+### Version Update Rules
 
-- **MAJOR**: 後方互換性のない変更
-  - PluginSDK APIの破壊的変更
-  - CLIの引数や出力形式の破壊的変更
-  - 設定ファイル形式の破壊的変更
+- **MAJOR**: Breaking changes
+  - Breaking changes to PluginSDK API
+  - Breaking changes to CLI arguments or output format
+  - Breaking changes to configuration file format
 
-- **MINOR**: 後方互換性のある機能追加
-  - 新しいルールの追加
-  - 新しいCLIコマンドやオプションの追加
-  - 新しいAPI機能の追加（PluginSDKの拡張）
+- **MINOR**: Backward-compatible feature additions
+  - Adding new rules
+  - Adding new CLI commands or options
+  - Adding new API features (PluginSDK extensions)
 
-- **PATCH**: 後方互換性のあるバグ修正
-  - ルールの誤検知修正
-  - フォーマッタのバグ修正
-  - パフォーマンス改善
+- **PATCH**: Backward-compatible bug fixes
+  - Fixing rule false positives
+  - Fixing formatter bugs
+  - Performance improvements
 
-### プレリリース版
+### Pre-release Versions
 
-- **alpha**: 開発中の不安定版（破壊的変更の可能性あり）
-- **beta**: 機能凍結済み、テスト中（バグ修正のみ）
-- **rc**: リリース候補版（重大なバグ修正のみ）
+- **alpha**: Unstable development version (may have breaking changes)
+- **beta**: Feature-frozen, under testing (bug fixes only)
+- **rc**: Release candidate (critical bug fixes only)
 
-## リリース手順
+## Release Procedure
 
-### 1. バージョン番号の決定
+### 1. Determine Version Number
 
-次のリリースのバージョン番号を決定します。
+Determine the version number for the next release.
 
-- 現在のバージョンは `Directory.Build.props` の `VersionPrefix` で確認
-- 変更内容に基づいて、適切なバージョン番号を決定
+- Check current version in `Directory.Build.props` under `VersionPrefix`
+- Determine appropriate version number based on changes
 
-### 2. バージョン番号の更新
+### 2. Update Version Number
 
-`Directory.Build.props` を編集してバージョン番号を更新します。
+Edit `Directory.Build.props` to update the version number.
 
 ```xml
 <VersionPrefix>0.2.0</VersionPrefix>
 <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha</VersionSuffix>
 ```
 
-プレリリース版の場合:
-- `VersionSuffix` を `alpha`, `beta`, `rc.1` などに設定
+For pre-release versions:
+- Set `VersionSuffix` to `alpha`, `beta`, `rc.1`, etc.
 
-安定版リリースの場合:
-- `VersionSuffix` を削除するか、空文字列に設定
-- または、ビルド時に `/p:VersionSuffix=` を指定
+For stable releases:
+- Remove `VersionSuffix` or set to empty string
+- Or specify `/p:VersionSuffix=` at build time
 
-### 3. CHANGELOGの更新
+### 3. Update CHANGELOG
 
-`CHANGELOG.md` を作成・更新して、リリース内容を記録します。
+Create/update `CHANGELOG.md` to record release contents.
 
 ```markdown
 ## [0.2.0] - 2026-01-29
 
 ### Added
-- 新しいルール: `require-schema-prefix`
-- `--parallel` オプションで並列処理をサポート
+- New rule: `require-schema-prefix`
+- `--parallel` option for parallel processing support
 
 ### Changed
-- パフォーマンス改善: 大規模SQLファイルの解析速度が2倍に
+- Performance improvement: 2x faster analysis for large SQL files
 
 ### Fixed
-- `avoid-select-star` ルールのCTE内での誤検知を修正
+- Fixed false positive for `avoid-select-star` rule inside CTEs
 ```
 
-### 4. コミットとタグの作成
+### 4. Create Commit and Tag
 
 ```bash
-# 変更をコミット
+# Commit changes
 git add Directory.Build.props CHANGELOG.md
 git commit -m "chore: bump version to 0.2.0"
 
-# タグを作成（v プレフィックス必須）
+# Create tag (v prefix required)
 git tag v0.2.0
 
-# リモートにプッシュ
+# Push to remote
 git push origin main
 git push origin v0.2.0
 ```
 
-### 5. GitHub Actionsによる自動リリース
+### 5. Automated Release via GitHub Actions
 
-タグをプッシュすると、GitHub Actionsが自動的に以下を実行します:
+Pushing a tag automatically triggers GitHub Actions to:
 
-1. ビルドとテスト
-2. NuGetパッケージの作成
-3. GitHub Releaseの作成（パッケージファイルを添付）
-4. NuGet.orgへの公開（安定版のみ、プレリリース版は除外）
+1. Build and test
+2. Create NuGet packages
+3. Create GitHub Release (with package files attached)
+4. Publish to NuGet.org (stable versions only, pre-releases excluded)
 
-リリースの進行状況は以下で確認できます:
+Check release progress at:
 - GitHub Actions: https://github.com/imasa/tsqlrefine/actions
 
-### 6. リリースノートの編集
+### 6. Edit Release Notes
 
-GitHub Releaseが作成された後、必要に応じてリリースノートを編集します:
+After GitHub Release is created, edit release notes if needed:
 
-1. https://github.com/imasa/tsqlrefine/releases にアクセス
-2. 最新のリリースを選択
-3. "Edit release" をクリック
-4. リリースノートを充実させる（Breaking changes、Migration guide など）
+1. Go to https://github.com/imasa/tsqlrefine/releases
+2. Select the latest release
+3. Click "Edit release"
+4. Enhance release notes (Breaking changes, Migration guide, etc.)
 
-## ローカルでのパッケージ作成
+## Local Package Creation
 
-リリースプロセスをテストする場合や、ローカルでパッケージを作成する場合:
+For testing the release process or creating packages locally:
 
 ```bash
-# ビルド（プレリリース版）
+# Build (pre-release version)
 dotnet build src/TsqlRefine.sln -c Release
 
-# ビルド（安定版）
+# Build (stable version)
 dotnet build src/TsqlRefine.sln -c Release /p:VersionSuffix=
 
-# パッケージ作成
+# Create package
 dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release /p:VersionSuffix=
 
-# 出力先
+# Output location
 # nupkg/TsqlRefine.0.2.0.nupkg
-# nupkg/TsqlRefine.0.2.0.snupkg (シンボルパッケージ)
+# nupkg/TsqlRefine.0.2.0.snupkg (symbols package)
 ```
 
-## インストール方法
+## Installation Methods
 
-### グローバルツールとしてインストール
+### Install as Global Tool
 
 ```bash
-# NuGet.orgから最新版をインストール
+# Install latest version from NuGet.org
 dotnet tool install --global TsqlRefine
 
-# 特定のバージョンをインストール
+# Install specific version
 dotnet tool install --global TsqlRefine --version 0.2.0
 
-# プレリリース版をインストール
+# Install pre-release version
 dotnet tool install --global TsqlRefine --version 0.2.0-alpha --prerelease
 
-# 更新
+# Update
 dotnet tool update --global TsqlRefine
 
-# アンインストール
+# Uninstall
 dotnet tool uninstall --global TsqlRefine
 ```
 
-### ローカルツールとしてインストール
+### Install as Local Tool
 
-プロジェクト単位でツールを管理する場合:
+For managing tools per project:
 
 ```bash
-# ツールマニフェストを作成
+# Create tool manifest
 dotnet new tool-manifest
 
-# ローカルツールとしてインストール
+# Install as local tool
 dotnet tool install TsqlRefine
 
-# 実行
+# Run
 dotnet tsqlrefine --help
 
-# 更新
+# Update
 dotnet tool update TsqlRefine
 ```
 
-### ローカルパッケージからインストール
+### Install from Local Package
 
-開発中やテスト用に、ローカルでビルドしたパッケージをインストールする場合:
+For development or testing with locally built packages:
 
 ```bash
-# パッケージを作成
+# Create package
 dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release /p:VersionSuffix=
 
-# ローカルソースからインストール
+# Install from local source
 dotnet tool install --global TsqlRefine --add-source ./nupkg --version 0.2.0
 
-# または、直接パッケージを指定
+# Or specify package directly
 dotnet tool install --global --add-source ./nupkg TsqlRefine
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### パッケージが見つからない
+### Package Not Found
 
-NuGet.orgへの公開後、インデックスに反映されるまで数分かかる場合があります。
+After publishing to NuGet.org, it may take a few minutes for the package to be indexed.
 
-### 古いバージョンがインストールされる
+### Old Version Gets Installed
 
-キャッシュをクリアしてから再インストール:
+Clear cache and reinstall:
 
 ```bash
 dotnet nuget locals all --clear
 dotnet tool update --global TsqlRefine
 ```
 
-### GitHub Actionsのワークフローが失敗する
+### GitHub Actions Workflow Fails
 
-- `NUGET_API_KEY` シークレットが設定されているか確認
+- Verify `NUGET_API_KEY` secret is configured
   - Settings > Secrets and variables > Actions > Repository secrets
-- テストが全てパスしているか確認
-- ビルドエラーがないか確認
+- Verify all tests pass
+- Check for build errors
 
-## 参考資料
+## References
 
 - [Semantic Versioning 2.0.0](https://semver.org/)
-- [.NET Global Tools のドキュメント](https://learn.microsoft.com/ja-jp/dotnet/core/tools/global-tools)
-- [NuGet パッケージの作成とパブリッシュ](https://learn.microsoft.com/ja-jp/nuget/quickstart/create-and-publish-a-package-using-the-dotnet-cli)
+- [.NET Global Tools documentation](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools)
+- [Creating and publishing NuGet packages](https://learn.microsoft.com/en-us/nuget/quickstart/create-and-publish-a-package-using-the-dotnet-cli)

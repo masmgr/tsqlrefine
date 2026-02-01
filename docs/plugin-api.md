@@ -1,54 +1,54 @@
-# プラグイン API（最小契約: Rule）
+# Plugin API (Minimal Contract: Rule)
 
-このプロジェクトでは **Rule のみ**をプラグイン化対象とします（Formatter/Reporter はコア固定）。
+This project targets **Rules only** for pluginization (Formatter/Reporter are fixed in core).
 
-目的:
+Purpose:
 
-- チーム固有の規約/危険パターンを追加できる
-- コアの更新とプラグインの互換性を管理できる
-
----
-
-## 1. 基本設計
-
-- 1 プラグイン = “Rule の集合”
-- ロード失敗時は **コアが落ちない**（要件: 信頼性）
-- 互換性は「API バージョン」で判定し、非互換ならロードしない（警告を出す）
+- Allow adding team-specific conventions/dangerous patterns
+- Manage compatibility between core updates and plugins
 
 ---
 
-## 2. ルール ID 命名
+## 1. Basic Design
 
-衝突回避のため、プラグインは namespace を必須とします。
-
-- 例: `myteam/avoid-select-star-in-procs`
-- コア/標準プラグインは `core/...` / `semantic/...` のように予約
+- 1 plugin = "collection of Rules"
+- Load failures **do not crash core** (requirement: reliability)
+- Compatibility is determined by "API version"; incompatible plugins are not loaded (warning is displayed)
 
 ---
 
-## 3. ルール契約（概念）
+## 2. Rule ID Naming
 
-`tsqlrefine` の内部モデルは実装言語に依存しますが、契約として最低限必要なのは以下です。
+To avoid conflicts, plugins must use a namespace.
 
-### 3.1 メタデータ
+- Example: `myteam/avoid-select-star-in-procs`
+- Core/standard plugins reserve `core/...` / `semantic/...`
 
-- `ruleId`（一意）
+---
+
+## 3. Rule Contract (Concept)
+
+The internal model of `tsqlrefine` depends on the implementation language, but the minimum required contract is as follows.
+
+### 3.1 Metadata
+
+- `ruleId` (unique)
 - `description` / `messageTemplate`
-- `category`（`docs/rules.md` のカテゴリ）
-- `defaultSeverity`（Error/Warning/Info/Hint）
-- `fixable`（boolean）
-- `minSqlVersion` / `maxSqlVersion`（任意）
+- `category` (categories from `docs/rules.md`)
+- `defaultSeverity` (Error/Warning/Info/Hint)
+- `fixable` (boolean)
+- `minSqlVersion` / `maxSqlVersion` (optional)
 
-### 3.2 実行
+### 3.2 Execution
 
-- 入力: パース済 AST（`GO` 単位のバッチも含む）、トークン、互換レベル、設定
-- 出力: `Diagnostic[]`（必要なら Fix/提案も）
+- Input: Parsed AST (including `GO`-separated batches), tokens, compatibility level, settings
+- Output: `Diagnostic[]` (with Fix/suggestions if needed)
 
 ---
 
-## 4. C# インターフェース案（.NET 前提の場合）
+## 4. C# Interface Proposal (Assuming .NET)
 
-> 実装言語が確定していない段階でも、外形として “こういう形を要求する” を先に置けます。
+> Even before the implementation language is finalized, you can define the expected interface shape upfront.
 
 ```csharp
 public enum RuleSeverity
@@ -87,15 +87,15 @@ public sealed record RuleContext(
 );
 ```
 
-※ `GetFixes` は `Metadata.Fixable == true` の場合のみ呼ばれる。
+*Note: `GetFixes` is only called when `Metadata.Fixable == true`.
 
 ---
 
-## 5. ロード仕様
+## 5. Loading Specification
 
-設定ファイルでプラグインを指定します。
+Plugins are specified in the configuration file.
 
-例:
+Example:
 
 ```jsonc
 {
@@ -105,17 +105,16 @@ public sealed record RuleContext(
 }
 ```
 
-ロード時:
+At load time:
 
-1. アセンブリを読み込み
-2. `IRule` 実装（または `IRuleProvider`）を列挙
-3. `ruleId` の重複チェック（重複はエラー扱いで、そのプラグインを無効化）
+1. Load the assembly
+2. Enumerate `IRule` implementations (or `IRuleProvider`)
+3. Check for `ruleId` duplicates (duplicates are treated as errors, and that plugin is disabled)
 
 ---
 
-## 6. 互換性
+## 6. Compatibility
 
-- コアは `pluginApiVersion` を持つ（例: `1`）
-- プラグインは `supportedApiVersions: [1]` を宣言
-- 合わなければロードしない（`list-plugins` に理由を表示）
-
+- Core has a `pluginApiVersion` (e.g., `1`)
+- Plugins declare `supportedApiVersions: [1]`
+- If mismatched, the plugin is not loaded (reason displayed in `list-plugins`)

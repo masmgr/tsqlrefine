@@ -1,12 +1,12 @@
-# インライン無効化ディレクティブ
+# Inline Disable Directives
 
-tsqlrefine では、SQL ファイル内のコメントを使用してルールを一時的に無効化できます。
+tsqlrefine allows you to temporarily disable rules using comments within SQL files.
 
 ---
 
-## 基本構文
+## Basic Syntax
 
-### すべてのルールを無効化
+### Disable All Rules
 
 ```sql
 /* tsqlrefine-disable */
@@ -14,9 +14,9 @@ SELECT * FROM Users;
 /* tsqlrefine-enable */
 ```
 
-`tsqlrefine-disable` から `tsqlrefine-enable` までの範囲内では、すべてのルール違反が抑制されます。
+All rule violations within the range from `tsqlrefine-disable` to `tsqlrefine-enable` are suppressed.
 
-### 特定のルールを無効化
+### Disable Specific Rules
 
 ```sql
 /* tsqlrefine-disable avoid-select-star */
@@ -24,9 +24,9 @@ SELECT * FROM Users;
 /* tsqlrefine-enable avoid-select-star */
 ```
 
-指定したルール ID のみが無効化されます。他のルールは引き続き適用されます。
+Only the specified rule ID is disabled. Other rules continue to apply.
 
-### 複数のルールを無効化
+### Disable Multiple Rules
 
 ```sql
 /* tsqlrefine-disable avoid-select-star, dml-without-where */
@@ -35,15 +35,15 @@ UPDATE Users SET Status = 1;
 /* tsqlrefine-enable avoid-select-star, dml-without-where */
 ```
 
-カンマ区切りで複数のルール ID を指定できます。
+Multiple rule IDs can be specified separated by commas.
 
 ---
 
-## スクリプト全体を無効化
+## Disable for Entire Script
 
-ファイルの先頭に `tsqlrefine-disable` を配置し、対応する `tsqlrefine-enable` を省略すると、スクリプト全体でルールが無効化されます。
+Placing `tsqlrefine-disable` at the beginning of a file and omitting the corresponding `tsqlrefine-enable` disables rules for the entire script.
 
-### すべてのルールを無効化（スクリプト全体）
+### Disable All Rules (Entire Script)
 
 ```sql
 /* tsqlrefine-disable */
@@ -53,7 +53,7 @@ UPDATE Users SET Status = 1;
 DELETE FROM TempData;
 ```
 
-### 特定のルールを無効化（スクリプト全体）
+### Disable Specific Rules (Entire Script)
 
 ```sql
 /* tsqlrefine-disable avoid-select-star */
@@ -64,16 +64,16 @@ SELECT * FROM Orders;
 
 ---
 
-## サポートされるコメント形式
+## Supported Comment Formats
 
-### ブロックコメント
+### Block Comments
 
 ```sql
 /* tsqlrefine-disable */
 /* tsqlrefine-enable */
 ```
 
-### ラインコメント
+### Line Comments
 
 ```sql
 -- tsqlrefine-disable
@@ -82,11 +82,11 @@ SELECT * FROM Orders;
 
 ---
 
-## ディレクティブの特性
+## Directive Characteristics
 
-### 大文字・小文字を区別しない
+### Case Insensitive
 
-ディレクティブ名は大文字・小文字を区別しません。
+Directive names are case insensitive.
 
 ```sql
 /* TSQLREFINE-DISABLE */
@@ -94,11 +94,11 @@ SELECT * FROM Orders;
 /* tsqlrefine-disable */
 ```
 
-上記はすべて同じ動作をします。
+All of the above behave the same.
 
-### ルール ID の大文字・小文字
+### Rule ID Case
 
-ルール ID も大文字・小文字を区別しません。
+Rule IDs are also case insensitive.
 
 ```sql
 /* tsqlrefine-disable AVOID-SELECT-STAR */
@@ -106,9 +106,9 @@ SELECT * FROM Orders;
 /* tsqlrefine-disable avoid-select-star */
 ```
 
-### 空白の扱い
+### Whitespace Handling
 
-ディレクティブ前後の空白は無視されます。
+Whitespace around directives is ignored.
 
 ```sql
 /*tsqlrefine-disable*/
@@ -118,79 +118,79 @@ SELECT * FROM Orders;
 
 ---
 
-## ネストされた無効化
+## Nested Disabling
 
-無効化ディレクティブはネストできます。
+Disable directives can be nested.
 
 ```sql
 /* tsqlrefine-disable */
-SELECT * FROM t1;           -- 外側の disable で抑制
+SELECT * FROM t1;           -- Suppressed by outer disable
 
 /* tsqlrefine-disable */
-SELECT * FROM t2;           -- 両方の disable で抑制
+SELECT * FROM t2;           -- Suppressed by both disables
 /* tsqlrefine-enable */
 
-SELECT * FROM t3;           -- 外側の disable でまだ抑制
+SELECT * FROM t3;           -- Still suppressed by outer disable
 /* tsqlrefine-enable */
 
-SELECT * FROM t4;           -- 抑制されない
+SELECT * FROM t4;           -- Not suppressed
 ```
 
-内側の `enable` は内側の `disable` を閉じ、外側の `enable` が外側の `disable` を閉じます。
+The inner `enable` closes the inner `disable`, and the outer `enable` closes the outer `disable`.
 
 ---
 
-## 注意事項
+## Notes
 
-### 行ベースの抑制
+### Line-Based Suppression
 
-無効化は行ベースで適用されます。診断の開始行が無効化範囲内にある場合、その診断は抑制されます。
+Disabling is applied on a line basis. If a diagnostic's start line is within the disabled range, that diagnostic is suppressed.
 
-### パースエラーは抑制されない
+### Parse Errors Are Not Suppressed
 
-構文エラー（`parse-error`）は `tsqlrefine-disable` の影響を受けません。これは構文エラーが根本的な問題を示すためです。
+Syntax errors (`parse-error`) are not affected by `tsqlrefine-disable`. This is because syntax errors indicate fundamental problems.
 
 ```sql
 /* tsqlrefine-disable */
-SELECT * FROM           -- パースエラーは報告される
+SELECT * FROM           -- Parse error is still reported
 ```
 
-### 無効化範囲の開始位置
+### Disable Range Start Position
 
-無効化ディレクティブは、そのディレクティブが存在する行から有効になります。ディレクティブより前の行には影響しません。
+Disable directives take effect from the line where the directive appears. Lines before the directive are not affected.
 
 ```sql
-SELECT * FROM t1;       -- 抑制されない（ディレクティブより前）
+SELECT * FROM t1;       -- Not suppressed (before directive)
 /* tsqlrefine-disable */
-SELECT * FROM t2;       -- 抑制される
+SELECT * FROM t2;       -- Suppressed
 ```
 
-### 対応する enable がない場合
+### Missing Corresponding Enable
 
-`tsqlrefine-enable` がない場合、無効化はファイル末尾まで継続します。
-
----
-
-## サンプルファイル
-
-`samples/sql/inline-disable/` ディレクトリに使用例があります：
-
-- `disable-all.sql` - すべてのルールを無効化
-- `disable-specific.sql` - 特定のルールを無効化
-- `disable-region.sql` - 特定の範囲のみ無効化
-- `disable-multiple.sql` - 複数のルールを無効化
+If there is no `tsqlrefine-enable`, disabling continues until the end of the file.
 
 ---
 
-## ルール ID の確認
+## Sample Files
 
-利用可能なルール ID は `list-rules` コマンドで確認できます：
+Usage examples are available in the `samples/sql/inline-disable/` directory:
+
+- `disable-all.sql` - Disable all rules
+- `disable-specific.sql` - Disable specific rules
+- `disable-region.sql` - Disable only specific regions
+- `disable-multiple.sql` - Disable multiple rules
+
+---
+
+## Checking Rule IDs
+
+Available rule IDs can be checked with the `list-rules` command:
 
 ```bash
 tsqlrefine list-rules
 ```
 
-出力例：
+Example output:
 
 ```
 avoid-select-star       Performance     Warning     fixable=False
