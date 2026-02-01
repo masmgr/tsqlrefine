@@ -150,9 +150,14 @@ public sealed class CommandExecutor
         }
         else
         {
-            foreach (var file in result.Files)
+            // Sort by file path, then by line, then by character
+            var sortedFiles = result.Files.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
+            foreach (var file in sortedFiles)
             {
-                foreach (var d in file.Diagnostics)
+                var sortedDiagnostics = file.Diagnostics
+                    .OrderBy(d => d.Range.Start.Line)
+                    .ThenBy(d => d.Range.Start.Character);
+                foreach (var d in sortedDiagnostics)
                 {
                     var start = d.Range.Start;
                     var ruleId = d.Data?.RuleId ?? d.Code;
