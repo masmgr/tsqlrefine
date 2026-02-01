@@ -9,248 +9,220 @@ namespace TsqlRefine.Cli;
 public static class CliParser
 {
     // =================================================================
-    // Global Options (available on all commands via RootCommand)
-    // These use Recursive = true so they're available on all subcommands
-    // =================================================================
-    private static readonly Option<string?> ConfigOption = new("--config", "-c")
-    {
-        Description = "Configuration file path",
-        Arity = ArgumentArity.ZeroOrOne,
-        Recursive = true
-    };
-
-    // =================================================================
-    // Shared Options (added to specific commands as needed)
+    // Option Definitions
     // =================================================================
 
-    // Input options
-    private static Option<string?> CreateIgnoreListOption() => new("--ignorelist", "-g")
+    private static class Options
     {
-        Description = "Ignore patterns file",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        // Global options (Recursive = true for all subcommands)
+        public static readonly Option<string?> Config = new("--config", "-c")
+        {
+            Description = "Configuration file path",
+            Arity = ArgumentArity.ZeroOrOne,
+            Recursive = true
+        };
 
-    private static Option<bool> CreateDetectEncodingOption() => new("--detect-encoding")
-    {
-        Description = "Auto-detect file encoding"
-    };
+        // Input options
+        public static readonly Option<string?> IgnoreList = new("--ignorelist", "-g")
+        {
+            Description = "Ignore patterns file",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<bool> CreateStdinOption() => new("--stdin")
-    {
-        Description = "Read from stdin"
-    };
+        public static readonly Option<bool> DetectEncoding = new("--detect-encoding")
+        {
+            Description = "Auto-detect file encoding"
+        };
 
-    private static Argument<string[]> CreatePathsArgument() => new("paths")
-    {
-        Description = "SQL files to process",
-        Arity = ArgumentArity.ZeroOrMore
-    };
+        public static readonly Option<bool> Stdin = new("--stdin")
+        {
+            Description = "Read from stdin"
+        };
 
-    // Output options
-    private static Option<string?> CreateOutputOption() => new("--output")
-    {
-        Description = "Output format (text/json)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        // Output options
+        public static readonly Option<string?> Output = new("--output")
+        {
+            Description = "Output format (text/json)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    // Analysis options
-    private static Option<string?> CreateCompatLevelOption() => new("--compat-level")
-    {
-        Description = "SQL Server compatibility level (100-160)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        // Analysis options
+        public static readonly Option<string?> CompatLevel = new("--compat-level")
+        {
+            Description = "SQL Server compatibility level (100-160)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    // Rule options
-    private static Option<string?> CreateSeverityOption() => new("--severity")
-    {
-        Description = "Minimum severity level (error/warning/info/hint)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        // Rule options
+        public static readonly Option<string?> Severity = new("--severity")
+        {
+            Description = "Minimum severity level (error/warning/info/hint)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<string?> CreatePresetOption() => new("--preset")
-    {
-        Description = "Preset ruleset (recommended/strict/pragmatic/security-only)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        public static readonly Option<string?> Preset = new("--preset")
+        {
+            Description = "Preset ruleset (recommended/strict/pragmatic/security-only)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<string?> CreateRulesetOption() => new("--ruleset")
-    {
-        Description = "Custom ruleset file path",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        public static readonly Option<string?> Ruleset = new("--ruleset")
+        {
+            Description = "Custom ruleset file path",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<string?> CreateRuleOption() => new("--rule")
-    {
-        Description = "Rule ID to apply",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        public static readonly Option<string?> Rule = new("--rule")
+        {
+            Description = "Rule ID to apply",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    // Format options
-    private static Option<string?> CreateIndentStyleOption() => new("--indent-style")
-    {
-        Description = "Indentation style (tabs/spaces)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        // Format options
+        public static readonly Option<string?> IndentStyle = new("--indent-style")
+        {
+            Description = "Indentation style (tabs/spaces)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<string?> CreateIndentSizeOption() => new("--indent-size")
-    {
-        Description = "Indentation size in spaces",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        public static readonly Option<string?> IndentSize = new("--indent-size")
+        {
+            Description = "Indentation size in spaces",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    private static Option<string?> CreateLineEndingOption() => new("--line-ending")
-    {
-        Description = "Line ending style (auto/lf/crlf)",
-        Arity = ArgumentArity.ZeroOrOne
-    };
+        public static readonly Option<string?> LineEnding = new("--line-ending")
+        {
+            Description = "Line ending style (auto/lf/crlf)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
 
-    // List-plugins options
-    private static Option<bool> CreateVerboseOption() => new("--verbose")
-    {
-        Description = "Show detailed information"
-    };
+        // Misc options
+        public static readonly Option<bool> Verbose = new("--verbose")
+        {
+            Description = "Show detailed information"
+        };
 
-    // Print-format-config options
-    private static Option<bool> CreateShowSourcesOption() => new("--show-sources")
+        public static readonly Option<bool> ShowSources = new("--show-sources")
+        {
+            Description = "Show where each option value originated"
+        };
+
+        // Arguments (factory method because each command needs its own instance)
+        public static Argument<string[]> CreatePathsArgument() => new("paths")
+        {
+            Description = "SQL files to process",
+            Arity = ArgumentArity.ZeroOrMore
+        };
+    }
+
+    // =================================================================
+    // Command Extension Methods
+    // =================================================================
+
+    private static Command WithInputOptions(this Command command)
     {
-        Description = "Show where each option value originated"
-    };
+        command.Options.Add(Options.IgnoreList);
+        command.Options.Add(Options.DetectEncoding);
+        command.Options.Add(Options.Stdin);
+        return command;
+    }
+
+    private static Command WithOutputOption(this Command command)
+    {
+        command.Options.Add(Options.Output);
+        return command;
+    }
+
+    private static Command WithCompatLevelOption(this Command command)
+    {
+        command.Options.Add(Options.CompatLevel);
+        return command;
+    }
+
+    private static Command WithRuleOptions(this Command command)
+    {
+        command.Options.Add(Options.Severity);
+        command.Options.Add(Options.Preset);
+        command.Options.Add(Options.Ruleset);
+        return command;
+    }
+
+    private static Command WithRuleIdOption(this Command command)
+    {
+        command.Options.Add(Options.Rule);
+        return command;
+    }
+
+    private static Command WithFormatOptions(this Command command)
+    {
+        command.Options.Add(Options.IndentStyle);
+        command.Options.Add(Options.IndentSize);
+        command.Options.Add(Options.LineEnding);
+        return command;
+    }
+
+    private static Command WithPathsArgument(this Command command)
+    {
+        command.Arguments.Add(Options.CreatePathsArgument());
+        return command;
+    }
 
     // =================================================================
     // Command Builders
     // =================================================================
 
-    private static Command BuildLintCommand()
-    {
-        var command = new Command("lint", "Analyze SQL files for rule violations");
+    private static Command BuildLintCommand() =>
+        new Command("lint", "Analyze SQL files for rule violations")
+            .WithInputOptions()
+            .WithOutputOption()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithPathsArgument();
 
-        // Input options
-        command.Options.Add(CreateIgnoreListOption());
-        command.Options.Add(CreateDetectEncodingOption());
-        command.Options.Add(CreateStdinOption());
+    private static Command BuildFormatCommand() =>
+        new Command("format", "Format SQL files (keyword casing, whitespace)")
+            .WithInputOptions()
+            .WithOutputOption()
+            .WithCompatLevelOption()
+            .WithFormatOptions()
+            .WithPathsArgument();
 
-        // Output options
-        command.Options.Add(CreateOutputOption());
+    private static Command BuildFixCommand() =>
+        new Command("fix", "Auto-fix issues that support fixing")
+            .WithInputOptions()
+            .WithOutputOption()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithRuleIdOption()
+            .WithPathsArgument();
 
-        // Analysis options
-        command.Options.Add(CreateCompatLevelOption());
+    private static Command BuildInitCommand() =>
+        new Command("init", "Initialize configuration files");
 
-        // Rule options
-        command.Options.Add(CreateSeverityOption());
-        command.Options.Add(CreatePresetOption());
-        command.Options.Add(CreateRulesetOption());
+    private static Command BuildPrintConfigCommand() =>
+        new Command("print-config", "Print effective configuration")
+            .WithOutputOption();
 
-        // Paths argument
-        command.Arguments.Add(CreatePathsArgument());
-
-        return command;
-    }
-
-    private static Command BuildFormatCommand()
-    {
-        var command = new Command("format", "Format SQL files (keyword casing, whitespace)");
-
-        // Input options
-        command.Options.Add(CreateIgnoreListOption());
-        command.Options.Add(CreateDetectEncodingOption());
-        command.Options.Add(CreateStdinOption());
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-
-        // Analysis options
-        command.Options.Add(CreateCompatLevelOption());
-
-        // Format options
-        command.Options.Add(CreateIndentStyleOption());
-        command.Options.Add(CreateIndentSizeOption());
-        command.Options.Add(CreateLineEndingOption());
-
-        // Paths argument
-        command.Arguments.Add(CreatePathsArgument());
-
-        return command;
-    }
-
-    private static Command BuildFixCommand()
-    {
-        var command = new Command("fix", "Auto-fix issues that support fixing");
-
-        // Input options
-        command.Options.Add(CreateIgnoreListOption());
-        command.Options.Add(CreateDetectEncodingOption());
-        command.Options.Add(CreateStdinOption());
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-
-        // Analysis options
-        command.Options.Add(CreateCompatLevelOption());
-
-        // Rule options
-        command.Options.Add(CreateSeverityOption());
-        command.Options.Add(CreatePresetOption());
-        command.Options.Add(CreateRulesetOption());
-        command.Options.Add(CreateRuleOption());
-
-        // Paths argument
-        command.Arguments.Add(CreatePathsArgument());
-
-        return command;
-    }
-
-    private static Command BuildInitCommand()
-    {
-        return new Command("init", "Initialize configuration files");
-    }
-
-    private static Command BuildPrintConfigCommand()
-    {
-        var command = new Command("print-config", "Print effective configuration");
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-
-        return command;
-    }
-
-    private static Command BuildListRulesCommand()
-    {
-        var command = new Command("list-rules", "List available rules");
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-
-        return command;
-    }
+    private static Command BuildListRulesCommand() =>
+        new Command("list-rules", "List available rules")
+            .WithOutputOption();
 
     private static Command BuildListPluginsCommand()
     {
-        var command = new Command("list-plugins", "List loaded plugins");
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-        command.Options.Add(CreateVerboseOption());
-
+        var command = new Command("list-plugins", "List loaded plugins")
+            .WithOutputOption();
+        command.Options.Add(Options.Verbose);
         return command;
     }
 
     private static Command BuildPrintFormatConfigCommand()
     {
-        var command = new Command("print-format-config", "Print effective formatting options");
-
-        // Output options
-        command.Options.Add(CreateOutputOption());
-        command.Options.Add(CreateShowSourcesOption());
-
-        // Format options (to test CLI arg override)
-        command.Options.Add(CreateIndentStyleOption());
-        command.Options.Add(CreateIndentSizeOption());
-        command.Options.Add(CreateLineEndingOption());
-
-        // Paths argument (optional file path for .editorconfig resolution)
-        command.Arguments.Add(CreatePathsArgument());
-
+        var command = new Command("print-format-config", "Print effective formatting options")
+            .WithOutputOption()
+            .WithFormatOptions()
+            .WithPathsArgument();
+        command.Options.Add(Options.ShowSources);
         return command;
     }
 
@@ -265,7 +237,7 @@ public static class CliParser
         var root = new RootCommand("A SQL Server/T-SQL linter, static analyzer, and formatter");
 
         // Global options (--help and --version are added automatically by System.CommandLine)
-        root.Options.Add(ConfigOption);
+        root.Options.Add(Options.Config);
 
         // Subcommands
         root.Subcommands.Add(BuildLintCommand());
@@ -281,7 +253,7 @@ public static class CliParser
     }
 
     // =================================================================
-    // Help/Version handling using System.CommandLine 2.0.0 InvokeAsync
+    // Public API
     // =================================================================
 
     /// <summary>
@@ -312,10 +284,9 @@ public static class CliParser
         return await parseResult.InvokeAsync(config);
     }
 
-    // =================================================================
-    // Parse
-    // =================================================================
-
+    /// <summary>
+    /// Parses command-line arguments into a CliArgs record.
+    /// </summary>
     public static CliArgs Parse(string[] args)
     {
         var parseResult = Root.Parse(args ?? []);
@@ -342,6 +313,10 @@ public static class CliParser
             RuleId: GetOptionValue<string?>(parseResult, "--rule")
         );
     }
+
+    // =================================================================
+    // Parse Helpers
+    // =================================================================
 
     private static (string Command, bool IsExplicit) GetCommandName(ParseResult parseResult)
     {
