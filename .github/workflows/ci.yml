@@ -45,8 +45,23 @@ jobs:
       - name: Build (Release)
         run: dotnet build src/TsqlRefine.sln -c Release --no-restore
 
-      - name: Test (Release)
-        run: dotnet test src/TsqlRefine.sln -c Release --no-build --logger "trx" --results-directory TestResults
+      - name: Test with coverage
+        run: dotnet test src/TsqlRefine.sln -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx" --results-directory TestResults
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:"Html;Cobertura;MarkdownSummaryGithub"
+
+      - name: Add coverage summary to job
+        if: runner.os == 'Linux'
+        run: cat TestResults/CoverageReport/SummaryGithub.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Add coverage summary to job (Windows)
+        if: runner.os == 'Windows'
+        run: Get-Content TestResults/CoverageReport/SummaryGithub.md >> $env:GITHUB_STEP_SUMMARY
+        shell: pwsh
 
       - name: Upload test results
         if: always()
@@ -54,3 +69,10 @@ jobs:
         with:
           name: test-results-${{ matrix.os }}
           path: TestResults
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ matrix.os }}
+          path: TestResults/CoverageReport
