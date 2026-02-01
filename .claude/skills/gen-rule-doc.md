@@ -82,7 +82,4 @@ To disable this rule:
 ```powershell
 # List all rules with metadata
 dotnet run --project src/TsqlRefine.Cli -c Release -- list-rules --output json
-
-# Regenerate README.md
-./scripts/extract-all-rules.ps1
 ```

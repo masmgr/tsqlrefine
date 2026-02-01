@@ -3,7 +3,7 @@ name: build
 description: Build tsqlrefine solution. Use when: compiling the project, checking for build errors, verifying code compiles, or running build + tests together. Supports Release/Debug configurations.
 ---
 
-# Build & Verify
+# Build
 
 Build with `dotnet build`.
 

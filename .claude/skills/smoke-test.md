@@ -59,7 +59,8 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- print-config
 # list-plugins
 dotnet run --project src/TsqlRefine.Cli -c Release -- list-plugins
 
-# init (creates tsqlrefine.json in temp dir)
+# init (creates tsqlrefine.json)
+dotnet run --project src/TsqlRefine.Cli -c Release -- init --path $env:TEMP/test-config
 ```
 
 ## Exit Codes

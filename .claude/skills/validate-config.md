@@ -23,18 +23,21 @@ Validate config files against schemas in `schemas/`.
 | `plugins` | array | Plugin configurations |
 | `formatting` | object | Formatting options |
 
-## Validation
+## Validation Workflow
 
-1. Parse JSON and check syntax
-2. Validate against schema
+1. Parse JSON and check syntax errors
+2. Validate required properties exist
 3. Check referenced files exist (ruleset, plugins)
-4. Report errors with property path
+4. Run CLI to verify config loads correctly
 
 ## Commands
 
 ```powershell
-# Show resolved config (validates implicitly)
+# Validate config loads correctly (reports config errors with exit code 3)
 dotnet run --project src/TsqlRefine.Cli -c Release -- print-config
+
+# Check JSON syntax
+Get-Content tsqlrefine.json | ConvertFrom-Json
 
 # Check ruleset file exists
 Test-Path "rulesets/recommended.json"
