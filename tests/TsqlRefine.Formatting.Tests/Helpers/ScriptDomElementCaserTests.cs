@@ -458,4 +458,106 @@ where u.isactive = 1 and u.createdate >= dateadd(day, -30, getdate());
         Assert.Contains("EXECUTE", result);
         Assert.Contains("EXEC", result);
     }
+
+    #region Parenthesis-free Functions
+
+    [Fact]
+    public void Apply_CurrentTimestamp_RecognizedAsFunction()
+    {
+        var sql = "SELECT current_timestamp, id FROM users";
+        var options = new FormattingOptions
+        {
+            BuiltInFunctionCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // CURRENT_TIMESTAMP should be uppercased as a function (no parentheses required)
+        Assert.Contains("CURRENT_TIMESTAMP", result);
+        // Other columns should be lowercase
+        Assert.Contains("id", result);
+    }
+
+    [Fact]
+    public void Apply_CurrentUser_RecognizedAsFunction()
+    {
+        var sql = "SELECT current_user, id FROM users";
+        var options = new FormattingOptions
+        {
+            BuiltInFunctionCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // CURRENT_USER should be uppercased as a function
+        Assert.Contains("CURRENT_USER", result);
+    }
+
+    [Fact]
+    public void Apply_SessionUser_RecognizedAsFunction()
+    {
+        var sql = "SELECT session_user, system_user FROM dual";
+        var options = new FormattingOptions
+        {
+            BuiltInFunctionCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // SESSION_USER and SYSTEM_USER should be uppercased as functions
+        Assert.Contains("SESSION_USER", result);
+        Assert.Contains("SYSTEM_USER", result);
+    }
+
+    [Fact]
+    public void Apply_UserFunction_RecognizedAsFunction()
+    {
+        var sql = "SELECT user, id FROM users";
+        var options = new FormattingOptions
+        {
+            BuiltInFunctionCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // USER should be uppercased as a function
+        Assert.Contains("USER", result);
+    }
+
+    #endregion
+
+    #region Default Values
+
+    [Fact]
+    public void Apply_DefaultOptions_IdentifierCasingIsNone()
+    {
+        // Default FormattingOptions should have None for identifiers (safe for CS environments)
+        var options = new FormattingOptions();
+
+        Assert.Equal(ElementCasing.None, options.SchemaCasing);
+        Assert.Equal(ElementCasing.None, options.TableCasing);
+        Assert.Equal(ElementCasing.None, options.ColumnCasing);
+    }
+
+    [Fact]
+    public void Apply_DefaultOptions_PreservesIdentifierCasing()
+    {
+        var sql = "SELECT UserId, UserName FROM DBO.Users WHERE IsActive = 1";
+        var options = new FormattingOptions(); // Default options
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // With default None for identifiers, original case should be preserved
+        Assert.Contains("UserId", result);
+        Assert.Contains("UserName", result);
+        Assert.Contains("DBO", result); // Schema preserved
+        Assert.Contains("Users", result);
+        Assert.Contains("IsActive", result);
+    }
+
+    #endregion
 }

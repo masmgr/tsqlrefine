@@ -25,10 +25,15 @@ When granular casing is enabled, the following defaults are applied:
 | Keywords | `Upper` | SQL keywords are traditionally uppercase |
 | Functions | `Upper` | Built-in functions follow keyword conventions |
 | Data Types | `Lower` | Data types are typically lowercase in modern SQL |
-| Schemas | `Lower` | Schema names are typically lowercase |
-| Tables | `Upper` | Table names are prominent identifiers |
-| Columns | `Upper` | Column names match table name style |
+| Schemas | `None` | **Safe default** - CS collation environments may break |
+| Tables | `None` | **Safe default** - CS collation environments may break |
+| Columns | `None` | **Safe default** - CS collation environments may break |
 | Variables | `Lower` | Variables use lowercase convention with @ prefix |
+
+> **WARNING**: Case-Sensitive collation environments (e.g., Microsoft Fabric Data Warehouse)
+> may break queries if identifier casing is changed. The default for Schema/Table/Column
+> is `None` (preserve original) for safety. Only change these if you are certain your
+> target environment uses Case-Insensitive collation.
 
 ## Usage
 
@@ -128,7 +133,9 @@ declare @userid int = 1;
 select u.userid, count(*) from dbo.users u where u.active = 1;
 ```
 
-### Example 3: Recommended Mixed Style (Default)
+### Example 3: Safe Default Style (Default)
+
+With the default settings, keywords and functions are uppercased, but identifiers (schema/table/column) are preserved:
 
 ```csharp
 var options = new FormattingOptions
@@ -136,9 +143,9 @@ var options = new FormattingOptions
     KeywordElementCasing = ElementCasing.Upper,
     BuiltInFunctionCasing = ElementCasing.Upper,
     DataTypeCasing = ElementCasing.Lower,
-    SchemaCasing = ElementCasing.Lower,
-    TableCasing = ElementCasing.Upper,
-    ColumnCasing = ElementCasing.Upper,
+    SchemaCasing = ElementCasing.None,     // Preserve original
+    TableCasing = ElementCasing.None,      // Preserve original
+    ColumnCasing = ElementCasing.None,     // Preserve original
     VariableCasing = ElementCasing.Lower
 };
 ```
@@ -168,18 +175,20 @@ DECLARE @userid int = 1;
 DECLARE @username nvarchar(50);
 
 SELECT
-    u.USERID,
-    u.USERNAME,
-    COUNT(*) AS ORDERCOUNT,
-    SUM(o.TOTALAMOUNT) AS TOTALSPENT,
-    GETDATE() AS CURRENTDATE,
-    @@rowcount AS ROWCOUNT
-FROM dbo.USERS u
-INNER JOIN sys.ORDERS o ON u.USERID = o.USERID
-WHERE u.ISACTIVE = 1
-    AND o.ORDERDATE >= DATEADD(day, -30, GETDATE())
-GROUP BY u.USERID, u.USERNAME;
+    U.UserId,
+    U.UserName,
+    COUNT(*) AS OrderCount,
+    SUM(O.TotalAmount) AS TotalSpent,
+    GETDATE() AS CurrentDate,
+    @@rowcount AS RowCount
+FROM DBO.Users U
+INNER JOIN SYS.Orders O ON U.UserId = O.UserId
+WHERE U.IsActive = 1
+    AND O.OrderDate >= DATEADD(day, -30, GETDATE())
+GROUP BY U.UserId, U.UserName;
 ```
+
+Note: With the default settings, identifiers preserve their original casing (only keywords, functions, data types, and variables are transformed).
 
 ### Example 4: Preserve Original Style
 

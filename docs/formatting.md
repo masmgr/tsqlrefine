@@ -53,15 +53,15 @@ SQL 入力
 
 | プロパティ | 型 | 既定値 | 説明 |
 |-----------|------|--------|------|
-| `CompatLevel` | `int` | `150` | SQL Server 互換レベル (100-160) |
+| `CompatLevel` | `int` | `150` | SQL Server 互換レベル (100-170) ※170はパッケージ更新が必要 |
 | `IndentStyle` | `IndentStyle` | `Spaces` | インデントスタイル (Tabs/Spaces) |
 | `IndentSize` | `int` | `4` | インデントサイズ (スペース数またはタブ幅) |
 | `KeywordElementCasing` | `ElementCasing` | `Upper` | キーワードの大文字小文字 |
 | `BuiltInFunctionCasing` | `ElementCasing` | `Upper` | 組み込み関数の大文字小文字 |
 | `DataTypeCasing` | `ElementCasing` | `Lower` | データ型の大文字小文字 |
-| `SchemaCasing` | `ElementCasing` | `Lower` | スキーマ名の大文字小文字 |
-| `TableCasing` | `ElementCasing` | `Upper` | テーブル名の大文字小文字 |
-| `ColumnCasing` | `ElementCasing` | `Upper` | カラム名の大文字小文字 |
+| `SchemaCasing` | `ElementCasing` | `None` | スキーマ名の大文字小文字 (※CS環境注意) |
+| `TableCasing` | `ElementCasing` | `None` | テーブル名の大文字小文字 (※CS環境注意) |
+| `ColumnCasing` | `ElementCasing` | `None` | カラム名の大文字小文字 (※CS環境注意) |
 | `VariableCasing` | `ElementCasing` | `Lower` | 変数の大文字小文字 |
 | `CommaStyle` | `CommaStyle` | `Trailing` | コンマスタイル (Trailing/Leading) |
 | `MaxLineLength` | `int` | `0` | 最大行長 (0 = 無制限) |
@@ -95,9 +95,17 @@ public enum ElementCasing
 public enum CommaStyle
 {
     Trailing,  // 末尾コンマ: SELECT a, b, c
-    Leading    // 先頭コンマ: SELECT a ,b ,c
+    Leading    // 先頭コンマ:
+               // SELECT a
+               //      , b
+               //      , c
 }
 ```
+
+> **警告**: Case-Sensitive collation 環境（例: Microsoft Fabric Data Warehouse）では、
+> 識別子のケーシング変更によりクエリが壊れる可能性があります。
+> `SchemaCasing`, `TableCasing`, `ColumnCasing` を `Upper` または `Lower` に設定する前に、
+> ターゲット環境の collation を確認してください。既定は `None`（元のまま保持）です。
 
 ---
 

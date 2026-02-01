@@ -20,7 +20,12 @@ public enum CommaStyle
 {
     /// <summary>Trailing comma: SELECT a, b, c</summary>
     Trailing,
-    /// <summary>Leading comma: SELECT a ,b ,c</summary>
+    /// <summary>
+    /// Leading comma style:
+    /// SELECT a
+    ///      , b
+    ///      , c
+    /// </summary>
     Leading
 }
 
@@ -44,14 +49,26 @@ public sealed record FormattingOptions
     /// <summary>Casing for data types (INT, VARCHAR, DATETIME, etc.)</summary>
     public ElementCasing DataTypeCasing { get; init; } = ElementCasing.Lower;
 
-    /// <summary>Casing for schema names (dbo, sys, etc.)</summary>
-    public ElementCasing SchemaCasing { get; init; } = ElementCasing.Lower;
+    /// <summary>
+    /// Casing for schema names (dbo, sys, etc.).
+    /// WARNING: Case-Sensitive collation environments may break queries if casing is changed.
+    /// Default is None (preserve original) for safety.
+    /// </summary>
+    public ElementCasing SchemaCasing { get; init; } = ElementCasing.None;
 
-    /// <summary>Casing for table names and aliases</summary>
-    public ElementCasing TableCasing { get; init; } = ElementCasing.Upper;
+    /// <summary>
+    /// Casing for table names and aliases.
+    /// WARNING: Case-Sensitive collation environments may break queries if casing is changed.
+    /// Default is None (preserve original) for safety.
+    /// </summary>
+    public ElementCasing TableCasing { get; init; } = ElementCasing.None;
 
-    /// <summary>Casing for column names and aliases</summary>
-    public ElementCasing ColumnCasing { get; init; } = ElementCasing.Upper;
+    /// <summary>
+    /// Casing for column names and aliases.
+    /// WARNING: Case-Sensitive collation environments may break queries if casing is changed.
+    /// Default is None (preserve original) for safety.
+    /// </summary>
+    public ElementCasing ColumnCasing { get; init; } = ElementCasing.None;
 
     /// <summary>Casing for variables (@var, @@rowcount, etc.)</summary>
     public ElementCasing VariableCasing { get; init; } = ElementCasing.Lower;
