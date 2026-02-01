@@ -39,6 +39,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
         new UndefinedAliasRule(),
+        new JoinTableNotReferencedInOnRule(),
 
         // === Performance ===
         new AvoidSelectStarRule(),
