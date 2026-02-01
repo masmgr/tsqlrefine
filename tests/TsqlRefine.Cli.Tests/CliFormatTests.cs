@@ -17,7 +17,7 @@ public sealed class CliFormatTests
         Assert.Equal(0, code);
         // Default identifier casing is None, so identifiers keep original casing
         // CRLF is preserved from input
-        Assert.Equal("SELECT *\r\n    FROM t\r\nWHERE id=1\r\n", stdout.ToString());
+        Assert.Equal("SELECT *\r\n    FROM t\r\nWHERE id = 1\r\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -32,7 +32,7 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(["format", "--stdin", "--line-ending", "lf"], stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Equal("SELECT *\n    FROM t\nWHERE id=1\n", stdout.ToString());
+        Assert.Equal("SELECT *\n    FROM t\nWHERE id = 1\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 

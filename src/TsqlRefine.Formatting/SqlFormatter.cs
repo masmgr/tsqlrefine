@@ -42,13 +42,16 @@ public static class SqlFormatter
         // Apply inline spacing normalization
         var inlineNormalized = InlineSpaceNormalizer.Normalize(whitespaceNormalized, options);
 
+        // Apply operator spacing normalization
+        var operatorNormalized = OperatorSpaceNormalizer.Normalize(inlineNormalized, options);
+
         // Apply comma style if not default trailing
         if (options.CommaStyle == CommaStyle.Leading)
         {
-            inlineNormalized = CommaStyleTransformer.ToLeadingCommas(inlineNormalized);
+            operatorNormalized = CommaStyleTransformer.ToLeadingCommas(operatorNormalized);
         }
 
-        return inlineNormalized;
+        return operatorNormalized;
     }
 
     private static string GetLineEndingString(LineEnding setting, string fallback)

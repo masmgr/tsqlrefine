@@ -107,6 +107,9 @@ public sealed record FormattingOptions
     /// <summary>Normalize inline spacing (collapse duplicates, space after commas)</summary>
     public bool NormalizeInlineSpacing { get; init; } = true;
 
+    /// <summary>Normalize spacing around operators (space before and after binary operators)</summary>
+    public bool NormalizeOperatorSpacing { get; init; } = true;
+
     /// <summary>Line ending style for output (Auto = detect from input, fallback to CRLF)</summary>
     public LineEnding LineEnding { get; init; } = LineEnding.Auto;
 }
