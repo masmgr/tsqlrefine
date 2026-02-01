@@ -3,7 +3,7 @@
 **Rule ID:** `conditional-begin-end`
 **Category:** Style
 **Severity:** Information
-**Fixable:** No
+**Fixable:** Yes
 
 ## Description
 
@@ -82,6 +82,34 @@ BEGIN
     INSERT INTO OrderLog (OrderId, Message) VALUES (@OrderId, 'Applied bulk discount');
     SELECT @OrderTotal = @OrderTotal * 0.9;  -- Apply 10% discount
 END;
+```
+
+## Auto-Fix
+
+This rule supports auto-fixing. The fix wraps the single statement with a BEGIN/END block, using proper indentation based on the parent IF or ELSE keyword.
+
+**Before:**
+
+```sql
+IF @x = 1
+    SELECT 1;
+```
+
+**After:**
+
+```sql
+IF @x = 1
+BEGIN
+    SELECT 1;
+END
+```
+
+The fix preserves the original indentation style and line endings from your source file.
+
+To apply the fix:
+
+```powershell
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix file.sql
 ```
 
 ## Configuration
