@@ -155,7 +155,9 @@ public sealed class CommandExecutor
                 foreach (var d in file.Diagnostics)
                 {
                     var start = d.Range.Start;
-                    await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({d.Data?.RuleId ?? d.Code})");
+                    var ruleId = d.Data?.RuleId ?? d.Code;
+                    var fixableIndicator = d.Data?.Fixable == true ? ",Fixable" : "";
+                    await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator})");
                 }
             }
         }
