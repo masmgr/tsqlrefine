@@ -277,15 +277,10 @@ public sealed class CommandExecutor
             }
         }
 
+        // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）
         var hasParseErrors = result.Files.Any(f =>
             f.Diagnostics.Any(d => d.Code == TsqlRefineEngine.ParseErrorCode));
-        if (hasParseErrors)
-        {
-            return ExitCodes.AnalysisError;
-        }
-
-        var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
-        return hasIssues ? ExitCodes.Violations : 0;
+        return hasParseErrors ? ExitCodes.AnalysisError : 0;
     }
 
     private EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)

@@ -88,4 +88,18 @@ public sealed class CliFixTests
                 Directory.Delete(tempDir, true);
         }
     }
+
+    [Fact]
+    public async Task Fix_WhenUnfixableViolationsRemain_Exit0()
+    {
+        // SELECT * は avoid-select-star ルールに違反するが、このルールは Fixable=false
+        var stdin = new StringReader("SELECT * FROM dbo.users;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(["fix", "--stdin"], stdin, stdout, stderr);
+
+        // 修正できない違反が残っていても、fix コマンド自体は成功扱い
+        Assert.Equal(0, code);
+    }
 }
