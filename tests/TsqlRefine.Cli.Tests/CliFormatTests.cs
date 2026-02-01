@@ -14,7 +14,8 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(["format", "--stdin"], stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        Assert.Equal("SELECT *\n    FROM T\nWHERE ID=1\n", stdout.ToString());
+        // Default identifier casing is None, so identifiers keep original casing
+        Assert.Equal("SELECT *\n    FROM t\nWHERE id=1\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -28,8 +29,8 @@ public sealed class CliFormatTests
         var code = await CliApp.RunAsync(["format", "--stdin"], stdin, stdout, stderr);
 
         Assert.Equal(0, code);
-        // Column alias 's' becomes 'S' with default column casing (upper)
-        Assert.Equal("SELECT '--select' AS S -- select\nSELECT [from] FROM T;\n", stdout.ToString());
+        // Default identifier casing is None, so aliases, tables, columns keep original casing
+        Assert.Equal("SELECT '--select' AS s -- select\nSELECT [from] FROM t;\n", stdout.ToString());
         Assert.Equal(string.Empty, stderr.ToString());
     }
 
@@ -54,9 +55,9 @@ public sealed class CliFormatTests
             Assert.Empty(stdout.ToString());
             // stderr should contain the change log
             Assert.Contains("Formatted:", stderr.ToString());
-            // File should be updated
+            // File should be updated (default identifier casing is None)
             var content = await File.ReadAllTextAsync(sqlPath);
-            Assert.Equal("SELECT * FROM T\n", content);
+            Assert.Equal("SELECT * FROM t\n", content);
         }
         finally
         {
@@ -91,9 +92,9 @@ public sealed class CliFormatTests
             Assert.Empty(stdout.ToString());
             // stderr should contain the change log
             Assert.Contains("Formatted:", stderr.ToString());
-            // File should be updated with tab indentation
+            // File should be updated with tab indentation (default identifier casing is None)
             var content = await File.ReadAllTextAsync(sqlPath);
-            Assert.Equal("SELECT *\n\t\tFROM T\n", content);
+            Assert.Equal("SELECT *\n\t\tFROM t\n", content);
         }
         finally
         {

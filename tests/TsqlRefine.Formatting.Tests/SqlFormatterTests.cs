@@ -182,11 +182,11 @@ FROM users";
         var result = SqlFormatter.Format(sql);
 
         // Should preserve the irregular indentation pattern
-        // Note: Column names will be uppercased due to default ColumnCasing = Upper
+        // Note: Default ColumnCasing is None, so identifiers keep their original casing
         var lines = result.Split('\n');
-        Assert.Contains(lines, line => line.Contains("    ID"));
-        Assert.Contains(lines, line => line.Contains("        NAME"));
-        Assert.Contains(lines, line => line.Contains("            EMAIL"));
+        Assert.Contains(lines, line => line.Contains("    id"));
+        Assert.Contains(lines, line => line.Contains("        name"));
+        Assert.Contains(lines, line => line.Contains("            email"));
     }
 
     [Fact]
@@ -222,8 +222,8 @@ FROM orders";
         var result = SqlFormatter.Format(sql);
 
         // Expression structure (CASE, parentheses, line breaks) should be preserved
-        // Note: Column names will be uppercased due to default ColumnCasing = Upper
-        Assert.Contains("(PRICE * QUANTITY)", result);
+        // Note: Default ColumnCasing is None, so identifiers keep their original casing
+        Assert.Contains("(price * quantity)", result);
         Assert.Contains("CASE", result);
         Assert.Contains("WHEN", result);
         Assert.Contains("THEN", result);
@@ -278,7 +278,8 @@ WHERE u.status IN (
         var sql = "SELECT  id,name,  email  FROM  users";
         var result = SqlFormatter.Format(sql);
 
-        Assert.Contains("SELECT ID, NAME, EMAIL FROM USERS", result);
+        // Default ColumnCasing/TableCasing is None, so identifiers keep original casing
+        Assert.Contains("SELECT id, name, email FROM users", result);
     }
 
     [Fact]
@@ -307,9 +308,9 @@ WHERE u.status IN (
         var result = SqlFormatter.Format(sql, options);
 
         // Should preserve double spaces and missing space after comma
-        // Note: Element casing still applies, so identifiers will be uppercased
+        // Note: Default ColumnCasing is None, so identifiers keep original casing
         Assert.Contains("  ", result);
-        Assert.Contains("ID,NAME", result);
+        Assert.Contains("id,name", result);
     }
 
     [Fact]
@@ -326,6 +327,7 @@ FROM users";
         Assert.Contains("-- line,  comment", result);
 
         // But unprotected regions should be normalized
-        Assert.Contains("ID, /* test,  comment */ NAME", result);
+        // Note: Default ColumnCasing is None, so identifiers keep original casing
+        Assert.Contains("id, /* test,  comment */ name", result);
     }
 }
