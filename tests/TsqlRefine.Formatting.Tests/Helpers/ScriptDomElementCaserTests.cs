@@ -354,4 +354,108 @@ where u.isactive = 1 and u.createdate >= dateadd(day, -30, getdate());
         // Comment content should not be affected
         Assert.Contains("-- comment with SELECT", result);
     }
+
+    [Fact]
+    public void Apply_SystemTable_LowercasesSystemTables()
+    {
+        var sql = "SELECT * FROM sys.tables WHERE name = 'users'";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            SchemaCasing = ElementCasing.Lower,
+            TableCasing = ElementCasing.Upper,
+            SystemTableCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // System table should be lowercase
+        Assert.Contains("sys.tables", result);
+
+        // But keyword should still be uppercase
+        Assert.Contains("SELECT", result);
+        Assert.Contains("FROM", result);
+        Assert.Contains("WHERE", result);
+    }
+
+    [Fact]
+    public void Apply_SystemTable_InformationSchema()
+    {
+        var sql = "SELECT * FROM information_schema.columns WHERE table_name = 'users'";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            SchemaCasing = ElementCasing.Lower,
+            TableCasing = ElementCasing.Upper,
+            SystemTableCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // System table should be lowercase
+        Assert.Contains("information_schema.columns", result);
+
+        // Keyword should be uppercase
+        Assert.Contains("SELECT", result);
+        Assert.Contains("FROM", result);
+    }
+
+    [Fact]
+    public void Apply_StoredProcedure_PreservesOriginalCase()
+    {
+        var sql = "EXEC MyStoredProc @param = 1";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            StoredProcedureCasing = ElementCasing.None
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // Stored procedure case should be preserved
+        Assert.Contains("MyStoredProc", result);
+
+        // Keyword should still be uppercase
+        Assert.Contains("EXEC", result);
+    }
+
+    [Fact]
+    public void Apply_StoredProcedure_UppercasesWhenConfigured()
+    {
+        var sql = "EXEC myStoredProc @param = 1";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            StoredProcedureCasing = ElementCasing.Upper
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // Stored procedure should be uppercased
+        Assert.Contains("MYSTOREDPROC", result);
+
+        // Keyword should be uppercase
+        Assert.Contains("EXEC", result);
+    }
+
+    [Fact]
+    public void Apply_Execute_VariousFormats()
+    {
+        var sql = "EXECUTE myProc1; EXEC myProc2;";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            StoredProcedureCasing = ElementCasing.None
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        // Procedure case should be preserved
+        Assert.Contains("myProc1", result);
+        Assert.Contains("myProc2", result);
+
+        // Keywords should be uppercase
+        Assert.Contains("EXECUTE", result);
+        Assert.Contains("EXEC", result);
+    }
 }

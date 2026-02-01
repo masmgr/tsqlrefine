@@ -92,6 +92,16 @@ public static class SqlElementCategorizer
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// System schemas that contain system objects (sys.*, information_schema.*)
+    /// Note: dbo is NOT included as it's the default user schema, not a system schema
+    /// </summary>
+    private static readonly FrozenSet<string> SystemSchemas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "sys",
+        "information_schema"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Categories for SQL token elements
     /// </summary>
     public enum ElementCategory
@@ -110,6 +120,12 @@ public static class SqlElementCategorizer
         Column,
         /// <summary>Variable (@var, @@var)</summary>
         Variable,
+        /// <summary>System table (sys.*, information_schema.*, etc.)</summary>
+        SystemTable,
+        /// <summary>Stored procedure name</summary>
+        StoredProcedure,
+        /// <summary>User-defined function name</summary>
+        UserDefinedFunction,
         /// <summary>Other (literals, comments, operators, etc.)</summary>
         Other
     }
@@ -139,6 +155,21 @@ public static class SqlElementCategorizer
         /// Whether we're currently after an AS keyword (expecting an alias)
         /// </summary>
         public bool AfterAsKeyword { get; set; }
+
+        /// <summary>
+        /// The last schema name seen (for system table detection)
+        /// </summary>
+        public string? LastSchemaName { get; set; }
+
+        /// <summary>
+        /// Whether we're currently in a procedure/function call context (right after EXEC/EXECUTE)
+        /// </summary>
+        public bool InExecuteContext { get; set; }
+
+        /// <summary>
+        /// Whether we've already processed the procedure name after EXEC
+        /// </summary>
+        public bool ExecuteProcedureProcessed { get; set; }
     }
 
     /// <summary>
@@ -211,6 +242,19 @@ public static class SqlElementCategorizer
         if (typeName.Contains("Identifier", StringComparison.Ordinal))
         {
             var category = CategorizeIdentifier(token, previousToken, nextToken, context);
+
+            // Track schema name if this is a schema identifier
+            if (category == ElementCategory.Schema)
+            {
+                context.LastSchemaName = text;
+            }
+
+            // Mark that we've processed the procedure name if in EXEC context
+            if (category == ElementCategory.StoredProcedure)
+            {
+                context.ExecuteProcedureProcessed = true;
+            }
+
             UpdateContext(token, context);
             return category;
         }
@@ -232,12 +276,18 @@ public static class SqlElementCategorizer
         {
             context.InTableContext = true;
             context.AfterAsKeyword = false;
+            context.InExecuteContext = false;
+            context.ExecuteProcedureProcessed = false;
+            context.LastSchemaName = null;
         }
         // Exit table context on certain keywords
         else if (IsEndOfTableContextKeyword(text))
         {
             context.InTableContext = false;
             context.AfterAsKeyword = false;
+            context.InExecuteContext = false;
+            context.ExecuteProcedureProcessed = false;
+            context.LastSchemaName = null;
         }
         // Track AS keyword
         else if (text.Equals("AS", StringComparison.OrdinalIgnoreCase))
@@ -248,6 +298,20 @@ public static class SqlElementCategorizer
         else if (context.AfterAsKeyword && token.TokenType.ToString().Contains("Identifier"))
         {
             context.AfterAsKeyword = false;
+        }
+        // Track EXEC/EXECUTE for procedure calls
+        else if (text.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
+                 text.Equals("EXECUTE", StringComparison.OrdinalIgnoreCase))
+        {
+            context.InExecuteContext = true;
+            context.ExecuteProcedureProcessed = false;
+        }
+        // Reset on statement terminators
+        else if (text.Equals(";", StringComparison.Ordinal))
+        {
+            context.InExecuteContext = false;
+            context.ExecuteProcedureProcessed = false;
+            context.LastSchemaName = null;
         }
     }
 
@@ -291,14 +355,34 @@ public static class SqlElementCategorizer
         TSqlParserToken? nextToken,
         CasingContext context)
     {
+        var text = token.Text ?? "";
+
+        // Check if this is a stored procedure (in EXEC/EXECUTE context)
+        // Stored procedures appear immediately after EXEC/EXECUTE keyword
+        // Only the first identifier after EXEC is the procedure name
+        if (context.InExecuteContext && !context.ExecuteProcedureProcessed)
+        {
+            return ElementCategory.StoredProcedure;
+        }
+
         var identContext = DetermineIdentifierContext(previousToken, nextToken, context);
-        return identContext switch
+
+        // Return mapped context category
+        var baseCategory = identContext switch
         {
             IdentifierContext.Schema => ElementCategory.Schema,
             IdentifierContext.Table => ElementCategory.Table,
             IdentifierContext.Column => ElementCategory.Column,
             _ => ElementCategory.Column // Default to column
         };
+
+        // Check if this is a system table (after sys or information_schema)
+        if (baseCategory == ElementCategory.Table && SystemSchemas.Contains(context.LastSchemaName ?? ""))
+        {
+            return ElementCategory.SystemTable;
+        }
+
+        return baseCategory;
     }
 
     /// <summary>
@@ -354,6 +438,16 @@ public static class SqlElementCategorizer
     private static bool IsFollowedByParenthesis(TSqlParserToken? nextToken)
     {
         return nextToken?.Text == "(";
+    }
+
+    /// <summary>
+    /// Checks if the previous token indicates EXEC or EXECUTE context
+    /// </summary>
+    private static bool IsExecuteContext(TSqlParserToken? previousToken)
+    {
+        var text = previousToken?.Text ?? "";
+        return text.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
+               text.Equals("EXECUTE", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

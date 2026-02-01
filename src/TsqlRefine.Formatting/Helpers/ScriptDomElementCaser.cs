@@ -73,6 +73,15 @@ public static class ScriptDomElementCaser
                 SqlElementCategorizer.ElementCategory.Variable =>
                     CasingHelpers.ApplyCasing(text, options.VariableCasing),
 
+                SqlElementCategorizer.ElementCategory.SystemTable =>
+                    CasingHelpers.ApplyCasing(text, options.SystemTableCasing),
+
+                SqlElementCategorizer.ElementCategory.StoredProcedure =>
+                    CasingHelpers.ApplyCasing(text, options.StoredProcedureCasing),
+
+                SqlElementCategorizer.ElementCategory.UserDefinedFunction =>
+                    CasingHelpers.ApplyCasing(text, options.UserDefinedFunctionCasing),
+
                 _ => text
             };
 

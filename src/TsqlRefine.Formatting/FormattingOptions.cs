@@ -56,6 +56,15 @@ public sealed record FormattingOptions
     /// <summary>Casing for variables (@var, @@rowcount, etc.)</summary>
     public ElementCasing VariableCasing { get; init; } = ElementCasing.Lower;
 
+    /// <summary>Casing for system tables (sys.*, information_schema.*)</summary>
+    public ElementCasing SystemTableCasing { get; init; } = ElementCasing.Lower;
+
+    /// <summary>Casing for stored procedures and user-defined functions (preserve original)</summary>
+    public ElementCasing StoredProcedureCasing { get; init; } = ElementCasing.None;
+
+    /// <summary>Casing for user-defined functions (preserve original)</summary>
+    public ElementCasing UserDefinedFunctionCasing { get; init; } = ElementCasing.None;
+
     /// <summary>Comma placement style (trailing or leading)</summary>
     public CommaStyle CommaStyle { get; init; } = CommaStyle.Trailing;
 
