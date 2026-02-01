@@ -119,7 +119,7 @@ Key components:
   - Collects and normalizes diagnostics
   - Returns `LintResult`
 - `ScriptDomTokenizer`: Wraps Microsoft's T-SQL parser
-  - Maps compat level (100-160) to appropriate TSql parser
+  - Maps compat level (100-170) to appropriate TSql parser
   - Extracts both AST (full syntax tree) and tokens (flat stream)
   - Handles parse errors gracefully
 - `EngineOptions`: Execution config (severity threshold, ruleset, compat level)
@@ -293,7 +293,7 @@ Each rule receives a `RuleContext`:
 ```csharp
 public sealed record RuleContext(
     string FilePath,
-    int CompatLevel,           // 100-160 (SQL Server 2008-2022)
+    int CompatLevel,           // 100-170 (SQL Server 2008-2025)
     ScriptDomAst Ast,          // Parsed AST (TSqlFragment)
     IReadOnlyList<Token> Tokens, // Flat token stream
     RuleSettings Settings       // Per-rule config
@@ -311,7 +311,7 @@ Rules return `Diagnostic[]` with:
 
 Uses **Microsoft.SqlServer.TransactSql.ScriptDom** for T-SQL parsing.
 
-**Compat level mapping**:
+**Compat level mapping** (TSql170Parser requires ScriptDom 170.x package):
 - 100 → SQL Server 2008
 - 110 → SQL Server 2012
 - 120 → SQL Server 2014
@@ -327,7 +327,7 @@ JSON schema available at `schemas/tsqlrefine.schema.json`.
 
 ```json
 {
-  "compatLevel": 150,              // SQL Server compat level (100, 110, 120, 150, 160)
+  "compatLevel": 150,              // SQL Server compat level (100, 110, 120, 150, 160, 170)
   "ruleset": "rulesets/recommended.json", // Optional ruleset file
   "plugins": [
     { "path": "plugins/custom.dll", "enabled": true }
