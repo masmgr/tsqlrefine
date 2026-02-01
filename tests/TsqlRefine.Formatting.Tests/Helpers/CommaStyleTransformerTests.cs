@@ -176,6 +176,73 @@ public class CommaStyleTransformerTests
 
     #endregion
 
+    #region ToLeadingCommas - Protected Regions
+
+    [Fact]
+    public void ToLeadingCommas_CommaInsideString_PreservesString()
+    {
+        // Comma inside string should not trigger transformation
+        var input = "SELECT 'a,b',\n    name";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // The trailing comma after string triggers transformation, but string content is preserved
+        Assert.Equal("SELECT 'a,b'\n    , name", result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_StringEndsWithComma_PreservesStringContent()
+    {
+        // Line ends with a string containing comma - should not transform the comma inside
+        var input = "SELECT 'abc,'\nFROM Users";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // No trailing comma outside string, so no transformation
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_CommaInsideBlockComment_NotTransformed()
+    {
+        // Comma inside block comment should not be transformed
+        var input = "SELECT id /* comma here, */,\n    name";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // The trailing comma after comment triggers transformation
+        Assert.Contains(", name", result);
+        Assert.Contains("/* comma here, */", result); // Comment content preserved
+    }
+
+    [Fact]
+    public void ToLeadingCommas_CommaInsideLineComment_NotTransformed()
+    {
+        // Line comment makes the trailing comma part of comment
+        var input = "SELECT id -- comment,\n    name";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // Comma is part of comment, so no transformation happens
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_CommaInsideBracketIdentifier_PreservesIdentifier()
+    {
+        // Comma inside bracket identifier should not trigger transformation
+        var input = "SELECT [Column,Name],\n    id";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // Trailing comma after bracket identifier triggers transformation
+        Assert.Equal("SELECT [Column,Name]\n    , id", result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_MultilineString_TracksStateCorrectly()
+    {
+        // String spanning multiple lines - state should be tracked
+        var input = "SELECT 'first line,\nsecond line',\n    id";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        // The comma inside the string should not be transformed
+        // Only the trailing comma after the string should transform
+        Assert.Contains("'first line,", result);
+        Assert.Contains("second line'", result);
+    }
+
+    #endregion
+
     #region ToTrailingCommas - Not Implemented
 
     [Fact]

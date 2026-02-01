@@ -10,33 +10,40 @@ public static class CommaStyleTransformer
     /// <summary>
     /// Transforms trailing commas to leading commas.
     ///
-    /// Current implementation is naive and handles simple cases only.
-    /// TODO: Implement AST-based approach for complex scenarios (subqueries, CTEs, nested structures).
+    /// Example:
+    /// Input:
+    ///   SELECT id,
+    ///          name,
+    ///          email
+    ///
+    /// Output:
+    ///   SELECT id
+    ///        , name
+    ///        , email
     ///
     /// Known limitations:
-    /// - Does not detect commas inside strings or comments
-    /// - May incorrectly transform commas in complex nested structures
     /// - Line-by-line processing cannot handle multiline expressions properly
+    /// - Complex nested structures (subqueries, CTEs) may not transform correctly
     /// </summary>
     /// <param name="input">SQL text with trailing commas</param>
     /// <returns>SQL text with leading commas</returns>
     public static string ToLeadingCommas(string input)
     {
-        // Simple transformation: move trailing commas to leading position
-        // This is a basic implementation that handles simple cases
-        // For more complex scenarios, a full AST-based approach would be needed
         var lines = input.Split('\n');
         var result = new StringBuilder(input.Length);
+        var tracker = new ProtectedRegionTracker();
 
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            var trimmed = line.TrimEnd();
 
-            if (trimmed.EndsWith(','))
+            // Check if this line ends with a comma outside protected regions
+            var (hasTrailingComma, commaPosition) = FindTrailingComma(line, tracker);
+
+            if (hasTrailingComma && commaPosition >= 0)
             {
-                // This line has a trailing comma
-                var withoutComma = trimmed[..^1].TrimEnd();
+                // This line has a trailing comma outside protected regions
+                var withoutComma = line[..commaPosition].TrimEnd();
                 result.Append(withoutComma);
 
                 // If there's a next line, prepend the comma to it
@@ -53,6 +60,9 @@ public static class CommaStyleTransformer
                         result.Append(' ');
                         result.Append(nextTrimStart);
                     }
+
+                    // Update tracker state with the next line content
+                    UpdateTrackerState(nextLine, tracker);
                     i++; // Skip next line as we already processed it
                 }
                 else
@@ -64,6 +74,11 @@ public static class CommaStyleTransformer
             else
             {
                 result.Append(line);
+                // Update tracker state for non-comma lines
+                if (!hasTrailingComma)
+                {
+                    UpdateTrackerState(line, tracker);
+                }
             }
 
             if (i < lines.Length - 1)
@@ -88,5 +103,94 @@ public static class CommaStyleTransformer
     {
         // Not currently used, but provides symmetry
         throw new NotImplementedException("Trailing comma transformation not yet implemented");
+    }
+
+    /// <summary>
+    /// Finds a trailing comma on a line, skipping commas inside protected regions.
+    /// Returns the position of the trailing comma (or -1 if none found) and whether
+    /// the line ends with a comma outside protected regions.
+    /// </summary>
+    private static (bool hasTrailingComma, int commaPosition) FindTrailingComma(string line, ProtectedRegionTracker tracker)
+    {
+        var trimmed = line.TrimEnd();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return (false, -1);
+        }
+
+        // Track protected regions through the line to determine if trailing comma is protected
+        var lastCommaOutsideProtected = -1;
+        var tempOutput = new StringBuilder();
+
+        for (var i = 0; i < trimmed.Length; i++)
+        {
+            // Try to consume protected region content
+            if (tracker.TryConsume(trimmed, tempOutput, ref i))
+            {
+                i--; // TryConsume advances index, loop will increment
+                continue;
+            }
+
+            // Try to start a protected region
+            if (tracker.TryStartProtectedRegion(trimmed, tempOutput, ref i))
+            {
+                i--; // TryStart advances index, loop will increment
+                continue;
+            }
+
+            // Check for line comment
+            var inLineComment = false;
+            if (ProtectedRegionTracker.TryStartLineComment(trimmed, tempOutput, ref i, ref inLineComment))
+            {
+                // Rest of line is comment
+                break;
+            }
+
+            var c = trimmed[i];
+
+            // Track comma position if outside protected regions
+            if (c == ',' && !tracker.IsInProtectedRegion())
+            {
+                lastCommaOutsideProtected = i;
+            }
+
+            tempOutput.Append(c);
+        }
+
+        // Check if the last non-whitespace character was a comma outside protected regions
+        var isTrailing = lastCommaOutsideProtected >= 0 && lastCommaOutsideProtected == trimmed.Length - 1;
+
+        return (isTrailing, isTrailing ? lastCommaOutsideProtected : -1);
+    }
+
+    /// <summary>
+    /// Updates the tracker state by processing a line without outputting.
+    /// This keeps the tracker state in sync when we skip lines.
+    /// </summary>
+    private static void UpdateTrackerState(string line, ProtectedRegionTracker tracker)
+    {
+        var tempOutput = new StringBuilder();
+        for (var i = 0; i < line.Length; i++)
+        {
+            if (tracker.TryConsume(line, tempOutput, ref i))
+            {
+                i--;
+                continue;
+            }
+
+            if (tracker.TryStartProtectedRegion(line, tempOutput, ref i))
+            {
+                i--;
+                continue;
+            }
+
+            var inLineComment = false;
+            if (ProtectedRegionTracker.TryStartLineComment(line, tempOutput, ref i, ref inLineComment))
+            {
+                break;
+            }
+
+            tempOutput.Append(line[i]);
+        }
     }
 }
