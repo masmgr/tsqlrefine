@@ -64,8 +64,10 @@ public sealed class JoinConditionAlwaysTrueRule : IRule
                     return;
                 }
 
-                // Check for self-comparisons like t1.col = t1.col
-                if (AreSameColumnReferences(comparison.FirstExpression, comparison.SecondExpression))
+                // Check for self-comparisons like t1.col = t1.col using helper
+                if (comparison.FirstExpression is ColumnReferenceExpression firstCol &&
+                    comparison.SecondExpression is ColumnReferenceExpression secondCol &&
+                    ColumnReferenceHelpers.AreColumnReferencesEqual(firstCol, secondCol))
                 {
                     AddDiagnostic(
                         fragment: join,
@@ -111,39 +113,6 @@ public sealed class JoinConditionAlwaysTrueRule : IRule
             }
 
             return false;
-        }
-
-        private static bool AreSameColumnReferences(ScalarExpression? first, ScalarExpression? second)
-        {
-            if (first is not ColumnReferenceExpression firstCol ||
-                second is not ColumnReferenceExpression secondCol)
-            {
-                return false;
-            }
-
-            var firstIdentifiers = firstCol.MultiPartIdentifier?.Identifiers;
-            var secondIdentifiers = secondCol.MultiPartIdentifier?.Identifiers;
-
-            if (firstIdentifiers == null || secondIdentifiers == null)
-            {
-                return false;
-            }
-
-            if (firstIdentifiers.Count != secondIdentifiers.Count)
-            {
-                return false;
-            }
-
-            // Compare each part (case-insensitive for SQL Server)
-            for (int i = 0; i < firstIdentifiers.Count; i++)
-            {
-                if (!string.Equals(firstIdentifiers[i].Value, secondIdentifiers[i].Value, StringComparison.OrdinalIgnoreCase))
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
     }
 }

@@ -85,4 +85,88 @@ public static class TableReferenceHelpers
             _ => null
         };
     }
+
+    /// <summary>
+    /// Traverses JOIN conditions recursively and invokes an action for each QualifiedJoin's search condition.
+    /// </summary>
+    /// <param name="tableRef">The table reference to start from.</param>
+    /// <param name="conditionAction">Action to invoke with the join and its search condition.</param>
+    public static void TraverseJoinConditions(
+        TableReference tableRef,
+        Action<QualifiedJoin, BooleanExpression> conditionAction)
+    {
+        ArgumentNullException.ThrowIfNull(conditionAction);
+
+        if (tableRef is QualifiedJoin qualifiedJoin)
+        {
+            if (qualifiedJoin.SearchCondition != null)
+            {
+                conditionAction(qualifiedJoin, qualifiedJoin.SearchCondition);
+            }
+
+            TraverseJoinConditions(qualifiedJoin.FirstTableReference, conditionAction);
+            TraverseJoinConditions(qualifiedJoin.SecondTableReference, conditionAction);
+        }
+        else if (tableRef is JoinTableReference join)
+        {
+            TraverseJoinConditions(join.FirstTableReference, conditionAction);
+            TraverseJoinConditions(join.SecondTableReference, conditionAction);
+        }
+    }
+
+    /// <summary>
+    /// Collects all QualifiedJoins of a specific type from a list of table references.
+    /// </summary>
+    /// <param name="tableRefs">The list of table references to search.</param>
+    /// <param name="joinType">The type of join to collect.</param>
+    /// <returns>An enumerable of matching QualifiedJoin nodes.</returns>
+    public static IEnumerable<QualifiedJoin> CollectJoinsOfType(
+        IList<TableReference> tableRefs,
+        QualifiedJoinType joinType)
+    {
+        ArgumentNullException.ThrowIfNull(tableRefs);
+
+        foreach (var tableRef in tableRefs)
+        {
+            foreach (var join in CollectJoinsOfTypeRecursive(tableRef, joinType))
+            {
+                yield return join;
+            }
+        }
+    }
+
+    private static IEnumerable<QualifiedJoin> CollectJoinsOfTypeRecursive(
+        TableReference tableRef,
+        QualifiedJoinType joinType)
+    {
+        if (tableRef is QualifiedJoin qualifiedJoin)
+        {
+            if (qualifiedJoin.QualifiedJoinType == joinType)
+            {
+                yield return qualifiedJoin;
+            }
+
+            foreach (var join in CollectJoinsOfTypeRecursive(qualifiedJoin.FirstTableReference, joinType))
+            {
+                yield return join;
+            }
+
+            foreach (var join in CollectJoinsOfTypeRecursive(qualifiedJoin.SecondTableReference, joinType))
+            {
+                yield return join;
+            }
+        }
+        else if (tableRef is JoinTableReference join)
+        {
+            foreach (var j in CollectJoinsOfTypeRecursive(join.FirstTableReference, joinType))
+            {
+                yield return j;
+            }
+
+            foreach (var j in CollectJoinsOfTypeRecursive(join.SecondTableReference, joinType))
+            {
+                yield return j;
+            }
+        }
+    }
 }

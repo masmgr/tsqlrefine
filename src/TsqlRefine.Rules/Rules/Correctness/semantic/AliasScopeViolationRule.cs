@@ -77,7 +77,7 @@ public sealed class AliasScopeViolationRule : IRule
             {
                 var outerContext = _queryStack.Peek();
 
-                // Get aliases referenced in this derived table
+                // Get aliases referenced in this derived table using helper
                 var referencedAliases = CollectReferencedAliases(node);
 
                 // Check if any referenced aliases are from the outer query but defined AFTER this derived table
@@ -147,6 +147,11 @@ public sealed class AliasScopeViolationRule : IRule
             return aliases;
         }
 
+        /// <summary>
+        /// Collects table qualifiers from column references, stopping at nested SELECT scope boundaries.
+        /// Note: Does NOT stop at QueryDerivedTable since we need to traverse into the derived table
+        /// we're analyzing - only stops at nested SELECT statements within.
+        /// </summary>
         private sealed class AliasCollector : TSqlFragmentVisitor
         {
             private readonly HashSet<string> _aliases;
@@ -158,19 +163,19 @@ public sealed class AliasScopeViolationRule : IRule
 
             public override void ExplicitVisit(ColumnReferenceExpression node)
             {
-                if (node.MultiPartIdentifier?.Identifiers?.Count > 1)
+                var qualifier = ColumnReferenceHelpers.GetTableQualifier(node);
+                if (qualifier != null)
                 {
-                    var alias = node.MultiPartIdentifier.Identifiers[0].Value;
-                    _aliases.Add(alias);
+                    _aliases.Add(qualifier);
                 }
 
                 base.ExplicitVisit(node);
             }
 
-            // Don't descend into nested subqueries
+            // Stop at nested SELECT statements - they have their own scope
             public override void ExplicitVisit(SelectStatement node)
             {
-                // Stop here
+                // Stop here - don't traverse into nested SELECT statements
             }
         }
 

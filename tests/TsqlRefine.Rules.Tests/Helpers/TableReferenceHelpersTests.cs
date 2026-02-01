@@ -217,4 +217,148 @@ public sealed class TableReferenceHelpersTests
         // Assert
         Assert.Equal("users", name);
     }
+
+    #region TraverseJoinConditions Tests
+
+    [Fact]
+    public void TraverseJoinConditions_WithSingleJoin_InvokesActionOnce()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM users u INNER JOIN orders o ON u.id = o.user_id");
+        var invokeCount = 0;
+
+        // Act
+        foreach (var tableRef in querySpec.FromClause.TableReferences)
+        {
+            TableReferenceHelpers.TraverseJoinConditions(tableRef, (join, condition) =>
+            {
+                invokeCount++;
+            });
+        }
+
+        // Assert
+        Assert.Equal(1, invokeCount);
+    }
+
+    [Fact]
+    public void TraverseJoinConditions_WithMultipleJoins_InvokesActionForEach()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec(@"
+            SELECT * FROM users u
+            INNER JOIN orders o ON u.id = o.user_id
+            LEFT JOIN products p ON o.product_id = p.id");
+        var invokeCount = 0;
+
+        // Act
+        foreach (var tableRef in querySpec.FromClause.TableReferences)
+        {
+            TableReferenceHelpers.TraverseJoinConditions(tableRef, (join, condition) =>
+            {
+                invokeCount++;
+            });
+        }
+
+        // Assert
+        Assert.Equal(2, invokeCount);
+    }
+
+    [Fact]
+    public void TraverseJoinConditions_WithNoJoin_DoesNotInvokeAction()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM users");
+        var invokeCount = 0;
+
+        // Act
+        foreach (var tableRef in querySpec.FromClause.TableReferences)
+        {
+            TableReferenceHelpers.TraverseJoinConditions(tableRef, (join, condition) =>
+            {
+                invokeCount++;
+            });
+        }
+
+        // Assert
+        Assert.Equal(0, invokeCount);
+    }
+
+    [Fact]
+    public void TraverseJoinConditions_WithNullAction_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM users u INNER JOIN orders o ON u.id = o.user_id");
+        var tableRef = querySpec.FromClause.TableReferences[0];
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            TableReferenceHelpers.TraverseJoinConditions(tableRef, null!));
+    }
+
+    #endregion
+
+    #region CollectJoinsOfType Tests
+
+    [Fact]
+    public void CollectJoinsOfType_WithLeftJoin_CollectsLeftJoin()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec(@"
+            SELECT * FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id");
+
+        // Act
+        var leftJoins = TableReferenceHelpers.CollectJoinsOfType(
+            querySpec.FromClause.TableReferences,
+            QualifiedJoinType.LeftOuter).ToList();
+
+        // Assert
+        Assert.Single(leftJoins);
+    }
+
+    [Fact]
+    public void CollectJoinsOfType_WithMixedJoins_CollectsOnlySpecifiedType()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec(@"
+            SELECT * FROM users u
+            INNER JOIN orders o ON u.id = o.user_id
+            LEFT JOIN products p ON o.product_id = p.id
+            LEFT JOIN categories c ON p.category_id = c.id");
+
+        // Act
+        var leftJoins = TableReferenceHelpers.CollectJoinsOfType(
+            querySpec.FromClause.TableReferences,
+            QualifiedJoinType.LeftOuter).ToList();
+
+        // Assert
+        Assert.Equal(2, leftJoins.Count);
+    }
+
+    [Fact]
+    public void CollectJoinsOfType_WithNoMatchingType_ReturnsEmpty()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec(@"
+            SELECT * FROM users u
+            INNER JOIN orders o ON u.id = o.user_id");
+
+        // Act
+        var leftJoins = TableReferenceHelpers.CollectJoinsOfType(
+            querySpec.FromClause.TableReferences,
+            QualifiedJoinType.LeftOuter).ToList();
+
+        // Assert
+        Assert.Empty(leftJoins);
+    }
+
+    [Fact]
+    public void CollectJoinsOfType_WithNullList_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            TableReferenceHelpers.CollectJoinsOfType(null!, QualifiedJoinType.Inner).ToList());
+    }
+
+    #endregion
 }

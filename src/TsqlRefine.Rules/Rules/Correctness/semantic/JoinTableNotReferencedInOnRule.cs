@@ -72,10 +72,8 @@ public sealed class JoinTableNotReferencedInOnRule : IRule
                 return;
             }
 
-            // Collect all table references from the ON clause
-            var referencedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var columnRefCollector = new ColumnReferenceCollector(referencedTables);
-            node.SearchCondition.Accept(columnRefCollector);
+            // Collect all table references from the ON clause using helper
+            var referencedTables = ColumnReferenceHelpers.CollectTableQualifiers(node.SearchCondition);
 
             // Check if the joined table is referenced
             if (!referencedTables.Contains(joinedTableName))
@@ -88,43 +86,6 @@ public sealed class JoinTableNotReferencedInOnRule : IRule
                     fixable: false
                 );
             }
-        }
-    }
-
-    /// <summary>
-    /// Collects all table references from ColumnReferenceExpressions in the ON clause.
-    /// </summary>
-    private sealed class ColumnReferenceCollector : TSqlFragmentVisitor
-    {
-        private readonly HashSet<string> _referencedTables;
-
-        public ColumnReferenceCollector(HashSet<string> referencedTables)
-        {
-            _referencedTables = referencedTables;
-        }
-
-        public override void ExplicitVisit(ColumnReferenceExpression node)
-        {
-            // Extract table qualifier from multi-part identifier
-            if (node.MultiPartIdentifier?.Identifiers?.Count > 1)
-            {
-                // First identifier is the table alias/name (e.g., "t2" in "t2.column")
-                var tableQualifier = node.MultiPartIdentifier.Identifiers[0].Value;
-                _referencedTables.Add(tableQualifier);
-            }
-
-            base.ExplicitVisit(node);
-        }
-
-        // Don't descend into subqueries - they have their own scope
-        public override void ExplicitVisit(ScalarSubquery node)
-        {
-            // Stop here - don't traverse into scalar subqueries
-        }
-
-        public override void ExplicitVisit(SelectStatement node)
-        {
-            // Stop here - don't traverse into nested SELECT statements
         }
     }
 }

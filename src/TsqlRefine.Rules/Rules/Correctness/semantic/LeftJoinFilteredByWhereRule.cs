@@ -45,20 +45,33 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                 return;
             }
 
-            // Collect LEFT JOIN right-side table aliases
-            var leftJoinRightTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var leftJoins = new List<QualifiedJoin>();
-
-            if (querySpec.FromClause != null)
-            {
-                CollectLeftJoinRightSides(querySpec.FromClause.TableReferences, leftJoinRightTables, leftJoins);
-            }
-
-            // If no LEFT JOINs, nothing to check
-            if (leftJoinRightTables.Count == 0)
+            if (querySpec.FromClause == null)
             {
                 base.ExplicitVisit(node);
                 return;
+            }
+
+            // Collect LEFT JOIN right-side table aliases using helper
+            var leftJoins = TableReferenceHelpers.CollectJoinsOfType(
+                querySpec.FromClause.TableReferences,
+                QualifiedJoinType.LeftOuter).ToList();
+
+            // If no LEFT JOINs, nothing to check
+            if (leftJoins.Count == 0)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            // Build a map of right-side table names to their JOIN nodes
+            var rightTableToJoin = new Dictionary<string, QualifiedJoin>(StringComparer.OrdinalIgnoreCase);
+            foreach (var join in leftJoins)
+            {
+                var rightTableName = TableReferenceHelpers.GetAliasOrTableName(join.SecondTableReference);
+                if (rightTableName != null)
+                {
+                    rightTableToJoin[rightTableName] = join;
+                }
             }
 
             // Check WHERE clause for filters on right-side tables
@@ -66,12 +79,12 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             {
                 var filteredTables = FindFilteredRightSideTables(
                     querySpec.WhereClause.SearchCondition,
-                    leftJoinRightTables
+                    rightTableToJoin.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
                 );
 
-                foreach (var (tableName, join) in filteredTables.Select(t => (t, leftJoins.FirstOrDefault(j => GetRightTableName(j) == t))))
+                foreach (var tableName in filteredTables)
                 {
-                    if (join != null)
+                    if (rightTableToJoin.TryGetValue(tableName, out var join))
                     {
                         AddDiagnostic(
                             fragment: join,
@@ -85,52 +98,6 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private static void CollectLeftJoinRightSides(
-            IList<TableReference> tableRefs,
-            HashSet<string> rightTables,
-            List<QualifiedJoin> leftJoins)
-        {
-            foreach (var tableRef in tableRefs)
-            {
-                if (tableRef is QualifiedJoin qualifiedJoin)
-                {
-                    if (qualifiedJoin.QualifiedJoinType == QualifiedJoinType.LeftOuter)
-                    {
-                        // Track the right side of the LEFT JOIN
-                        var rightTableName = GetRightTableName(qualifiedJoin);
-                        if (rightTableName != null)
-                        {
-                            rightTables.Add(rightTableName);
-                            leftJoins.Add(qualifiedJoin);
-                        }
-                    }
-
-                    // Recursively check nested joins
-                    CollectLeftJoinRightSides(new[] { qualifiedJoin.FirstTableReference }, rightTables, leftJoins);
-                    CollectLeftJoinRightSides(new[] { qualifiedJoin.SecondTableReference }, rightTables, leftJoins);
-                }
-                else if (tableRef is JoinTableReference join)
-                {
-                    CollectLeftJoinRightSides(new[] { join.FirstTableReference }, rightTables, leftJoins);
-                    CollectLeftJoinRightSides(new[] { join.SecondTableReference }, rightTables, leftJoins);
-                }
-            }
-        }
-
-        private static string? GetRightTableName(QualifiedJoin join)
-        {
-            var rightTable = join.SecondTableReference;
-
-            return rightTable switch
-            {
-                NamedTableReference namedTable =>
-                    namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value,
-                QueryDerivedTable derivedTable =>
-                    derivedTable.Alias?.Value,
-                _ => null
-            };
         }
 
         private static HashSet<string> FindFilteredRightSideTables(
@@ -162,7 +129,7 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                     CheckComparison(comparison, rightSideTables, filteredTables);
                     break;
 
-                case BooleanIsNullExpression isNull:
+                case BooleanIsNullExpression:
                     // IS NULL / IS NOT NULL on right-side tables is OK - doesn't negate LEFT JOIN
                     break;
 
@@ -180,7 +147,7 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                     // IN predicate on right-side table
                     if (inPred.Expression is ColumnReferenceExpression colRef)
                     {
-                        var tableName = GetTableNameFromColumn(colRef);
+                        var tableName = ColumnReferenceHelpers.GetTableQualifier(colRef);
                         if (tableName != null && rightSideTables.Contains(tableName))
                         {
                             filteredTables.Add(tableName);
@@ -197,11 +164,11 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
         {
             // Check if either side references a right-side table
             var firstTable = comparison.FirstExpression is ColumnReferenceExpression firstCol
-                ? GetTableNameFromColumn(firstCol)
+                ? ColumnReferenceHelpers.GetTableQualifier(firstCol)
                 : null;
 
             var secondTable = comparison.SecondExpression is ColumnReferenceExpression secondCol
-                ? GetTableNameFromColumn(secondCol)
+                ? ColumnReferenceHelpers.GetTableQualifier(secondCol)
                 : null;
 
             // If a right-side table is compared to a literal or another column, it's a filter
@@ -214,17 +181,6 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             {
                 filteredTables.Add(secondTable);
             }
-        }
-
-        private static string? GetTableNameFromColumn(ColumnReferenceExpression column)
-        {
-            // Extract table name/alias from column reference (e.g., t2.status -> "t2")
-            if (column.MultiPartIdentifier?.Identifiers?.Count > 1)
-            {
-                return column.MultiPartIdentifier.Identifiers[0].Value;
-            }
-
-            return null;
         }
     }
 }

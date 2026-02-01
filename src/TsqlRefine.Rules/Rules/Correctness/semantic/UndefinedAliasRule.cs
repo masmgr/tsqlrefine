@@ -75,34 +75,22 @@ public sealed class UndefinedAliasRule : IRule
             // Check ORDER BY clause
             querySpec.OrderByClause?.Accept(columnRefChecker);
 
-            // Check JOIN conditions (these are part of FROM clause)
+            // Check JOIN conditions using helper
             if (querySpec.FromClause != null)
             {
                 foreach (var tableRef in querySpec.FromClause.TableReferences)
                 {
-                    CheckJoinConditions(tableRef, columnRefChecker);
+                    TableReferenceHelpers.TraverseJoinConditions(tableRef, (join, condition) =>
+                    {
+                        condition.Accept(columnRefChecker);
+                    });
                 }
             }
 
             base.ExplicitVisit(node);
         }
 
-        private static void CheckJoinConditions(TableReference tableRef, ColumnReferenceChecker checker)
-        {
-            if (tableRef is QualifiedJoin qualifiedJoin)
-            {
-                qualifiedJoin.SearchCondition?.Accept(checker);
-                CheckJoinConditions(qualifiedJoin.FirstTableReference, checker);
-                CheckJoinConditions(qualifiedJoin.SecondTableReference, checker);
-            }
-            else if (tableRef is JoinTableReference join)
-            {
-                CheckJoinConditions(join.FirstTableReference, checker);
-                CheckJoinConditions(join.SecondTableReference, checker);
-            }
-        }
-
-        private sealed class ColumnReferenceChecker : TSqlFragmentVisitor
+        private sealed class ColumnReferenceChecker : ScopeBoundaryAwareVisitor
         {
             private readonly HashSet<string> _declaredAliases;
             private readonly UndefinedAliasVisitor _parent;
@@ -116,30 +104,20 @@ public sealed class UndefinedAliasRule : IRule
             public override void ExplicitVisit(ColumnReferenceExpression node)
             {
                 // Check if this is a qualified column reference (e.g., table.column)
-                if (node.MultiPartIdentifier?.Identifiers?.Count > 1)
-                {
-                    var qualifier = node.MultiPartIdentifier.Identifiers[0].Value;
+                var qualifier = ColumnReferenceHelpers.GetTableQualifier(node);
 
-                    if (!_declaredAliases.Contains(qualifier))
-                    {
-                        _parent.AddDiagnostic(
-                            fragment: node.MultiPartIdentifier.Identifiers[0],
-                            message: $"Undefined table alias '{qualifier}'. Table or alias '{qualifier}' is not declared in the FROM clause.",
-                            code: "semantic/undefined-alias",
-                            category: "Correctness",
-                            fixable: false
-                        );
-                    }
+                if (qualifier != null && !_declaredAliases.Contains(qualifier))
+                {
+                    _parent.AddDiagnostic(
+                        fragment: node.MultiPartIdentifier!.Identifiers[0],
+                        message: $"Undefined table alias '{qualifier}'. Table or alias '{qualifier}' is not declared in the FROM clause.",
+                        code: "semantic/undefined-alias",
+                        category: "Correctness",
+                        fixable: false
+                    );
                 }
 
                 base.ExplicitVisit(node);
-            }
-
-            // Don't descend into subqueries - they have their own scope
-            public override void ExplicitVisit(SelectStatement node)
-            {
-                // Stop here - don't traverse into nested SELECT statements
-                // The parent visitor will handle them separately
             }
         }
     }
