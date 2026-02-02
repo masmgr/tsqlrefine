@@ -713,4 +713,125 @@ SELECT x.id FROM orders o;";
     }
 
     #endregion
+
+    #region Built-in Table-Valued Function Tests
+
+    // STRING_SPLIT - Valid cases
+    [Theory]
+    [InlineData("SELECT s.value FROM STRING_SPLIT('a,b,c', ',') AS s;")]
+    [InlineData("SELECT s.value, s.ordinal FROM STRING_SPLIT('a,b,c', ',', 1) AS s;")]
+    [InlineData("SELECT t.id, s.value FROM table1 t CROSS APPLY STRING_SPLIT(t.csv, ',') AS s;")]
+    [InlineData("SELECT t.id, s.value FROM table1 t OUTER APPLY STRING_SPLIT(t.csv, ',') AS s;")]
+    public void Analyze_WithStringSplit_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // STRING_SPLIT - Invalid cases
+    [Theory]
+    [InlineData("SELECT x.value FROM STRING_SPLIT('a,b,c', ',') AS s;", "x")]
+    [InlineData("SELECT s.value, y.other FROM STRING_SPLIT('a,b,c', ',') AS s;", "y")]
+    public void Analyze_WithStringSplitAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // OPENJSON - Valid cases
+    [Theory]
+    [InlineData("SELECT j.value FROM OPENJSON(@json) AS j;")]
+    [InlineData("SELECT j.[key], j.value FROM OPENJSON('[1,2,3]') AS j;")]
+    [InlineData("SELECT t.id, j.value FROM table1 t CROSS APPLY OPENJSON(t.json_col) AS j;")]
+    public void Analyze_WithOpenJson_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // OPENJSON - Invalid cases
+    [Theory]
+    [InlineData("SELECT x.value FROM OPENJSON(@json) AS j;", "x")]
+    public void Analyze_WithOpenJsonAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // VALUES clause as table (InlineDerivedTable) - Valid cases
+    [Theory]
+    [InlineData("SELECT v.id FROM (VALUES (1), (2)) AS v(id);")]
+    [InlineData("SELECT v.id, v.name FROM (VALUES (1, 'a'), (2, 'b')) AS v(id, name);")]
+    [InlineData("SELECT t.col, v.id FROM table1 t JOIN (VALUES (1), (2)) AS v(id) ON t.id = v.id;")]
+    public void Analyze_WithValuesClause_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // VALUES clause - Invalid cases
+    [Theory]
+    [InlineData("SELECT x.id FROM (VALUES (1), (2)) AS v(id);", "x")]
+    public void Analyze_WithValuesClauseAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // GENERATE_SERIES - Valid cases (SQL Server 2022+)
+    [Theory]
+    [InlineData("SELECT g.value FROM GENERATE_SERIES(1, 10) AS g;")]
+    [InlineData("SELECT g.value FROM GENERATE_SERIES(1, 100, 5) AS g;")]
+    public void Analyze_WithGenerateSeries_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    #endregion
 }

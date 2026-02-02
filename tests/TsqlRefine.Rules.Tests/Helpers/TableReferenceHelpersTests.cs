@@ -361,4 +361,56 @@ public sealed class TableReferenceHelpersTests
     }
 
     #endregion
+
+    #region Built-in Table-Valued Function Tests
+
+    [Fact]
+    public void GetAliasOrTableName_WithStringSplit_ReturnsAlias()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT s.value FROM STRING_SPLIT('a,b,c', ',') AS s");
+        var collected = new List<TableReference>();
+        TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, collected);
+        var tableRef = collected[0];
+
+        // Act
+        var name = TableReferenceHelpers.GetAliasOrTableName(tableRef);
+
+        // Assert
+        Assert.Equal("s", name);
+    }
+
+    [Fact]
+    public void GetAliasOrTableName_WithOpenJson_ReturnsAlias()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT j.value FROM OPENJSON('[]') AS j");
+        var collected = new List<TableReference>();
+        TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, collected);
+        var tableRef = collected[0];
+
+        // Act
+        var name = TableReferenceHelpers.GetAliasOrTableName(tableRef);
+
+        // Assert
+        Assert.Equal("j", name);
+    }
+
+    [Fact]
+    public void GetAliasOrTableName_WithInlineDerivedTable_ReturnsAlias()
+    {
+        // Arrange - VALUES clause as table
+        var querySpec = GetQuerySpec("SELECT v.id FROM (VALUES (1), (2)) AS v(id)");
+        var collected = new List<TableReference>();
+        TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, collected);
+        var tableRef = collected[0];
+
+        // Act
+        var name = TableReferenceHelpers.GetAliasOrTableName(tableRef);
+
+        // Assert
+        Assert.Equal("v", name);
+    }
+
+    #endregion
 }

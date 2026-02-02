@@ -86,6 +86,51 @@ public static class TableReferenceHelpers
                 funcTable.Alias?.Value,
             VariableTableReference varTable =>
                 varTable.Alias?.Value ?? varTable.Variable?.Name,
+
+            // Built-in table-valued functions (STRING_SPLIT, GENERATE_SERIES, etc.)
+            BuiltInFunctionTableReference builtInFunc =>
+                builtInFunc.Alias?.Value,
+
+            // JSON/XML/External data functions
+            OpenJsonTableReference openJson =>
+                openJson.Alias?.Value,
+            OpenXmlTableReference openXml =>
+                openXml.Alias?.Value,
+            OpenRowsetTableReference openRowset =>
+                openRowset.Alias?.Value,
+            OpenQueryTableReference openQuery =>
+                openQuery.Alias?.Value,
+
+            // Full-text search functions (CONTAINSTABLE, FREETEXTTABLE)
+            FullTextTableReference fullText =>
+                fullText.Alias?.Value,
+
+            // PIVOT/UNPIVOT
+            PivotedTableReference pivoted =>
+                pivoted.Alias?.Value,
+            UnpivotedTableReference unpivoted =>
+                unpivoted.Alias?.Value,
+
+            // VALUES clause as table
+            InlineDerivedTable inlineDerived =>
+                inlineDerived.Alias?.Value,
+
+            // Change tracking functions
+            ChangeTableChangesTableReference changeChanges =>
+                changeChanges.Alias?.Value,
+            ChangeTableVersionTableReference changeVersion =>
+                changeVersion.Alias?.Value,
+
+            // Other specialized references
+            DataModificationTableReference dataMod =>
+                dataMod.Alias?.Value,
+            SemanticTableReference semantic =>
+                semantic.Alias?.Value,
+            GlobalFunctionTableReference globalFunc =>
+                globalFunc.Alias?.Value,
+            AdHocTableReference adHoc =>
+                adHoc.Alias?.Value,
+
             _ => null
         };
     }

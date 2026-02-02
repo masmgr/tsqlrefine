@@ -72,6 +72,10 @@ Invalid column name 'x.active'.
 - Table-valued function aliases (e.g., `JOIN dbo.fn_GetData() AS tvf`) are correctly recognized
 - Temporary table aliases (e.g., `FROM #temp AS t`) are correctly recognized
 - Table variable aliases (e.g., `FROM @tableVar AS tv`) are correctly recognized
+- Built-in TVF aliases (e.g., `STRING_SPLIT(...) AS s`) are correctly recognized
+- OPENJSON aliases (e.g., `OPENJSON(@json) AS j`) are correctly recognized
+- PIVOT/UNPIVOT aliases are correctly recognized
+- VALUES clause aliases (e.g., `VALUES (...) AS v(col)`) are correctly recognized
 
 **Subquery scope handling**:
 
@@ -208,6 +212,27 @@ FROM @users AS tv;  -- OK: alias 'tv' is recognized
 
 -- Table variable without alias (implicit name)
 SELECT @tableVar.id FROM @tableVar;  -- OK: variable name '@tableVar' is recognized
+
+-- Built-in table-valued function (STRING_SPLIT)
+SELECT s.value
+FROM STRING_SPLIT('a,b,c', ',') AS s;  -- OK: alias 's' is recognized
+
+-- CROSS APPLY with STRING_SPLIT
+SELECT t.id, s.value
+FROM table1 t
+CROSS APPLY STRING_SPLIT(t.csv, ',') AS s;  -- OK: both aliases recognized
+
+-- OPENJSON with alias
+SELECT j.[key], j.value
+FROM OPENJSON(@json) AS j;  -- OK: alias 'j' is recognized
+
+-- VALUES clause as table
+SELECT v.id, v.name
+FROM (VALUES (1, 'a'), (2, 'b')) AS v(id, name);  -- OK: alias 'v' is recognized
+
+-- GENERATE_SERIES (SQL Server 2022+)
+SELECT g.value
+FROM GENERATE_SERIES(1, 10) AS g;  -- OK: alias 'g' is recognized
 ```
 
 ## Configuration
