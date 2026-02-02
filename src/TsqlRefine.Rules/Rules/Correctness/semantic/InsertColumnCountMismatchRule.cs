@@ -96,7 +96,18 @@ public sealed class InsertColumnCountMismatchRule : IRule
             // Handle QuerySpecification (the main SELECT)
             if (queryExpression is QuerySpecification querySpec)
             {
-                return querySpec.SelectElements?.Count ?? 0;
+                if (querySpec.SelectElements == null || querySpec.SelectElements.Count == 0)
+                {
+                    return 0;
+                }
+
+                // If SELECT contains *, we can't determine column count without schema
+                if (querySpec.SelectElements.Any(e => e is SelectStarExpression))
+                {
+                    return null;
+                }
+
+                return querySpec.SelectElements.Count;
             }
 
             // For other query expressions (UNION, etc.), we can't easily count

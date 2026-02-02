@@ -38,6 +38,9 @@ public sealed class InsertColumnCountMismatchRuleTests
     [InlineData("INSERT INTO t (a) SELECT x FROM t2")]  // single column match
     [InlineData("INSERT INTO t (a, b, c) VALUES (1, 2, 3)")]  // 3 cols match
     [InlineData("INSERT INTO t (a, b, c) SELECT 1, 2, 3")]  // 3 cols match
+    [InlineData("INSERT INTO t (a, b) SELECT * FROM t2")]  // SELECT * - can't verify without schema
+    [InlineData("INSERT INTO t (a, b, c) SELECT t2.* FROM t2")]  // SELECT t2.* - can't verify without schema
+    [InlineData("INSERT INTO t (a, b) SELECT *, x FROM t2")]  // SELECT * with other columns - can't verify
     public void Analyze_WhenColumnCountMatches_ReturnsEmpty(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();
