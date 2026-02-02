@@ -92,7 +92,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
 
     private static bool IsExplicitJoin(IReadOnlyList<Token> tokens, int joinTokenIndex)
     {
-        var previousIndex = GetPreviousNonTriviaIndex(tokens, joinTokenIndex);
+        var previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, joinTokenIndex);
         if (previousIndex < 0)
         {
             return true;
@@ -114,7 +114,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         // In that case, inspect tokens before the hint.
         if (IsJoinHint(tokens[previousIndex]))
         {
-            previousIndex = GetPreviousNonTriviaIndex(tokens, previousIndex);
+            previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, previousIndex);
             if (previousIndex < 0)
             {
                 return true;
@@ -124,7 +124,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         // OUTER may appear before JOIN (and before a hint), e.g. "LEFT OUTER JOIN" or "LEFT OUTER HASH JOIN".
         if (TokenHelpers.IsKeyword(tokens[previousIndex], "OUTER"))
         {
-            previousIndex = GetPreviousNonTriviaIndex(tokens, previousIndex);
+            previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, previousIndex);
             if (previousIndex < 0)
             {
                 return true;
@@ -160,7 +160,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         newText = string.Empty;
 
         var joinToken = tokens[joinTokenIndex];
-        var previousIndex = GetPreviousNonTriviaIndex(tokens, joinTokenIndex);
+        var previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, joinTokenIndex);
         if (previousIndex < 0)
         {
             return false;
@@ -170,7 +170,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         if (IsJoinHint(tokens[previousIndex]))
         {
             joinHintIndex = previousIndex;
-            previousIndex = GetPreviousNonTriviaIndex(tokens, previousIndex);
+            previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, previousIndex);
             if (previousIndex < 0)
             {
                 return false;
@@ -181,7 +181,7 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         if (TokenHelpers.IsKeyword(tokens[previousIndex], "OUTER"))
         {
             hasOuterKeyword = true;
-            previousIndex = GetPreviousNonTriviaIndex(tokens, previousIndex);
+            previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(tokens, previousIndex);
             if (previousIndex < 0)
             {
                 return false;
@@ -232,19 +232,6 @@ public sealed class RequireExplicitJoinTypeRule : IRule
 
             var end = TokenHelpers.GetTokenEnd(token);
             if (end == range.End && TokenHelpers.IsKeyword(token, "JOIN"))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    private static int GetPreviousNonTriviaIndex(IReadOnlyList<Token> tokens, int index)
-    {
-        for (var i = index - 1; i >= 0; i--)
-        {
-            if (!TokenHelpers.IsTrivia(tokens[i]))
             {
                 return i;
             }

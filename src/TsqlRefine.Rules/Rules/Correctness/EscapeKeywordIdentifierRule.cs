@@ -270,7 +270,7 @@ public sealed class EscapeKeywordIdentifierRule : IRule
             }
 
             // Table name context (e.g., FROM order, JOIN table)
-            var previousIndex = GetPreviousNonTriviaIndex(index);
+            var previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(_tokens, index);
             if (previousIndex >= 0 && IsTableNameContextKeyword(_tokens[previousIndex]))
             {
                 // Don't flag keywords that are themselves context keywords (e.g., INTO after INSERT)
@@ -303,7 +303,7 @@ public sealed class EscapeKeywordIdentifierRule : IRule
 
         private bool IsFollowedByOpenParen(int index)
         {
-            var nextIndex = GetNextNonTriviaIndex(index);
+            var nextIndex = TokenHelpers.GetNextNonTriviaIndex(_tokens, index);
             return nextIndex >= 0 && _tokens[nextIndex].Text == "(";
         }
 
@@ -327,7 +327,7 @@ public sealed class EscapeKeywordIdentifierRule : IRule
                 return true;
             }
 
-            var nextIndex = GetNextNonTriviaIndex(itemStartIndex);
+            var nextIndex = TokenHelpers.GetNextNonTriviaIndex(_tokens, itemStartIndex);
             if (nextIndex < 0)
             {
                 return false;
@@ -352,30 +352,6 @@ public sealed class EscapeKeywordIdentifierRule : IRule
                    secondText.Equals("CLUSTERED", StringComparison.OrdinalIgnoreCase) ||
                    secondText.Equals("NONCLUSTERED", StringComparison.OrdinalIgnoreCase) ||
                    secondText.Equals("KEY", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private int GetPreviousNonTriviaIndex(int index)
-        {
-            for (var i = index - 1; i >= 0; i--)
-            {
-                if (!TokenHelpers.IsTrivia(_tokens[i]))
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        private int GetNextNonTriviaIndex(int index)
-        {
-            for (var i = index + 1; i < _tokens.Count; i++)
-            {
-                if (!TokenHelpers.IsTrivia(_tokens[i]))
-                {
-                    return i;
-                }
-            }
-            return -1;
         }
     }
 }

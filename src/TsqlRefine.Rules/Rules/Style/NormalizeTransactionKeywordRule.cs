@@ -154,7 +154,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
     /// </summary>
     private static bool IsStandaloneCommitOrRollback(IReadOnlyList<Token> tokens, int index)
     {
-        var nextIndex = GetNextNonTriviaIndex(tokens, index);
+        var nextIndex = TokenHelpers.GetNextNonTriviaIndex(tokens, index);
         if (nextIndex < 0)
         {
             // End of tokens - this is standalone
@@ -178,19 +178,6 @@ public sealed class NormalizeTransactionKeywordRule : IRule
 
         // Anything else means standalone
         return true;
-    }
-
-    private static int GetNextNonTriviaIndex(IReadOnlyList<Token> tokens, int index)
-    {
-        for (var i = index + 1; i < tokens.Count; i++)
-        {
-            if (!TokenHelpers.IsTrivia(tokens[i]))
-            {
-                return i;
-            }
-        }
-
-        return -1;
     }
 
     private static int FindTokenIndexByRange(IReadOnlyList<Token> tokens, TsqlRefine.PluginSdk.Range range)

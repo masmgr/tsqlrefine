@@ -229,4 +229,48 @@ public static class TokenHelpers
 
         return new TsqlRefine.PluginSdk.Range(start, end);
     }
+
+    /// <summary>
+    /// Gets the index of the previous non-trivia token before the specified index.
+    /// </summary>
+    /// <param name="tokens">The token list to search.</param>
+    /// <param name="index">The index to start searching backwards from (exclusive).</param>
+    /// <returns>The index of the previous non-trivia token, or -1 if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens is null.</exception>
+    public static int GetPreviousNonTriviaIndex(IReadOnlyList<Token> tokens, int index)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+
+        for (var i = index - 1; i >= 0; i--)
+        {
+            if (!IsTrivia(tokens[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Gets the index of the next non-trivia token after the specified index.
+    /// </summary>
+    /// <param name="tokens">The token list to search.</param>
+    /// <param name="index">The index to start searching forward from (exclusive).</param>
+    /// <returns>The index of the next non-trivia token, or -1 if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens is null.</exception>
+    public static int GetNextNonTriviaIndex(IReadOnlyList<Token> tokens, int index)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+
+        for (var i = index + 1; i < tokens.Count; i++)
+        {
+            if (!IsTrivia(tokens[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }
