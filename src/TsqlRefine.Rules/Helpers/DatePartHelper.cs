@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Rules.Helpers;
@@ -14,13 +15,9 @@ namespace TsqlRefine.Rules.Helpers;
 /// </remarks>
 public static class DatePartHelper
 {
-    private static readonly HashSet<string> DatePartFunctions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "DATEADD",
-        "DATEDIFF",
-        "DATEPART",
-        "DATENAME"
-    };
+    private static readonly FrozenSet<string> DatePartFunctions = FrozenSet.ToFrozenSet(
+        ["DATEADD", "DATEDIFF", "DATEPART", "DATENAME"],
+        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Determines whether the given function call is a date part function

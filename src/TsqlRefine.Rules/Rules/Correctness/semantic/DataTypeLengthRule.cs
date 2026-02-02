@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
@@ -110,15 +111,15 @@ public sealed class DataTypeLengthRule : IRule
 
     private sealed class DataTypeLengthVisitor : DiagnosticVisitorBase
     {
-        private static readonly HashSet<SqlDataTypeOption> VariableLengthTypes = new()
-        {
+        private static readonly FrozenSet<SqlDataTypeOption> VariableLengthTypes = FrozenSet.ToFrozenSet(
+        [
             SqlDataTypeOption.VarChar,
             SqlDataTypeOption.NVarChar,
             SqlDataTypeOption.Char,
             SqlDataTypeOption.NChar,
             SqlDataTypeOption.VarBinary,
             SqlDataTypeOption.Binary
-        };
+        ]);
 
         public override void ExplicitVisit(DeclareVariableStatement node)
         {

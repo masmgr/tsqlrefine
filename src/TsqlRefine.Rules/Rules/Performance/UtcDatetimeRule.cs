@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
@@ -6,21 +7,17 @@ namespace TsqlRefine.Rules.Rules.Performance;
 
 public sealed class UtcDatetimeRule : IRule
 {
-    private static readonly HashSet<string> LocalDatetimeFunctions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "GETDATE",
-        "SYSDATETIME",
-        "CURRENT_TIMESTAMP",
-        "SYSDATETIMEOFFSET"
-    };
+    private static readonly FrozenSet<string> LocalDatetimeFunctions = FrozenSet.ToFrozenSet(
+        ["GETDATE", "SYSDATETIME", "CURRENT_TIMESTAMP", "SYSDATETIMEOFFSET"],
+        StringComparer.OrdinalIgnoreCase);
 
-    private static readonly Dictionary<string, string> UtcAlternatives = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly FrozenDictionary<string, string> UtcAlternatives = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         { "GETDATE", "GETUTCDATE()" },
         { "SYSDATETIME", "SYSUTCDATETIME()" },
         { "CURRENT_TIMESTAMP", "GETUTCDATE()" },
         { "SYSDATETIMEOFFSET", "SYSUTCDATETIME()" }
-    };
+    }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public RuleMetadata Metadata { get; } = new(
         RuleId: "utc-datetime",

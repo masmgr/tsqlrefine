@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.Json;
 
 namespace TsqlRefine.Core.Config;
@@ -46,8 +47,8 @@ public sealed record TsqlRefineConfig(
     /// <summary>
     /// Valid SQL Server compatibility levels.
     /// </summary>
-    public static readonly IReadOnlySet<int> ValidCompatLevels = new HashSet<int>
-    {
+    public static readonly FrozenSet<int> ValidCompatLevels = FrozenSet.ToFrozenSet(
+    [
         100, // SQL Server 2008
         110, // SQL Server 2012
         120, // SQL Server 2014
@@ -55,7 +56,7 @@ public sealed record TsqlRefineConfig(
         140, // SQL Server 2017
         150, // SQL Server 2019
         160  // SQL Server 2022
-    };
+    ]);
 
     public static readonly TsqlRefineConfig Default = new();
 

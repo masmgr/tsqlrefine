@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
@@ -43,10 +44,9 @@ public sealed class PreferJsonFunctionsRule : IRule
 
     private sealed class PreferJsonFunctionsVisitor : DiagnosticVisitorBase
     {
-        private static readonly HashSet<string> JsonParsingFunctions = new(StringComparer.OrdinalIgnoreCase)
-        {
-            "CHARINDEX", "SUBSTRING", "PATINDEX", "STUFF", "REPLACE"
-        };
+        private static readonly FrozenSet<string> JsonParsingFunctions = FrozenSet.ToFrozenSet(
+            ["CHARINDEX", "SUBSTRING", "PATINDEX", "STUFF", "REPLACE"],
+            StringComparer.OrdinalIgnoreCase);
 
         public override void ExplicitVisit(FunctionCall node)
         {
