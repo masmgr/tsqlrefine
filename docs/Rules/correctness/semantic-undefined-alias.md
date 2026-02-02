@@ -68,6 +68,7 @@ Invalid column name 'x.active'.
 - Aliases are case-insensitive (`u` = `U` = `u`)
 - Outer query aliases can be referenced in correlated subqueries
 - Each query scope has its own alias namespace
+- Schema-qualified column references (e.g., `dbo.users.id`) are correctly recognized
 
 ## Examples
 
@@ -150,6 +151,12 @@ WHERE u.active = 1
 
 -- Table without alias (direct table name)
 SELECT id, name FROM users WHERE active = 1;  -- OK: no alias needed
+
+-- Schema-qualified column references
+SELECT dbo.users.id FROM dbo.users;  -- OK: table name 'users' is recognized
+
+-- Fully-qualified column references (server.schema.table.column)
+SELECT mydb.dbo.users.id FROM users;  -- OK: table name 'users' is recognized
 ```
 
 ## Configuration

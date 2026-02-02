@@ -215,5 +215,35 @@ SELECT x.id FROM orders o;";
         Assert.Contains("alias", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("SELECT dbo.users.id FROM dbo.users;")]   // schema.table.column
+    [InlineData("SELECT dbo.users.id FROM users;")]        // schema prefix on column
+    [InlineData("SELECT mydb.dbo.users.id FROM users;")]   // server.schema.table.column
+    public void Analyze_WithSchemaQualifiedColumn_RecognizesTableName(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
 
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("SELECT dbo.unknown.id FROM users;", "unknown")]        // unknown table with schema
+    [InlineData("SELECT mydb.dbo.unknown.id FROM users;", "unknown")]   // unknown table with server.schema
+    public void Analyze_WithSchemaQualifiedUnknownTable_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
 }
