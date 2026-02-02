@@ -31,29 +31,25 @@ public sealed class UnicodeStringRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            return [];
+        }
 
         var issue = FindIssues(context)
             .FirstOrDefault(i => i.Diagnostic.Range == diagnostic.Range);
 
         if (issue is null)
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
         if (!TryCreateTypeKeywordEdit(context.Tokens, issue.TypeFragment, issue.ReplacementKeyword, out var edit))
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
-        return new[]
-        {
-            new Fix(
-                Title: $"Change data type to {issue.ReplacementKeyword.ToUpperInvariant()}",
-                Edits: new[] { edit }
-            )
-        };
+        return [new Fix(Title: $"Change data type to {issue.ReplacementKeyword.ToUpperInvariant()}", Edits: [edit])];
     }
 
     private sealed record Issue(
@@ -187,7 +183,7 @@ public sealed class UnicodeStringRule : IRule
 
         var range = ScriptDomHelpers.GetRange(typeFragment);
         var keywordToken = tokens.FirstOrDefault(t =>
-            IsWithin(t.Start, range) &&
+            TokenHelpers.IsPositionWithinRange(t.Start, range) &&
             IsTypeKeywordToken(t, typeFragment.SqlDataTypeOption));
 
         if (keywordToken is null)
@@ -197,29 +193,9 @@ public sealed class UnicodeStringRule : IRule
 
         var start = keywordToken.Start;
         var end = new Position(start.Line, start.Character + keywordToken.Length);
-        var replacement = ApplyKeywordCasing(replacementKeyword, keywordToken.Text);
+        var replacement = TokenHelpers.ApplyKeywordCasing(replacementKeyword, keywordToken.Text);
 
         edit = new TextEdit(new TsqlRefine.PluginSdk.Range(start, end), replacement);
-        return true;
-    }
-
-    private static bool IsWithin(Position tokenStart, TsqlRefine.PluginSdk.Range fragmentRange)
-    {
-        if (tokenStart.Line < fragmentRange.Start.Line || tokenStart.Line > fragmentRange.End.Line)
-        {
-            return false;
-        }
-
-        if (tokenStart.Line == fragmentRange.Start.Line && tokenStart.Character < fragmentRange.Start.Character)
-        {
-            return false;
-        }
-
-        if (tokenStart.Line == fragmentRange.End.Line && tokenStart.Character > fragmentRange.End.Character)
-        {
-            return false;
-        }
-
         return true;
     }
 
@@ -233,25 +209,5 @@ public sealed class UnicodeStringRule : IRule
                 string.Equals(token.Text, "char", StringComparison.OrdinalIgnoreCase),
             _ => false
         };
-    }
-
-    private static string ApplyKeywordCasing(string replacementKeyword, string originalKeyword)
-    {
-        if (string.IsNullOrEmpty(originalKeyword))
-        {
-            return replacementKeyword;
-        }
-
-        if (originalKeyword.All(c => !char.IsLetter(c) || char.IsUpper(c)))
-        {
-            return replacementKeyword.ToUpperInvariant();
-        }
-
-        if (originalKeyword.All(c => !char.IsLetter(c) || char.IsLower(c)))
-        {
-            return replacementKeyword.ToLowerInvariant();
-        }
-
-        return replacementKeyword.ToUpperInvariant();
     }
 }

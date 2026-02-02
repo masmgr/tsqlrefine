@@ -273,4 +273,140 @@ public static class TokenHelpers
 
         return -1;
     }
+
+    /// <summary>
+    /// Finds a token that exactly matches the specified range.
+    /// </summary>
+    /// <param name="tokens">The token list to search.</param>
+    /// <param name="range">The range to match.</param>
+    /// <returns>The matching token, or null if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens or range is null.</exception>
+    public static Token? FindTokenByRange(
+        IReadOnlyList<Token> tokens,
+        TsqlRefine.PluginSdk.Range range)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        ArgumentNullException.ThrowIfNull(range);
+
+        foreach (var token in tokens)
+        {
+            if (IsTrivia(token))
+            {
+                continue;
+            }
+
+            if (token.Start != range.Start)
+            {
+                continue;
+            }
+
+            var end = GetTokenEnd(token);
+            if (end == range.End)
+            {
+                return token;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Finds the index of a token that exactly matches the specified range.
+    /// </summary>
+    /// <param name="tokens">The token list to search.</param>
+    /// <param name="range">The range to match.</param>
+    /// <returns>The index of the matching token, or -1 if not found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when tokens or range is null.</exception>
+    public static int FindTokenIndexByRange(
+        IReadOnlyList<Token> tokens,
+        TsqlRefine.PluginSdk.Range range)
+    {
+        ArgumentNullException.ThrowIfNull(tokens);
+        ArgumentNullException.ThrowIfNull(range);
+
+        for (var i = 0; i < tokens.Count; i++)
+        {
+            var token = tokens[i];
+            if (IsTrivia(token))
+            {
+                continue;
+            }
+
+            if (token.Start != range.Start)
+            {
+                continue;
+            }
+
+            var end = GetTokenEnd(token);
+            if (end == range.End)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Checks if a position is within a range (inclusive).
+    /// </summary>
+    /// <param name="position">The position to check.</param>
+    /// <param name="range">The range to check against.</param>
+    /// <returns>True if the position is within the range.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when position or range is null.</exception>
+    public static bool IsPositionWithinRange(
+        Position position,
+        TsqlRefine.PluginSdk.Range range)
+    {
+        ArgumentNullException.ThrowIfNull(position);
+        ArgumentNullException.ThrowIfNull(range);
+
+        if (position.Line < range.Start.Line || position.Line > range.End.Line)
+        {
+            return false;
+        }
+
+        if (position.Line == range.Start.Line && position.Character < range.Start.Character)
+        {
+            return false;
+        }
+
+        if (position.Line == range.End.Line && position.Character > range.End.Character)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Applies the casing pattern from the original keyword to the replacement keyword.
+    /// If the original is all uppercase, returns uppercase. If all lowercase, returns lowercase.
+    /// Otherwise, returns uppercase as the default.
+    /// </summary>
+    /// <param name="replacementKeyword">The keyword to apply casing to.</param>
+    /// <param name="originalKeyword">The original keyword to derive casing from.</param>
+    /// <returns>The replacement keyword with appropriate casing.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when replacementKeyword is null.</exception>
+    public static string ApplyKeywordCasing(string replacementKeyword, string? originalKeyword)
+    {
+        ArgumentNullException.ThrowIfNull(replacementKeyword);
+
+        if (string.IsNullOrEmpty(originalKeyword))
+        {
+            return replacementKeyword;
+        }
+
+        if (originalKeyword.All(c => !char.IsLetter(c) || char.IsUpper(c)))
+        {
+            return replacementKeyword.ToUpperInvariant();
+        }
+
+        if (originalKeyword.All(c => !char.IsLetter(c) || char.IsLower(c)))
+        {
+            return replacementKeyword.ToLowerInvariant();
+        }
+
+        return replacementKeyword.ToUpperInvariant();
+    }
 }

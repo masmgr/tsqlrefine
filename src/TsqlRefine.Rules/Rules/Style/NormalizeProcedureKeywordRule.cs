@@ -55,12 +55,11 @@ public sealed class NormalizeProcedureKeywordRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            yield break;
+        }
 
-        yield return new Fix(
-            Title: "Use 'PROCEDURE'",
-            Edits: new[] { new TextEdit(diagnostic.Range, "PROCEDURE") }
-        );
+        yield return RuleHelpers.CreateReplaceFix("Use 'PROCEDURE'", diagnostic.Range, "PROCEDURE");
     }
 }

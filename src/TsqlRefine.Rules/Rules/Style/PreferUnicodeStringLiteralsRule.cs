@@ -31,17 +31,9 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
-
-        if (!string.Equals(diagnostic.Code, Metadata.RuleId, StringComparison.Ordinal))
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {
-            return Array.Empty<Fix>();
-        }
-
-        if (diagnostic.Data?.Fixable is not true)
-        {
-            return Array.Empty<Fix>();
+            return [];
         }
 
         var issue = FindIssues(context)
@@ -49,21 +41,15 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         if (issue is null)
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
         if (!TryCreateUnicodePrefixEdit(context.Tokens, issue.Literal, out var edit))
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
-        return new[]
-        {
-            new Fix(
-                Title: "Prefix string literal with N",
-                Edits: new[] { edit }
-            )
-        };
+        return [new Fix(Title: "Prefix string literal with N", Edits: [edit])];
     }
 
     private sealed record Issue(Diagnostic Diagnostic, StringLiteral Literal);
@@ -429,7 +415,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
     {
         foreach (var token in tokens)
         {
-            if (!IsWithin(token.Start, range))
+            if (!TokenHelpers.IsPositionWithinRange(token.Start, range))
             {
                 continue;
             }
@@ -441,25 +427,5 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         }
 
         return null;
-    }
-
-    private static bool IsWithin(Position tokenStart, TsqlRefine.PluginSdk.Range fragmentRange)
-    {
-        if (tokenStart.Line < fragmentRange.Start.Line || tokenStart.Line > fragmentRange.End.Line)
-        {
-            return false;
-        }
-
-        if (tokenStart.Line == fragmentRange.Start.Line && tokenStart.Character < fragmentRange.Start.Character)
-        {
-            return false;
-        }
-
-        if (tokenStart.Line == fragmentRange.End.Line && tokenStart.Character > fragmentRange.End.Character)
-        {
-            return false;
-        }
-
-        return true;
     }
 }

@@ -53,17 +53,19 @@ public sealed class SemicolonTerminationRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            return [];
+        }
 
         if (context.Ast.Fragment is null || context.Ast.Fragment is not TSqlScript script)
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
         if (script.ScriptTokenStream is null || script.ScriptTokenStream.Count == 0)
         {
-            return Array.Empty<Fix>();
+            return [];
         }
 
         foreach (var batch in script.Batches)
@@ -78,23 +80,14 @@ public sealed class SemicolonTerminationRule : IRule
 
                 if (HasSemicolonTerminator(statement, script.ScriptTokenStream))
                 {
-                    return Array.Empty<Fix>();
+                    return [];
                 }
 
-                var insertAt = range.End;
-                var insertRange = new TsqlRefine.PluginSdk.Range(insertAt, insertAt);
-
-                return new[]
-                {
-                    new Fix(
-                        Title: "Insert semicolon",
-                        Edits: new[] { new TextEdit(insertRange, ";") }
-                    )
-                };
+                return [RuleHelpers.CreateInsertFix("Insert semicolon", range.End, ";")];
             }
         }
 
-        return Array.Empty<Fix>();
+        return [];
     }
 
     private static bool HasSemicolonTerminator(TSqlStatement statement, IList<TSqlParserToken> tokenStream)

@@ -50,19 +50,18 @@ public sealed class EscapeKeywordIdentifierRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            yield break;
+        }
 
-        var token = FindTokenByRange(context.Tokens, diagnostic.Range);
+        var token = TokenHelpers.FindTokenByRange(context.Tokens, diagnostic.Range);
         if (token is null)
         {
             yield break;
         }
 
-        yield return new Fix(
-            Title: "Escape keyword identifier",
-            Edits: [new TextEdit(diagnostic.Range, $"[{token.Text}]")]
-        );
+        yield return RuleHelpers.CreateReplaceFix("Escape keyword identifier", diagnostic.Range, $"[{token.Text}]");
     }
 
     private Diagnostic CreateDiagnostic(Token keywordToken)
@@ -78,30 +77,6 @@ public sealed class EscapeKeywordIdentifierRule : IRule
             Code: RuleId,
             Data: new DiagnosticData(RuleId, Category, Metadata.Fixable)
         );
-    }
-
-    private static Token? FindTokenByRange(IReadOnlyList<Token> tokens, TsqlRefine.PluginSdk.Range range)
-    {
-        foreach (var token in tokens)
-        {
-            if (TokenHelpers.IsTrivia(token))
-            {
-                continue;
-            }
-
-            if (token.Start != range.Start)
-            {
-                continue;
-            }
-
-            var end = TokenHelpers.GetTokenEnd(token);
-            if (end == range.End)
-            {
-                return token;
-            }
-        }
-
-        return null;
     }
 
     /// <summary>

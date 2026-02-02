@@ -95,8 +95,10 @@ public sealed class NormalizeTransactionKeywordRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            yield break;
+        }
 
         var tokens = context.Tokens;
         if (tokens is null || tokens.Count == 0)
@@ -105,7 +107,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         }
 
         // Find the token at the diagnostic range
-        var tokenIndex = FindTokenIndexByRange(tokens, diagnostic.Range);
+        var tokenIndex = TokenHelpers.FindTokenIndexByRange(tokens, diagnostic.Range);
         if (tokenIndex < 0)
         {
             yield break;
@@ -116,10 +118,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         // TRAN → TRANSACTION (simple replacement)
         if (TokenHelpers.IsKeyword(token, "TRAN"))
         {
-            yield return new Fix(
-                Title: "Use 'TRANSACTION'",
-                Edits: new[] { new TextEdit(diagnostic.Range, "TRANSACTION") }
-            );
+            yield return RuleHelpers.CreateReplaceFix("Use 'TRANSACTION'", diagnostic.Range, "TRANSACTION");
             yield break;
         }
 
@@ -127,12 +126,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         if (TokenHelpers.IsKeyword(token, "COMMIT"))
         {
             var end = TokenHelpers.GetTokenEnd(token);
-            var insertRange = new TsqlRefine.PluginSdk.Range(end, end);
-
-            yield return new Fix(
-                Title: "Use 'COMMIT TRANSACTION'",
-                Edits: new[] { new TextEdit(insertRange, " TRANSACTION") }
-            );
+            yield return RuleHelpers.CreateInsertFix("Use 'COMMIT TRANSACTION'", end, " TRANSACTION");
             yield break;
         }
 
@@ -140,12 +134,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         if (TokenHelpers.IsKeyword(token, "ROLLBACK"))
         {
             var end = TokenHelpers.GetTokenEnd(token);
-            var insertRange = new TsqlRefine.PluginSdk.Range(end, end);
-
-            yield return new Fix(
-                Title: "Use 'ROLLBACK TRANSACTION'",
-                Edits: new[] { new TextEdit(insertRange, " TRANSACTION") }
-            );
+            yield return RuleHelpers.CreateInsertFix("Use 'ROLLBACK TRANSACTION'", end, " TRANSACTION");
         }
     }
 
@@ -180,28 +169,4 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         return true;
     }
 
-    private static int FindTokenIndexByRange(IReadOnlyList<Token> tokens, TsqlRefine.PluginSdk.Range range)
-    {
-        for (var i = 0; i < tokens.Count; i++)
-        {
-            var token = tokens[i];
-            if (TokenHelpers.IsTrivia(token))
-            {
-                continue;
-            }
-
-            if (token.Start != range.Start)
-            {
-                continue;
-            }
-
-            var end = TokenHelpers.GetTokenEnd(token);
-            if (end == range.End)
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
 }

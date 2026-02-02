@@ -35,15 +35,7 @@ public sealed class DataTypeLengthRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
-
-        if (!string.Equals(diagnostic.Code, Metadata.RuleId, StringComparison.Ordinal))
-        {
-            return [];
-        }
-
-        if (diagnostic.Data?.Fixable is not true)
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {
             return [];
         }
@@ -63,16 +55,7 @@ public sealed class DataTypeLengthRule : IRule
         }
 
         var defaultLength = GetDefaultLength(visitor.FoundDataType.SqlDataTypeOption);
-        var insertAt = diagnostic.Range.End;
-        var insertRange = new TsqlRefine.PluginSdk.Range(insertAt, insertAt);
-
-        return
-        [
-            new Fix(
-                Title: $"Add ({defaultLength}) length specification",
-                Edits: [new TextEdit(insertRange, $"({defaultLength})")]
-            )
-        ];
+        return [RuleHelpers.CreateInsertFix($"Add ({defaultLength}) length specification", diagnostic.Range.End, $"({defaultLength})")];
     }
 
     private static string GetDefaultLength(SqlDataTypeOption dataType) => dataType switch

@@ -55,12 +55,11 @@ public sealed class NormalizeExecuteKeywordRule : IRule
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
+        {
+            yield break;
+        }
 
-        yield return new Fix(
-            Title: "Use 'EXECUTE'",
-            Edits: new[] { new TextEdit(diagnostic.Range, "EXECUTE") }
-        );
+        yield return RuleHelpers.CreateReplaceFix("Use 'EXECUTE'", diagnostic.Range, "EXECUTE");
     }
 }

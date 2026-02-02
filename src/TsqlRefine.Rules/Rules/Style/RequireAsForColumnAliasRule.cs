@@ -37,31 +37,14 @@ public sealed class RequireAsForColumnAliasRule : IRule
         }
     }
 
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        GetFixesCore(context, diagnostic);
-
-    private IEnumerable<Fix> GetFixesCore(RuleContext context, Diagnostic diagnostic)
+    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(diagnostic);
-
-        if (!string.Equals(diagnostic.Code, Metadata.RuleId, StringComparison.Ordinal))
+        if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {
             yield break;
         }
 
-        if (diagnostic.Data?.Fixable is not true)
-        {
-            yield break;
-        }
-
-        var insertAt = diagnostic.Range.Start;
-        var insertRange = new TsqlRefine.PluginSdk.Range(insertAt, insertAt);
-
-        yield return new Fix(
-            Title: "Insert AS for column alias",
-            Edits: new[] { new TextEdit(insertRange, "AS ") }
-        );
+        yield return RuleHelpers.CreateInsertFix("Insert AS for column alias", diagnostic.Range.Start, "AS ");
     }
 
     private sealed class RequireAsForColumnAliasVisitor : DiagnosticVisitorBase

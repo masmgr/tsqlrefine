@@ -321,4 +321,260 @@ public sealed class RuleHelpersTests
     }
 
     #endregion
+
+    #region CanProvideFix Tests
+
+    [Fact]
+    public void CanProvideFix_WithMatchingCodeAndFixable_ReturnsTrue()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "test-rule",
+            Data: new DiagnosticData("test-rule", "Test", true)
+        );
+
+        // Act
+        var result = RuleHelpers.CanProvideFix(context, diagnostic, "test-rule");
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNonMatchingCode_ReturnsFalse()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "different-rule",
+            Data: new DiagnosticData("different-rule", "Test", true)
+        );
+
+        // Act
+        var result = RuleHelpers.CanProvideFix(context, diagnostic, "test-rule");
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNotFixable_ReturnsFalse()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "test-rule",
+            Data: new DiagnosticData("test-rule", "Test", false)
+        );
+
+        // Act
+        var result = RuleHelpers.CanProvideFix(context, diagnostic, "test-rule");
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNullData_ReturnsFalse()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "test-rule",
+            Data: null
+        );
+
+        // Act
+        var result = RuleHelpers.CanProvideFix(context, diagnostic, "test-rule");
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNullContext_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "test-rule",
+            Data: new DiagnosticData("test-rule", "Test", true)
+        );
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CanProvideFix(null!, diagnostic, "test-rule"));
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNullDiagnostic_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CanProvideFix(context, null!, "test-rule"));
+    }
+
+    [Fact]
+    public void CanProvideFix_WithNullExpectedRuleId_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var context = new RuleContext(
+            FilePath: "test.sql",
+            CompatLevel: 150,
+            Ast: new ScriptDomAst("SELECT 1"),
+            Tokens: Array.Empty<Token>(),
+            Settings: new RuleSettings()
+        );
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
+            Message: "Test",
+            Code: "test-rule",
+            Data: new DiagnosticData("test-rule", "Test", true)
+        );
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CanProvideFix(context, diagnostic, null!));
+    }
+
+    #endregion
+
+    #region CreateInsertFix Tests
+
+    [Fact]
+    public void CreateInsertFix_WithValidParameters_CreatesFixWithZeroWidthRange()
+    {
+        // Arrange
+        var position = new Position(5, 10);
+
+        // Act
+        var fix = RuleHelpers.CreateInsertFix("Insert semicolon", position, ";");
+
+        // Assert
+        Assert.NotNull(fix);
+        Assert.Equal("Insert semicolon", fix.Title);
+        Assert.Single(fix.Edits);
+        var edit = fix.Edits[0];
+        Assert.Equal(position, edit.Range.Start);
+        Assert.Equal(position, edit.Range.End);
+        Assert.Equal(";", edit.NewText);
+    }
+
+    [Fact]
+    public void CreateInsertFix_WithNullTitle_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var position = new Position(0, 0);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateInsertFix(null!, position, "text"));
+    }
+
+    [Fact]
+    public void CreateInsertFix_WithNullPosition_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateInsertFix("title", null!, "text"));
+    }
+
+    [Fact]
+    public void CreateInsertFix_WithNullText_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var position = new Position(0, 0);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateInsertFix("title", position, null!));
+    }
+
+    #endregion
+
+    #region CreateReplaceFix Tests
+
+    [Fact]
+    public void CreateReplaceFix_WithValidParameters_CreatesFixWithRange()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 4));
+
+        // Act
+        var fix = RuleHelpers.CreateReplaceFix("Use EXECUTE", range, "EXECUTE");
+
+        // Assert
+        Assert.NotNull(fix);
+        Assert.Equal("Use EXECUTE", fix.Title);
+        Assert.Single(fix.Edits);
+        var edit = fix.Edits[0];
+        Assert.Equal(range, edit.Range);
+        Assert.Equal("EXECUTE", edit.NewText);
+    }
+
+    [Fact]
+    public void CreateReplaceFix_WithNullTitle_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 4));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateReplaceFix(null!, range, "text"));
+    }
+
+    [Fact]
+    public void CreateReplaceFix_WithNullRange_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateReplaceFix("title", null!, "text"));
+    }
+
+    [Fact]
+    public void CreateReplaceFix_WithNullNewText_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 4));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => RuleHelpers.CreateReplaceFix("title", range, null!));
+    }
+
+    #endregion
 }

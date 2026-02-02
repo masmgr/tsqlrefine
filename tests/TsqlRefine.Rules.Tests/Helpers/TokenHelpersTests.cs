@@ -610,4 +610,355 @@ public sealed class TokenHelpersTests
     }
 
     #endregion
+
+    #region FindTokenByRange Tests
+
+    [Fact]
+    public void FindTokenByRange_WithMatchingRange_ReturnsToken()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("SELECT", new Position(0, 0), 6),
+            new Token(" ", new Position(0, 6), 1),
+            new Token("*", new Position(0, 7), 1)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 6));
+
+        // Act
+        var result = TokenHelpers.FindTokenByRange(tokens, range);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("SELECT", result.Text);
+    }
+
+    [Fact]
+    public void FindTokenByRange_WithNoMatchingRange_ReturnsNull()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("SELECT", new Position(0, 0), 6)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.FindTokenByRange(tokens, range);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void FindTokenByRange_SkipsTrivia_ReturnsNonTriviaToken()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("   ", new Position(0, 0), 3),
+            new Token("SELECT", new Position(0, 3), 6)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 3), new Position(0, 9));
+
+        // Act
+        var result = TokenHelpers.FindTokenByRange(tokens, range);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("SELECT", result.Text);
+    }
+
+    [Fact]
+    public void FindTokenByRange_WithNullTokens_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 6));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.FindTokenByRange(null!, range));
+    }
+
+    [Fact]
+    public void FindTokenByRange_WithNullRange_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var tokens = new List<Token> { new Token("SELECT", new Position(0, 0), 6) };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.FindTokenByRange(tokens, null!));
+    }
+
+    #endregion
+
+    #region FindTokenIndexByRange Tests
+
+    [Fact]
+    public void FindTokenIndexByRange_WithMatchingRange_ReturnsIndex()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("SELECT", new Position(0, 0), 6),
+            new Token(" ", new Position(0, 6), 1),
+            new Token("*", new Position(0, 7), 1)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 7), new Position(0, 8));
+
+        // Act
+        var result = TokenHelpers.FindTokenIndexByRange(tokens, range);
+
+        // Assert
+        Assert.Equal(2, result);
+    }
+
+    [Fact]
+    public void FindTokenIndexByRange_WithNoMatchingRange_ReturnsMinusOne()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("SELECT", new Position(0, 0), 6)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.FindTokenIndexByRange(tokens, range);
+
+        // Assert
+        Assert.Equal(-1, result);
+    }
+
+    [Fact]
+    public void FindTokenIndexByRange_SkipsTrivia_ReturnsCorrectIndex()
+    {
+        // Arrange
+        var tokens = new List<Token>
+        {
+            new Token("   ", new Position(0, 0), 3),
+            new Token("SELECT", new Position(0, 3), 6)
+        };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 3), new Position(0, 9));
+
+        // Act
+        var result = TokenHelpers.FindTokenIndexByRange(tokens, range);
+
+        // Assert
+        Assert.Equal(1, result);
+    }
+
+    [Fact]
+    public void FindTokenIndexByRange_WithNullTokens_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 6));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.FindTokenIndexByRange(null!, range));
+    }
+
+    [Fact]
+    public void FindTokenIndexByRange_WithNullRange_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var tokens = new List<Token> { new Token("SELECT", new Position(0, 0), 6) };
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.FindTokenIndexByRange(tokens, null!));
+    }
+
+    #endregion
+
+    #region IsPositionWithinRange Tests
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionInside_ReturnsTrue()
+    {
+        // Arrange
+        var position = new Position(1, 5);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(2, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionAtStart_ReturnsTrue()
+    {
+        // Arrange
+        var position = new Position(0, 0);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionAtEnd_ReturnsTrue()
+    {
+        // Arrange
+        var position = new Position(0, 10);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionBeforeStart_ReturnsFalse()
+    {
+        // Arrange
+        var position = new Position(0, 0);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 5), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionAfterEnd_ReturnsFalse()
+    {
+        // Arrange
+        var position = new Position(0, 15);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionOnLineBefore_ReturnsFalse()
+    {
+        // Arrange
+        var position = new Position(0, 5);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(1, 0), new Position(1, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithPositionOnLineAfter_ReturnsFalse()
+    {
+        // Arrange
+        var position = new Position(2, 5);
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(1, 10));
+
+        // Act
+        var result = TokenHelpers.IsPositionWithinRange(position, range);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithNullPosition_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var range = new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10));
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.IsPositionWithinRange(null!, range));
+    }
+
+    [Fact]
+    public void IsPositionWithinRange_WithNullRange_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var position = new Position(0, 5);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.IsPositionWithinRange(position, null!));
+    }
+
+    #endregion
+
+    #region ApplyKeywordCasing Tests
+
+    [Fact]
+    public void ApplyKeywordCasing_WithUppercaseOriginal_ReturnsUppercase()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("nvarchar", "VARCHAR");
+
+        // Assert
+        Assert.Equal("NVARCHAR", result);
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithLowercaseOriginal_ReturnsLowercase()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("NVARCHAR", "varchar");
+
+        // Assert
+        Assert.Equal("nvarchar", result);
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithMixedCaseOriginal_ReturnsUppercase()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("nvarchar", "VarChar");
+
+        // Assert
+        Assert.Equal("NVARCHAR", result);
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithEmptyOriginal_ReturnsReplacement()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("nvarchar", "");
+
+        // Assert
+        Assert.Equal("nvarchar", result);
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithNullOriginal_ReturnsReplacement()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("nvarchar", null);
+
+        // Assert
+        Assert.Equal("nvarchar", result);
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithNullReplacement_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() => TokenHelpers.ApplyKeywordCasing(null!, "VARCHAR"));
+    }
+
+    [Fact]
+    public void ApplyKeywordCasing_WithNonLetterOriginal_ReturnsUppercase()
+    {
+        // Act
+        var result = TokenHelpers.ApplyKeywordCasing("nvarchar", "123");
+
+        // Assert
+        Assert.Equal("NVARCHAR", result);
+    }
+
+    #endregion
 }
