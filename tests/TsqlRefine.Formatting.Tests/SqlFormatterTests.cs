@@ -307,13 +307,14 @@ WHERE u.status IN (
     }
 
     [Fact]
-    public void Format_WithInlineSpacing_NormalizesSpacing()
+    public void Format_WithInlineSpacing_PreservesSpacing()
     {
         var sql = "SELECT  id,name,  email  FROM  users";
         var result = SqlFormatter.Format(sql);
 
         // Default ColumnCasing/TableCasing is None, so identifiers keep original casing
-        Assert.Contains("SELECT id, name, email FROM users", result);
+        // Whitespace is preserved, only comma spacing is normalized
+        Assert.Contains("SELECT  id, name,  email  FROM  users", result);
     }
 
     [Fact]
@@ -360,8 +361,8 @@ FROM users";
         Assert.Contains("/* test,  comment */", result);
         Assert.Contains("-- line,  comment", result);
 
-        // But unprotected regions should be normalized
+        // Whitespace is preserved (no consolidation)
         // Note: Default ColumnCasing is None, so identifiers keep original casing
-        Assert.Contains("id, /* test,  comment */ name", result);
+        Assert.Contains("id,  /* test,  comment */  name", result);
     }
 }

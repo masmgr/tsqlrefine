@@ -39,19 +39,19 @@ public class InlineSpaceNormalizerTests
     }
 
     [Fact]
-    public void Normalize_DuplicateSpaces_CollapsesToSingle()
+    public void Normalize_DuplicateSpaces_PreservesOriginal()
     {
         var input = "SELECT  id,  name";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id, name", result);
+        Assert.Equal("SELECT  id,  name", result);
     }
 
     [Fact]
-    public void Normalize_TripleSpaces_CollapsesToSingle()
+    public void Normalize_TripleSpaces_PreservesOriginal()
     {
         var input = "SELECT   id   FROM   users";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id FROM users", result);
+        Assert.Equal("SELECT   id   FROM   users", result);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT 'a,b',  'test  string'";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT 'a,b', 'test  string'", result);
+        Assert.Equal("SELECT 'a,b',  'test  string'", result);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT id,  name  -- test,  comment";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id, name -- test,  comment", result);
+        Assert.Equal("SELECT id,  name  -- test,  comment", result);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT id,  /* test,  comment */  name";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id, /* test,  comment */ name", result);
+        Assert.Equal("SELECT id,  /* test,  comment */  name", result);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT [Column,Name],  id";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT [Column,Name], id", result);
+        Assert.Equal("SELECT [Column,Name],  id", result);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT \"Column,Name\",  id";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT \"Column,Name\", id", result);
+        Assert.Equal("SELECT \"Column,Name\",  id", result);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT 'test''s  value',  id";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT 'test''s  value', id", result);
+        Assert.Equal("SELECT 'test''s  value',  id", result);
     }
 
     [Fact]
@@ -131,27 +131,27 @@ public class InlineSpaceNormalizerTests
     {
         var input = "SELECT [Table]]Name],  id";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT [Table]]Name], id", result);
+        Assert.Equal("SELECT [Table]]Name],  id", result);
     }
 
     [Fact]
-    public void Normalize_TabCharacters_CollapseDuplicates()
+    public void Normalize_TabCharacters_PreservesDuplicates()
     {
         var input = "SELECT\tid,\t\tname";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT\tid,\tname", result);
+        Assert.Equal("SELECT\tid,\t\tname", result);
     }
 
     [Fact]
-    public void Normalize_MixedSpacesAndTabs_CollapseDuplicates()
+    public void Normalize_MixedSpacesAndTabs_PreservesDuplicates()
     {
         var input = "SELECT \t id, \t \tname";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id, name", result);
+        Assert.Equal("SELECT \t id, \t \tname", result);
     }
 
     [Fact]
-    public void Normalize_ComplexQuery_NormalizesAllSpacing()
+    public void Normalize_ComplexQuery_PreservesSpacing()
     {
         var input = @"SELECT  o.OrderId,  o.OrderDate,  c.CustomerName
 FROM  dbo.Orders  o
@@ -160,10 +160,11 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
 
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
 
-        var expected = @"SELECT o.OrderId, o.OrderDate, c.CustomerName
-FROM dbo.Orders o
-INNER JOIN dbo.Customers c ON o.CustomerId = c.CustomerId
-WHERE o.OrderDate >= '2024-01-01'";
+        // Spaces are preserved, only comma spacing is normalized
+        var expected = @"SELECT  o.OrderId,  o.OrderDate,  c.CustomerName
+FROM  dbo.Orders  o
+INNER  JOIN  dbo.Customers  c  ON  o.CustomerId  =  c.CustomerId
+WHERE  o.OrderDate  >=  '2024-01-01'";
 
         Assert.Equal(expected, result);
     }
@@ -200,7 +201,7 @@ WHERE o.OrderDate >= '2024-01-01'";
     {
         var input = "SELECT '',  \"\",  [],  /**/, id";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT '', \"\", [], /**/, id", result);
+        Assert.Equal("SELECT '',  \"\",  [],  /**/, id", result);
     }
 
     [Fact]
@@ -224,7 +225,7 @@ WHERE o.OrderDate >= '2024-01-01'";
     {
         var input = "SELECT /* a,  b */  id,  /* c,  d */  name";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT /* a,  b */ id, /* c,  d */ name", result);
+        Assert.Equal("SELECT /* a,  b */  id,  /* c,  d */  name", result);
     }
 
     [Fact]
@@ -232,14 +233,14 @@ WHERE o.OrderDate >= '2024-01-01'";
     {
         var input = "SELECT [dbo].[Users],  \"schema\".\"table\"";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT [dbo].[Users], \"schema\".\"table\"", result);
+        Assert.Equal("SELECT [dbo].[Users],  \"schema\".\"table\"", result);
     }
 
     [Fact]
-    public void Normalize_CommaFollowedByMultipleSpaces_CollapsesToOneSpace()
+    public void Normalize_CommaFollowedByMultipleSpaces_PreservesOriginal()
     {
         var input = "SELECT id,    name";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
-        Assert.Equal("SELECT id, name", result);
+        Assert.Equal("SELECT id,    name", result);
     }
 }

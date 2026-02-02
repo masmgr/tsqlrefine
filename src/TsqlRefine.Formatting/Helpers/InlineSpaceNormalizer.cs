@@ -7,7 +7,6 @@ namespace TsqlRefine.Formatting.Helpers;
 ///
 /// Transformations:
 /// - Adds space after commas (e.g., "a,b" → "a, b")
-/// - Removes duplicate spaces (e.g., "SELECT  *" → "SELECT *")
 /// - Preserves spaces inside strings, comments, brackets
 /// - Does not modify leading indentation (handled by WhitespaceNormalizer)
 ///
@@ -70,7 +69,6 @@ public static class InlineSpaceNormalizer
 
         var tracker = new ProtectedRegionTracker();
         var output = new StringBuilder();
-        var previousWasSpace = false;
         var needsSpaceAfterComma = false;
         var index = 0;
 
@@ -93,7 +91,6 @@ public static class InlineSpaceNormalizer
             // Try to consume characters in active protected region
             if (tracker.TryConsume(line, output, ref index))
             {
-                previousWasSpace = false;
                 needsSpaceAfterComma = false;
                 continue;
             }
@@ -101,7 +98,6 @@ public static class InlineSpaceNormalizer
             // Try to start a new protected region
             if (tracker.TryStartProtectedRegion(line, output, ref index))
             {
-                previousWasSpace = false;
                 needsSpaceAfterComma = false;
                 continue;
             }
@@ -126,7 +122,6 @@ public static class InlineSpaceNormalizer
 
                 output.Append(c);
                 needsSpaceAfterComma = true;
-                previousWasSpace = false;
                 index++;
                 continue;
             }
@@ -139,21 +134,12 @@ public static class InlineSpaceNormalizer
                     // Preserve the original whitespace character (space or tab) after comma
                     output.Append(c);
                     needsSpaceAfterComma = false;
-                    previousWasSpace = true;
-                    index++;
-                    continue;
-                }
-
-                if (previousWasSpace)
-                {
-                    // Skip duplicate space
                     index++;
                     continue;
                 }
 
                 // Output the space/tab
                 output.Append(c);
-                previousWasSpace = true;
                 index++;
                 continue;
             }
@@ -167,7 +153,6 @@ public static class InlineSpaceNormalizer
             }
 
             output.Append(c);
-            previousWasSpace = false;
             index++;
         }
 
