@@ -1,4 +1,4 @@
-using Microsoft.SqlServer.TransactSql.ScriptDom;
+using System.Collections.Frozen;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Helpers;
 
@@ -6,10 +6,21 @@ namespace TsqlRefine.Rules.Rules.Style;
 
 public sealed class JoinKeywordRule : IRule
 {
+    private const string RuleId = "join-keyword";
+    private const string Category = "Style";
+
+    /// <summary>
+    /// Keywords that terminate the FROM clause table list.
+    /// </summary>
+    private static readonly FrozenSet<string> FromClauseTerminators = FrozenSet.ToFrozenSet(
+        ["WHERE", "ORDER", "GROUP", "HAVING", "UNION", "EXCEPT", "INTERSECT",
+         "SELECT", "UPDATE", "DELETE", "INSERT", "SET"],
+        StringComparer.OrdinalIgnoreCase);
+
     public RuleMetadata Metadata { get; } = new(
-        RuleId: "join-keyword",
+        RuleId: RuleId,
         Description: "Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability",
-        Category: "Style",
+        Category: Category,
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
@@ -18,78 +29,101 @@ public sealed class JoinKeywordRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // Use token-based detection for comma joins
-        var ranges = FindCommaJoins(context.Tokens);
-        foreach (var range in ranges)
+        var tokens = context.Tokens;
+        if (tokens is null || tokens.Count == 0)
         {
-            yield return new Diagnostic(
-                Range: range,
-                Message: "Avoid implicit joins using comma-separated table lists. Use explicit INNER JOIN, LEFT JOIN, or CROSS JOIN syntax for better readability and to prevent accidental Cartesian products.",
-                Severity: null,
-                Code: Metadata.RuleId,
-                Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
-            );
+            yield break;
+        }
+
+        var analyzer = new CommaJoinAnalyzer(tokens);
+        foreach (var commaToken in analyzer.FindCommaJoinTokens())
+        {
+            yield return CreateDiagnostic(commaToken);
         }
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private static List<TsqlRefine.PluginSdk.Range> FindCommaJoins(IReadOnlyList<Token> tokens)
+    private Diagnostic CreateDiagnostic(Token commaToken)
     {
-        var ranges = new List<TsqlRefine.PluginSdk.Range>();
+        var start = commaToken.Start;
+        var end = TokenHelpers.GetTokenEnd(commaToken);
 
-        if (tokens is null || tokens.Count == 0)
+        return new Diagnostic(
+            Range: new PluginSdk.Range(start, end),
+            Message: "Avoid implicit joins using comma-separated table lists. Use explicit INNER JOIN, LEFT JOIN, or CROSS JOIN syntax for better readability and to prevent accidental Cartesian products.",
+            Severity: null,
+            Code: RuleId,
+            Data: new DiagnosticData(RuleId, Category, Metadata.Fixable)
+        );
+    }
+
+    /// <summary>
+    /// Encapsulates the state machine logic for finding comma joins in FROM clauses.
+    /// Tracks parenthesis depth to handle subqueries correctly.
+    /// </summary>
+    private sealed class CommaJoinAnalyzer(IReadOnlyList<Token> tokens)
+    {
+        private readonly IReadOnlyList<Token> _tokens = tokens;
+
+        public IEnumerable<Token> FindCommaJoinTokens()
         {
-            return ranges;
-        }
+            var parenDepth = 0;
 
-        // Track parenthesis depth across the entire token stream
-        var currentDepth = 0;
-
-        for (var i = 0; i < tokens.Count; i++)
-        {
-            if (TokenHelpers.IsTrivia(tokens[i]))
+            for (var i = 0; i < _tokens.Count; i++)
             {
-                continue;
-            }
-
-            var text = tokens[i].Text;
-
-            // Track parenthesis depth
-            if (text == "(")
-            {
-                currentDepth++;
-                continue;
-            }
-
-            if (text == ")")
-            {
-                currentDepth--;
-                continue;
-            }
-
-            // Look for FROM keyword
-            if (!TokenHelpers.IsKeyword(tokens[i], "FROM"))
-            {
-                continue;
-            }
-
-            // Remember the depth at which we found FROM (for subquery detection)
-            var fromDepth = currentDepth;
-
-            // Look for commas between FROM and WHERE/ORDER BY/GROUP BY/HAVING/;
-            var depth = 0;
-            for (var j = i + 1; j < tokens.Count; j++)
-            {
-                if (TokenHelpers.IsTrivia(tokens[j]))
+                var token = _tokens[i];
+                if (TokenHelpers.IsTrivia(token))
                 {
                     continue;
                 }
 
-                text = tokens[j].Text;
+                var text = token.Text;
 
-                // Track parenthesis depth (for subqueries)
+                if (text == "(")
+                {
+                    parenDepth++;
+                    continue;
+                }
+
+                if (text == ")")
+                {
+                    parenDepth = Math.Max(0, parenDepth - 1);
+                    continue;
+                }
+
+                if (!TokenHelpers.IsKeyword(token, "FROM"))
+                {
+                    continue;
+                }
+
+                foreach (var commaToken in ScanFromClause(i + 1))
+                {
+                    yield return commaToken;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scans tokens after FROM keyword to find comma joins.
+        /// </summary>
+        /// <param name="startIndex">Index of the first token after FROM.</param>
+        /// <returns>Comma tokens that represent implicit joins.</returns>
+        private IEnumerable<Token> ScanFromClause(int startIndex)
+        {
+            var depth = 0;
+
+            for (var i = startIndex; i < _tokens.Count; i++)
+            {
+                var token = _tokens[i];
+                if (TokenHelpers.IsTrivia(token))
+                {
+                    continue;
+                }
+
+                var text = token.Text;
+
                 if (text == "(")
                 {
                     depth++;
@@ -99,59 +133,53 @@ public sealed class JoinKeywordRule : IRule
                 if (text == ")")
                 {
                     depth--;
-                    // If we've exited the subquery that contained this FROM, stop scanning
                     if (depth < 0)
                     {
-                        break;
+                        yield break;
                     }
                     continue;
                 }
 
-                // At depth 0, check for clause terminators or new statement start
-                if (depth == 0)
+                if (depth > 0)
                 {
-                    if (TokenHelpers.IsKeyword(tokens[j], "WHERE") ||
-                        TokenHelpers.IsKeyword(tokens[j], "ORDER") ||
-                        TokenHelpers.IsKeyword(tokens[j], "GROUP") ||
-                        TokenHelpers.IsKeyword(tokens[j], "HAVING") ||
-                        TokenHelpers.IsKeyword(tokens[j], "UNION") ||
-                        TokenHelpers.IsKeyword(tokens[j], "EXCEPT") ||
-                        TokenHelpers.IsKeyword(tokens[j], "INTERSECT") ||
-                        TokenHelpers.IsKeyword(tokens[j], "SELECT") ||
-                        TokenHelpers.IsKeyword(tokens[j], "UPDATE") ||
-                        TokenHelpers.IsKeyword(tokens[j], "DELETE") ||
-                        TokenHelpers.IsKeyword(tokens[j], "INSERT") ||
-                        TokenHelpers.IsKeyword(tokens[j], "SET") ||
-                        text == ";")
-                    {
-                        break;
-                    }
+                    continue;
+                }
 
-                    // Found comma in FROM clause (not in subquery)
-                    if (text == "," && !IsPartOfJoin(tokens, j))
-                    {
-                        var start = tokens[j].Start;
-                        var end = TokenHelpers.GetTokenEnd(tokens[j]);
-                        ranges.Add(new TsqlRefine.PluginSdk.Range(start, end));
-                    }
+                if (IsFromClauseTerminator(text))
+                {
+                    yield break;
+                }
+
+                if (text == "," && !IsPrecededByJoinKeyword(i))
+                {
+                    yield return token;
                 }
             }
         }
 
-        return ranges;
-    }
-
-    private static bool IsPartOfJoin(IReadOnlyList<Token> tokens, int commaIndex)
-    {
-        // Check if the comma is preceded by JOIN keyword (within a few tokens)
-        for (var i = Math.Max(0, commaIndex - 10); i < commaIndex; i++)
+        private static bool IsFromClauseTerminator(string text)
         {
-            if (TokenHelpers.IsKeyword(tokens[i], "JOIN"))
-            {
-                return true;
-            }
+            return text == ";" || FromClauseTerminators.Contains(text);
         }
 
-        return false;
+        /// <summary>
+        /// Checks if a comma is preceded by JOIN keyword (within recent tokens).
+        /// This distinguishes between comma joins and commas in other contexts.
+        /// </summary>
+        private bool IsPrecededByJoinKeyword(int commaIndex)
+        {
+            const int lookbackLimit = 10;
+            var searchStart = Math.Max(0, commaIndex - lookbackLimit);
+
+            for (var i = commaIndex - 1; i >= searchStart; i--)
+            {
+                if (TokenHelpers.IsKeyword(_tokens[i], "JOIN"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }
