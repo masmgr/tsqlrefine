@@ -70,6 +70,8 @@ Invalid column name 'x.active'.
 - Each query scope has its own alias namespace
 - Schema-qualified column references (e.g., `dbo.users.id`) are correctly recognized
 - Table-valued function aliases (e.g., `JOIN dbo.fn_GetData() AS tvf`) are correctly recognized
+- Temporary table aliases (e.g., `FROM #temp AS t`) are correctly recognized
+- Table variable aliases (e.g., `FROM @tableVar AS tv`) are correctly recognized
 
 **Subquery scope handling**:
 
@@ -192,6 +194,20 @@ FROM dbo.fn_GetUserData(@userId) AS tvf;  -- OK: alias 'tvf' is recognized
 SELECT u.id, tvf.data
 FROM users u
 JOIN dbo.fn_GetMetrics() AS tvf ON u.id = tvf.user_id;  -- OK: both aliases recognized
+
+-- Temporary table with alias
+SELECT t.id, t.name
+FROM #temp_users AS t;  -- OK: alias 't' is recognized
+
+-- Temporary table without alias (implicit name)
+SELECT #temp.id FROM #temp;  -- OK: table name '#temp' is recognized
+
+-- Table variable with alias
+SELECT tv.id, tv.name
+FROM @users AS tv;  -- OK: alias 'tv' is recognized
+
+-- Table variable without alias (implicit name)
+SELECT @tableVar.id FROM @tableVar;  -- OK: variable name '@tableVar' is recognized
 ```
 
 ## Configuration

@@ -280,6 +280,71 @@ SELECT x.id FROM orders o;";
         Assert.Contains(expectedAlias, diagnostics[0].Message);
     }
 
+    [Theory]
+    [InlineData("SELECT t.col FROM #temp t;")]  // temp table with alias
+    [InlineData("SELECT #temp.col FROM #temp;")]  // temp table without alias (implicit name)
+    [InlineData("SELECT t.id FROM #temp t JOIN users u ON t.id = u.id;")]
+    [InlineData("SELECT t.col FROM ##global_temp t;")]  // global temp table
+    public void Analyze_WithTemporaryTable_RecognizesAlias(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("SELECT x.col FROM #temp t;", "x")]
+    [InlineData("SELECT t.col, y.other FROM #temp t;", "y")]
+    public void Analyze_WithTemporaryTableAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    [Theory]
+    [InlineData("SELECT tv.col FROM @tableVar tv;")]  // table variable with alias
+    [InlineData("SELECT @tableVar.col FROM @tableVar;")]  // table variable without alias (implicit name)
+    [InlineData("SELECT tv.id FROM @tableVar tv JOIN users u ON tv.id = u.id;")]
+    public void Analyze_WithTableVariable_RecognizesAlias(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("SELECT x.col FROM @tableVar tv;", "x")]
+    [InlineData("SELECT tv.col, y.other FROM @tableVar tv;", "y")]
+    public void Analyze_WithTableVariableAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
     #region Subquery Scope Tests
 
     // FROM clause subquery (QueryDerivedTable) - Valid cases
