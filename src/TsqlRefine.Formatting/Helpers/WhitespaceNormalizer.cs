@@ -9,6 +9,48 @@ namespace TsqlRefine.Formatting.Helpers;
 public static class WhitespaceNormalizer
 {
     /// <summary>
+    /// Maximum number of columns to cache for space-based indentation.
+    /// </summary>
+    private const int MaxCachedSpaceColumns = 32;
+
+    /// <summary>
+    /// Maximum number of tabs to cache for tab-based indentation.
+    /// </summary>
+    private const int MaxCachedTabs = 8;
+
+    /// <summary>
+    /// Cache of space-based indent strings (0 to MaxCachedSpaceColumns spaces).
+    /// </summary>
+    private static readonly string[] SpaceIndentCache = BuildSpaceIndentCache();
+
+    /// <summary>
+    /// Cache of tab-based indent strings (0 to MaxCachedTabs tabs).
+    /// </summary>
+    private static readonly string[] TabIndentCache = BuildTabIndentCache();
+
+    private static string[] BuildSpaceIndentCache()
+    {
+        var cache = new string[MaxCachedSpaceColumns + 1];
+        for (var i = 0; i <= MaxCachedSpaceColumns; i++)
+        {
+            cache[i] = new string(' ', i);
+        }
+
+        return cache;
+    }
+
+    private static string[] BuildTabIndentCache()
+    {
+        var cache = new string[MaxCachedTabs + 1];
+        for (var i = 0; i <= MaxCachedTabs; i++)
+        {
+            cache[i] = new string('\t', i);
+        }
+
+        return cache;
+    }
+
+    /// <summary>
     /// Normalizes whitespace in SQL text according to formatting options.
     /// </summary>
     /// <param name="input">SQL text to normalize</param>
@@ -43,15 +85,13 @@ public static class WhitespaceNormalizer
             AppendProcessedLine(sb, line, options, tracker);
         }
 
-        var result = sb.ToString();
-
         // Apply final newline option using the resolved line ending
-        if (options.InsertFinalNewline && !EndsWithLineEnding(result, lineEnding))
+        if (options.InsertFinalNewline && !EndsWithLineEnding(sb, lineEnding))
         {
-            result += lineEnding;
+            sb.Append(lineEnding);
         }
 
-        return result;
+        return sb.ToString();
     }
 
     /// <summary>
@@ -70,9 +110,23 @@ public static class WhitespaceNormalizer
     }
 
 
-    private static bool EndsWithLineEnding(string text, string lineEnding)
+    private static bool EndsWithLineEnding(StringBuilder sb, string lineEnding)
     {
-        return text.EndsWith(lineEnding, StringComparison.Ordinal);
+        if (sb.Length < lineEnding.Length)
+        {
+            return false;
+        }
+
+        var startIndex = sb.Length - lineEnding.Length;
+        for (var i = 0; i < lineEnding.Length; i++)
+        {
+            if (sb[startIndex + i] != lineEnding[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool TryConsumeNewline(string input, ref int index, char current)
@@ -208,10 +262,23 @@ public static class WhitespaceNormalizer
         {
             var tabs = columns / indentSize;
             var spaces = columns % indentSize;
-            return new string('\t', tabs) + new string(' ', spaces);
+
+            // Use cache for common cases
+            if (spaces == 0 && tabs <= MaxCachedTabs)
+            {
+                return TabIndentCache[tabs];
+            }
+
+            // Fall back to string creation for larger or mixed indents
+            var tabPart = tabs <= MaxCachedTabs ? TabIndentCache[tabs] : new string('\t', tabs);
+            var spacePart = spaces <= MaxCachedSpaceColumns ? SpaceIndentCache[spaces] : new string(' ', spaces);
+            return tabPart + spacePart;
         }
 
-        return new string(' ', columns);
+        // Use cache for common space indents
+        return columns <= MaxCachedSpaceColumns
+            ? SpaceIndentCache[columns]
+            : new string(' ', columns);
     }
 
     private static void TrimTrailingWhitespace(StringBuilder sb)

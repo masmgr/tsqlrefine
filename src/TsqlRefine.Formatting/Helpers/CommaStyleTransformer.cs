@@ -120,30 +120,20 @@ public static class CommaStyleTransformer
 
         // Track protected regions through the line to determine if trailing comma is protected
         var lastCommaOutsideProtected = -1;
-        var tempOutput = new StringBuilder();
 
-        for (var i = 0; i < trimmed.Length; i++)
+        for (var i = 0; i < trimmed.Length;)
         {
-            // Try to consume protected region content
-            if (tracker.TryConsume(trimmed, tempOutput, ref i))
-            {
-                i--; // TryConsume advances index, loop will increment
-                continue;
-            }
-
-            // Try to start a protected region
-            if (tracker.TryStartProtectedRegion(trimmed, tempOutput, ref i))
-            {
-                i--; // TryStart advances index, loop will increment
-                continue;
-            }
-
-            // Check for line comment
-            var inLineComment = false;
-            if (ProtectedRegionTracker.TryStartLineComment(trimmed, tempOutput, ref i, ref inLineComment))
+            // Check for line comment first
+            if (ProtectedRegionTracker.IsLineCommentStart(trimmed, i))
             {
                 // Rest of line is comment
                 break;
+            }
+
+            // Try to consume or start protected region
+            if (tracker.TryAdvance(trimmed, ref i))
+            {
+                continue;
             }
 
             var c = trimmed[i];
@@ -154,7 +144,7 @@ public static class CommaStyleTransformer
                 lastCommaOutsideProtected = i;
             }
 
-            tempOutput.Append(c);
+            i++;
         }
 
         // Check if the last non-whitespace character was a comma outside protected regions
@@ -169,28 +159,22 @@ public static class CommaStyleTransformer
     /// </summary>
     private static void UpdateTrackerState(string line, ProtectedRegionTracker tracker)
     {
-        var tempOutput = new StringBuilder();
-        for (var i = 0; i < line.Length; i++)
+        for (var i = 0; i < line.Length;)
         {
-            if (tracker.TryConsume(line, tempOutput, ref i))
+            // Check for line comment first
+            if (ProtectedRegionTracker.IsLineCommentStart(line, i))
             {
-                i--;
-                continue;
-            }
-
-            if (tracker.TryStartProtectedRegion(line, tempOutput, ref i))
-            {
-                i--;
-                continue;
-            }
-
-            var inLineComment = false;
-            if (ProtectedRegionTracker.TryStartLineComment(line, tempOutput, ref i, ref inLineComment))
-            {
+                // Rest of line is comment - no state change needed
                 break;
             }
 
-            tempOutput.Append(line[i]);
+            // Try to consume or start protected region
+            if (tracker.TryAdvance(line, ref i))
+            {
+                continue;
+            }
+
+            i++;
         }
     }
 }

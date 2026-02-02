@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Formatting.Helpers;
@@ -8,6 +9,71 @@ namespace TsqlRefine.Formatting.Helpers;
 /// </summary>
 public static class SqlElementCategorizer
 {
+    /// <summary>
+    /// Categories for token type classification (internal optimization).
+    /// </summary>
+    private enum TokenTypeCategory
+    {
+        Other,
+        Variable,
+        Literal,
+        Comment,
+        WhiteSpace,
+        Identifier
+    }
+
+    private static readonly FrozenDictionary<TSqlTokenType, TokenTypeCategory> TokenTypeCategoryCache = BuildTokenTypeCategoryCache();
+
+    private static readonly FrozenSet<string> TableContextKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "FROM", "JOIN", "INTO", "UPDATE", "TABLE"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly FrozenSet<string> EndOfTableContextKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "WHERE", "GROUP", "ORDER", "HAVING", "SELECT"
+    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+
+    private static FrozenDictionary<TSqlTokenType, TokenTypeCategory> BuildTokenTypeCategoryCache()
+    {
+        var cache = new Dictionary<TSqlTokenType, TokenTypeCategory>();
+        foreach (var tokenType in Enum.GetValues<TSqlTokenType>())
+        {
+            var name = tokenType.ToString();
+            TokenTypeCategory category;
+
+            if (name.Contains("Variable", StringComparison.Ordinal))
+            {
+                category = TokenTypeCategory.Variable;
+            }
+            else if (name.Contains("Literal", StringComparison.Ordinal))
+            {
+                category = TokenTypeCategory.Literal;
+            }
+            else if (name.Contains("Comment", StringComparison.Ordinal))
+            {
+                category = TokenTypeCategory.Comment;
+            }
+            else if (name.Contains("WhiteSpace", StringComparison.Ordinal) ||
+                     name.Contains("Whitespace", StringComparison.Ordinal))
+            {
+                category = TokenTypeCategory.WhiteSpace;
+            }
+            else if (name.Contains("Identifier", StringComparison.Ordinal))
+            {
+                category = TokenTypeCategory.Identifier;
+            }
+            else
+            {
+                category = TokenTypeCategory.Other;
+            }
+
+            cache[tokenType] = category;
+        }
+
+        return cache.ToFrozenDictionary();
+    }
+
     /// <summary>
     /// Categories for SQL token elements
     /// </summary>
@@ -71,11 +137,10 @@ public static class SqlElementCategorizer
         }
 
         var text = token.Text;
-        var typeName = token.TokenType.ToString();
+        var tokenCategory = TokenTypeCategoryCache.GetValueOrDefault(token.TokenType, TokenTypeCategory.Other);
 
         // 1. Variables (@var, @@var)
-        if (typeName.Contains("Variable", StringComparison.Ordinal) ||
-            text.StartsWith('@'))
+        if (tokenCategory == TokenTypeCategory.Variable || text.StartsWith('@'))
         {
             UpdateContext(token, context);
             return ElementCategory.Variable;
@@ -83,10 +148,7 @@ public static class SqlElementCategorizer
 
         // 2. Skip non-word tokens (operators, punctuation, literals, comments, whitespace)
         if (!IsWordToken(text) ||
-            typeName.Contains("Literal", StringComparison.Ordinal) ||
-            typeName.Contains("Comment", StringComparison.Ordinal) ||
-            typeName.Contains("WhiteSpace", StringComparison.Ordinal) ||
-            typeName.Contains("Whitespace", StringComparison.Ordinal))
+            tokenCategory is TokenTypeCategory.Literal or TokenTypeCategory.Comment or TokenTypeCategory.WhiteSpace)
         {
             UpdateContext(token, context);
             return ElementCategory.Other;
@@ -123,7 +185,7 @@ public static class SqlElementCategorizer
         }
 
         // 6. Identifiers (schema.table.column, table.column, alias, etc.)
-        if (typeName.Contains("Identifier", StringComparison.Ordinal))
+        if (tokenCategory == TokenTypeCategory.Identifier)
         {
             var category = CategorizeIdentifier(token, previousToken, nextToken, context);
 
@@ -179,7 +241,8 @@ public static class SqlElementCategorizer
             context.AfterAsKeyword = true;
         }
         // After processing an identifier following AS, reset the flag
-        else if (context.AfterAsKeyword && token.TokenType.ToString().Contains("Identifier"))
+        else if (context.AfterAsKeyword &&
+                 TokenTypeCategoryCache.GetValueOrDefault(token.TokenType) == TokenTypeCategory.Identifier)
         {
             context.AfterAsKeyword = false;
         }
@@ -202,14 +265,7 @@ public static class SqlElementCategorizer
     /// <summary>
     /// Checks if a keyword ends table context (WHERE, GROUP, ORDER, HAVING, etc.)
     /// </summary>
-    private static bool IsEndOfTableContextKeyword(string text)
-    {
-        return text.Equals("WHERE", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("GROUP", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("ORDER", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("HAVING", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("SELECT", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsEndOfTableContextKeyword(string text) => EndOfTableContextKeywords.Contains(text);
 
     /// <summary>
     /// Categorizes a quoted identifier based on context
@@ -306,14 +362,7 @@ public static class SqlElementCategorizer
     /// <summary>
     /// Checks if the previous token indicates a table context
     /// </summary>
-    private static bool IsTableContextKeyword(string text)
-    {
-        return text.Equals("FROM", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("JOIN", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("INTO", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("UPDATE", StringComparison.OrdinalIgnoreCase) ||
-               text.Equals("TABLE", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsTableContextKeyword(string text) => TableContextKeywords.Contains(text);
 
     /// <summary>
     /// Checks if the next token is an opening parenthesis (function call indicator)

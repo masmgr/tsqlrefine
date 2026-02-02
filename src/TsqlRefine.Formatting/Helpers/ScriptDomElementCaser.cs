@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+using System.Collections.Frozen;
 using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
@@ -11,7 +11,7 @@ namespace TsqlRefine.Formatting.Helpers;
 /// </summary>
 public static class ScriptDomElementCaser
 {
-    private static readonly IReadOnlyDictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
+    private static readonly FrozenSet<TSqlTokenType> TriviaTokenTypes = BuildTriviaTokenTypes();
 
     /// <summary>
     /// Applies granular element casing to SQL text.
@@ -128,13 +128,7 @@ public static class ScriptDomElementCaser
     /// <summary>
     /// Checks if a token is trivia (whitespace or comment).
     /// </summary>
-    private static bool IsTrivia(TSqlParserToken token)
-    {
-        var typeName = GetTokenTypeName(token.TokenType);
-        return typeName.Contains("WhiteSpace", StringComparison.Ordinal) ||
-               typeName.Contains("Whitespace", StringComparison.Ordinal) ||
-               typeName.Contains("Comment", StringComparison.Ordinal);
-    }
+    private static bool IsTrivia(TSqlParserToken token) => TriviaTokenTypes.Contains(token.TokenType);
 
     /// <summary>
     /// Creates a T-SQL parser for the specified compatibility level.
@@ -153,19 +147,20 @@ public static class ScriptDomElementCaser
             _ => new TSql100Parser(initialQuotedIdentifiers: true)
         };
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string GetTokenTypeName(TSqlTokenType tokenType) =>
-        TokenTypeNameCache.TryGetValue(tokenType, out var name) ? name : tokenType.ToString();
-
-    private static IReadOnlyDictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
+    private static FrozenSet<TSqlTokenType> BuildTriviaTokenTypes()
     {
-        var values = Enum.GetValues<TSqlTokenType>();
-        var map = new Dictionary<TSqlTokenType, string>(values.Length);
-        foreach (var value in values)
+        var triviaTypes = new HashSet<TSqlTokenType>();
+        foreach (var tokenType in Enum.GetValues<TSqlTokenType>())
         {
-            map[value] = value.ToString();
+            var name = tokenType.ToString();
+            if (name.Contains("WhiteSpace", StringComparison.Ordinal) ||
+                name.Contains("Whitespace", StringComparison.Ordinal) ||
+                name.Contains("Comment", StringComparison.Ordinal))
+            {
+                triviaTypes.Add(tokenType);
+            }
         }
 
-        return map;
+        return triviaTypes.ToFrozenSet();
     }
 }

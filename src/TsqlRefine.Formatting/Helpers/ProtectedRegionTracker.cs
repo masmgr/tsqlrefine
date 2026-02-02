@@ -21,6 +21,28 @@ internal sealed class ProtectedRegionTracker
         _inString || _inBlockComment || _inDoubleQuote || _inBracket;
 
     /// <summary>
+    /// Updates tracker state for a character without producing output.
+    /// Returns true if the character was consumed (in a protected region or started one).
+    /// </summary>
+    /// <param name="text">The text being processed</param>
+    /// <param name="index">Current index (will be advanced if consumed)</param>
+    /// <returns>True if character was consumed; false otherwise</returns>
+    public bool TryAdvance(string text, ref int index)
+    {
+        return TryConsumeWithoutOutput(text, ref index) ||
+               TryStartProtectedRegionWithoutOutput(text, ref index);
+    }
+
+    /// <summary>
+    /// Checks if text at the given index starts a line comment (-- style).
+    /// Does not consume or modify state - caller should skip to end of line.
+    /// </summary>
+    public static bool IsLineCommentStart(string text, int index)
+    {
+        return index + 1 < text.Length && text[index] == '-' && text[index + 1] == '-';
+    }
+
+    /// <summary>
     /// Attempts to consume characters in an active protected region.
     /// </summary>
     /// <param name="text">The text being processed</param>
@@ -222,6 +244,134 @@ internal sealed class ProtectedRegionTracker
 
         _inBracket = true;
         output.Append(c);
+        index++;
+        return true;
+    }
+
+    private bool TryConsumeWithoutOutput(string text, ref int index)
+    {
+        if (_inString)
+        {
+            return TryConsumeStringWithoutOutput(text, ref index);
+        }
+
+        if (_inDoubleQuote)
+        {
+            return TryConsumeDoubleQuoteWithoutOutput(text, ref index);
+        }
+
+        if (_inBracket)
+        {
+            return TryConsumeBracketWithoutOutput(text, ref index);
+        }
+
+        if (_inBlockComment)
+        {
+            return TryConsumeBlockCommentWithoutOutput(text, ref index);
+        }
+
+        return false;
+    }
+
+    private bool TryStartProtectedRegionWithoutOutput(string text, ref int index)
+    {
+        var c = text[index];
+
+        // Block comment: /*
+        if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
+        {
+            _inBlockComment = true;
+            index += 2;
+            return true;
+        }
+
+        // String literal: '
+        if (c == '\'')
+        {
+            _inString = true;
+            index++;
+            return true;
+        }
+
+        // Double-quoted identifier: "
+        if (c == '"')
+        {
+            _inDoubleQuote = true;
+            index++;
+            return true;
+        }
+
+        // Bracketed identifier: [
+        if (c == '[')
+        {
+            _inBracket = true;
+            index++;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryConsumeStringWithoutOutput(string text, ref int index)
+    {
+        var c = text[index];
+        if (c == '\'')
+        {
+            // Handle escaped single quotes
+            if (index + 1 < text.Length && text[index + 1] == '\'')
+            {
+                index += 2;
+                return true;
+            }
+
+            _inString = false;
+        }
+
+        index++;
+        return true;
+    }
+
+    private bool TryConsumeDoubleQuoteWithoutOutput(string text, ref int index)
+    {
+        var c = text[index];
+        if (c == '"')
+        {
+            _inDoubleQuote = false;
+        }
+
+        index++;
+        return true;
+    }
+
+    private bool TryConsumeBracketWithoutOutput(string text, ref int index)
+    {
+        var c = text[index];
+        if (c == ']')
+        {
+            // Handle escaped brackets
+            if (index + 1 < text.Length && text[index + 1] == ']')
+            {
+                index += 2;
+                return true;
+            }
+
+            _inBracket = false;
+        }
+
+        index++;
+        return true;
+    }
+
+    private bool TryConsumeBlockCommentWithoutOutput(string text, ref int index)
+    {
+        var c = text[index];
+        if (c == '*' && index + 1 < text.Length && text[index + 1] == '/')
+        {
+            _inBlockComment = false;
+            index += 2;
+            return true;
+        }
+
         index++;
         return true;
     }
