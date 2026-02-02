@@ -9,15 +9,24 @@ public static class ColumnReferenceHelpers
 {
     /// <summary>
     /// Gets the table qualifier (alias or table name) from a column reference.
-    /// Returns the first part of a multi-part identifier (e.g., "t1" from "t1.column").
+    /// Returns the table/alias part from multi-part identifiers:
+    /// - "t1.column" → "t1" (index 0)
+    /// - "schema.table.column" → "table" (index 1)
+    /// - "server.schema.table.column" → "table" (index 2)
+    /// Formula: table is at index (count - 2)
     /// </summary>
     /// <param name="columnRef">The column reference expression.</param>
     /// <returns>The table qualifier, or null if no qualifier is present.</returns>
     public static string? GetTableQualifier(ColumnReferenceExpression? columnRef)
     {
-        if (columnRef?.MultiPartIdentifier?.Identifiers?.Count > 1)
+        var count = columnRef?.MultiPartIdentifier?.Identifiers?.Count ?? 0;
+        if (count > 1)
         {
-            return columnRef.MultiPartIdentifier.Identifiers[0].Value;
+            // Table/alias is always at index (count - 2)
+            // 2 parts: table.column -> index 0
+            // 3 parts: schema.table.column -> index 1
+            // 4 parts: server.schema.table.column -> index 2
+            return columnRef!.MultiPartIdentifier!.Identifiers[count - 2].Value;
         }
 
         return null;

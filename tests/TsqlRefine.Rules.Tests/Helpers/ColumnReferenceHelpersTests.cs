@@ -70,7 +70,7 @@ public sealed class ColumnReferenceHelpersTests
     }
 
     [Fact]
-    public void GetTableQualifier_WithSchemaQualifiedColumn_ReturnsFirstPart()
+    public void GetTableQualifier_WithSchemaQualifiedColumn_ReturnsTableName()
     {
         // Arrange (schema.table.column)
         var column = GetFirstColumnReference("SELECT dbo.users.name FROM dbo.users");
@@ -78,8 +78,8 @@ public sealed class ColumnReferenceHelpersTests
         // Act
         var qualifier = ColumnReferenceHelpers.GetTableQualifier(column);
 
-        // Assert
-        Assert.Equal("dbo", qualifier);
+        // Assert - should return table name, not schema
+        Assert.Equal("users", qualifier);
     }
 
     [Fact]
