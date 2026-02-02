@@ -37,67 +37,136 @@ public sealed class UndefinedAliasRule : IRule
 
     private sealed class UndefinedAliasVisitor : DiagnosticVisitorBase
     {
-        public override void ExplicitVisit(SelectStatement node)
+        // Stack of alias sets for each query scope (innermost at top)
+        private readonly Stack<HashSet<string>> _scopeStack = new();
+
+        // Check if an alias is defined in any scope (current or outer)
+        private bool IsAliasDefinedInAnyScope(string alias)
         {
-            var querySpec = node.QueryExpression as QuerySpecification;
-            if (querySpec == null)
+            foreach (var scope in _scopeStack)
             {
-                base.ExplicitVisit(node);
-                return;
+                if (scope.Contains(alias))
+                {
+                    return true;
+                }
             }
 
+            return false;
+        }
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            ProcessQueryExpression(node.QueryExpression);
+        }
+
+        public override void ExplicitVisit(ScalarSubquery node)
+        {
+            // Scalar subqueries in SELECT, WHERE, etc. have their own scope
+            ProcessQueryExpression(node.QueryExpression);
+        }
+
+        public override void ExplicitVisit(QueryDerivedTable node)
+        {
+            // Derived tables (subqueries in FROM clause) have their own scope
+            ProcessQueryExpression(node.QueryExpression);
+        }
+
+        private void ProcessQueryExpression(QueryExpression? queryExpression)
+        {
+            switch (queryExpression)
+            {
+                case QuerySpecification querySpec:
+                    ProcessQuerySpecification(querySpec);
+                    break;
+                case BinaryQueryExpression binaryExpr:
+                    // UNION, INTERSECT, EXCEPT - validate both sides
+                    ProcessQueryExpression(binaryExpr.FirstQueryExpression);
+                    ProcessQueryExpression(binaryExpr.SecondQueryExpression);
+                    break;
+                case QueryParenthesisExpression parenExpr:
+                    ProcessQueryExpression(parenExpr.QueryExpression);
+                    break;
+            }
+        }
+
+        private void ProcessQuerySpecification(QuerySpecification querySpec)
+        {
             // Phase 1: Collect declared aliases from FROM clause
             var declaredAliases = querySpec.FromClause != null
                 ? TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Phase 2: Check column references in the entire query
-            var columnRefChecker = new ColumnReferenceChecker(declaredAliases, this);
+            // Push this scope onto the stack
+            _scopeStack.Push(declaredAliases);
 
-            // Check SELECT list
-            if (querySpec.SelectElements != null)
+            try
             {
-                foreach (var selectElement in querySpec.SelectElements)
+                // Phase 2: Check column references in the query
+                var columnRefChecker = new ColumnReferenceChecker(this);
+
+                // Check SELECT list
+                if (querySpec.SelectElements != null)
                 {
-                    selectElement.Accept(columnRefChecker);
-                }
-            }
-
-            // Check WHERE clause
-            querySpec.WhereClause?.Accept(columnRefChecker);
-
-            // Check GROUP BY clause
-            querySpec.GroupByClause?.Accept(columnRefChecker);
-
-            // Check HAVING clause
-            querySpec.HavingClause?.Accept(columnRefChecker);
-
-            // Check ORDER BY clause
-            querySpec.OrderByClause?.Accept(columnRefChecker);
-
-            // Check JOIN conditions using helper
-            if (querySpec.FromClause != null)
-            {
-                foreach (var tableRef in querySpec.FromClause.TableReferences)
-                {
-                    TableReferenceHelpers.TraverseJoinConditions(tableRef, (join, condition) =>
+                    foreach (var selectElement in querySpec.SelectElements)
                     {
-                        condition.Accept(columnRefChecker);
-                    });
+                        selectElement.Accept(columnRefChecker);
+                    }
+                }
+
+                // Check WHERE clause
+                querySpec.WhereClause?.Accept(columnRefChecker);
+
+                // Check GROUP BY clause
+                querySpec.GroupByClause?.Accept(columnRefChecker);
+
+                // Check HAVING clause
+                querySpec.HavingClause?.Accept(columnRefChecker);
+
+                // Check ORDER BY clause
+                querySpec.OrderByClause?.Accept(columnRefChecker);
+
+                // Check JOIN conditions and process nested subqueries in FROM clause
+                if (querySpec.FromClause != null)
+                {
+                    foreach (var tableRef in querySpec.FromClause.TableReferences)
+                    {
+                        ProcessTableReference(tableRef, columnRefChecker);
+                    }
                 }
             }
-
-            base.ExplicitVisit(node);
+            finally
+            {
+                // Pop this scope
+                _scopeStack.Pop();
+            }
         }
 
-        private sealed class ColumnReferenceChecker : ScopeBoundaryAwareVisitor
+        private void ProcessTableReference(TableReference tableRef, ColumnReferenceChecker checker)
         {
-            private readonly HashSet<string> _declaredAliases;
+            if (tableRef is QualifiedJoin qualifiedJoin)
+            {
+                qualifiedJoin.SearchCondition?.Accept(checker);
+                ProcessTableReference(qualifiedJoin.FirstTableReference, checker);
+                ProcessTableReference(qualifiedJoin.SecondTableReference, checker);
+            }
+            else if (tableRef is JoinTableReference join)
+            {
+                ProcessTableReference(join.FirstTableReference, checker);
+                ProcessTableReference(join.SecondTableReference, checker);
+            }
+            else if (tableRef is QueryDerivedTable derivedTable)
+            {
+                // Process the derived table's inner query with its own scope
+                ProcessQueryExpression(derivedTable.QueryExpression);
+            }
+        }
+
+        private sealed class ColumnReferenceChecker : TSqlFragmentVisitor
+        {
             private readonly UndefinedAliasVisitor _parent;
 
-            public ColumnReferenceChecker(HashSet<string> declaredAliases, UndefinedAliasVisitor parent)
+            public ColumnReferenceChecker(UndefinedAliasVisitor parent)
             {
-                _declaredAliases = declaredAliases;
                 _parent = parent;
             }
 
@@ -106,10 +175,21 @@ public sealed class UndefinedAliasRule : IRule
                 // Check if this is a qualified column reference (e.g., table.column)
                 var qualifier = ColumnReferenceHelpers.GetTableQualifier(node);
 
-                if (qualifier != null && !_declaredAliases.Contains(qualifier))
+                // Check against ALL scopes (current + outer) to support correlated subqueries
+                if (qualifier != null && !_parent.IsAliasDefinedInAnyScope(qualifier))
                 {
+                    var identifiers = node.MultiPartIdentifier!.Identifiers;
+                    var count = identifiers.Count;
+
+                    // Multi-part identifier patterns:
+                    // 2 parts: table.column                   -> qualifier at index 0
+                    // 3 parts: schema.table.column            -> qualifier at index 1
+                    // 4 parts: server.schema.table.column     -> qualifier at index 2
+                    // Formula: qualifier index = count - 2
+                    var qualifierIndex = count - 2;
+
                     _parent.AddDiagnostic(
-                        fragment: node.MultiPartIdentifier!.Identifiers[0],
+                        fragment: identifiers[qualifierIndex],
                         message: $"Undefined table alias '{qualifier}'. Table or alias '{qualifier}' is not declared in the FROM clause.",
                         code: "semantic/undefined-alias",
                         category: "Correctness",
@@ -118,6 +198,26 @@ public sealed class UndefinedAliasRule : IRule
                 }
 
                 base.ExplicitVisit(node);
+            }
+
+            // Don't descend into subqueries - they have their own scope
+            // Instead, delegate to parent visitor to process them with proper scope tracking
+            public override void ExplicitVisit(SelectStatement node)
+            {
+                // Process the nested SELECT with its own scope
+                _parent.ProcessQueryExpression(node.QueryExpression);
+            }
+
+            public override void ExplicitVisit(ScalarSubquery node)
+            {
+                // Process the scalar subquery with its own scope
+                _parent.ProcessQueryExpression(node.QueryExpression);
+            }
+
+            public override void ExplicitVisit(QueryDerivedTable node)
+            {
+                // Process the derived table with its own scope
+                _parent.ProcessQueryExpression(node.QueryExpression);
             }
         }
     }

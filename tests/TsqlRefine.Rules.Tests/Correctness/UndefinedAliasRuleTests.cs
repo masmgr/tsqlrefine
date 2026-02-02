@@ -279,4 +279,251 @@ SELECT x.id FROM orders o;";
         Assert.Single(diagnostics);
         Assert.Contains(expectedAlias, diagnostics[0].Message);
     }
+
+    #region Subquery Scope Tests
+
+    // FROM clause subquery (QueryDerivedTable) - Valid cases
+    [Theory]
+    [InlineData("SELECT sub.col FROM (SELECT t.id AS col FROM table1 t) AS sub;")]
+    [InlineData("SELECT a.x, b.y FROM (SELECT id AS x FROM t1) a JOIN (SELECT id AS y FROM t2) b ON a.x = b.y;")]
+    [InlineData("SELECT u.id FROM (SELECT id FROM users) AS u;")]
+    public void Analyze_FromClauseSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // FROM clause subquery - Invalid cases
+    [Theory]
+    [InlineData("SELECT x.id FROM (SELECT id FROM users) AS u;", "x")]
+    [InlineData("SELECT sub.col FROM (SELECT x.id FROM table1 t) AS sub;", "x")]
+    public void Analyze_FromClauseSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // SELECT clause scalar subquery - Valid cases (including correlated)
+    [Theory]
+    [InlineData("SELECT (SELECT t.id FROM table1 t) FROM users u;")]
+    [InlineData("SELECT u.name, (SELECT COUNT(*) FROM orders o WHERE o.user_id = u.id) FROM users u;")]  // correlated
+    [InlineData("SELECT (SELECT o.total FROM orders o WHERE o.user_id = u.id) AS order_total FROM users u;")]  // correlated
+    public void Analyze_SelectClauseSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // SELECT clause scalar subquery - Invalid cases
+    [Theory]
+    [InlineData("SELECT (SELECT x.id FROM table1 t) FROM users u;", "x")]
+    public void Analyze_SelectClauseSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // WHERE EXISTS subquery - Valid cases (including correlated)
+    [Theory]
+    [InlineData("SELECT u.id FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);")]
+    [InlineData("SELECT * FROM users u WHERE NOT EXISTS (SELECT o.id FROM orders o WHERE o.user_id = u.id);")]
+    [InlineData("SELECT u.id FROM users u WHERE EXISTS (SELECT o.id FROM orders o);")]  // non-correlated
+    public void Analyze_WhereExistsSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // WHERE EXISTS subquery - Invalid cases
+    [Theory]
+    [InlineData("SELECT u.id FROM users u WHERE EXISTS (SELECT x.id FROM orders o);", "x")]
+    public void Analyze_WhereExistsSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // WHERE IN subquery - Valid cases
+    [Theory]
+    [InlineData("SELECT u.id FROM users u WHERE u.id IN (SELECT o.user_id FROM orders o);")]
+    [InlineData("SELECT u.id FROM users u WHERE u.id NOT IN (SELECT o.user_id FROM orders o);")]
+    public void Analyze_WhereInSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // WHERE IN subquery - Invalid cases
+    [Theory]
+    [InlineData("SELECT u.id FROM users u WHERE u.id IN (SELECT x.id FROM orders o);", "x")]
+    public void Analyze_WhereInSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // Deeply nested subqueries - Valid
+    [Fact]
+    public void Analyze_DeeplyNestedSubquery_ValidAliases_ReturnsEmpty()
+    {
+        var rule = new UndefinedAliasRule();
+        var sql = @"
+            SELECT a.id
+            FROM (
+                SELECT b.id
+                FROM (
+                    SELECT c.id FROM table1 c
+                ) AS b
+            ) AS a;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // Deeply nested subqueries - Invalid
+    [Fact]
+    public void Analyze_DeeplyNestedSubquery_UndefinedAlias_ReturnsDiagnostic()
+    {
+        var rule = new UndefinedAliasRule();
+        var sql = @"
+            SELECT a.id
+            FROM (
+                SELECT x.id
+                FROM (
+                    SELECT c.id FROM table1 c
+                ) AS b
+            ) AS a;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("x", diagnostics[0].Message);
+    }
+
+    // Correlated subquery with multiple outer references
+    [Fact]
+    public void Analyze_CorrelatedSubquery_MultipleOuterReferences_NoError()
+    {
+        var rule = new UndefinedAliasRule();
+        var sql = @"
+            SELECT u.name
+            FROM users u
+            JOIN departments d ON u.dept_id = d.id
+            WHERE EXISTS (
+                SELECT 1
+                FROM orders o
+                WHERE o.user_id = u.id AND o.dept_id = d.id
+            );";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // UNION in subquery - Valid
+    [Fact]
+    public void Analyze_UnionInSubquery_ValidAliases_ReturnsEmpty()
+    {
+        var rule = new UndefinedAliasRule();
+        var sql = @"
+            SELECT *
+            FROM (
+                SELECT t1.id FROM table1 t1
+                UNION
+                SELECT t2.id FROM table2 t2
+            ) AS combined;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // UNION in subquery - Invalid
+    [Fact]
+    public void Analyze_UnionInSubquery_UndefinedAlias_ReturnsDiagnostic()
+    {
+        var rule = new UndefinedAliasRule();
+        var sql = @"
+            SELECT *
+            FROM (
+                SELECT t1.id FROM table1 t1
+                UNION
+                SELECT x.id FROM table2 t2
+            ) AS combined;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("x", diagnostics[0].Message);
+    }
+
+    #endregion
 }

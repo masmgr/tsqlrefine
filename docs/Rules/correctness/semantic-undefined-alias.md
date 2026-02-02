@@ -71,6 +71,31 @@ Invalid column name 'x.active'.
 - Schema-qualified column references (e.g., `dbo.users.id`) are correctly recognized
 - Table-valued function aliases (e.g., `JOIN dbo.fn_GetData() AS tvf`) are correctly recognized
 
+**Subquery scope handling**:
+
+This rule validates subqueries as separate scopes while supporting correlated references:
+
+- **FROM clause subqueries**: Each derived table has its own scope
+  ```sql
+  SELECT sub.col FROM (SELECT t.id AS col FROM table1 t) AS sub;  -- OK
+  ```
+- **SELECT clause scalar subqueries**: Validated with their own scope
+  ```sql
+  SELECT (SELECT t.id FROM table1 t) FROM users u;  -- OK
+  ```
+- **WHERE clause subqueries (EXISTS, IN)**: Each subquery has its own scope
+  ```sql
+  SELECT u.id FROM users u WHERE EXISTS (SELECT 1 FROM orders o);  -- OK
+  ```
+- **Correlated subqueries**: Can reference outer query aliases
+  ```sql
+  SELECT u.id FROM users u WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);  -- OK: u.id references outer scope
+  ```
+- **UNION/INTERSECT/EXCEPT**: Each side is validated independently
+  ```sql
+  SELECT * FROM (SELECT t1.id FROM t1 UNION SELECT t2.id FROM t2) AS combined;  -- OK
+  ```
+
 ## Examples
 
 ### Bad
