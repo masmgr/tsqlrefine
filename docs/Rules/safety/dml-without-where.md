@@ -74,6 +74,23 @@ DELETE FROM Users;  -- Accidentally deleted ALL users (millions of records)
    COMMIT;
    ```
 
+## Exceptions
+
+This rule does **not** flag UPDATE/DELETE without WHERE on:
+
+- **Local temporary tables** (`#temp`) - Session-scoped, automatically dropped
+- **Global temporary tables** (`##globaltemp`) - Temporary by nature
+- **Table variables** (`@tablevar`) - Batch-scoped, no persistence risk
+
+These temporary objects don't pose the same data safety risk as permanent tables since they are automatically cleaned up and contain only transient data.
+
+```sql
+-- These are allowed (no violation)
+DELETE FROM #tempResults;
+UPDATE ##globalCache SET processed = 1;
+DELETE FROM @batchItems;
+```
+
 ## Examples
 
 ### Bad
