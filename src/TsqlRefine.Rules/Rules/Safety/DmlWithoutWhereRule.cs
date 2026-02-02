@@ -39,82 +39,63 @@ public sealed class DmlWithoutWhereRule : IRule
     {
         public override void ExplicitVisit(UpdateStatement node)
         {
-            if (node.UpdateSpecification?.WhereClause is null)
-            {
-                var target = node.UpdateSpecification?.Target;
-                var fromClause = node.UpdateSpecification?.FromClause;
-
-                // Skip temporary tables and table variables
-                if (IsTemporaryTableOrTableVariable(target))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                // Skip when target uses an alias (implies FROM clause with more complex logic)
-                if (IsTargetUsingAlias(target, fromClause))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                // Skip when FROM clause contains INNER JOIN (inherent filtering)
-                if (HasInnerJoin(fromClause))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                AddDiagnostic(
-                    fragment: node,
-                    message: "UPDATE statement without WHERE clause can modify all rows. Add a WHERE clause to limit the scope.",
-                    code: "dml-without-where",
-                    category: "Safety",
-                    fixable: false
-                );
-            }
-
+            CheckDmlWithoutWhere(
+                node.UpdateSpecification?.Target,
+                node.UpdateSpecification?.FromClause,
+                node.UpdateSpecification?.WhereClause,
+                node,
+                "UPDATE",
+                "modify");
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(DeleteStatement node)
         {
-            if (node.DeleteSpecification?.WhereClause is null)
+            CheckDmlWithoutWhere(
+                node.DeleteSpecification?.Target,
+                node.DeleteSpecification?.FromClause,
+                node.DeleteSpecification?.WhereClause,
+                node,
+                "DELETE",
+                "delete");
+            base.ExplicitVisit(node);
+        }
+
+        private void CheckDmlWithoutWhere(
+            TableReference? target,
+            FromClause? fromClause,
+            WhereClause? whereClause,
+            TSqlFragment node,
+            string statementType,
+            string actionVerb)
+        {
+            if (whereClause is not null)
             {
-                var target = node.DeleteSpecification?.Target;
-                var fromClause = node.DeleteSpecification?.FromClause;
-
-                // Skip temporary tables and table variables
-                if (IsTemporaryTableOrTableVariable(target))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                // Skip when target uses an alias (implies FROM clause with more complex logic)
-                if (IsTargetUsingAlias(target, fromClause))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                // Skip when FROM clause contains INNER JOIN (inherent filtering)
-                if (HasInnerJoin(fromClause))
-                {
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                AddDiagnostic(
-                    fragment: node,
-                    message: "DELETE statement without WHERE clause can delete all rows. Add a WHERE clause to limit the scope.",
-                    code: "dml-without-where",
-                    category: "Safety",
-                    fixable: false
-                );
+                return;
             }
 
-            base.ExplicitVisit(node);
+            if (IsTemporaryTableOrTableVariable(target))
+            {
+                return;
+            }
+
+            if (IsTargetUsingAlias(target, fromClause))
+            {
+                return;
+            }
+
+            if (HasInnerJoin(fromClause))
+            {
+                return;
+            }
+
+            AddDiagnostic(
+                fragment: node,
+                message: $"{statementType} statement without WHERE clause can {actionVerb} all rows. Add a WHERE clause to limit the scope.",
+                code: "dml-without-where",
+                category: "Safety",
+                fixable: false
+            );
         }
 
         private static bool IsTemporaryTableOrTableVariable(TableReference? target)
@@ -197,37 +178,9 @@ public sealed class DmlWithoutWhereRule : IRule
                 return false;
             }
 
-            return ContainsInnerJoin(fromClause.TableReferences);
-        }
-
-        private static bool ContainsInnerJoin(IList<TableReference> tableReferences)
-        {
-            foreach (var tableRef in tableReferences)
-            {
-                if (tableRef is QualifiedJoin qualifiedJoin)
-                {
-                    if (qualifiedJoin.QualifiedJoinType == QualifiedJoinType.Inner)
-                    {
-                        return true;
-                    }
-
-                    if (ContainsInnerJoin([qualifiedJoin.FirstTableReference]) ||
-                        ContainsInnerJoin([qualifiedJoin.SecondTableReference]))
-                    {
-                        return true;
-                    }
-                }
-                else if (tableRef is JoinTableReference join)
-                {
-                    if (ContainsInnerJoin([join.FirstTableReference]) ||
-                        ContainsInnerJoin([join.SecondTableReference]))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            return TableReferenceHelpers.CollectJoinsOfType(
+                fromClause.TableReferences,
+                QualifiedJoinType.Inner).Any();
         }
     }
 }
