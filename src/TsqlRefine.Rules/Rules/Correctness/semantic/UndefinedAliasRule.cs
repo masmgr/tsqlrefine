@@ -59,6 +59,25 @@ public sealed class UndefinedAliasRule : IRule
             ProcessQueryExpression(node.QueryExpression);
         }
 
+        public override void ExplicitVisit(UpdateStatement node)
+        {
+            ProcessUpdateSpecification(node.UpdateSpecification);
+        }
+
+        public override void ExplicitVisit(DeleteStatement node)
+        {
+            ProcessDeleteSpecification(node.DeleteSpecification);
+        }
+
+        public override void ExplicitVisit(InsertStatement node)
+        {
+            // Handle INSERT ... SELECT ... pattern
+            if (node.InsertSpecification?.InsertSource is SelectInsertSource selectSource)
+            {
+                ProcessQueryExpression(selectSource.Select);
+            }
+        }
+
         public override void ExplicitVisit(ScalarSubquery node)
         {
             // Scalar subqueries in SELECT, WHERE, etc. have their own scope
@@ -158,6 +177,88 @@ public sealed class UndefinedAliasRule : IRule
             {
                 // Process the derived table's inner query with its own scope
                 ProcessQueryExpression(derivedTable.QueryExpression);
+            }
+        }
+
+        private void ProcessUpdateSpecification(UpdateSpecification updateSpec)
+        {
+            // Collect aliases from FROM clause (if present)
+            var declaredAliases = updateSpec.FromClause != null
+                ? TableReferenceHelpers.CollectTableAliases(updateSpec.FromClause.TableReferences)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Also add the target table alias if it has one
+            var targetAlias = TableReferenceHelpers.GetAliasOrTableName(updateSpec.Target);
+            if (targetAlias != null)
+            {
+                declaredAliases.Add(targetAlias);
+            }
+
+            _scopeStack.Push(declaredAliases);
+
+            try
+            {
+                var columnRefChecker = new ColumnReferenceChecker(this);
+
+                // Check SET clauses
+                foreach (var setClause in updateSpec.SetClauses)
+                {
+                    setClause.Accept(columnRefChecker);
+                }
+
+                // Check WHERE clause
+                updateSpec.WhereClause?.Accept(columnRefChecker);
+
+                // Check FROM clause for JOIN conditions and subqueries
+                if (updateSpec.FromClause != null)
+                {
+                    foreach (var tableRef in updateSpec.FromClause.TableReferences)
+                    {
+                        ProcessTableReference(tableRef, columnRefChecker);
+                    }
+                }
+            }
+            finally
+            {
+                _scopeStack.Pop();
+            }
+        }
+
+        private void ProcessDeleteSpecification(DeleteSpecification deleteSpec)
+        {
+            // Collect aliases from FROM clause (if present)
+            var declaredAliases = deleteSpec.FromClause != null
+                ? TableReferenceHelpers.CollectTableAliases(deleteSpec.FromClause.TableReferences)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Also add the target table alias if it has one
+            var targetAlias = TableReferenceHelpers.GetAliasOrTableName(deleteSpec.Target);
+            if (targetAlias != null)
+            {
+                declaredAliases.Add(targetAlias);
+            }
+
+            _scopeStack.Push(declaredAliases);
+
+            try
+            {
+                var columnRefChecker = new ColumnReferenceChecker(this);
+
+                // Check WHERE clause
+                deleteSpec.WhereClause?.Accept(columnRefChecker);
+
+                // Check FROM clause for JOIN conditions and subqueries
+                if (deleteSpec.FromClause != null)
+                {
+                    foreach (var tableRef in deleteSpec.FromClause.TableReferences)
+                    {
+                        ProcessTableReference(tableRef, columnRefChecker);
+                    }
+                }
+            }
+            finally
+            {
+                _scopeStack.Pop();
             }
         }
 

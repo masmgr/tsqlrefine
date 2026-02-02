@@ -524,6 +524,23 @@ SELECT x.id FROM orders o;";
         Assert.Contains("x", diagnostics[0].Message);
     }
 
+    // Correlated subquery referencing outer table without alias
+    [Theory]
+    [InlineData("SELECT (SELECT TOP 1 T2.NAME FROM T2 WHERE T2.ID_T1 = T1.ID) AS T2_TOP FROM T1;")]
+    [InlineData("SELECT T1.ID FROM T1 WHERE EXISTS(SELECT * FROM T2 WHERE T2.ID_T1 = T1.ID);")]
+    [InlineData("SELECT T1.ID FROM T1 WHERE T1.ID IN (SELECT T2.ID_T1 FROM T2 WHERE T2.ACTIVE = 1);")]
+    public void Analyze_CorrelatedSubquery_OuterTableWithoutAlias_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     // Correlated subquery with multiple outer references
     [Fact]
     public void Analyze_CorrelatedSubquery_MultipleOuterReferences_NoError()
@@ -588,6 +605,111 @@ SELECT x.id FROM orders o;";
 
         Assert.Single(diagnostics);
         Assert.Contains("x", diagnostics[0].Message);
+    }
+
+    #endregion
+
+    #region INSERT Statement Tests
+
+    // INSERT ... SELECT with correlated subquery
+    [Theory]
+    [InlineData(@"INSERT INTO target (col1) SELECT (SELECT MAX(t2.value) FROM source t2 WHERE t2.id = t1.id) FROM source t1;")]
+    [InlineData(@"INSERT INTO target (col1, col2) SELECT t1.id, (SELECT COUNT(*) FROM items t2 WHERE t2.category = t1.category) FROM items t1;")]
+    public void Analyze_InsertSelectWithCorrelatedSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // INSERT ... SELECT with undefined alias
+    [Theory]
+    [InlineData(@"INSERT INTO target (col1) SELECT (SELECT MAX(t2.value) FROM source t2 WHERE t2.id = x.id) FROM source t1;", "x")]
+    public void Analyze_InsertSelectWithCorrelatedSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    #endregion
+
+    #region UPDATE/DELETE Statement Tests
+
+    // UPDATE with correlated subquery referencing FROM clause alias
+    [Theory]
+    [InlineData(@"UPDATE #t SET seq = (SELECT COUNT(*) FROM #t t2 WHERE t1.id = t2.id AND t1.code >= t2.code) FROM #t t1;")]
+    [InlineData(@"UPDATE t SET t.value = (SELECT MAX(s.value) FROM source s WHERE s.id = t.id) FROM target t;")]
+    [InlineData(@"UPDATE items SET rank = (SELECT COUNT(*) FROM items i2 WHERE i1.category = i2.category AND i1.price >= i2.price) FROM items i1;")]
+    public void Analyze_UpdateWithCorrelatedSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // UPDATE with undefined alias in correlated subquery
+    [Theory]
+    [InlineData(@"UPDATE t SET t.value = (SELECT MAX(s.value) FROM source s WHERE x.id = s.id) FROM target t;", "x")]
+    public void Analyze_UpdateWithCorrelatedSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // DELETE with correlated subquery
+    [Theory]
+    [InlineData(@"DELETE t FROM target t WHERE EXISTS (SELECT 1 FROM source s WHERE s.id = t.id);")]
+    [InlineData(@"DELETE FROM target WHERE id IN (SELECT s.target_id FROM source s);")]
+    public void Analyze_DeleteWithCorrelatedSubquery_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // DELETE with undefined alias
+    [Theory]
+    [InlineData(@"DELETE t FROM target t WHERE EXISTS (SELECT 1 FROM source s WHERE x.id = s.id);", "x")]
+    public void Analyze_DeleteWithCorrelatedSubquery_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
     }
 
     #endregion
