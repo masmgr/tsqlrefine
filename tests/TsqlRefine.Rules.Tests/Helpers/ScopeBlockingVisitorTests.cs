@@ -4,7 +4,7 @@ using Xunit;
 
 namespace TsqlRefine.Rules.Tests.Helpers;
 
-public sealed class ScopeBoundaryAwareVisitorTests
+public sealed class ScopeBlockingVisitorTests
 {
     private static TSqlFragment ParseSql(string sql)
     {
@@ -93,7 +93,7 @@ public sealed class ScopeBoundaryAwareVisitorTests
         Assert.Contains("c", visitor.ColumnNames);
     }
 
-    private sealed class ColumnCountingVisitor : ScopeBoundaryAwareVisitor
+    private sealed class ColumnCountingVisitor : ScopeBlockingVisitor
     {
         public List<string> ColumnNames { get; } = new();
 

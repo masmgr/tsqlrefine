@@ -7,12 +7,12 @@ namespace TsqlRefine.Rules.Helpers;
 /// Use this for visitors that need to hand off subquery processing to a parent scope manager.
 /// </summary>
 /// <remarks>
-/// Extends <see cref="ScopeBoundaryAwareVisitor"/> but instead of stopping at scope boundaries,
+/// Extends <see cref="ScopeBlockingVisitor"/> but instead of stopping at scope boundaries,
 /// it invokes a delegate to process the subquery with proper scope tracking.
 /// This is essential for rules that need to support correlated subqueries where inner queries
 /// can reference aliases from outer scopes.
 /// </remarks>
-public abstract class ScopeDelegatingVisitor : ScopeBoundaryAwareVisitor
+public abstract class ScopeDelegatingVisitor : ScopeBlockingVisitor
 {
     /// <summary>
     /// Called when a subquery scope boundary is encountered.

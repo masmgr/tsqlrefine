@@ -93,7 +93,7 @@ public static class ColumnReferenceHelpers
     /// <summary>
     /// Internal visitor that collects table qualifiers from column references.
     /// </summary>
-    private sealed class TableQualifierCollector : ScopeBoundaryAwareVisitor
+    private sealed class TableQualifierCollector : ScopeBlockingVisitor
     {
         private readonly HashSet<string> _qualifiers;
 

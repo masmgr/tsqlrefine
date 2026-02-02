@@ -35,44 +35,11 @@ public sealed class UpperLowerRule : IRule
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class UpperLowerVisitor : DiagnosticVisitorBase
+    private sealed class UpperLowerVisitor : PredicateAwareVisitorBase
     {
-        private bool _isInPredicate = false;
-
-        public override void ExplicitVisit(WhereClause node)
-        {
-            _isInPredicate = true;
-            base.ExplicitVisit(node);
-            _isInPredicate = false;
-        }
-
-        public override void ExplicitVisit(QualifiedJoin node)
-        {
-            // Check JOIN ON conditions
-            if (node.SearchCondition != null)
-            {
-                _isInPredicate = true;
-                node.SearchCondition.Accept(this);
-                _isInPredicate = false;
-            }
-
-            // Continue visiting other parts of the join
-            if (node.FirstTableReference != null)
-                node.FirstTableReference.Accept(this);
-            if (node.SecondTableReference != null)
-                node.SecondTableReference.Accept(this);
-        }
-
-        public override void ExplicitVisit(HavingClause node)
-        {
-            _isInPredicate = true;
-            base.ExplicitVisit(node);
-            _isInPredicate = false;
-        }
-
         public override void ExplicitVisit(BooleanComparisonExpression node)
         {
-            if (_isInPredicate)
+            if (IsInPredicate)
             {
                 CheckForUpperLowerOnColumn(node.FirstExpression);
                 CheckForUpperLowerOnColumn(node.SecondExpression);
@@ -93,7 +60,7 @@ public sealed class UpperLowerRule : IRule
                 if (functionName is "UPPER" or "LOWER")
                 {
                     // Check if function is applied to a column reference
-                    if (functionCall.Parameters != null && functionCall.Parameters.Any(ContainsColumnReference))
+                    if (functionCall.Parameters != null && functionCall.Parameters.Any(ExpressionAnalysisHelpers.ContainsColumnReference))
                     {
                         AddDiagnostic(
                             fragment: functionCall,
@@ -105,50 +72,6 @@ public sealed class UpperLowerRule : IRule
                     }
                 }
             }
-        }
-
-        private static bool ContainsColumnReference(ScalarExpression? expression)
-        {
-            if (expression == null)
-                return false;
-
-            // Direct column reference
-            if (expression is ColumnReferenceExpression)
-                return true;
-
-            // Check nested expressions
-            if (expression is CastCall castCall)
-                return ContainsColumnReference(castCall.Parameter);
-
-            if (expression is ConvertCall convertCall)
-                return ContainsColumnReference(convertCall.Parameter);
-
-            if (expression is FunctionCall functionCall && functionCall.Parameters != null)
-            {
-                for (var i = 0; i < functionCall.Parameters.Count; i++)
-                {
-                    var parameter = functionCall.Parameters[i];
-                    if (DatePartHelper.IsDatePartLiteralParameter(functionCall, i, parameter))
-                    {
-                        continue;
-                    }
-
-                    if (ContainsColumnReference(parameter))
-                    {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            if (expression is BinaryExpression binaryExpr)
-                return ContainsColumnReference(binaryExpr.FirstExpression) ||
-                       ContainsColumnReference(binaryExpr.SecondExpression);
-
-            if (expression is ParenthesisExpression parenExpr)
-                return ContainsColumnReference(parenExpr.Expression);
-
-            return false;
         }
     }
 }
