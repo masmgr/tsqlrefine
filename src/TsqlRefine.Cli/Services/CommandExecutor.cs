@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using TsqlRefine.Core;
@@ -130,6 +131,8 @@ public sealed class CommandExecutor
 
     public async Task<int> ExecuteLintAsync(string command, CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
         if (read is null)
         {
@@ -143,6 +146,8 @@ public sealed class CommandExecutor
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
         var result = engine.Run(command, read.Inputs, options);
+
+        stopwatch.Stop();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -165,6 +170,18 @@ public sealed class CommandExecutor
                     await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator})");
                 }
             }
+        }
+
+        if (args.Verbose)
+        {
+            var fileCount = result.Files.Count;
+            var errorCount = result.Files.Sum(f => f.Diagnostics.Count);
+            var elapsed = stopwatch.Elapsed;
+            var elapsedText = elapsed.TotalSeconds >= 1
+                ? $"{elapsed.TotalSeconds:F2}s"
+                : $"{elapsed.TotalMilliseconds:F0}ms";
+            await stderr.WriteLineAsync();
+            await stderr.WriteLineAsync($"Files: {fileCount}, Errors: {errorCount}, Time: {elapsedText}");
         }
 
         var hasParseErrors = result.Files.Any(f =>

@@ -79,5 +79,50 @@ public sealed class CliLintTests
         // The * is on line 2 (1-based), column 5 (after 4 spaces)
         Assert.Contains("<stdin>:2:5:", output);
     }
+
+    [Fact]
+    public async Task Lint_Verbose_OutputsSummaryToStderr()
+    {
+        var stdin = new StringReader("SELECT id FROM dbo.t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin", "--verbose" }, stdin, stdout, stderr);
+
+        var stderrOutput = stderr.ToString();
+        Assert.Contains("Files: 1", stderrOutput);
+        Assert.Contains("Errors: 0", stderrOutput);
+        Assert.Contains("Time:", stderrOutput);
+    }
+
+    [Fact]
+    public async Task Lint_Verbose_WithMultipleErrors_ShowsCorrectCount()
+    {
+        // This SQL has 2 violations: SELECT * and missing schema prefix
+        var stdin = new StringReader("SELECT * FROM unqualified_table;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin", "--verbose" }, stdin, stdout, stderr);
+
+        var stderrOutput = stderr.ToString();
+        Assert.Contains("Files: 1", stderrOutput);
+        Assert.Matches(@"Errors: [2-9]|\d{2,}", stderrOutput); // 2 or more errors
+        Assert.Contains("Time:", stderrOutput);
+    }
+
+    [Fact]
+    public async Task Lint_WithoutVerbose_DoesNotOutputSummary()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
+
+        var stderrOutput = stderr.ToString();
+        Assert.DoesNotContain("Files:", stderrOutput);
+        Assert.DoesNotContain("Time:", stderrOutput);
+    }
 }
 

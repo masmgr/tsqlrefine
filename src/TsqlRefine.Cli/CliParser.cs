@@ -172,13 +172,17 @@ public static class CliParser
     // Command Builders
     // =================================================================
 
-    private static Command BuildLintCommand() =>
-        new Command("lint", "Analyze SQL files for rule violations")
+    private static Command BuildLintCommand()
+    {
+        var command = new Command("lint", "Analyze SQL files for rule violations")
             .WithInputOptions()
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithRuleOptions()
             .WithPathsArgument();
+        command.Options.Add(Options.Verbose);
+        return command;
+    }
 
     private static Command BuildFormatCommand() =>
         new Command("format", "Format SQL files (keyword casing, whitespace)")
