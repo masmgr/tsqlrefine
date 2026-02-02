@@ -834,4 +834,165 @@ SELECT x.id FROM orders o;";
     }
 
     #endregion
+
+    #region CTE Tests
+
+    // CTE - Valid alias in CTE definition
+    [Theory]
+    [InlineData("WITH CTE AS (SELECT u.id FROM users u) SELECT * FROM CTE;")]
+    [InlineData("WITH CTE AS (SELECT id FROM users) SELECT c.id FROM CTE c;")]
+    [InlineData("WITH CTE AS (SELECT id FROM users) SELECT CTE.id FROM CTE;")]
+    public void Analyze_WithCte_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // CTE - Undefined alias in CTE definition
+    [Theory]
+    [InlineData("WITH CTE AS (SELECT x.id FROM users) SELECT * FROM CTE;", "x")]
+    [InlineData("WITH CTE AS (SELECT u.id FROM users u WHERE x.status = 1) SELECT * FROM CTE;", "x")]
+    public void Analyze_WithCte_UndefinedAliasInDefinition_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    // Multiple CTEs (chained)
+    [Theory]
+    [InlineData("WITH CTE1 AS (SELECT id FROM users), CTE2 AS (SELECT c1.id FROM CTE1 c1) SELECT * FROM CTE2;")]
+    [InlineData("WITH CTE1 AS (SELECT id FROM users), CTE2 AS (SELECT CTE1.id FROM CTE1) SELECT c2.id FROM CTE2 c2;")]
+    public void Analyze_WithMultipleCtes_ValidReferences_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // CTE - Undefined alias in second CTE (not forward reference, which is a different semantic issue)
+    [Fact]
+    public void Analyze_WithMultipleCtes_UndefinedAliasInSecondCte_ReturnsDiagnostic()
+    {
+        var sql = "WITH CTE1 AS (SELECT id FROM users), CTE2 AS (SELECT x.id FROM CTE1) SELECT * FROM CTE2;";
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("x", diagnostics[0].Message);
+    }
+
+    // Recursive CTE - Valid self-reference
+    [Theory]
+    [InlineData(@"
+        WITH RecursiveCTE AS (
+            SELECT id, parent_id FROM categories WHERE parent_id IS NULL
+            UNION ALL
+            SELECT c.id, c.parent_id FROM categories c
+            INNER JOIN RecursiveCTE r ON c.parent_id = r.id
+        )
+        SELECT * FROM RecursiveCTE;")]
+    [InlineData(@"
+        WITH RecursiveCTE AS (
+            SELECT id FROM items WHERE parent_id IS NULL
+            UNION ALL
+            SELECT i.id FROM items i, RecursiveCTE
+            WHERE i.parent_id = RecursiveCTE.id
+        )
+        SELECT r.id FROM RecursiveCTE r;")]
+    public void Analyze_WithRecursiveCte_ValidSelfReference_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // Recursive CTE - Undefined alias in recursive part
+    [Fact]
+    public void Analyze_WithRecursiveCte_UndefinedAliasInRecursivePart_ReturnsDiagnostic()
+    {
+        var sql = @"
+            WITH RecursiveCTE AS (
+                SELECT id FROM categories WHERE parent_id IS NULL
+                UNION ALL
+                SELECT x.id FROM categories c
+                INNER JOIN RecursiveCTE r ON c.parent_id = r.id
+            )
+            SELECT * FROM RecursiveCTE;";
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("x", diagnostics[0].Message);
+    }
+
+    // CTE with subquery inside CTE definition
+    [Fact]
+    public void Analyze_WithCte_SubqueryInsideCteDefinition_ValidAliases_ReturnsEmpty()
+    {
+        var sql = @"
+            WITH CTE AS (
+                SELECT u.id FROM users u
+                WHERE u.status = (SELECT MAX(status) FROM statuses)
+            )
+            SELECT c.id FROM CTE c;";
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    // CTE - Main query subquery can reference CTE
+    [Fact]
+    public void Analyze_WithCte_SubqueryInMainQueryReferencesCte_ReturnsEmpty()
+    {
+        var sql = @"
+            WITH MyCTE AS (SELECT id FROM users)
+            SELECT * FROM products p
+            WHERE p.user_id IN (SELECT c.id FROM MyCTE c);";
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    #endregion
 }

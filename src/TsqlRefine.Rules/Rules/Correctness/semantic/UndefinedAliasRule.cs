@@ -62,7 +62,97 @@ public sealed class UndefinedAliasRule : IRule
 
         public override void ExplicitVisit(SelectStatement node)
         {
+            // Process CTEs first (they have their own independent scope)
+            if (node.WithCtesAndXmlNamespaces?.CommonTableExpressions != null)
+            {
+                ProcessCteDefinitions(node.WithCtesAndXmlNamespaces.CommonTableExpressions);
+            }
+
+            // Then process the main query
             ProcessQueryExpression(node.QueryExpression);
+        }
+
+        private void ProcessCteDefinitions(IList<CommonTableExpression> ctes)
+        {
+            // Track available CTE names for chained/recursive CTE references
+            var availableCteNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var cte in ctes)
+            {
+                var cteName = cte.ExpressionName?.Value;
+
+                // Add current CTE name for self-reference (recursive CTEs)
+                // Previous CTE names are also available (chained CTEs)
+                if (cteName != null)
+                {
+                    availableCteNames.Add(cteName);
+                }
+
+                // Process CTE's query expression with available CTE names
+                ProcessCteQueryExpression(cte.QueryExpression, availableCteNames);
+            }
+        }
+
+        private void ProcessCteQueryExpression(QueryExpression? queryExpression, HashSet<string> availableCteNames)
+        {
+            switch (queryExpression)
+            {
+                case QuerySpecification querySpec:
+                    ProcessCteQuerySpecification(querySpec, availableCteNames);
+                    break;
+                case BinaryQueryExpression binaryExpr:
+                    // UNION ALL in recursive CTEs - both sides can reference the CTE
+                    ProcessCteQueryExpression(binaryExpr.FirstQueryExpression, availableCteNames);
+                    ProcessCteQueryExpression(binaryExpr.SecondQueryExpression, availableCteNames);
+                    break;
+                case QueryParenthesisExpression parenExpr:
+                    ProcessCteQueryExpression(parenExpr.QueryExpression, availableCteNames);
+                    break;
+            }
+        }
+
+        private void ProcessCteQuerySpecification(QuerySpecification querySpec, HashSet<string> availableCteNames)
+        {
+            // Collect declared aliases from FROM clause
+            var declaredAliases = querySpec.FromClause != null
+                ? TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // Add available CTE names to the scope (for recursive/chained CTE references)
+            foreach (var cteName in availableCteNames)
+            {
+                declaredAliases.Add(cteName);
+            }
+
+            // Check column references with scope management
+            using (PushScope(declaredAliases))
+            {
+                var checker = new ColumnReferenceChecker(this);
+
+                // Check SELECT list
+                if (querySpec.SelectElements != null)
+                {
+                    foreach (var selectElement in querySpec.SelectElements)
+                    {
+                        selectElement.Accept(checker);
+                    }
+                }
+
+                // Check WHERE clause
+                querySpec.WhereClause?.Accept(checker);
+
+                // Check GROUP BY clause
+                querySpec.GroupByClause?.Accept(checker);
+
+                // Check HAVING clause
+                querySpec.HavingClause?.Accept(checker);
+
+                // Check ORDER BY clause
+                querySpec.OrderByClause?.Accept(checker);
+
+                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessFromClause(querySpec.FromClause, checker);
+            }
         }
 
         public override void ExplicitVisit(UpdateStatement node)
