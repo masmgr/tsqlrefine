@@ -54,6 +54,12 @@ public sealed class UndefinedAliasRule : IRule
             return false;
         }
 
+        private ScopeGuard PushScope(HashSet<string> aliases)
+        {
+            _scopeStack.Push(aliases);
+            return new ScopeGuard(_scopeStack);
+        }
+
         public override void ExplicitVisit(SelectStatement node)
         {
             ProcessQueryExpression(node.QueryExpression);
@@ -110,165 +116,140 @@ public sealed class UndefinedAliasRule : IRule
 
         private void ProcessQuerySpecification(QuerySpecification querySpec)
         {
-            // Phase 1: Collect declared aliases from FROM clause
-            var declaredAliases = querySpec.FromClause != null
-                ? TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences)
-                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Push this scope onto the stack
-            _scopeStack.Push(declaredAliases);
-
-            try
-            {
-                // Phase 2: Check column references in the query
-                var columnRefChecker = new ColumnReferenceChecker(this);
-
-                // Check SELECT list
-                if (querySpec.SelectElements != null)
+            ProcessStatementWithFromClause(
+                fromClause: querySpec.FromClause,
+                target: null,
+                visitClauses: checker =>
                 {
-                    foreach (var selectElement in querySpec.SelectElements)
+                    // Check SELECT list
+                    if (querySpec.SelectElements != null)
                     {
-                        selectElement.Accept(columnRefChecker);
+                        foreach (var selectElement in querySpec.SelectElements)
+                        {
+                            selectElement.Accept(checker);
+                        }
                     }
-                }
 
-                // Check WHERE clause
-                querySpec.WhereClause?.Accept(columnRefChecker);
+                    // Check WHERE clause
+                    querySpec.WhereClause?.Accept(checker);
 
-                // Check GROUP BY clause
-                querySpec.GroupByClause?.Accept(columnRefChecker);
+                    // Check GROUP BY clause
+                    querySpec.GroupByClause?.Accept(checker);
 
-                // Check HAVING clause
-                querySpec.HavingClause?.Accept(columnRefChecker);
+                    // Check HAVING clause
+                    querySpec.HavingClause?.Accept(checker);
 
-                // Check ORDER BY clause
-                querySpec.OrderByClause?.Accept(columnRefChecker);
-
-                // Check JOIN conditions and process nested subqueries in FROM clause
-                if (querySpec.FromClause != null)
-                {
-                    foreach (var tableRef in querySpec.FromClause.TableReferences)
-                    {
-                        ProcessTableReference(tableRef, columnRefChecker);
-                    }
-                }
-            }
-            finally
-            {
-                // Pop this scope
-                _scopeStack.Pop();
-            }
-        }
-
-        private void ProcessTableReference(TableReference tableRef, ColumnReferenceChecker checker)
-        {
-            if (tableRef is QualifiedJoin qualifiedJoin)
-            {
-                qualifiedJoin.SearchCondition?.Accept(checker);
-                ProcessTableReference(qualifiedJoin.FirstTableReference, checker);
-                ProcessTableReference(qualifiedJoin.SecondTableReference, checker);
-            }
-            else if (tableRef is JoinTableReference join)
-            {
-                ProcessTableReference(join.FirstTableReference, checker);
-                ProcessTableReference(join.SecondTableReference, checker);
-            }
-            else if (tableRef is QueryDerivedTable derivedTable)
-            {
-                // Process the derived table's inner query with its own scope
-                ProcessQueryExpression(derivedTable.QueryExpression);
-            }
+                    // Check ORDER BY clause
+                    querySpec.OrderByClause?.Accept(checker);
+                });
         }
 
         private void ProcessUpdateSpecification(UpdateSpecification updateSpec)
         {
-            // Collect aliases from FROM clause (if present)
-            var declaredAliases = updateSpec.FromClause != null
-                ? TableReferenceHelpers.CollectTableAliases(updateSpec.FromClause.TableReferences)
-                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Also add the target table alias if it has one
-            var targetAlias = TableReferenceHelpers.GetAliasOrTableName(updateSpec.Target);
-            if (targetAlias != null)
-            {
-                declaredAliases.Add(targetAlias);
-            }
-
-            _scopeStack.Push(declaredAliases);
-
-            try
-            {
-                var columnRefChecker = new ColumnReferenceChecker(this);
-
-                // Check SET clauses
-                foreach (var setClause in updateSpec.SetClauses)
+            ProcessStatementWithFromClause(
+                fromClause: updateSpec.FromClause,
+                target: updateSpec.Target,
+                visitClauses: checker =>
                 {
-                    setClause.Accept(columnRefChecker);
-                }
-
-                // Check WHERE clause
-                updateSpec.WhereClause?.Accept(columnRefChecker);
-
-                // Check FROM clause for JOIN conditions and subqueries
-                if (updateSpec.FromClause != null)
-                {
-                    foreach (var tableRef in updateSpec.FromClause.TableReferences)
+                    // Check SET clauses
+                    foreach (var setClause in updateSpec.SetClauses)
                     {
-                        ProcessTableReference(tableRef, columnRefChecker);
+                        setClause.Accept(checker);
                     }
-                }
-            }
-            finally
-            {
-                _scopeStack.Pop();
-            }
+
+                    // Check WHERE clause
+                    updateSpec.WhereClause?.Accept(checker);
+                });
         }
 
         private void ProcessDeleteSpecification(DeleteSpecification deleteSpec)
         {
-            // Collect aliases from FROM clause (if present)
-            var declaredAliases = deleteSpec.FromClause != null
-                ? TableReferenceHelpers.CollectTableAliases(deleteSpec.FromClause.TableReferences)
+            ProcessStatementWithFromClause(
+                fromClause: deleteSpec.FromClause,
+                target: deleteSpec.Target,
+                visitClauses: checker =>
+                {
+                    // Check WHERE clause
+                    deleteSpec.WhereClause?.Accept(checker);
+                });
+        }
+
+        private void ProcessStatementWithFromClause(
+            FromClause? fromClause,
+            TableReference? target,
+            Action<ColumnReferenceChecker> visitClauses)
+        {
+            // Phase 1: Collect declared aliases from FROM clause
+            var declaredAliases = fromClause != null
+                ? TableReferenceHelpers.CollectTableAliases(fromClause.TableReferences)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // Also add the target table alias if it has one
-            var targetAlias = TableReferenceHelpers.GetAliasOrTableName(deleteSpec.Target);
-            if (targetAlias != null)
+            // Add target table alias for UPDATE/DELETE
+            if (target != null)
             {
-                declaredAliases.Add(targetAlias);
-            }
-
-            _scopeStack.Push(declaredAliases);
-
-            try
-            {
-                var columnRefChecker = new ColumnReferenceChecker(this);
-
-                // Check WHERE clause
-                deleteSpec.WhereClause?.Accept(columnRefChecker);
-
-                // Check FROM clause for JOIN conditions and subqueries
-                if (deleteSpec.FromClause != null)
+                var targetAlias = TableReferenceHelpers.GetAliasOrTableName(target);
+                if (targetAlias != null)
                 {
-                    foreach (var tableRef in deleteSpec.FromClause.TableReferences)
-                    {
-                        ProcessTableReference(tableRef, columnRefChecker);
-                    }
+                    declaredAliases.Add(targetAlias);
                 }
             }
-            finally
+
+            // Phase 2: Check column references with scope management
+            using (PushScope(declaredAliases))
             {
-                _scopeStack.Pop();
+                var checker = new ColumnReferenceChecker(this);
+
+                // Visit statement-specific clauses
+                visitClauses(checker);
+
+                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessFromClause(fromClause, checker);
             }
         }
 
-        private sealed class ColumnReferenceChecker : TSqlFragmentVisitor
+        private void ProcessFromClause(FromClause? fromClause, ColumnReferenceChecker checker)
+        {
+            if (fromClause == null)
+            {
+                return;
+            }
+
+            foreach (var tableRef in fromClause.TableReferences)
+            {
+                // Check JOIN conditions using existing helper
+                TableReferenceHelpers.TraverseJoinConditions(tableRef, (_, condition) =>
+                    condition.Accept(checker));
+
+                // Process derived tables (subqueries in FROM) with their own scope
+                TraverseDerivedTables(tableRef);
+            }
+        }
+
+        private void TraverseDerivedTables(TableReference tableRef)
+        {
+            if (tableRef is QueryDerivedTable derivedTable)
+            {
+                ProcessQueryExpression(derivedTable.QueryExpression);
+            }
+            else if (tableRef is JoinTableReference join)
+            {
+                TraverseDerivedTables(join.FirstTableReference);
+                TraverseDerivedTables(join.SecondTableReference);
+            }
+        }
+
+        private sealed class ColumnReferenceChecker : ScopeDelegatingVisitor
         {
             private readonly UndefinedAliasVisitor _parent;
 
             public ColumnReferenceChecker(UndefinedAliasVisitor parent)
             {
                 _parent = parent;
+            }
+
+            protected override void ProcessSubquery(QueryExpression? queryExpression)
+            {
+                _parent.ProcessQueryExpression(queryExpression);
             }
 
             public override void ExplicitVisit(ColumnReferenceExpression node)
@@ -300,26 +281,11 @@ public sealed class UndefinedAliasRule : IRule
 
                 base.ExplicitVisit(node);
             }
+        }
 
-            // Don't descend into subqueries - they have their own scope
-            // Instead, delegate to parent visitor to process them with proper scope tracking
-            public override void ExplicitVisit(SelectStatement node)
-            {
-                // Process the nested SELECT with its own scope
-                _parent.ProcessQueryExpression(node.QueryExpression);
-            }
-
-            public override void ExplicitVisit(ScalarSubquery node)
-            {
-                // Process the scalar subquery with its own scope
-                _parent.ProcessQueryExpression(node.QueryExpression);
-            }
-
-            public override void ExplicitVisit(QueryDerivedTable node)
-            {
-                // Process the derived table with its own scope
-                _parent.ProcessQueryExpression(node.QueryExpression);
-            }
+        private readonly struct ScopeGuard(Stack<HashSet<string>> stack) : IDisposable
+        {
+            public void Dispose() => stack.Pop();
         }
     }
 }
