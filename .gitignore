@@ -55,3 +55,9 @@ TestResult.xml
 nunit-*.xml
 
 .claude/settings.local.json
+
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
