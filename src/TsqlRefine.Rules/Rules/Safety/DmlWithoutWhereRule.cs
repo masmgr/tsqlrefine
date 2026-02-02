@@ -37,11 +37,17 @@ public sealed class DmlWithoutWhereRule : IRule
 
     private sealed class DmlWithoutWhereVisitor : DiagnosticVisitorBase
     {
-
         public override void ExplicitVisit(UpdateStatement node)
         {
             if (node.UpdateSpecification?.WhereClause is null)
             {
+                // Skip temporary tables and table variables
+                if (IsTemporaryTableOrTableVariable(node.UpdateSpecification?.Target))
+                {
+                    base.ExplicitVisit(node);
+                    return;
+                }
+
                 AddDiagnostic(
                     fragment: node,
                     message: "UPDATE statement without WHERE clause can modify all rows. Add a WHERE clause to limit the scope.",
@@ -58,6 +64,13 @@ public sealed class DmlWithoutWhereRule : IRule
         {
             if (node.DeleteSpecification?.WhereClause is null)
             {
+                // Skip temporary tables and table variables
+                if (IsTemporaryTableOrTableVariable(node.DeleteSpecification?.Target))
+                {
+                    base.ExplicitVisit(node);
+                    return;
+                }
+
                 AddDiagnostic(
                     fragment: node,
                     message: "DELETE statement without WHERE clause can delete all rows. Add a WHERE clause to limit the scope.",
@@ -68,6 +81,27 @@ public sealed class DmlWithoutWhereRule : IRule
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private static bool IsTemporaryTableOrTableVariable(TableReference? target)
+        {
+            // Table variables (@tablevar) are represented as VariableTableReference
+            if (target is VariableTableReference)
+            {
+                return true;
+            }
+
+            // Temporary tables (#temp, ##global) are NamedTableReference with # prefix
+            if (target is NamedTableReference namedTable)
+            {
+                var tableName = namedTable.SchemaObject?.BaseIdentifier?.Value;
+                if (tableName != null && tableName.StartsWith('#'))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

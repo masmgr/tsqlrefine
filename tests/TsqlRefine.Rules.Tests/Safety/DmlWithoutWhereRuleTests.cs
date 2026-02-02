@@ -34,6 +34,12 @@ public sealed class DmlWithoutWhereRuleTests
     [InlineData("DELETE FROM orders WHERE order_date < DATEADD(year, -1, GETDATE());")]
     [InlineData("SELECT * FROM users;")]  // not DML
     [InlineData("INSERT INTO users (name) VALUES ('test');")]  // INSERT is allowed
+    [InlineData("UPDATE #temp SET col = 1;")]  // local temp table
+    [InlineData("DELETE FROM #temp;")]  // local temp table
+    [InlineData("UPDATE ##globaltemp SET col = 1;")]  // global temp table
+    [InlineData("DELETE FROM ##globaltemp;")]  // global temp table
+    [InlineData("UPDATE @tablevar SET col = 1;")]  // table variable
+    [InlineData("DELETE FROM @tablevar;")]  // table variable
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new DmlWithoutWhereRule();
