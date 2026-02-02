@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 
 namespace TsqlRefine.Formatting.Helpers;
@@ -20,7 +21,14 @@ namespace TsqlRefine.Formatting.Helpers;
 /// </summary>
 public static class OperatorSpaceNormalizer
 {
-    private static readonly HashSet<char> SingleCharOperators = ['=', '<', '>', '+', '-', '*', '/', '%'];
+    private static readonly FrozenSet<char> SingleCharOperators =
+        FrozenSet.ToFrozenSet(['=', '<', '>', '+', '-', '*', '/', '%']);
+
+    /// <summary>
+    /// Characters that can end an operand (indicate preceding token is a value).
+    /// </summary>
+    private static readonly FrozenSet<char> OperandEndingChars =
+        FrozenSet.ToFrozenSet([')', ']', '\'', '"']);
 
     /// <summary>
     /// Normalizes operator spacing in SQL text.
@@ -116,7 +124,7 @@ public static class OperatorSpaceNormalizer
             // Try single-char operators (=, <, >, +, -, *, /, %)
             if (SingleCharOperators.Contains(c))
             {
-                ProcessSingleOperator(line, output, ref index, leadingWhitespaceEnd);
+                ProcessSingleOperator(line, output, ref index);
                 continue;
             }
 
@@ -159,12 +167,12 @@ public static class OperatorSpaceNormalizer
         return true;
     }
 
-    private static void ProcessSingleOperator(string line, StringBuilder output, ref int index, int leadingWhitespaceEnd)
+    private static void ProcessSingleOperator(string line, StringBuilder output, ref int index)
     {
         var c = line[index];
 
         // Check for scientific notation: digit followed by e/E followed by +/-
-        if ((c == '+' || c == '-') && IsScientificNotationSign(line, index))
+        if (c is '+' or '-' && ScientificNotationChecker.IsSign(line, index))
         {
             output.Append(c);
             index++;
@@ -174,7 +182,7 @@ public static class OperatorSpaceNormalizer
         // +, - can be unary operators
         // * after ( is special case: COUNT(*), could also be wildcard in SELECT *
         // =, <, >, /, % are always binary operators
-        var canBeUnary = c == '+' || c == '-';
+        var canBeUnary = c is '+' or '-';
 
         // Special case: * after ( is not multiplication but wildcard/special syntax
         // e.g., COUNT(*), SUM(*), etc.
@@ -195,7 +203,7 @@ public static class OperatorSpaceNormalizer
         }
 
         // Determine if this is a binary or unary operator
-        if (!canBeUnary || IsBinaryOperatorContext(output, leadingWhitespaceEnd))
+        if (!canBeUnary || BinaryContextChecker.IsBinaryContext(output))
         {
             EnsureSpaceBefore(output);
             output.Append(c);
@@ -217,7 +225,7 @@ public static class OperatorSpaceNormalizer
         for (var i = output.Length - 1; i >= 0; i--)
         {
             var c = output[i];
-            if (c == ' ' || c == '\t')
+            if (c is ' ' or '\t')
             {
                 continue;
             }
@@ -228,117 +236,110 @@ public static class OperatorSpaceNormalizer
         return false;
     }
 
-    private static bool IsScientificNotationSign(string line, int index)
+    /// <summary>
+    /// Detects scientific notation patterns like 1e-3, 2.5E+10.
+    /// </summary>
+    private static class ScientificNotationChecker
     {
-        // Pattern: [0-9][eE][+-][0-9]
-        // Current char (at index) is + or -
-        if (index < 2)
+        /// <summary>
+        /// Checks if +/- at the given index is part of scientific notation.
+        /// Pattern: [digit or .][eE][+-][digit]
+        /// </summary>
+        public static bool IsSign(string line, int index)
         {
-            return false;
-        }
+            // Need at least 2 chars before and 1 after
+            if (index < 2 || index + 1 >= line.Length)
+            {
+                return false;
+            }
 
-        var prev = line[index - 1];
-        if (prev != 'e' && prev != 'E')
-        {
-            return false;
-        }
+            var prev = line[index - 1];
+            if (prev is not ('e' or 'E'))
+            {
+                return false;
+            }
 
-        // Check for digit (or dot) before 'e'/'E'
-        var beforeE = line[index - 2];
-        if (!char.IsDigit(beforeE) && beforeE != '.')
-        {
-            return false;
-        }
+            var beforeE = line[index - 2];
+            if (!char.IsDigit(beforeE) && beforeE != '.')
+            {
+                return false;
+            }
 
-        // Check for digit after +/-
-        if (index + 1 >= line.Length)
-        {
-            return false;
+            return char.IsDigit(line[index + 1]);
         }
-
-        return char.IsDigit(line[index + 1]);
     }
 
-    private static bool IsBinaryOperatorContext(StringBuilder output, int leadingWhitespaceEnd)
+    /// <summary>
+    /// Determines whether an operator is in binary (e.g., a + b) or unary (e.g., -1) context.
+    /// </summary>
+    private static class BinaryContextChecker
     {
-        // Find the last non-whitespace character in output
-        var (lastNonSpace, hasSpaceBefore) = GetLastNonWhitespaceCharAndSpaceFlag(output);
-
-        if (lastNonSpace == null)
+        /// <summary>
+        /// Determines if the current position indicates a binary operator context.
+        /// </summary>
+        /// <param name="output">The output buffer built so far.</param>
+        /// <returns>True if operator should be treated as binary; false for unary.</returns>
+        public static bool IsBinaryContext(StringBuilder output)
         {
-            // Nothing before operator (line start) - unary
-            return false;
+            var (lastNonSpace, hasSpaceBefore) = GetLastNonWhitespaceInfo(output);
+
+            if (lastNonSpace is null)
+            {
+                // Nothing before operator (line start) - unary
+                return false;
+            }
+
+            var lastChar = lastNonSpace.Value;
+
+            return hasSpaceBefore
+                ? IsOperandEndAfterSpace(lastChar)
+                : IsOperandEndNoSpace(lastChar);
         }
 
-        var lastChar = lastNonSpace.Value;
-
-        // If there's space before the operator, we need to check if the preceding
-        // token is a keyword or an operand
-        if (hasSpaceBefore)
+        /// <summary>
+        /// After space, check if preceding character ends an operand.
+        /// Closing delimiters, quotes, and digits indicate binary context.
+        /// Letters/underscores are treated as unary (conservative: SELECT -1).
+        /// </summary>
+        private static bool IsOperandEndAfterSpace(char c)
         {
-            // After space, check if preceding character ends an operand
-            // - Closing parenthesis ) - operand end
-            // - Closing bracket ] - operand end
-            // - Quote characters - operand end
-            // - Digit - likely operand end (e.g., "1 -" in expressions)
-            // - Letter could be keyword (SELECT, WHERE, AND, etc.) or identifier
-            //   We treat space + letter as unary context (conservative approach)
-            //   since keywords like SELECT, WHERE, WHEN, etc. are followed by operands
-            if (lastChar == ')' || lastChar == ']' || lastChar == '\'' || lastChar == '"')
+            if (OperandEndingChars.Contains(c))
             {
                 return true;
             }
 
             // Digit followed by space then operator is binary: "1 + 2"
-            if (char.IsDigit(lastChar))
+            return char.IsDigit(c);
+        }
+
+        /// <summary>
+        /// No space before operator - check for binary context.
+        /// Alphanumeric, underscore, or closing delimiters indicate binary.
+        /// </summary>
+        private static bool IsOperandEndNoSpace(char c)
+        {
+            return char.IsLetterOrDigit(c) ||
+                   c == '_' ||
+                   OperandEndingChars.Contains(c);
+        }
+
+        private static (char? lastChar, bool hasSpaceBefore) GetLastNonWhitespaceInfo(StringBuilder sb)
+        {
+            var hasSpace = false;
+            for (var i = sb.Length - 1; i >= 0; i--)
             {
-                return true;
+                var c = sb[i];
+                if (c is ' ' or '\t')
+                {
+                    hasSpace = true;
+                    continue;
+                }
+
+                return (c, hasSpace);
             }
 
-            // Letter/underscore followed by space: could be keyword or identifier
-            // Conservative: treat as unary context (SELECT -1, WHERE -x, etc.)
-            // This means "a -1" becomes "a -1" not "a - 1", but this is safer
-            // Users who want binary spacing should write without preceding space: "a-1" -> "a - 1"
-            return false;
+            return (null, hasSpace);
         }
-
-        // No space before operator - check for binary context
-        // Binary operator context: immediately after identifier/number/closing delimiter
-        // - Alphanumeric or underscore (identifier/number end): a+b, 1+2
-        // - Closing parenthesis ): (a)+b
-        // - Closing bracket ]: [a]+b
-        // - Quote characters: 'a'+b
-        if (char.IsLetterOrDigit(lastChar) || lastChar == '_' ||
-            lastChar == ')' || lastChar == ']' ||
-            lastChar == '\'' || lastChar == '"')
-        {
-            return true;
-        }
-
-        // Unary context: after opening delimiter or operator
-        // - Opening parenthesis (
-        // - Comma ,
-        // - Operators: =, <, >, +, -, *, /, %
-        // These indicate the operator is unary
-        return false;
-    }
-
-    private static (char? lastNonSpace, bool hasSpaceBefore) GetLastNonWhitespaceCharAndSpaceFlag(StringBuilder sb)
-    {
-        var hasSpace = false;
-        for (var i = sb.Length - 1; i >= 0; i--)
-        {
-            var c = sb[i];
-            if (c == ' ' || c == '\t')
-            {
-                hasSpace = true;
-                continue;
-            }
-
-            return (c, hasSpace);
-        }
-
-        return (null, hasSpace);
     }
 
     private static void EnsureSpaceBefore(StringBuilder output)
