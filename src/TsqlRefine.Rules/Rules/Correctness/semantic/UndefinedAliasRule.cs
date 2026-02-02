@@ -37,27 +37,12 @@ public sealed class UndefinedAliasRule : IRule
 
     private sealed class UndefinedAliasVisitor : DiagnosticVisitorBase
     {
-        // Stack of alias sets for each query scope (innermost at top)
-        private readonly Stack<HashSet<string>> _scopeStack = new();
+        private readonly AliasScopeManager _scopeManager = new();
+        private readonly ColumnReferenceChecker _checker;
 
-        // Check if an alias is defined in any scope (current or outer)
-        private bool IsAliasDefinedInAnyScope(string alias)
+        public UndefinedAliasVisitor()
         {
-            foreach (var scope in _scopeStack)
-            {
-                if (scope.Contains(alias))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private ScopeGuard PushScope(HashSet<string> aliases)
-        {
-            _scopeStack.Push(aliases);
-            return new ScopeGuard(_scopeStack);
+            _checker = new ColumnReferenceChecker(this);
         }
 
         public override void ExplicitVisit(SelectStatement node)
@@ -89,69 +74,25 @@ public sealed class UndefinedAliasRule : IRule
                 }
 
                 // Process CTE's query expression with available CTE names
-                ProcessCteQueryExpression(cte.QueryExpression, availableCteNames);
+                ProcessQueryExpression(cte.QueryExpression, availableCteNames);
             }
         }
 
-        private void ProcessCteQueryExpression(QueryExpression? queryExpression, HashSet<string> availableCteNames)
+        private void ProcessQueryExpression(QueryExpression? queryExpression, HashSet<string>? cteNames = null)
         {
             switch (queryExpression)
             {
                 case QuerySpecification querySpec:
-                    ProcessCteQuerySpecification(querySpec, availableCteNames);
+                    ProcessQuerySpecification(querySpec, cteNames);
                     break;
                 case BinaryQueryExpression binaryExpr:
-                    // UNION ALL in recursive CTEs - both sides can reference the CTE
-                    ProcessCteQueryExpression(binaryExpr.FirstQueryExpression, availableCteNames);
-                    ProcessCteQueryExpression(binaryExpr.SecondQueryExpression, availableCteNames);
+                    // UNION, INTERSECT, EXCEPT - validate both sides
+                    ProcessQueryExpression(binaryExpr.FirstQueryExpression, cteNames);
+                    ProcessQueryExpression(binaryExpr.SecondQueryExpression, cteNames);
                     break;
                 case QueryParenthesisExpression parenExpr:
-                    ProcessCteQueryExpression(parenExpr.QueryExpression, availableCteNames);
+                    ProcessQueryExpression(parenExpr.QueryExpression, cteNames);
                     break;
-            }
-        }
-
-        private void ProcessCteQuerySpecification(QuerySpecification querySpec, HashSet<string> availableCteNames)
-        {
-            // Collect declared aliases from FROM clause
-            var declaredAliases = querySpec.FromClause != null
-                ? TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences)
-                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Add available CTE names to the scope (for recursive/chained CTE references)
-            foreach (var cteName in availableCteNames)
-            {
-                declaredAliases.Add(cteName);
-            }
-
-            // Check column references with scope management
-            using (PushScope(declaredAliases))
-            {
-                var checker = new ColumnReferenceChecker(this);
-
-                // Check SELECT list
-                if (querySpec.SelectElements != null)
-                {
-                    foreach (var selectElement in querySpec.SelectElements)
-                    {
-                        selectElement.Accept(checker);
-                    }
-                }
-
-                // Check WHERE clause
-                querySpec.WhereClause?.Accept(checker);
-
-                // Check GROUP BY clause
-                querySpec.GroupByClause?.Accept(checker);
-
-                // Check HAVING clause
-                querySpec.HavingClause?.Accept(checker);
-
-                // Check ORDER BY clause
-                querySpec.OrderByClause?.Accept(checker);
-
-                // Visit FROM clause for JOIN conditions and derived tables
-                ProcessFromClause(querySpec.FromClause, checker);
             }
         }
 
@@ -186,90 +127,56 @@ public sealed class UndefinedAliasRule : IRule
             ProcessQueryExpression(node.QueryExpression);
         }
 
-        private void ProcessQueryExpression(QueryExpression? queryExpression)
+        private void ProcessQuerySpecification(QuerySpecification querySpec, HashSet<string>? cteNames = null)
         {
-            switch (queryExpression)
+            var declaredAliases = CollectScopeAliases(querySpec.FromClause, null, cteNames);
+
+            using (_scopeManager.PushScope(declaredAliases))
             {
-                case QuerySpecification querySpec:
-                    ProcessQuerySpecification(querySpec);
-                    break;
-                case BinaryQueryExpression binaryExpr:
-                    // UNION, INTERSECT, EXCEPT - validate both sides
-                    ProcessQueryExpression(binaryExpr.FirstQueryExpression);
-                    ProcessQueryExpression(binaryExpr.SecondQueryExpression);
-                    break;
-                case QueryParenthesisExpression parenExpr:
-                    ProcessQueryExpression(parenExpr.QueryExpression);
-                    break;
+                ValidateSelectClauses(querySpec);
+                ProcessFromClause(querySpec.FromClause);
             }
-        }
-
-        private void ProcessQuerySpecification(QuerySpecification querySpec)
-        {
-            ProcessStatementWithFromClause(
-                fromClause: querySpec.FromClause,
-                target: null,
-                visitClauses: checker =>
-                {
-                    // Check SELECT list
-                    if (querySpec.SelectElements != null)
-                    {
-                        foreach (var selectElement in querySpec.SelectElements)
-                        {
-                            selectElement.Accept(checker);
-                        }
-                    }
-
-                    // Check WHERE clause
-                    querySpec.WhereClause?.Accept(checker);
-
-                    // Check GROUP BY clause
-                    querySpec.GroupByClause?.Accept(checker);
-
-                    // Check HAVING clause
-                    querySpec.HavingClause?.Accept(checker);
-
-                    // Check ORDER BY clause
-                    querySpec.OrderByClause?.Accept(checker);
-                });
         }
 
         private void ProcessUpdateSpecification(UpdateSpecification updateSpec)
         {
-            ProcessStatementWithFromClause(
-                fromClause: updateSpec.FromClause,
-                target: updateSpec.Target,
-                visitClauses: checker =>
-                {
-                    // Check SET clauses
-                    foreach (var setClause in updateSpec.SetClauses)
-                    {
-                        setClause.Accept(checker);
-                    }
+            var declaredAliases = CollectScopeAliases(updateSpec.FromClause, updateSpec.Target, null);
 
-                    // Check WHERE clause
-                    updateSpec.WhereClause?.Accept(checker);
-                });
+            using (_scopeManager.PushScope(declaredAliases))
+            {
+                // Check SET clauses
+                foreach (var setClause in updateSpec.SetClauses)
+                {
+                    setClause.Accept(_checker);
+                }
+
+                // Check WHERE clause
+                updateSpec.WhereClause?.Accept(_checker);
+
+                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessFromClause(updateSpec.FromClause);
+            }
         }
 
         private void ProcessDeleteSpecification(DeleteSpecification deleteSpec)
         {
-            ProcessStatementWithFromClause(
-                fromClause: deleteSpec.FromClause,
-                target: deleteSpec.Target,
-                visitClauses: checker =>
-                {
-                    // Check WHERE clause
-                    deleteSpec.WhereClause?.Accept(checker);
-                });
+            var declaredAliases = CollectScopeAliases(deleteSpec.FromClause, deleteSpec.Target, null);
+
+            using (_scopeManager.PushScope(declaredAliases))
+            {
+                // Check WHERE clause
+                deleteSpec.WhereClause?.Accept(_checker);
+
+                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessFromClause(deleteSpec.FromClause);
+            }
         }
 
-        private void ProcessStatementWithFromClause(
+        private static HashSet<string> CollectScopeAliases(
             FromClause? fromClause,
             TableReference? target,
-            Action<ColumnReferenceChecker> visitClauses)
+            HashSet<string>? cteNames)
         {
-            // Phase 1: Collect declared aliases from FROM clause
             var declaredAliases = fromClause != null
                 ? TableReferenceHelpers.CollectTableAliases(fromClause.TableReferences)
                 : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -284,20 +191,34 @@ public sealed class UndefinedAliasRule : IRule
                 }
             }
 
-            // Phase 2: Check column references with scope management
-            using (PushScope(declaredAliases))
+            // Add available CTE names to the scope (for recursive/chained CTE references)
+            if (cteNames != null)
             {
-                var checker = new ColumnReferenceChecker(this);
-
-                // Visit statement-specific clauses
-                visitClauses(checker);
-
-                // Visit FROM clause for JOIN conditions and derived tables
-                ProcessFromClause(fromClause, checker);
+                foreach (var cteName in cteNames)
+                {
+                    declaredAliases.Add(cteName);
+                }
             }
+
+            return declaredAliases;
         }
 
-        private void ProcessFromClause(FromClause? fromClause, ColumnReferenceChecker checker)
+        private void ValidateSelectClauses(QuerySpecification querySpec)
+        {
+            // Check SELECT list
+            foreach (var selectElement in querySpec.SelectElements ?? [])
+            {
+                selectElement.Accept(_checker);
+            }
+
+            // Check WHERE, GROUP BY, HAVING, ORDER BY clauses
+            querySpec.WhereClause?.Accept(_checker);
+            querySpec.GroupByClause?.Accept(_checker);
+            querySpec.HavingClause?.Accept(_checker);
+            querySpec.OrderByClause?.Accept(_checker);
+        }
+
+        private void ProcessFromClause(FromClause? fromClause)
         {
             if (fromClause == null)
             {
@@ -308,7 +229,7 @@ public sealed class UndefinedAliasRule : IRule
             {
                 // Check JOIN conditions using existing helper
                 TableReferenceHelpers.TraverseJoinConditions(tableRef, (_, condition) =>
-                    condition.Accept(checker));
+                    condition.Accept(_checker));
 
                 // Process derived tables (subqueries in FROM) with their own scope
                 TraverseDerivedTables(tableRef);
@@ -345,23 +266,15 @@ public sealed class UndefinedAliasRule : IRule
             public override void ExplicitVisit(ColumnReferenceExpression node)
             {
                 // Check if this is a qualified column reference (e.g., table.column)
-                var qualifier = ColumnReferenceHelpers.GetTableQualifier(node);
+                var qualifierInfo = ColumnReferenceHelpers.GetTableQualifierWithIdentifier(node);
 
                 // Check against ALL scopes (current + outer) to support correlated subqueries
-                if (qualifier != null && !_parent.IsAliasDefinedInAnyScope(qualifier))
+                if (qualifierInfo.HasValue && !_parent._scopeManager.IsAliasDefinedInAnyScope(qualifierInfo.Value.Qualifier))
                 {
-                    var identifiers = node.MultiPartIdentifier!.Identifiers;
-                    var count = identifiers.Count;
-
-                    // Multi-part identifier patterns:
-                    // 2 parts: table.column                   -> qualifier at index 0
-                    // 3 parts: schema.table.column            -> qualifier at index 1
-                    // 4 parts: server.schema.table.column     -> qualifier at index 2
-                    // Formula: qualifier index = count - 2
-                    var qualifierIndex = count - 2;
+                    var (qualifier, qualifierIdentifier) = qualifierInfo.Value;
 
                     _parent.AddDiagnostic(
-                        fragment: identifiers[qualifierIndex],
+                        fragment: qualifierIdentifier,
                         message: $"Undefined table alias '{qualifier}'. Table or alias '{qualifier}' is not declared in the FROM clause.",
                         code: "semantic/undefined-alias",
                         category: "Correctness",
@@ -371,11 +284,6 @@ public sealed class UndefinedAliasRule : IRule
 
                 base.ExplicitVisit(node);
             }
-        }
-
-        private readonly struct ScopeGuard(Stack<HashSet<string>> stack) : IDisposable
-        {
-            public void Dispose() => stack.Pop();
         }
     }
 }

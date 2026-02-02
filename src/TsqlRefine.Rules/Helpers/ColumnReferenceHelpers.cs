@@ -33,6 +33,26 @@ public static class ColumnReferenceHelpers
     }
 
     /// <summary>
+    /// Gets the table qualifier and its identifier from a column reference.
+    /// Useful for diagnostics where the identifier's position is needed.
+    /// </summary>
+    /// <param name="columnRef">The column reference expression.</param>
+    /// <returns>A tuple of (qualifier string, qualifier identifier), or null if no qualifier is present.</returns>
+    public static (string Qualifier, Identifier QualifierIdentifier)? GetTableQualifierWithIdentifier(
+        ColumnReferenceExpression? columnRef)
+    {
+        var count = columnRef?.MultiPartIdentifier?.Identifiers?.Count ?? 0;
+        if (count > 1)
+        {
+            var qualifierIndex = count - 2;
+            var identifier = columnRef!.MultiPartIdentifier!.Identifiers[qualifierIndex];
+            return (identifier.Value, identifier);
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Collects all table qualifiers from column references within a fragment.
     /// Does not descend into subqueries (respects scope boundaries).
     /// </summary>
