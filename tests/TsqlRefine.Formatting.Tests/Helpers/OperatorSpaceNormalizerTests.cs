@@ -156,6 +156,29 @@ public class OperatorSpaceNormalizerTests
         Assert.Equal(expected, result);
     }
 
+    // Multi-line block comments - closing */ must not be split
+    [Theory]
+    [InlineData("comment text */", "comment text */")]
+    [InlineData("   */", "   */")]
+    [InlineData("*/", "*/")]
+    [InlineData("SELECT a */ FROM t", "SELECT a */ FROM t")]
+    [InlineData("/*** comment ***/", "/*** comment ***/")]
+    public void Normalize_BlockCommentClosing_NotSplit(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void Normalize_MultilineBlockComment_ClosingPreserved()
+    {
+        // Simulates second line of a multi-line block comment
+        var input = "/* comment\nend of comment */";
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Contains("*/", result);
+        Assert.DoesNotContain("* /", result);
+    }
+
     // Protected regions - line comments
     [Theory]
     [InlineData("SELECT a -- a=b", "SELECT a -- a=b")]

@@ -185,6 +185,15 @@ public static class OperatorSpaceNormalizer
             return;
         }
 
+        // Special case: */ is block comment closing - don't treat as operators
+        // This handles multi-line block comments where the tracker state is not preserved
+        if (c == '*' && index + 1 < line.Length && line[index + 1] == '/')
+        {
+            output.Append("*/");
+            index += 2;
+            return;
+        }
+
         // Determine if this is a binary or unary operator
         if (!canBeUnary || IsBinaryOperatorContext(output, leadingWhitespaceEnd))
         {
