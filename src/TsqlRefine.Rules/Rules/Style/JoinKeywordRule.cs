@@ -44,25 +44,50 @@ public sealed class JoinKeywordRule : IRule
             return ranges;
         }
 
+        // Track parenthesis depth across the entire token stream
+        var currentDepth = 0;
+
         for (var i = 0; i < tokens.Count; i++)
         {
+            if (TokenHelpers.IsTrivia(tokens[i]))
+            {
+                continue;
+            }
+
+            var text = tokens[i].Text;
+
+            // Track parenthesis depth
+            if (text == "(")
+            {
+                currentDepth++;
+                continue;
+            }
+
+            if (text == ")")
+            {
+                currentDepth--;
+                continue;
+            }
+
             // Look for FROM keyword
             if (!TokenHelpers.IsKeyword(tokens[i], "FROM"))
             {
                 continue;
             }
 
+            // Remember the depth at which we found FROM (for subquery detection)
+            var fromDepth = currentDepth;
+
             // Look for commas between FROM and WHERE/ORDER BY/GROUP BY/HAVING/;
-            var fromIndex = i;
             var depth = 0;
-            for (var j = fromIndex + 1; j < tokens.Count; j++)
+            for (var j = i + 1; j < tokens.Count; j++)
             {
                 if (TokenHelpers.IsTrivia(tokens[j]))
                 {
                     continue;
                 }
 
-                var text = tokens[j].Text;
+                text = tokens[j].Text;
 
                 // Track parenthesis depth (for subqueries)
                 if (text == "(")
@@ -74,10 +99,15 @@ public sealed class JoinKeywordRule : IRule
                 if (text == ")")
                 {
                     depth--;
+                    // If we've exited the subquery that contained this FROM, stop scanning
+                    if (depth < 0)
+                    {
+                        break;
+                    }
                     continue;
                 }
 
-                // At depth 0, check for clause terminators
+                // At depth 0, check for clause terminators or new statement start
                 if (depth == 0)
                 {
                     if (TokenHelpers.IsKeyword(tokens[j], "WHERE") ||
@@ -87,6 +117,11 @@ public sealed class JoinKeywordRule : IRule
                         TokenHelpers.IsKeyword(tokens[j], "UNION") ||
                         TokenHelpers.IsKeyword(tokens[j], "EXCEPT") ||
                         TokenHelpers.IsKeyword(tokens[j], "INTERSECT") ||
+                        TokenHelpers.IsKeyword(tokens[j], "SELECT") ||
+                        TokenHelpers.IsKeyword(tokens[j], "UPDATE") ||
+                        TokenHelpers.IsKeyword(tokens[j], "DELETE") ||
+                        TokenHelpers.IsKeyword(tokens[j], "INSERT") ||
+                        TokenHelpers.IsKeyword(tokens[j], "SET") ||
                         text == ";")
                     {
                         break;
