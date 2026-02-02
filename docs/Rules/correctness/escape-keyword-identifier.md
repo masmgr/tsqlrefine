@@ -207,6 +207,15 @@ In `custom-ruleset.json`:
 }
 ```
 
+## Exceptions
+
+The rule does not flag SQL syntax keywords that are part of compound statement structures:
+
+- `INTO` in `INSERT INTO table_name` or `SELECT ... INTO #temp`
+- Other table name context keywords (`FROM`, `JOIN`, `UPDATE`, `MERGE`, `TABLE`) when they appear after another context keyword
+
+These keywords are recognized as part of SQL syntax, not as identifiers.
+
 ## See Also
 
 - [TsqlRefine Rules Documentation](../README.md)

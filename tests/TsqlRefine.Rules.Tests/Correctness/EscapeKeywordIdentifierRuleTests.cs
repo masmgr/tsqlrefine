@@ -107,4 +107,39 @@ public sealed class EscapeKeywordIdentifierRuleTests
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.True(_rule.Metadata.Fixable);
     }
+
+    [Fact]
+    public void Analyze_InsertIntoStatement_DoesNotFlagInto()
+    {
+        var sql = "INSERT INTO TABLE1 VALUES (1);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_SelectIntoStatement_DoesNotFlagInto()
+    {
+        var sql = "SELECT * INTO #temp FROM source;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InsertIntoWithKeywordTableName_FlagsOnlyTableName()
+    {
+        var sql = "INSERT INTO order VALUES (1);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("escape-keyword-identifier", diagnostic.Code);
+        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+    }
 }

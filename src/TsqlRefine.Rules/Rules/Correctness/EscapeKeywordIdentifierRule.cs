@@ -273,6 +273,11 @@ public sealed class EscapeKeywordIdentifierRule : IRule
             var previousIndex = GetPreviousNonTriviaIndex(index);
             if (previousIndex >= 0 && IsTableNameContextKeyword(_tokens[previousIndex]))
             {
+                // Don't flag keywords that are themselves context keywords (e.g., INTO after INSERT)
+                if (IsTableNameContextKeyword(token))
+                {
+                    return false;
+                }
                 result = token;
                 return true;
             }
