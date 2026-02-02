@@ -69,6 +69,7 @@ Invalid column name 'x.active'.
 - Outer query aliases can be referenced in correlated subqueries
 - Each query scope has its own alias namespace
 - Schema-qualified column references (e.g., `dbo.users.id`) are correctly recognized
+- Table-valued function aliases (e.g., `JOIN dbo.fn_GetData() AS tvf`) are correctly recognized
 
 ## Examples
 
@@ -157,6 +158,15 @@ SELECT dbo.users.id FROM dbo.users;  -- OK: table name 'users' is recognized
 
 -- Fully-qualified column references (server.schema.table.column)
 SELECT mydb.dbo.users.id FROM users;  -- OK: table name 'users' is recognized
+
+-- Table-valued function with alias
+SELECT tvf.id, tvf.name
+FROM dbo.fn_GetUserData(@userId) AS tvf;  -- OK: alias 'tvf' is recognized
+
+-- JOIN with table-valued function
+SELECT u.id, tvf.data
+FROM users u
+JOIN dbo.fn_GetMetrics() AS tvf ON u.id = tvf.user_id;  -- OK: both aliases recognized
 ```
 
 ## Configuration

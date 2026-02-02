@@ -246,4 +246,37 @@ SELECT x.id FROM orders o;";
         Assert.Single(diagnostics);
         Assert.Contains(expectedAlias, diagnostics[0].Message);
     }
+
+    [Theory]
+    [InlineData("SELECT tvf.col FROM dbo.f_func() AS tvf;")]
+    [InlineData("SELECT tvf.col FROM dbo.f_func() tvf;")]  // without AS keyword
+    [InlineData("SELECT a.id, tvf.col FROM users a JOIN dbo.f_func() AS tvf ON a.id = tvf.user_id;")]
+    [InlineData("SELECT t.col FROM schema1.f_tableFunc(@param) AS t;")]  // with parameter
+    public void Analyze_WithTableValuedFunction_RecognizesAlias(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("SELECT x.col FROM dbo.f_func() AS tvf;", "x")]
+    [InlineData("SELECT tvf.col, y.other FROM dbo.f_func() AS tvf;", "y")]
+    public void Analyze_WithTableValuedFunctionAndUndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
 }

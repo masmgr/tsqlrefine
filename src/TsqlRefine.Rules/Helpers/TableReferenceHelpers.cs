@@ -82,6 +82,8 @@ public static class TableReferenceHelpers
                 namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value,
             QueryDerivedTable derivedTable =>
                 derivedTable.Alias?.Value,
+            SchemaObjectFunctionTableReference funcTable =>
+                funcTable.Alias?.Value,
             _ => null
         };
     }
