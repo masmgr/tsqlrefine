@@ -13,6 +13,8 @@ public sealed class DmlWithoutWhereRuleTests
     [InlineData("DELETE orders;")]
     [InlineData("update users set active = 1;")]  // lowercase
     [InlineData("delete from orders;")]  // lowercase
+    [InlineData("UPDATE users SET active = 1 FROM users LEFT JOIN orders ON users.id = orders.user_id;")]  // LEFT JOIN does NOT exempt
+    [InlineData("UPDATE users SET active = 1 FROM users CROSS JOIN orders;")]  // CROSS JOIN does NOT exempt
     public void Analyze_WhenDmlWithoutWhere_ReturnsDiagnostic(string sql)
     {
         var rule = new DmlWithoutWhereRule();
@@ -40,6 +42,14 @@ public sealed class DmlWithoutWhereRuleTests
     [InlineData("DELETE FROM ##globaltemp;")]  // global temp table
     [InlineData("UPDATE @tablevar SET col = 1;")]  // table variable
     [InlineData("DELETE FROM @tablevar;")]  // table variable
+    [InlineData("UPDATE u SET active = 1 FROM users u;")]  // alias target
+    [InlineData("DELETE u FROM users u;")]  // alias target
+    [InlineData("UPDATE u SET active = 1 FROM dbo.users u;")]  // alias target with schema
+    [InlineData("DELETE u FROM dbo.users AS u;")]  // alias target with AS keyword
+    [InlineData("UPDATE users SET active = 1 FROM users INNER JOIN orders ON users.id = orders.user_id;")]  // INNER JOIN
+    [InlineData("DELETE FROM users FROM users INNER JOIN orders ON users.id = orders.user_id;")]  // INNER JOIN
+    [InlineData("UPDATE u SET active = 1 FROM users u INNER JOIN orders o ON u.id = o.user_id;")]  // alias + INNER JOIN
+    [InlineData("DELETE u FROM users u INNER JOIN orders o ON u.id = o.user_id;")]  // alias + INNER JOIN
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new DmlWithoutWhereRule();
@@ -136,6 +146,83 @@ DELETE FROM orders;";
         Assert.False(rule.Metadata.Fixable);
         Assert.Contains("UPDATE", rule.Metadata.Description);
         Assert.Contains("DELETE", rule.Metadata.Description);
+    }
+
+    [Fact]
+    public void Analyze_UpdateWithAliasTarget_ReturnsEmpty()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = "UPDATE u SET active = 1 FROM users u;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_DeleteWithAliasTarget_ReturnsEmpty()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = "DELETE u FROM users u;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UpdateWithInnerJoin_ReturnsEmpty()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = "UPDATE users SET active = 1 FROM users INNER JOIN orders ON users.id = orders.user_id;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_DeleteWithInnerJoin_ReturnsEmpty()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = "DELETE FROM users FROM users INNER JOIN orders ON users.id = orders.user_id;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UpdateWithLeftJoin_ReturnsDiagnostic()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = "UPDATE users SET active = 1 FROM users LEFT JOIN orders ON users.id = orders.user_id;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("dml-without-where", diagnostics[0].Data?.RuleId);
+    }
+
+    [Fact]
+    public void Analyze_UpdateWithNestedInnerJoin_ReturnsEmpty()
+    {
+        var rule = new DmlWithoutWhereRule();
+        var sql = @"UPDATE u
+            SET active = 1
+            FROM users u
+            LEFT JOIN orders o ON u.id = o.user_id
+            INNER JOIN customers c ON o.customer_id = c.id;";
+        var context = CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
     }
 
     private static RuleContext CreateContext(string sql)
