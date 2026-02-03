@@ -34,7 +34,7 @@ public class OperatorSpaceNormalizerTests
     [InlineData("WHERE a=b", "WHERE a = b")]
     [InlineData("WHERE a= b", "WHERE a = b")]
     [InlineData("WHERE a =b", "WHERE a = b")]
-    [InlineData("WHERE a  =  b", "WHERE a = b")]
+    [InlineData("WHERE a  =  b", "WHERE a  =  b")]
     public void Normalize_Equals_AddsSpacing(string input, string expected)
     {
         var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
@@ -358,6 +358,34 @@ public class OperatorSpaceNormalizerTests
     [InlineData("SELECT a*b", "SELECT a * b")]
     [InlineData("SELECT (a)*b", "SELECT (a) * b")]
     public void Normalize_AsteriskMultiplication_HasSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Multi-line block comment - asterisks should not be split
+    [Fact]
+    public void Normalize_MultilineBlockComment_AsterisksPreserved()
+    {
+        var input = "/***\n* COMMENT\n***/";
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("/***\n* COMMENT\n***/", result);
+    }
+
+    [Fact]
+    public void Normalize_MultilineBlockComment_WindowsLineEndings_AsterisksPreserved()
+    {
+        var input = "/***\r\n* COMMENT\r\n***/";
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("/***\r\n* COMMENT\r\n***/", result);
+    }
+
+    // Alignment preservation
+    [Theory]
+    [InlineData("SET @a          = 1", "SET @a          = 1")]
+    [InlineData("WHERE col       = 'value'", "WHERE col       = 'value'")]
+    [InlineData("SELECT a        + b", "SELECT a        + b")]
+    public void Normalize_AlignedOperators_PreservesAlignment(string input, string expected)
     {
         var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
         Assert.Equal(expected, result);

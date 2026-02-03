@@ -54,9 +54,13 @@ public static class OperatorSpaceNormalizer
         var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
         var result = new StringBuilder();
 
+        // Create tracker outside the loop to preserve state across lines
+        // (e.g., multi-line block comments)
+        var tracker = new ProtectedRegionTracker();
+
         for (var i = 0; i < lines.Length; i++)
         {
-            var processedLine = NormalizeLine(lines[i]);
+            var processedLine = NormalizeLine(lines[i], tracker);
             result.Append(processedLine);
 
             if (i < lines.Length - 1)
@@ -68,27 +72,40 @@ public static class OperatorSpaceNormalizer
         return result.ToString();
     }
 
-    private static string NormalizeLine(string line)
+    private static string NormalizeLine(string line, ProtectedRegionTracker tracker)
     {
         if (string.IsNullOrEmpty(line))
         {
             return line;
         }
 
-        var tracker = new ProtectedRegionTracker();
         var output = new StringBuilder();
         var index = 0;
 
-        // Preserve leading whitespace
-        var leadingWhitespaceEnd = 0;
+        // If we're inside a protected region (e.g., multi-line block comment),
+        // consume characters until we exit the region
+        while (index < line.Length && tracker.IsInProtectedRegion())
+        {
+            if (tracker.TryConsume(line, output, ref index))
+            {
+                continue;
+            }
+
+            // Should not happen if TryConsume works correctly, but safeguard
+            output.Append(line[index]);
+            index++;
+        }
+
+        // Preserve leading whitespace (only relevant if we weren't in a protected region)
+        var leadingWhitespaceEnd = index;
         while (leadingWhitespaceEnd < line.Length && (line[leadingWhitespaceEnd] == ' ' || line[leadingWhitespaceEnd] == '\t'))
         {
             leadingWhitespaceEnd++;
         }
 
-        if (leadingWhitespaceEnd > 0)
+        if (leadingWhitespaceEnd > index)
         {
-            output.Append(line.AsSpan(0, leadingWhitespaceEnd));
+            output.Append(line.AsSpan(index, leadingWhitespaceEnd - index));
             index = leadingWhitespaceEnd;
         }
 
@@ -349,28 +366,25 @@ public static class OperatorSpaceNormalizer
             return;
         }
 
-        // Remove trailing whitespace first
-        while (output.Length > 0 && (output[^1] == ' ' || output[^1] == '\t'))
+        // If already has whitespace, preserve it (maintains alignment)
+        if (output[^1] == ' ' || output[^1] == '\t')
         {
-            output.Length--;
+            return;
         }
 
-        // Add single space if there's content
-        if (output.Length > 0)
-        {
-            output.Append(' ');
-        }
+        // Add single space if no whitespace exists
+        output.Append(' ');
     }
 
     private static void EnsureSpaceAfter(string line, StringBuilder output, ref int index)
     {
-        // Skip existing whitespace in input
-        while (index < line.Length && (line[index] == ' ' || line[index] == '\t'))
+        // If next char is whitespace, preserve existing spacing (maintains alignment)
+        if (index < line.Length && (line[index] == ' ' || line[index] == '\t'))
         {
-            index++;
+            return;
         }
 
-        // Add single space if there's more content (and not at end of line)
+        // Add single space if no whitespace and there's more content
         if (index < line.Length)
         {
             output.Append(' ');
