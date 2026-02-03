@@ -60,7 +60,7 @@ public sealed class ConditionalBeginEndRule : IRule
 
         // Get the indentation from the parent IF/ELSE statement
         var controlStatementOffset = collector.IsElseBranch
-            ? FindElseKeywordOffset(sql, parentIf, statement)
+            ? FindElseKeywordOffset(parentIf, statement)
             : parentIf.StartOffset;
         var indent = GetIndentation(sql, controlStatementOffset);
 
@@ -82,27 +82,25 @@ public sealed class ConditionalBeginEndRule : IRule
         );
     }
 
-    private static int FindElseKeywordOffset(string sql, IfStatement parentIf, TSqlStatement elseStatement)
+    private static int FindElseKeywordOffset(IfStatement parentIf, TSqlStatement elseStatement)
     {
-        // Search backwards from the ELSE statement to find the ELSE keyword
-        var searchStart = parentIf.ThenStatement.StartOffset + parentIf.ThenStatement.FragmentLength;
-        var searchEnd = elseStatement.StartOffset;
-
-        for (var i = searchStart; i < searchEnd; i++)
+        // Use ScriptTokenStream to find the ELSE keyword between ThenStatement and ElseStatement
+        var tokenStream = parentIf.ScriptTokenStream;
+        if (tokenStream is null)
         {
-            if (i + 4 <= sql.Length &&
-                char.ToUpperInvariant(sql[i]) == 'E' &&
-                char.ToUpperInvariant(sql[i + 1]) == 'L' &&
-                char.ToUpperInvariant(sql[i + 2]) == 'S' &&
-                char.ToUpperInvariant(sql[i + 3]) == 'E')
+            return elseStatement.StartOffset;
+        }
+
+        // Search tokens between ThenStatement's last token and ElseStatement's first token
+        var searchStart = parentIf.ThenStatement.LastTokenIndex + 1;
+        var searchEnd = elseStatement.FirstTokenIndex;
+
+        for (var i = searchStart; i < searchEnd && i < tokenStream.Count; i++)
+        {
+            var token = tokenStream[i];
+            if (token.TokenType == TSqlTokenType.Else)
             {
-                // Verify it's not part of a larger identifier
-                var beforeValid = i == 0 || !char.IsLetterOrDigit(sql[i - 1]);
-                var afterValid = i + 4 >= sql.Length || !char.IsLetterOrDigit(sql[i + 4]);
-                if (beforeValid && afterValid)
-                {
-                    return i;
-                }
+                return token.Offset;
             }
         }
 
@@ -186,7 +184,7 @@ public sealed class ConditionalBeginEndRule : IRule
         public override void ExplicitVisit(IfStatement node)
         {
             // Check THEN clause
-            if (node.ThenStatement is not null && node.ThenStatement is not BeginEndBlockStatement)
+            if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement))
             {
                 AddDiagnostic(
                     fragment: node.ThenStatement,
@@ -198,7 +196,9 @@ public sealed class ConditionalBeginEndRule : IRule
             }
 
             // Check ELSE clause (skip ELSE IF chains as they are intentional patterns)
-            if (node.ElseStatement is not null && node.ElseStatement is not BeginEndBlockStatement && node.ElseStatement is not IfStatement)
+            if (node.ElseStatement is not null &&
+                !BeginEndHelpers.IsElseIfPattern(node.ElseStatement) &&
+                BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement))
             {
                 AddDiagnostic(
                     fragment: node.ElseStatement,
@@ -226,7 +226,7 @@ public sealed class ConditionalBeginEndRule : IRule
         public override void ExplicitVisit(IfStatement node)
         {
             // Check THEN clause
-            if (node.ThenStatement is not null && node.ThenStatement is not BeginEndBlockStatement)
+            if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement))
             {
                 var range = ScriptDomHelpers.GetRange(node.ThenStatement);
                 if (RangesMatch(range, _targetRange))
@@ -238,8 +238,10 @@ public sealed class ConditionalBeginEndRule : IRule
                 }
             }
 
-            // Check ELSE clause
-            if (node.ElseStatement is not null && node.ElseStatement is not BeginEndBlockStatement && node.ElseStatement is not IfStatement)
+            // Check ELSE clause (skip ELSE IF patterns)
+            if (node.ElseStatement is not null &&
+                !BeginEndHelpers.IsElseIfPattern(node.ElseStatement) &&
+                BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement))
             {
                 var range = ScriptDomHelpers.GetRange(node.ElseStatement);
                 if (RangesMatch(range, _targetRange))

@@ -39,7 +39,7 @@ public sealed class RequireBeginEndForWhileRule : IRule
     {
         public override void ExplicitVisit(WhileStatement node)
         {
-            if (node.Statement is not BeginEndBlockStatement)
+            if (BeginEndHelpers.NeedsBeginEndBlock(node.Statement))
             {
                 AddDiagnostic(
                     fragment: node,

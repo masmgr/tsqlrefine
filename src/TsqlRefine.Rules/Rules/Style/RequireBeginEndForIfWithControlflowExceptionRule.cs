@@ -39,8 +39,8 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : IRule
     {
         public override void ExplicitVisit(IfStatement node)
         {
-            // Check THEN branch
-            if (node.ThenStatement is not BeginEndBlockStatement && !IsControlFlowStatement(node.ThenStatement))
+            // Check THEN branch (allow control-flow statements without BEGIN/END)
+            if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement, allowControlFlowWithoutBlock: true))
             {
                 AddDiagnostic(
                     fragment: node,
@@ -51,11 +51,10 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : IRule
                 );
             }
 
-            // Check ELSE branch
+            // Check ELSE branch (allow ELSE IF pattern and control-flow statements)
             if (node.ElseStatement is not null &&
-                node.ElseStatement is not BeginEndBlockStatement &&
-                node.ElseStatement is not IfStatement &&  // Allow ELSE IF pattern
-                !IsControlFlowStatement(node.ElseStatement))
+                !BeginEndHelpers.IsElseIfPattern(node.ElseStatement) &&
+                BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement, allowControlFlowWithoutBlock: true))
             {
                 AddDiagnostic(
                     fragment: node.ElseStatement,
@@ -67,14 +66,6 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : IRule
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private static bool IsControlFlowStatement(TSqlStatement statement)
-        {
-            return statement is ReturnStatement or
-                   BreakStatement or
-                   ContinueStatement or
-                   ThrowStatement;
         }
     }
 }
