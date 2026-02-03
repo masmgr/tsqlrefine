@@ -246,7 +246,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
                 return;
             }
 
-            var collector = new StringLiteralCollector(_tokens);
+            var collector = new StringLiteralCollector();
             fragment.Accept(collector);
 
             foreach (var literal in collector.Literals)
@@ -257,7 +257,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         private void MarkUnsafe(StringLiteral literal)
         {
-            if (IsUnicodeLiteral(literal, _tokens))
+            if (IsUnicodeLiteral(literal))
             {
                 return;
             }
@@ -267,19 +267,13 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         private sealed class StringLiteralCollector : TSqlFragmentVisitor
         {
-            private readonly IReadOnlyList<Token> _tokens;
             private readonly List<StringLiteral> _literals = new();
-
-            public StringLiteralCollector(IReadOnlyList<Token> tokens)
-            {
-                _tokens = tokens ?? Array.Empty<Token>();
-            }
 
             public IReadOnlyList<StringLiteral> Literals => _literals;
 
             public override void ExplicitVisit(StringLiteral node)
             {
-                if (!IsUnicodeLiteral(node, _tokens))
+                if (!IsUnicodeLiteral(node))
                 {
                     _literals.Add(node);
                 }
@@ -322,7 +316,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
 
         private bool ShouldSkipLiteral(StringLiteral literal)
         {
-            return IsUnicodeLiteral(literal, _tokens)
+            return IsUnicodeLiteral(literal)
                 || _unsafeLiterals.Contains(LiteralKey.From(literal));
         }
 
@@ -366,17 +360,9 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
             SqlDataTypeOption.Image;
     }
 
-    private static bool IsUnicodeLiteral(StringLiteral literal, IReadOnlyList<Token> tokens)
+    private static bool IsUnicodeLiteral(StringLiteral literal)
     {
-        var range = ScriptDomHelpers.GetRange(literal);
-        var token = FindLiteralToken(tokens, range);
-
-        if (token is null || string.IsNullOrEmpty(token.Text))
-        {
-            return true;
-        }
-
-        return token.Text.StartsWith("N'", StringComparison.OrdinalIgnoreCase);
+        return literal.IsNational;
     }
 
     private static bool TryCreateUnicodePrefixEdit(
@@ -386,7 +372,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
     {
         edit = default!;
 
-        if (tokens.Count == 0)
+        if (literal.IsNational || tokens.Count == 0)
         {
             return false;
         }
@@ -399,19 +385,13 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
             return false;
         }
 
-        if (!string.IsNullOrEmpty(literalToken.Text) &&
-            literalToken.Text.StartsWith("N'", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
         var start = literalToken.Start;
-        var insertRange = new TsqlRefine.PluginSdk.Range(start, start);
+        var insertRange = new PluginSdk.Range(start, start);
         edit = new TextEdit(insertRange, "N");
         return true;
     }
 
-    private static Token? FindLiteralToken(IReadOnlyList<Token> tokens, TsqlRefine.PluginSdk.Range range)
+    private static Token? FindLiteralToken(IReadOnlyList<Token> tokens, PluginSdk.Range range)
     {
         foreach (var token in tokens)
         {
