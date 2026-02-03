@@ -23,6 +23,15 @@ public sealed class EscapeKeywordIdentifierRule : IRule
         ["CONSTRAINT", "PRIMARY", "FOREIGN", "CHECK", "UNIQUE"],
         StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Keywords that follow CREATE and indicate the object type (excluding TABLE).
+    /// When these are seen after CREATE, we know it's NOT CREATE TABLE.
+    /// </summary>
+    private static readonly FrozenSet<string> CreateObjectKeywords = FrozenSet.ToFrozenSet(
+        ["FUNCTION", "PROCEDURE", "PROC", "VIEW", "INDEX", "TRIGGER",
+         "DATABASE", "SCHEMA", "TYPE", "ASSEMBLY", "SEQUENCE", "SYNONYM"],
+        StringComparer.OrdinalIgnoreCase);
+
     public RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
         Description: "Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.",
@@ -97,6 +106,10 @@ public sealed class EscapeKeywordIdentifierRule : IRule
         private bool _inCreateTableColumnList;
         private bool _expectingCreateTableItemStart;
 
+        // RETURNS TABLE context (for inline table-valued functions)
+        private bool _sawReturns;
+        private bool _inReturnsTableContext;
+
         public IEnumerable<Token> FindKeywordIdentifierTokens()
         {
             for (var i = 0; i < _tokens.Count; i++)
@@ -132,15 +145,57 @@ public sealed class EscapeKeywordIdentifierRule : IRule
 
         private void UpdateCreateTableState(Token token)
         {
-            if (_sawCreate && TokenHelpers.IsKeyword(token, "TABLE"))
+            // Handle RETURNS keyword (for inline TVF detection)
+            if (TokenHelpers.IsKeyword(token, "RETURNS"))
             {
-                _sawCreateTable = true;
-                _sawCreate = false;
+                _sawReturns = true;
+                return;
             }
-            else if (TokenHelpers.IsKeyword(token, "CREATE"))
+
+            // Handle TABLE keyword
+            if (TokenHelpers.IsKeyword(token, "TABLE"))
+            {
+                if (_sawReturns)
+                {
+                    // This is RETURNS TABLE - inline TVF, NOT CREATE TABLE
+                    _inReturnsTableContext = true;
+                    _sawReturns = false;
+                    _sawCreate = false;
+                    return;
+                }
+
+                if (_sawCreate)
+                {
+                    // This is CREATE TABLE
+                    _sawCreateTable = true;
+                    _sawCreate = false;
+                    return;
+                }
+
+                return;
+            }
+
+            // Handle CREATE keyword
+            if (TokenHelpers.IsKeyword(token, "CREATE"))
             {
                 _sawCreate = true;
                 _sawCreateTable = false;
+                _sawReturns = false;
+                _inReturnsTableContext = false;
+                return;
+            }
+
+            // Handle keywords that consume CREATE (not TABLE)
+            if (_sawCreate && CreateObjectKeywords.Contains(token.Text))
+            {
+                _sawCreate = false;
+                return;
+            }
+
+            // Reset RETURNS flag if we see something other than TABLE after RETURNS
+            if (_sawReturns)
+            {
+                _sawReturns = false;
             }
         }
 
@@ -153,6 +208,12 @@ public sealed class EscapeKeywordIdentifierRule : IRule
             if (token.Text == "(")
             {
                 _parenDepth++;
+
+                // Exit RETURNS TABLE context when entering function body
+                if (_inReturnsTableContext)
+                {
+                    _inReturnsTableContext = false;
+                }
 
                 if (_sawCreateTable && !_inCreateTableColumnList)
                 {
@@ -237,6 +298,12 @@ public sealed class EscapeKeywordIdentifierRule : IRule
                 return false;
             }
 
+            // Skip keywords in RETURNS TABLE context (AS, RETURN are valid keywords here)
+            if (_inReturnsTableContext)
+            {
+                return false;
+            }
+
             // Qualified column reference (e.g., t.order)
             if (TokenHelpers.IsPrefixedByDot(_tokens, index))
             {
@@ -248,6 +315,16 @@ public sealed class EscapeKeywordIdentifierRule : IRule
             var previousIndex = TokenHelpers.GetPreviousNonTriviaIndex(_tokens, index);
             if (previousIndex >= 0 && IsTableNameContextKeyword(_tokens[previousIndex]))
             {
+                // Don't treat TABLE in RETURNS TABLE as table name context
+                if (TokenHelpers.IsKeyword(_tokens[previousIndex], "TABLE"))
+                {
+                    var beforeTableIndex = TokenHelpers.GetPreviousNonTriviaIndex(_tokens, previousIndex);
+                    if (beforeTableIndex >= 0 && TokenHelpers.IsKeyword(_tokens[beforeTableIndex], "RETURNS"))
+                    {
+                        return false;
+                    }
+                }
+
                 // Don't flag keywords that are themselves context keywords (e.g., INTO after INSERT)
                 if (IsTableNameContextKeyword(token))
                 {

@@ -142,4 +142,103 @@ public sealed class EscapeKeywordIdentifierRuleTests
         Assert.Equal("escape-keyword-identifier", diagnostic.Code);
         Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Analyze_CreateFunctionWithReturnsTable_NoDiagnostic()
+    {
+        var sql = @"CREATE FUNCTION dbo.GetItems()
+RETURNS TABLE
+AS
+RETURN (SELECT id, name FROM items);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CreateFunctionWithKeywordColumn_FlagsOnlyColumn()
+    {
+        var sql = @"CREATE FUNCTION dbo.GetOrders()
+RETURNS TABLE
+AS
+RETURN (SELECT id, t.order FROM items AS t);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Should only flag t.order (qualified column reference)
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Analyze_CreateProcedureWithSelect_NoDiagnostic()
+    {
+        var sql = @"CREATE PROCEDURE dbo.GetData
+AS
+BEGIN
+    SELECT id FROM items;
+END;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_MultiStatementTableValuedFunction_NoDiagnostic()
+    {
+        var sql = @"CREATE FUNCTION dbo.GetItems()
+RETURNS @results TABLE (id INT, name NVARCHAR(100))
+AS
+BEGIN
+    INSERT INTO @results SELECT id, name FROM items;
+    RETURN;
+END;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NullInExpression_NoDiagnostic()
+    {
+        var sql = "SELECT ISNULL(col, NULL) FROM t;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CaseExpression_NoDiagnostic()
+    {
+        var sql = "SELECT CASE WHEN x = 1 THEN 'a' ELSE 'b' END FROM t;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CreateTableAfterFunction_FlagsKeywordColumn()
+    {
+        var sql = @"CREATE FUNCTION dbo.GetItems() RETURNS TABLE AS RETURN (SELECT 1);
+CREATE TABLE dbo.orders ([order] INT);
+CREATE TABLE dbo.test (order INT);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Should flag 'order' in CREATE TABLE (the unescaped one)
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+    }
 }
