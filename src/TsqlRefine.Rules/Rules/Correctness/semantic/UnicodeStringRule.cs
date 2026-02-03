@@ -140,11 +140,9 @@ public sealed class UnicodeStringRule : IRule
             // Check if the literal value contains Unicode characters.
             var literalValue = literal.Value;
 
-            if (!string.IsNullOrEmpty(literalValue) && ContainsUnicodeCharacters(literalValue))
+            if (!string.IsNullOrEmpty(literalValue) && SqlDataTypeHelpers.ContainsUnicodeCharacters(literalValue))
             {
-                var replacementKeyword = dataType.SqlDataTypeOption == SqlDataTypeOption.VarChar
-                    ? "nvarchar"
-                    : "nchar";
+                var replacementKeyword = SqlDataTypeHelpers.GetUnicodeEquivalent(dataType.SqlDataTypeOption) ?? "nvarchar";
 
                 var fixable = TryCreateTypeKeywordEdit(_tokens, dataType, replacementKeyword, out _);
 
@@ -161,11 +159,6 @@ public sealed class UnicodeStringRule : IRule
             }
         }
 
-        private static bool ContainsUnicodeCharacters(string value)
-        {
-            // Check if any character is outside the ASCII range (0-127)
-            return value.Any(c => c > 127);
-        }
     }
 
     private static bool TryCreateTypeKeywordEdit(

@@ -62,19 +62,19 @@ public sealed class ConditionalBeginEndRule : IRule
         var controlStatementOffset = collector.IsElseBranch
             ? FindElseKeywordOffset(parentIf, statement)
             : parentIf.StartOffset;
-        var indent = GetIndentation(sql, controlStatementOffset);
+        var indent = TextPositionHelpers.GetLineIndentation(sql, controlStatementOffset);
 
         // Build the replacement text with BEGIN/END
         var statementText = sql.Substring(startOffset, statement.FragmentLength).TrimEnd();
 
         // Determine line ending style from the source
-        var lineEnding = DetectLineEnding(sql);
+        var lineEnding = TextPositionHelpers.DetectLineEnding(sql);
 
         // Create the wrapped statement with proper indentation
         var newText = $"BEGIN{lineEnding}{indent}    {statementText}{lineEnding}{indent}END";
 
-        var startPos = OffsetToPosition(sql, startOffset);
-        var endPos = OffsetToPosition(sql, endOffset);
+        var startPos = TextPositionHelpers.OffsetToPosition(sql, startOffset);
+        var endPos = TextPositionHelpers.OffsetToPosition(sql, endOffset);
 
         yield return new Fix(
             Title: "Wrap with BEGIN/END block",
@@ -106,77 +106,6 @@ public sealed class ConditionalBeginEndRule : IRule
 
         // Fallback to statement offset if ELSE not found
         return elseStatement.StartOffset;
-    }
-
-    private static string GetIndentation(string sql, int offset)
-    {
-        // Find the start of the line containing this offset
-        var lineStart = offset;
-        while (lineStart > 0 && sql[lineStart - 1] != '\n')
-        {
-            lineStart--;
-        }
-
-        // Extract leading whitespace
-        var indent = new System.Text.StringBuilder();
-        for (var i = lineStart; i < offset && i < sql.Length; i++)
-        {
-            var ch = sql[i];
-            if (ch == ' ' || ch == '\t')
-            {
-                indent.Append(ch);
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        return indent.ToString();
-    }
-
-    private static string DetectLineEnding(string sql)
-    {
-        var crlfIndex = sql.IndexOf("\r\n", StringComparison.Ordinal);
-        var lfIndex = sql.IndexOf('\n');
-
-        if (crlfIndex >= 0 && (lfIndex < 0 || crlfIndex <= lfIndex))
-        {
-            return "\r\n";
-        }
-
-        return "\n";
-    }
-
-    private static Position OffsetToPosition(string sql, int offset)
-    {
-        var line = 0;
-        var character = 0;
-
-        for (var i = 0; i < offset && i < sql.Length; i++)
-        {
-            if (sql[i] == '\r')
-            {
-                if (i + 1 < sql.Length && sql[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                line++;
-                character = 0;
-            }
-            else if (sql[i] == '\n')
-            {
-                line++;
-                character = 0;
-            }
-            else
-            {
-                character++;
-            }
-        }
-
-        return new Position(line, character);
     }
 
     private sealed class ConditionalBeginEndVisitor : DiagnosticVisitorBase

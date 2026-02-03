@@ -122,7 +122,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         public override void ExplicitVisit(CastCall node)
         {
             if (node.DataType is SqlDataTypeReference sqlDataType &&
-                IsEncodingSensitiveType(sqlDataType))
+                SqlDataTypeHelpers.IsEncodingSensitiveType(sqlDataType))
             {
                 MarkUnsafeIn(node.Parameter);
             }
@@ -133,7 +133,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         public override void ExplicitVisit(ConvertCall node)
         {
             if (node.DataType is SqlDataTypeReference sqlDataType &&
-                IsEncodingSensitiveType(sqlDataType))
+                SqlDataTypeHelpers.IsEncodingSensitiveType(sqlDataType))
             {
                 MarkUnsafeIn(node.Parameter);
             }
@@ -294,7 +294,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
                 return;
             }
 
-            if (IsNonUnicodeStringType(dataType))
+            if (SqlDataTypeHelpers.IsNonUnicodeStringType(dataType))
             {
                 MarkUnsafe(literal);
             }
@@ -308,7 +308,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
             }
 
             if (_variableTypes.TryGetValue(variableName, out var dataType) &&
-                IsNonUnicodeStringType(dataType))
+                SqlDataTypeHelpers.IsNonUnicodeStringType(dataType))
             {
                 MarkUnsafe(literal);
             }
@@ -342,22 +342,6 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
                 range.End.Line,
                 range.End.Character);
         }
-    }
-
-    private static bool IsNonUnicodeStringType(SqlDataTypeReference dataType)
-    {
-        return dataType.SqlDataTypeOption is SqlDataTypeOption.VarChar or SqlDataTypeOption.Char or SqlDataTypeOption.Text;
-    }
-
-    private static bool IsEncodingSensitiveType(SqlDataTypeReference dataType)
-    {
-        return dataType.SqlDataTypeOption is
-            SqlDataTypeOption.VarChar or
-            SqlDataTypeOption.Char or
-            SqlDataTypeOption.Text or
-            SqlDataTypeOption.Binary or
-            SqlDataTypeOption.VarBinary or
-            SqlDataTypeOption.Image;
     }
 
     private static bool IsUnicodeLiteral(StringLiteral literal)
