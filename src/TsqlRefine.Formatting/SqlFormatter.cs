@@ -1,3 +1,4 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.Formatting.Helpers;
 
 namespace TsqlRefine.Formatting;
@@ -22,6 +23,16 @@ public static class SqlFormatter
     /// <param name="options">Formatting options. If null, defaults are used.</param>
     /// <returns>The formatted SQL code, or empty string if input is null/empty.</returns>
     public static string Format(string sql, FormattingOptions? options = null)
+        => Format(sql, options, ast: null);
+
+    /// <summary>
+    /// Formats SQL code according to the specified options, using AST for more accurate formatting.
+    /// </summary>
+    /// <param name="sql">The SQL code to format. Can be null or empty.</param>
+    /// <param name="options">Formatting options. If null, defaults are used.</param>
+    /// <param name="ast">Optional parsed AST fragment for accurate operator context detection.</param>
+    /// <returns>The formatted SQL code, or empty string if input is null/empty.</returns>
+    public static string Format(string sql, FormattingOptions? options, TSqlFragment? ast)
     {
         options ??= new FormattingOptions();
 
@@ -34,6 +45,9 @@ public static class SqlFormatter
                 : string.Empty;
         }
 
+        // Build AST position map for operator context detection (if AST provided)
+        var positionMap = AstPositionMap.Build(ast);
+
         // Apply granular element-based casing
         var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: options.CompatLevel);
 
@@ -42,8 +56,8 @@ public static class SqlFormatter
         // Apply inline spacing normalization
         var inlineNormalized = InlineSpaceNormalizer.Normalize(whitespaceNormalized, options);
 
-        // Apply operator spacing normalization
-        var operatorNormalized = OperatorSpaceNormalizer.Normalize(inlineNormalized, options);
+        // Apply operator spacing normalization with AST context
+        var operatorNormalized = OperatorSpaceNormalizer.Normalize(inlineNormalized, options, positionMap);
 
         // Apply comma style if not default trailing
         if (options.CommaStyle == CommaStyle.Leading)
