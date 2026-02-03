@@ -16,42 +16,16 @@ public sealed class EscapeKeywordIdentifierRule : IRule
     /// These are "soft" keywords that SQL Server allows as unquoted identifiers
     /// in certain contexts.
     /// </summary>
-    private static readonly FrozenSet<string> SoftKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        // Common T-SQL keywords that parse successfully as identifiers
-        "VALUE",
-        "TYPE",
-        "DATE",
-        "TIME",
-        "NAME",
-        "STATUS",
-        "COUNT",
-        "SUM",
-        "FIRST",
-        "LAST",
-        "MIN",
-        "MAX",
-        "AVG",
-        "YEAR",
-        "MONTH",
-        "DAY",
-        "HOUR",
-        "MINUTE",
-        "SECOND",
-        "LEVEL",
-        "STATE",
-        "DATA",
-        "ROLE",
-        "LANGUAGE",
-        "OUTPUT",
-        "INPUT",
-        "ABSOLUTE",
-        "RELATIVE",
-        "PATH",
-        "CONTENT",
-        "DOCUMENT",
-        "ROWCOUNT",
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    private static readonly FrozenSet<string> SoftKeywords = FrozenSet.ToFrozenSet(
+        [
+            "VALUE", "TYPE", "DATE", "TIME", "NAME", "STATUS",
+            "COUNT", "SUM", "FIRST", "LAST", "MIN", "MAX", "AVG",
+            "YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND",
+            "LEVEL", "STATE", "DATA", "ROLE", "LANGUAGE",
+            "OUTPUT", "INPUT", "ABSOLUTE", "RELATIVE",
+            "PATH", "CONTENT", "DOCUMENT", "ROWCOUNT",
+        ],
+        StringComparer.OrdinalIgnoreCase);
 
     public RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
@@ -97,95 +71,45 @@ public sealed class EscapeKeywordIdentifierRule : IRule
 
     /// <summary>
     /// AST visitor that identifies keyword identifiers that need escaping.
-    /// Uses ScriptDom's parsing to correctly identify identifier context.
     /// </summary>
     private sealed class KeywordIdentifierVisitor : DiagnosticVisitorBase
     {
-        /// <summary>
-        /// Checks table names in FROM, JOIN, UPDATE, etc.
-        /// </summary>
         public override void ExplicitVisit(NamedTableReference node)
         {
-            // Check the base table name (last part of schema.table)
-            var identifier = node.SchemaObject?.BaseIdentifier;
-            if (identifier != null && NeedsEscaping(identifier))
-            {
-                AddIdentifierDiagnostic(identifier);
-            }
-
+            CheckAndReportIdentifier(node.SchemaObject?.BaseIdentifier);
             base.ExplicitVisit(node);
         }
 
-        /// <summary>
-        /// Checks column references like t.order, SELECT order FROM ...
-        /// </summary>
         public override void ExplicitVisit(ColumnReferenceExpression node)
         {
-            if (node.MultiPartIdentifier?.Identifiers == null)
+            foreach (var identifier in node.MultiPartIdentifier?.Identifiers ?? [])
             {
-                base.ExplicitVisit(node);
+                CheckAndReportIdentifier(identifier);
+            }
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(ColumnDefinition node)
+        {
+            CheckAndReportIdentifier(node.ColumnIdentifier);
+            base.ExplicitVisit(node);
+        }
+
+        private void CheckAndReportIdentifier(Identifier? identifier)
+        {
+            if (identifier is null ||
+                identifier.QuoteType != QuoteType.NotQuoted ||
+                !SoftKeywords.Contains(identifier.Value))
+            {
                 return;
             }
 
-            // Check each part of the multi-part identifier
-            // e.g., for "t.order", check both "t" and "order"
-            foreach (var identifier in node.MultiPartIdentifier.Identifiers)
-            {
-                if (NeedsEscaping(identifier))
-                {
-                    AddIdentifierDiagnostic(identifier);
-                }
-            }
-
-            base.ExplicitVisit(node);
-        }
-
-        /// <summary>
-        /// Checks column definitions in CREATE TABLE.
-        /// </summary>
-        public override void ExplicitVisit(ColumnDefinition node)
-        {
-            var identifier = node.ColumnIdentifier;
-            if (identifier != null && NeedsEscaping(identifier))
-            {
-                AddIdentifierDiagnostic(identifier);
-            }
-
-            base.ExplicitVisit(node);
-        }
-
-        /// <summary>
-        /// Checks if an identifier needs escaping.
-        /// Returns true if the identifier is not quoted and is a T-SQL keyword.
-        /// </summary>
-        private static bool NeedsEscaping(Identifier? identifier)
-        {
-            if (identifier == null)
-            {
-                return false;
-            }
-
-            // Already escaped with brackets or double quotes
-            if (identifier.QuoteType != QuoteType.NotQuoted)
-            {
-                return false;
-            }
-
-            // Check if it's a soft keyword that should be escaped
-            return SoftKeywords.Contains(identifier.Value);
-        }
-
-        private void AddIdentifierDiagnostic(Identifier identifier)
-        {
-            var escaped = $"[{identifier.Value}]";
-
             AddDiagnostic(
                 fragment: identifier,
-                message: $"Identifier '{identifier.Value}' is a T-SQL soft keyword. Escape it as {escaped} for clarity.",
+                message: $"Identifier '{identifier.Value}' is a T-SQL soft keyword. Escape it as [{identifier.Value}] for clarity.",
                 code: RuleId,
                 category: Category,
-                fixable: true
-            );
+                fixable: true);
         }
     }
 }

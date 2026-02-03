@@ -7,184 +7,119 @@
 
 ## Description
 
-Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
+Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
 
 ## Rationale
 
-Using T-SQL reserved keywords as identifiers without escaping causes compile-time errors and forward-compatibility issues.
+T-SQL has two types of keywords:
 
-**Compile-time errors**:
+1. **Reserved keywords**: Cause parse errors when used as identifiers (e.g., `SELECT`, `FROM`, `WHERE`, `ORDER`)
+2. **Soft keywords**: Parse successfully as identifiers but should still be escaped for clarity
 
-```
-Msg 156, Level 15, State 1
-Incorrect syntax near the keyword 'order'.
-```
+This rule detects **soft keywords** - words that SQL Server allows as unquoted identifiers in certain contexts, but can cause confusion or future compatibility issues.
 
-**Why this fails**:
+**Why escape soft keywords?**
 
-1. **Reserved keywords**: SQL Server has 200+ reserved keywords (SELECT, FROM, WHERE, ORDER, GROUP, TABLE, etc.)
-   - These keywords have special meaning in T-SQL syntax
-   - Cannot be used as table/column/variable names without escaping
-
-2. **Ambiguous syntax**: Parser cannot distinguish between keyword and identifier
+1. **Readability**: Soft keywords look like SQL syntax, making code harder to understand
    ```sql
-   SELECT * FROM order;  -- Error: Is 'order' a table name or ORDER BY clause?
+   SELECT value FROM data;  -- Is 'value' a column? Is 'data' a table?
+   SELECT [value] FROM [data];  -- Clear: both are identifiers
    ```
 
-3. **Context-dependent**: Some keywords work in certain contexts but fail in others
-   ```sql
-   CREATE TABLE [table] (id INT);  -- OK with brackets
-   CREATE TABLE table (id INT);    -- Error: 'table' is reserved keyword
-   ```
+2. **Forward compatibility**: Microsoft may reserve these keywords in future SQL Server versions
 
-**Common reserved keywords used as identifiers**:
+3. **Consistency**: Escaping all keyword-like identifiers makes the codebase more maintainable
 
-| Keyword | Common Use Case | Error Without Escaping |
-|---------|----------------|------------------------|
-| ORDER | Orders table | Syntax error (conflicts with ORDER BY) |
-| GROUP | User groups table | Syntax error (conflicts with GROUP BY) |
-| TABLE | Metadata table | Syntax error (reserved word) |
-| USER | Users table | Syntax error (reserved word) |
-| DATE | Date column | Syntax error (reserved word) |
-| KEY | Key column | Syntax error (reserved word) |
-| LEVEL | Level column | Syntax error (reserved word) |
-| OPTION | Options table | Syntax error (conflicts with OPTION clause) |
-| INDEX | Index column | Syntax error (reserved word) |
-| VIEW | View metadata | Syntax error (reserved word) |
+**Detected soft keywords**:
 
-**Forward compatibility issues**:
+This rule checks for the following soft keywords:
 
-1. **New reserved keywords**: Each SQL Server version adds new reserved keywords
-   - Code that works in SQL Server 2012 may fail in SQL Server 2019
-   - Example: `JSON`, `STRING_AGG` became reserved in later versions
+| Category | Keywords |
+|----------|----------|
+| Common names | `VALUE`, `TYPE`, `NAME`, `STATUS`, `DATA`, `ROLE`, `LEVEL`, `STATE` |
+| Date/Time | `DATE`, `TIME`, `YEAR`, `MONTH`, `DAY`, `HOUR`, `MINUTE`, `SECOND` |
+| Aggregates | `COUNT`, `SUM`, `MIN`, `MAX`, `AVG`, `FIRST`, `LAST` |
+| I/O | `INPUT`, `OUTPUT`, `PATH`, `CONTENT`, `DOCUMENT` |
+| Other | `LANGUAGE`, `ABSOLUTE`, `RELATIVE`, `ROWCOUNT` |
 
-2. **Breaking changes**: Upgrading SQL Server can break existing queries
-   ```sql
-   -- Worked in SQL Server 2012
-   CREATE TABLE json (id INT);
-
-   -- Fails in SQL Server 2016+ ('json' is now reserved)
-   CREATE TABLE json (id INT);  -- Error!
-   ```
-
-**Readability issues**:
-
-Using keywords as identifiers makes code confusing:
-```sql
-SELECT order FROM order WHERE order > 100;  -- Which 'order' is which?
-SELECT [order] FROM [order] WHERE [order] > 100;  -- Clear: all are identifiers
-```
+**Note**: Reserved keywords like `ORDER`, `GROUP`, `TABLE`, `SELECT` cause parse errors and are not detected by this rule - the SQL parser itself will reject them.
 
 **Solution: Bracket escaping**:
 
 ```sql
-CREATE TABLE [Order] (OrderId INT, [Date] DATE, [User] NVARCHAR(50));
-SELECT [Order], [Date], [User] FROM [Order];
+CREATE TABLE Items (ItemId INT, [value] INT, [type] VARCHAR(50));
+SELECT [value], [type] FROM Items;
 ```
 
 **Best practice**:
 
-1. **Avoid reserved keywords**: Use non-reserved names (Orders instead of Order)
+1. **Avoid soft keywords**: Use descriptive names (ItemValue instead of value)
 2. **If unavoidable**: Always escape with brackets `[keyword]`
 3. **Consistent escaping**: Escape in all contexts (DDL, DML, queries)
 
-**Note**: `QUOTED_IDENTIFIER ON` allows using double quotes `"order"` instead of brackets, but brackets `[order]` are more portable and standard in T-SQL.
+**Note**: `QUOTED_IDENTIFIER ON` allows using double quotes `"value"` instead of brackets, but brackets `[value]` are more portable and standard in T-SQL.
 
 ## Examples
 
 ### Bad
 
 ```sql
--- Reserved keyword as table name (syntax error)
-SELECT * FROM order;  -- Error: 'order' is reserved keyword
+-- Soft keyword as table name
+SELECT * FROM value;  -- Warning: 'value' is a soft keyword
 
--- Reserved keyword as column name
+-- Soft keyword as column name
 CREATE TABLE Products (
     ProductId INT,
-    name VARCHAR(100),    -- OK: 'name' is not reserved in this context
-    key VARCHAR(50),      -- Error: 'key' is reserved keyword
-    index INT             -- Error: 'index' is reserved keyword
+    value INT,          -- Warning: 'value' is a soft keyword
+    type VARCHAR(50)    -- Warning: 'type' is a soft keyword
 );
 
--- Multiple reserved keywords
-SELECT user, group, level FROM table;  -- Error: all are reserved keywords
+-- Multiple soft keywords
+SELECT value, type, status FROM data;  -- Warning: all are soft keywords
 
--- Reserved keyword in JOIN
-SELECT o.OrderId, g.GroupName
-FROM order o  -- Error: 'order' is reserved keyword
-JOIN group g ON o.GroupId = g.GroupId;  -- Error: 'group' is reserved keyword
+-- Soft keyword in qualified column reference
+SELECT t.value FROM Items AS t;  -- Warning: 'value' is a soft keyword
 
--- Reserved keyword in WHERE clause
-SELECT * FROM Customers WHERE user = 'John';  -- Error: 'user' is reserved keyword
-
--- Reserved keyword in INSERT
-INSERT INTO table (key, value) VALUES (1, 'test');  -- Error: 'table', 'key' are reserved
-
--- Reserved keyword as alias (error in some contexts)
-SELECT OrderId AS order FROM Orders;  -- Error: 'order' is reserved keyword
-
--- Reserved keyword in stored procedure
-CREATE PROCEDURE GetOrderByDate @date DATE  -- Error: 'date' is reserved keyword
-AS
-BEGIN
-    SELECT * FROM Orders WHERE OrderDate = @date;
-END;
-
--- Reserved keyword in variable name
-DECLARE @table VARCHAR(50);  -- Error: 'table' is reserved keyword
-SET @table = 'Orders';
+-- Soft keywords in CREATE TABLE
+CREATE TABLE dbo.test (
+    id INT,
+    value INT,    -- Warning: 'value' is a soft keyword
+    [type] INT    -- OK: already escaped
+);
 ```
 
 ### Good
 
 ```sql
--- Escaped reserved keyword as table name
-SELECT * FROM [order];  -- OK: Escaped with brackets
+-- Escaped soft keyword as table name
+SELECT * FROM [value];
 
--- Escaped reserved keywords in CREATE TABLE
+-- Escaped soft keywords in CREATE TABLE
 CREATE TABLE Products (
     ProductId INT,
-    [name] VARCHAR(100),  -- OK: Can escape even non-reserved words
-    [key] VARCHAR(50),    -- OK: Escaped reserved keyword
-    [index] INT           -- OK: Escaped reserved keyword
+    [value] INT,
+    [type] VARCHAR(50)
 );
 
--- All reserved keywords escaped
-SELECT [user], [group], [level] FROM [table];
+-- All soft keywords escaped
+SELECT [value], [type], [status] FROM [data];
 
--- Escaped keywords in JOIN
-SELECT o.OrderId, g.GroupName
-FROM [order] o
-JOIN [group] g ON o.GroupId = g.GroupId;
+-- Escaped keyword in qualified column reference
+SELECT t.[value] FROM Items AS t;
 
--- Escaped keyword in WHERE clause
-SELECT * FROM Customers WHERE [user] = 'John';
-
--- Escaped keywords in INSERT
-INSERT INTO [table] ([key], [value]) VALUES (1, 'test');
-
--- Escaped keyword as alias
-SELECT OrderId AS [order] FROM Orders;
-
--- Escaped keyword in stored procedure parameter
-CREATE PROCEDURE GetOrderByDate @date DATE  -- OK: Parameter names don't require escaping
-AS
-BEGIN
-    SELECT * FROM [Order] WHERE OrderDate = @date;
-END;
-
--- Escaped keyword in variable name (still avoid if possible)
-DECLARE @table VARCHAR(50);  -- Variables don't require escaping, but avoid keyword names
-SET @table = 'Orders';
-
--- Best practice: Avoid reserved keywords altogether
-CREATE TABLE Orders (     -- Better: Plural, not reserved keyword
-    OrderId INT,
-    ProductKey VARCHAR(50),   -- Better: Descriptive, not just 'key'
-    IndexValue INT            -- Better: Descriptive, not just 'index'
+-- Escaped soft keywords in CREATE TABLE
+CREATE TABLE dbo.test (
+    id INT,
+    [value] INT,
+    [type] INT
 );
 
-SELECT UserId, GroupId, LevelValue FROM UserGroups;  -- Better: Non-reserved names
+-- Best practice: Avoid soft keywords altogether
+CREATE TABLE Products (
+    ProductId INT,
+    ProductValue INT,     -- Better: Descriptive name
+    ProductType VARCHAR(50)   -- Better: Descriptive name
+);
 ```
 
 ## Configuration
@@ -209,12 +144,13 @@ In `custom-ruleset.json`:
 
 ## Exceptions
 
-The rule does not flag SQL syntax keywords that are part of compound statement structures:
+The rule does not flag:
 
-- `INTO` in `INSERT INTO table_name` or `SELECT ... INTO #temp`
-- Other table name context keywords (`FROM`, `JOIN`, `UPDATE`, `MERGE`, `TABLE`) when they appear after another context keyword
+- **Reserved keywords**: Words like `ORDER`, `GROUP`, `TABLE`, `SELECT` cause parse errors and are rejected by the SQL parser itself
+- **Already escaped identifiers**: Identifiers wrapped in brackets `[value]` or double quotes `"value"`
+- **SQL syntax keywords**: Keywords used in their syntactic role (e.g., `INTO` in `INSERT INTO`, `TABLE` in `RETURNS TABLE`)
 
-These keywords are recognized as part of SQL syntax, not as identifiers.
+This rule focuses only on soft keywords that parse successfully but should be escaped for clarity.
 
 ## See Also
 
