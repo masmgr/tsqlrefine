@@ -144,9 +144,15 @@ public sealed class AstPositionMap
         public override void ExplicitVisit(FunctionCall node)
         {
             // Check for COUNT(*), SUM(*), etc.
-            // FunctionCall with UniqueRowFilter = All and no parameters typically represents func(*)
-            // Actually, we need to check if this is a function with * as parameter
-            if (node.UniqueRowFilter == UniqueRowFilter.All ||
+            // FunctionCall with * parameter can be represented in multiple ways:
+            // 1. UniqueRowFilter = All (for DISTINCT, etc.)
+            // 2. Parameters contains a ColumnReferenceExpression with ColumnType.Wildcard
+            // 3. Parameters.Count == 0 but source contains * (heuristic)
+            var hasWildcardParam = node.Parameters.Count == 1 &&
+                node.Parameters[0] is ColumnReferenceExpression colRef &&
+                colRef.ColumnType == ColumnType.Wildcard;
+
+            if (hasWildcardParam || node.UniqueRowFilter == UniqueRowFilter.All ||
                 (node.Parameters.Count == 0 && HasAsteriskInSource(node)))
             {
                 // Find the asterisk position inside the parentheses
