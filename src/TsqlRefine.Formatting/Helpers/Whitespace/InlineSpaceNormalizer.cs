@@ -1,6 +1,7 @@
 using System.Text;
+using TsqlRefine.Formatting.Helpers.Protection;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
 /// <summary>
 /// Normalizes inline spacing within SQL lines while preserving protected regions.

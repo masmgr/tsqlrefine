@@ -1,4 +1,4 @@
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Casing;
 
 /// <summary>
 /// Helper utilities for applying casing transformations to SQL text.

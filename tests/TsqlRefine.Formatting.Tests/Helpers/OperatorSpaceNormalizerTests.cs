@@ -1,5 +1,5 @@
 using TsqlRefine.Formatting;
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Whitespace;
 using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;

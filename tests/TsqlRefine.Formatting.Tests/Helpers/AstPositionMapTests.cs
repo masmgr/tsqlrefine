@@ -1,5 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Transformation;
 using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;

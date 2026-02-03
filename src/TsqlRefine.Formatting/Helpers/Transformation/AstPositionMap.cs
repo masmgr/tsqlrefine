@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Transformation;
 
 /// <summary>
 /// Maps source positions to operator context information derived from AST analysis.

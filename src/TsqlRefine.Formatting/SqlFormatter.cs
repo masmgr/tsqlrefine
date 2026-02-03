@@ -1,5 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Casing;
+using TsqlRefine.Formatting.Helpers.Transformation;
+using TsqlRefine.Formatting.Helpers.Whitespace;
 
 namespace TsqlRefine.Formatting;
 

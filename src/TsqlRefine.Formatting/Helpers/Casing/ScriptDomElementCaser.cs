@@ -2,7 +2,7 @@ using System.Collections.Frozen;
 using System.Text;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Casing;
 
 /// <summary>
 /// Applies granular casing transformations to SQL elements using ScriptDom token stream.

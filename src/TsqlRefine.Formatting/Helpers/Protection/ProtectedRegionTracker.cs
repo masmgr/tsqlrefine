@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Protection;
 
 /// <summary>
 /// Tracks protected regions (strings, comments, brackets) during whitespace normalization.

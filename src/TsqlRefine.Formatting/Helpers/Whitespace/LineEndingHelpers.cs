@@ -1,4 +1,4 @@
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
 /// <summary>
 /// Shared utilities for line ending detection and manipulation.

@@ -1,4 +1,4 @@
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Registries;
 using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;

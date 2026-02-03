@@ -1,7 +1,8 @@
 using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
+using TsqlRefine.Formatting.Helpers.Registries;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Casing;
 
 /// <summary>
 /// Categorizes T-SQL tokens into different element types for granular casing control.

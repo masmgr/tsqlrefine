@@ -1,6 +1,6 @@
 using System.Collections.Frozen;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Registries;
 
 /// <summary>
 /// Registry of system schemas for system table detection.

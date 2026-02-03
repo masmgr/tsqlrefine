@@ -1,5 +1,5 @@
 using System.Text;
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Protection;
 using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;

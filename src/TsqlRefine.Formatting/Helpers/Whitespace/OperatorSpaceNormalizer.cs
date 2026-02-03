@@ -1,7 +1,9 @@
 using System.Collections.Frozen;
 using System.Text;
+using TsqlRefine.Formatting.Helpers.Protection;
+using TsqlRefine.Formatting.Helpers.Transformation;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
 /// <summary>
 /// Normalizes spacing around binary operators while preserving unary operators

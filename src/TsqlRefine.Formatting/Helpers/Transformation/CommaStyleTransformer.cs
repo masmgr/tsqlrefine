@@ -1,6 +1,7 @@
 using System.Text;
+using TsqlRefine.Formatting.Helpers.Protection;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Transformation;
 
 /// <summary>
 /// Transforms SQL between trailing and leading comma styles.

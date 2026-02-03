@@ -1,4 +1,4 @@
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Casing;
 
 /// <summary>
 /// Tracks parsing state for element categorization during casing operations.

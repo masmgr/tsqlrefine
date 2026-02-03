@@ -1,6 +1,7 @@
 using System.Text;
+using TsqlRefine.Formatting.Helpers.Protection;
 
-namespace TsqlRefine.Formatting.Helpers;
+namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
 /// <summary>
 /// Normalizes whitespace (indentation, line breaks, trailing whitespace) while preserving
