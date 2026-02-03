@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Visitors;
 
 /// <summary>
 /// A base visitor that blocks traversal at subquery scope boundaries.

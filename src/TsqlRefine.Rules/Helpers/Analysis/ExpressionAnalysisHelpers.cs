@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Analysis;
 
 /// <summary>
 /// Helper utilities for analyzing SQL expressions.

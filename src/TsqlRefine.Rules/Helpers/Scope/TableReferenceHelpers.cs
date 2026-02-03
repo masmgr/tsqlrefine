@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Scope;
 
 /// <summary>
 /// Helper utilities for working with table references in SQL queries.

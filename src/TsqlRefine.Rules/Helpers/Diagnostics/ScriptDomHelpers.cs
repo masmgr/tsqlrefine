@@ -1,7 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Diagnostics;
 
 /// <summary>
 /// Helper utilities for working with Microsoft ScriptDom fragments and tokens.

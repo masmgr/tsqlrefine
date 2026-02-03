@@ -1,6 +1,7 @@
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Tokens;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Diagnostics;
 
 /// <summary>
 /// Helper utilities for implementing IRule interface.

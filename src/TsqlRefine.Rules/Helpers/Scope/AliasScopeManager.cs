@@ -1,4 +1,4 @@
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Scope;
 
 /// <summary>
 /// Manages a stack of alias scopes for validating table references in nested queries.

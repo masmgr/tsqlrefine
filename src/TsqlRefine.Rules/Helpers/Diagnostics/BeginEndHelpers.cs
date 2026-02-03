@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Diagnostics;
 
 /// <summary>
 /// Helper methods for BEGIN/END block requirement rules.

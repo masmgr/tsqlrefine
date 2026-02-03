@@ -1,7 +1,8 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Diagnostics;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Visitors;
 
 /// <summary>
 /// Base class for TSqlFragmentVisitor implementations that collect diagnostics.

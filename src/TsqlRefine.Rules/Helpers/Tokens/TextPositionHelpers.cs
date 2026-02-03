@@ -1,6 +1,6 @@
 using TsqlRefine.PluginSdk;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Tokens;
 
 /// <summary>
 /// Utilities for converting between text offsets and line/column positions.

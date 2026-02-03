@@ -1,6 +1,6 @@
 using TsqlRefine.PluginSdk;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Tokens;
 
 /// <summary>
 /// Helper utilities for working with token streams.

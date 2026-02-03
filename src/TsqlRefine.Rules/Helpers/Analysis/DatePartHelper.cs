@@ -1,7 +1,7 @@
 using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Analysis;
 
 /// <summary>
 /// Helper utilities for identifying and working with T-SQL date/time functions

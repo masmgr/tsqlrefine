@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Visitors;
 
 /// <summary>
 /// A base visitor that delegates subquery processing to a callback instead of stopping traversal.

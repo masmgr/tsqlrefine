@@ -1,6 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
-namespace TsqlRefine.Rules.Helpers;
+namespace TsqlRefine.Rules.Helpers.Visitors;
 
 /// <summary>
 /// Base visitor that tracks whether we're inside a predicate context
