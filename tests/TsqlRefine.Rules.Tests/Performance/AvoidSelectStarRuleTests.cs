@@ -72,4 +72,99 @@ public sealed class AvoidSelectStarRuleTests
         Assert.Equal("avoid-select-star", diagnostics[0].Data?.RuleId);
     }
 
+    [Fact]
+    public void Analyze_WhenQualifiedWildcard_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT u.* FROM users u;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenMultiPartQualifiedWildcard_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT dbo.users.* FROM dbo.users;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectStarInSubquery_ReturnsDiagnostic()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT u.UserName FROM (SELECT * FROM dbo.Users) u;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenNestedExists_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT id FROM t1 WHERE EXISTS (SELECT * FROM t2 WHERE EXISTS (SELECT * FROM t3));";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectTopStar_ReturnsDiagnostic()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT TOP 1 * FROM users;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectDistinctStar_ReturnsDiagnostic()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT DISTINCT * FROM users;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenCountStar_ReturnsEmpty()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT COUNT(*) FROM users;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenMultipleSelectStar_ReportsAll()
+    {
+        var rule = new AvoidSelectStarRule();
+        var sql = "SELECT * FROM t1; SELECT * FROM t2;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Equal(2, diagnostics.Length);
+    }
 }

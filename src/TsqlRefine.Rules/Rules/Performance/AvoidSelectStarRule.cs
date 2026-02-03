@@ -1,5 +1,6 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
+using TsqlRefine.Rules.Helpers.Visitors;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
@@ -17,125 +18,59 @@ public sealed class AvoidSelectStarRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var range = FindSelectStarRange(context.Tokens);
-        if (range is null)
+        if (context.Ast.Fragment is null)
         {
             yield break;
         }
 
-        yield return RuleHelpers.CreateDiagnostic(
-            range: range,
-            message: "Avoid SELECT *; explicitly list required columns.",
-            code: Metadata.RuleId,
-            category: Metadata.Category,
-            fixable: Metadata.Fixable
-        );
+        var visitor = new AvoidSelectStarVisitor(Metadata);
+        context.Ast.Fragment.Accept(visitor);
+
+        foreach (var diagnostic in visitor.Diagnostics)
+        {
+            yield return diagnostic;
+        }
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private static TsqlRefine.PluginSdk.Range? FindSelectStarRange(IReadOnlyList<Token> tokens)
+    private sealed class AvoidSelectStarVisitor(RuleMetadata metadata) : DiagnosticVisitorBase
     {
-        if (tokens is null || tokens.Count == 0)
+        private int _existsDepth;
+
+        public override void ExplicitVisit(ExistsPredicate node)
         {
-            return null;
+            _existsDepth++;
+            base.ExplicitVisit(node);
+            _existsDepth--;
         }
 
-        for (var i = 0; i < tokens.Count; i++)
+        public override void ExplicitVisit(SelectStarExpression node)
         {
-            if (!TokenHelpers.IsKeyword(tokens[i], "select"))
+            // Skip if inside EXISTS clause - SELECT * is acceptable there
+            if (_existsDepth > 0)
             {
-                continue;
+                base.ExplicitVisit(node);
+                return;
             }
 
-            // Check if this SELECT is inside an EXISTS clause
-            if (IsInsideExists(tokens, i))
+            // Skip qualified wildcards (e.g., t.* or dbo.users.*)
+            if (node.Qualifier is not null)
             {
-                continue;
+                base.ExplicitVisit(node);
+                return;
             }
 
-            var depth = 0;
-            for (var j = i + 1; j < tokens.Count; j++)
-            {
-                if (TokenHelpers.IsTrivia(tokens[j]))
-                {
-                    continue;
-                }
+            AddDiagnostic(
+                fragment: node,
+                message: "Avoid SELECT *; explicitly list required columns.",
+                code: metadata.RuleId,
+                category: metadata.Category,
+                fixable: metadata.Fixable
+            );
 
-                var text = tokens[j].Text;
-                if (TokenHelpers.IsKeyword(tokens[j], "from") || TokenHelpers.IsKeyword(tokens[j], "into"))
-                {
-                    break;
-                }
-
-                if (text == "(")
-                {
-                    depth++;
-                    continue;
-                }
-
-                if (text == ")" && depth > 0)
-                {
-                    depth--;
-                    continue;
-                }
-
-                if (depth == 0 && text == "*" && !TokenHelpers.IsPrefixedByDot(tokens, j))
-                {
-                    return TokenHelpers.GetTokenRange(tokens, j, j);
-                }
-            }
+            base.ExplicitVisit(node);
         }
-
-        return null;
-    }
-
-    private static bool IsInsideExists(IReadOnlyList<Token> tokens, int selectIndex)
-    {
-        // Look backwards from SELECT to find EXISTS keyword followed by opening parenthesis
-        var parenDepth = 0;
-        for (var i = selectIndex - 1; i >= 0; i--)
-        {
-            if (TokenHelpers.IsTrivia(tokens[i]))
-            {
-                continue;
-            }
-
-            if (tokens[i].Text == ")")
-            {
-                parenDepth++;
-                continue;
-            }
-
-            if (tokens[i].Text == "(")
-            {
-                if (parenDepth == 0)
-                {
-                    // Found opening paren at our level, check if preceded by EXISTS
-                    for (var j = i - 1; j >= 0; j--)
-                    {
-                        if (TokenHelpers.IsTrivia(tokens[j]))
-                        {
-                            continue;
-                        }
-
-                        if (TokenHelpers.IsKeyword(tokens[j], "exists"))
-                        {
-                            return true;
-                        }
-
-                        // Any other non-whitespace token means this isn't EXISTS
-                        break;
-                    }
-
-                    return false;
-                }
-
-                parenDepth--;
-            }
-        }
-
-        return false;
     }
 }
