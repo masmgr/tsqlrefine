@@ -3,6 +3,7 @@ using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+// TODO: Use AST
 /// <summary>
 /// Rule that normalizes transaction-related keywords:
 /// - TRAN → TRANSACTION

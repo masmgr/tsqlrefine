@@ -3,6 +3,7 @@ using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+// TODO: Use AST
 public sealed class DisallowSelectDistinctRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

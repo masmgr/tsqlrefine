@@ -4,6 +4,7 @@ using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+// TODO: Use AST
 public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
 {
     [GeneratedRegex(@"^\s*\d{1,2}[/]\d{1,2}[/]\d{2,4}\s*$", RegexOptions.Compiled)]
