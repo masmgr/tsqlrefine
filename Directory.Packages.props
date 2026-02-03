@@ -1,12 +1,12 @@
 <Project>
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
-    <PackageVersion Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="161.8812.0" />
-    <PackageVersion Include="System.CommandLine" Version="2.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="170.157.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.FileSystemGlobbing" Version="10.0.2" />
     <PackageVersion Include="DiffPlex" Version="1.7.2" />
     <PackageVersion Include="editorconfig" Version="0.15.0" />
     <PackageVersion Include="UTF.Unknown" Version="2.6.0" />
