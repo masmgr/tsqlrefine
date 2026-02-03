@@ -1,10 +1,11 @@
 using System.Text.RegularExpressions;
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
+using TsqlRefine.Rules.Helpers.Diagnostics;
+using TsqlRefine.Rules.Helpers.Visitors;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
-// TODO: Use AST
 public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
 {
     [GeneratedRegex(@"^\s*\d{1,2}[/]\d{1,2}[/]\d{2,4}\s*$", RegexOptions.Compiled)]
@@ -22,39 +23,50 @@ public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        for (var i = 0; i < context.Tokens.Count; i++)
+        if (context.Ast.Fragment is null)
         {
-            var token = context.Tokens[i];
+            yield break;
+        }
 
-            // Look for string literals that match date patterns with slashes
-            var text = token.Text;
+        var visitor = new AmbiguousDatetimeLiteralVisitor();
+        context.Ast.Fragment.Accept(visitor);
 
-            // Check if this looks like a string literal (starts with quote)
-            if (text.Length > 0 && (text[0] == '\'' || text[0] == '"'))
-            {
-
-                // Remove quotes if present
-                if ((text.StartsWith('\'') && text.EndsWith('\'')) ||
-                    (text.StartsWith('"') && text.EndsWith('"')))
-                {
-                    text = text[1..^1];
-                }
-
-                // Check for slash-delimited date pattern
-                if (SlashDatePattern().IsMatch(text))
-                {
-                    var end = TokenHelpers.GetTokenEnd(token);
-                    yield return new Diagnostic(
-                        Range: new TsqlRefine.PluginSdk.Range(token.Start, end),
-                        Message: $"Avoid slash-delimited date literal '{token.Text}'; it depends on locale settings. Use ISO 8601 format (YYYY-MM-DD) instead.",
-                        Code: "avoid-ambiguous-datetime-literal",
-                        Data: new DiagnosticData("avoid-ambiguous-datetime-literal", "Correctness", false)
-                    );
-                }
-            }
+        foreach (var diagnostic in visitor.Diagnostics)
+        {
+            yield return diagnostic;
         }
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
+
+    private sealed class AmbiguousDatetimeLiteralVisitor : DiagnosticVisitorBase
+    {
+        public override void ExplicitVisit(StringLiteral node)
+        {
+            var text = node.Value ?? string.Empty;
+            if (SlashDatePattern().IsMatch(text))
+            {
+                var message = $"Avoid slash-delimited date literal '{text}'; it depends on locale settings. Use ISO 8601 format (YYYY-MM-DD) instead.";
+                AddDiagnostic(node, message, "avoid-ambiguous-datetime-literal", "Correctness", false);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(Identifier node)
+        {
+            if (node.QuoteType == QuoteType.DoubleQuote)
+            {
+                var text = node.Value ?? string.Empty;
+                if (SlashDatePattern().IsMatch(text))
+                {
+                    var message = $"Avoid slash-delimited date literal '{text}'; it depends on locale settings. Use ISO 8601 format (YYYY-MM-DD) instead.";
+                    AddDiagnostic(node, message, "avoid-ambiguous-datetime-literal", "Correctness", false);
+                }
+            }
+
+            base.ExplicitVisit(node);
+        }
+    }
 }
