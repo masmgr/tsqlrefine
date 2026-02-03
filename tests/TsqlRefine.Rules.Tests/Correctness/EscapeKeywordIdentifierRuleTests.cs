@@ -14,46 +14,46 @@ public sealed class EscapeKeywordIdentifierRuleTests
     [Fact]
     public void Analyze_TableNameKeywordAfterFrom_ReturnsDiagnostic()
     {
-        var sql = "SELECT * FROM order;";
+        var sql = "SELECT * FROM value;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("escape-keyword-identifier", diagnostic.Code);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Analyze_QualifiedColumnKeywordAfterDot_ReturnsDiagnostic()
     {
-        var sql = "SELECT t.order FROM t;";
+        var sql = "SELECT t.value FROM t;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("escape-keyword-identifier", diagnostic.Code);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Analyze_CreateTableColumnNameKeyword_ReturnsDiagnostic()
     {
-        var sql = "CREATE TABLE t (order int);";
+        var sql = "CREATE TABLE t (value int);";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("escape-keyword-identifier", diagnostic.Code);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Analyze_AlreadyEscapedIdentifier_NoDiagnostic()
     {
-        var sql = "SELECT * FROM [order];";
+        var sql = "SELECT * FROM [value];";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
@@ -86,7 +86,7 @@ public sealed class EscapeKeywordIdentifierRuleTests
     [Fact]
     public void GetFixes_ReturnsBracketEscapeEdit()
     {
-        var sql = "SELECT * FROM order;";
+        var sql = "SELECT * FROM value;";
         var context = RuleTestContext.CreateContext(sql);
         var diagnostic = _rule.Analyze(context).Single();
 
@@ -96,7 +96,7 @@ public sealed class EscapeKeywordIdentifierRuleTests
         Assert.Equal("Escape keyword identifier", fix.Title);
         var edit = Assert.Single(fix.Edits);
         Assert.Equal(diagnostic.Range, edit.Range);
-        Assert.Equal("[order]", edit.NewText);
+        Assert.Equal("[value]", edit.NewText);
     }
 
     [Fact]
@@ -133,14 +133,14 @@ public sealed class EscapeKeywordIdentifierRuleTests
     [Fact]
     public void Analyze_InsertIntoWithKeywordTableName_FlagsOnlyTableName()
     {
-        var sql = "INSERT INTO order VALUES (1);";
+        var sql = "INSERT INTO value VALUES (1);";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("escape-keyword-identifier", diagnostic.Code);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public sealed class EscapeKeywordIdentifierRuleTests
         var sql = @"CREATE FUNCTION dbo.GetItems()
 RETURNS TABLE
 AS
-RETURN (SELECT id, name FROM items);";
+RETURN (SELECT id, title FROM items);";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
@@ -163,14 +163,14 @@ RETURN (SELECT id, name FROM items);";
         var sql = @"CREATE FUNCTION dbo.GetOrders()
 RETURNS TABLE
 AS
-RETURN (SELECT id, t.order FROM items AS t);";
+RETURN (SELECT id, t.value FROM items AS t);";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
-        // Should only flag t.order (qualified column reference)
+        // Should only flag t.value (qualified column reference)
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -192,10 +192,10 @@ END;";
     public void Analyze_MultiStatementTableValuedFunction_NoDiagnostic()
     {
         var sql = @"CREATE FUNCTION dbo.GetItems()
-RETURNS @results TABLE (id INT, name NVARCHAR(100))
+RETURNS @results TABLE (id INT, title NVARCHAR(100))
 AS
 BEGIN
-    INSERT INTO @results SELECT id, name FROM items;
+    INSERT INTO @results SELECT id, title FROM items;
     RETURN;
 END;";
         var context = RuleTestContext.CreateContext(sql);
@@ -228,17 +228,15 @@ END;";
     }
 
     [Fact]
-    public void Analyze_CreateTableAfterFunction_FlagsKeywordColumn()
+    public void Analyze_CreateTableWithEscapedAndUnescapedKeyword_FlagsOnlyUnescaped()
     {
-        var sql = @"CREATE FUNCTION dbo.GetItems() RETURNS TABLE AS RETURN (SELECT 1);
-CREATE TABLE dbo.orders ([order] INT);
-CREATE TABLE dbo.test (order INT);";
+        var sql = "CREATE TABLE dbo.test ([type] INT, value INT);";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToList();
 
-        // Should flag 'order' in CREATE TABLE (the unescaped one)
+        // Should flag only 'value' (unescaped), not '[type]' (escaped)
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Contains("[order]", diagnostic.Message, StringComparison.Ordinal);
+        Assert.Contains("[value]", diagnostic.Message, StringComparison.Ordinal);
     }
 }
