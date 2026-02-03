@@ -1,9 +1,8 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
-// TODO: Use AST
 /// <summary>
 /// Rule that normalizes transaction-related keywords:
 /// - TRAN → TRANSACTION
@@ -20,77 +19,25 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         Fixable: true
     );
 
+    private const string TranMessage = "Use 'TRANSACTION' instead of 'TRAN'.";
+    private const string CommitMessage = "Use 'COMMIT TRANSACTION' instead of 'COMMIT'.";
+    private const string RollbackMessage = "Use 'ROLLBACK TRANSACTION' instead of 'ROLLBACK'.";
+
     public IEnumerable<Diagnostic> Analyze(RuleContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var tokens = context.Tokens;
-        if (tokens is null || tokens.Count == 0)
+        if (context.Ast.Fragment is not TSqlScript script || script.ScriptTokenStream is null)
         {
             yield break;
         }
 
-        for (var i = 0; i < tokens.Count; i++)
+        var visitor = new TransactionKeywordVisitor(script.ScriptTokenStream, Metadata);
+        context.Ast.Fragment.Accept(visitor);
+
+        foreach (var diagnostic in visitor.Diagnostics)
         {
-            var token = tokens[i];
-
-            if (TokenHelpers.IsTrivia(token))
-            {
-                continue;
-            }
-
-            // Check for TRAN (abbreviated form of TRANSACTION)
-            if (TokenHelpers.IsKeyword(token, "TRAN"))
-            {
-                var start = token.Start;
-                var end = TokenHelpers.GetTokenEnd(token);
-
-                yield return new Diagnostic(
-                    Range: new TsqlRefine.PluginSdk.Range(start, end),
-                    Message: "Use 'TRANSACTION' instead of 'TRAN'.",
-                    Severity: null,
-                    Code: Metadata.RuleId,
-                    Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
-                );
-                continue;
-            }
-
-            // Check for standalone COMMIT (without TRANSACTION or WORK)
-            if (TokenHelpers.IsKeyword(token, "COMMIT"))
-            {
-                if (IsStandaloneCommitOrRollback(tokens, i))
-                {
-                    var start = token.Start;
-                    var end = TokenHelpers.GetTokenEnd(token);
-
-                    yield return new Diagnostic(
-                        Range: new TsqlRefine.PluginSdk.Range(start, end),
-                        Message: "Use 'COMMIT TRANSACTION' instead of 'COMMIT'.",
-                        Severity: null,
-                        Code: Metadata.RuleId,
-                        Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
-                    );
-                }
-                continue;
-            }
-
-            // Check for standalone ROLLBACK (without TRANSACTION or WORK)
-            if (TokenHelpers.IsKeyword(token, "ROLLBACK"))
-            {
-                if (IsStandaloneCommitOrRollback(tokens, i))
-                {
-                    var start = token.Start;
-                    var end = TokenHelpers.GetTokenEnd(token);
-
-                    yield return new Diagnostic(
-                        Range: new TsqlRefine.PluginSdk.Range(start, end),
-                        Message: "Use 'ROLLBACK TRANSACTION' instead of 'ROLLBACK'.",
-                        Severity: null,
-                        Code: Metadata.RuleId,
-                        Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
-                    );
-                }
-            }
+            yield return diagnostic;
         }
     }
 
@@ -101,73 +48,215 @@ public sealed class NormalizeTransactionKeywordRule : IRule
             yield break;
         }
 
-        var tokens = context.Tokens;
-        if (tokens is null || tokens.Count == 0)
-        {
-            yield break;
-        }
-
-        // Find the token at the diagnostic range
-        var tokenIndex = TokenHelpers.FindTokenIndexByRange(tokens, diagnostic.Range);
-        if (tokenIndex < 0)
-        {
-            yield break;
-        }
-
-        var token = tokens[tokenIndex];
-
-        // TRAN → TRANSACTION (simple replacement)
-        if (TokenHelpers.IsKeyword(token, "TRAN"))
+        if (string.Equals(diagnostic.Message, TranMessage, StringComparison.Ordinal))
         {
             yield return RuleHelpers.CreateReplaceFix("Use 'TRANSACTION'", diagnostic.Range, "TRANSACTION");
             yield break;
         }
 
-        // COMMIT → COMMIT TRANSACTION (insert " TRANSACTION" after COMMIT)
-        if (TokenHelpers.IsKeyword(token, "COMMIT"))
+        if (string.Equals(diagnostic.Message, CommitMessage, StringComparison.Ordinal))
         {
-            var end = TokenHelpers.GetTokenEnd(token);
-            yield return RuleHelpers.CreateInsertFix("Use 'COMMIT TRANSACTION'", end, " TRANSACTION");
+            yield return RuleHelpers.CreateInsertFix("Use 'COMMIT TRANSACTION'", diagnostic.Range.End, " TRANSACTION");
             yield break;
         }
 
-        // ROLLBACK → ROLLBACK TRANSACTION (insert " TRANSACTION" after ROLLBACK)
-        if (TokenHelpers.IsKeyword(token, "ROLLBACK"))
+        if (string.Equals(diagnostic.Message, RollbackMessage, StringComparison.Ordinal))
         {
-            var end = TokenHelpers.GetTokenEnd(token);
-            yield return RuleHelpers.CreateInsertFix("Use 'ROLLBACK TRANSACTION'", end, " TRANSACTION");
+            yield return RuleHelpers.CreateInsertFix("Use 'ROLLBACK TRANSACTION'", diagnostic.Range.End, " TRANSACTION");
         }
     }
 
-    /// <summary>
-    /// Checks if COMMIT or ROLLBACK is standalone (not followed by TRANSACTION, TRAN, or WORK).
-    /// </summary>
-    private static bool IsStandaloneCommitOrRollback(IReadOnlyList<Token> tokens, int index)
+    private sealed class TransactionKeywordVisitor : TSqlFragmentVisitor
     {
-        var nextIndex = TokenHelpers.GetNextNonTriviaIndex(tokens, index);
-        if (nextIndex < 0)
+        private readonly IList<TSqlParserToken> _tokenStream;
+        private readonly RuleMetadata _metadata;
+        private readonly List<Diagnostic> _diagnostics = new();
+
+        public TransactionKeywordVisitor(IList<TSqlParserToken> tokenStream, RuleMetadata metadata)
         {
-            // End of tokens - this is standalone
+            _tokenStream = tokenStream;
+            _metadata = metadata;
+        }
+
+        public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
+
+        public override void ExplicitVisit(BeginTransactionStatement node)
+        {
+            CheckForTranKeyword(node);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(SaveTransactionStatement node)
+        {
+            CheckForTranKeyword(node);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(CommitTransactionStatement node)
+        {
+            CheckForTranKeyword(node);
+            CheckStandaloneCommitOrRollback(node, "COMMIT", CommitMessage);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(RollbackTransactionStatement node)
+        {
+            CheckForTranKeyword(node);
+            CheckStandaloneCommitOrRollback(node, "ROLLBACK", RollbackMessage);
+            base.ExplicitVisit(node);
+        }
+
+        private void CheckForTranKeyword(TSqlFragment fragment)
+        {
+            if (!TryGetTokenSpan(fragment, out var startIndex, out var endIndex))
+            {
+                return;
+            }
+
+            for (var i = startIndex; i <= endIndex; i++)
+            {
+                var token = _tokenStream[i];
+                if (IsTranKeyword(token))
+                {
+                    AddTokenDiagnostic(token, TranMessage);
+                }
+            }
+        }
+
+        private void CheckStandaloneCommitOrRollback(TSqlFragment fragment, string keyword, string message)
+        {
+            if (!TryGetTokenSpan(fragment, out var startIndex, out var endIndex))
+            {
+                return;
+            }
+
+            var keywordIndex = FindKeywordIndex(startIndex, endIndex, keyword);
+            if (keywordIndex < 0)
+            {
+                return;
+            }
+
+            if (HasTransactionQualifier(keywordIndex, endIndex))
+            {
+                return;
+            }
+
+            AddTokenDiagnostic(_tokenStream[keywordIndex], message);
+        }
+
+        private int FindKeywordIndex(int startIndex, int endIndex, string keyword)
+        {
+            for (var i = startIndex; i <= endIndex; i++)
+            {
+                var token = _tokenStream[i];
+                if (IsTrivia(token))
+                {
+                    continue;
+                }
+
+                if (IsKeyword(token, keyword))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private bool HasTransactionQualifier(int startIndex, int endIndex)
+        {
+            for (var i = startIndex + 1; i <= endIndex; i++)
+            {
+                var token = _tokenStream[i];
+                if (IsTransactionKeyword(token) || IsTranKeyword(token) || IsWorkKeyword(token))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void AddTokenDiagnostic(TSqlParserToken token, string message)
+        {
+            var range = GetTokenRange(token);
+            _diagnostics.Add(RuleHelpers.CreateDiagnostic(range, message, _metadata.RuleId, _metadata.Category, _metadata.Fixable));
+        }
+
+        private bool TryGetTokenSpan(TSqlFragment fragment, out int startIndex, out int endIndex)
+        {
+            startIndex = -1;
+            endIndex = -1;
+
+            if (fragment.FirstTokenIndex < 0 || fragment.LastTokenIndex < 0)
+            {
+                return false;
+            }
+
+            if (fragment.FirstTokenIndex >= _tokenStream.Count || fragment.LastTokenIndex >= _tokenStream.Count)
+            {
+                return false;
+            }
+
+            startIndex = fragment.FirstTokenIndex;
+            endIndex = fragment.LastTokenIndex;
             return true;
         }
 
-        var nextToken = tokens[nextIndex];
+        private static bool IsTrivia(TSqlParserToken token) =>
+            token.TokenType == TSqlTokenType.WhiteSpace ||
+            token.TokenType == TSqlTokenType.SingleLineComment ||
+            token.TokenType == TSqlTokenType.MultilineComment;
 
-        // COMMIT/ROLLBACK TRANSACTION or COMMIT/ROLLBACK TRAN - not standalone
-        if (TokenHelpers.IsKeyword(nextToken, "TRANSACTION") ||
-            TokenHelpers.IsKeyword(nextToken, "TRAN"))
+        private static bool IsKeyword(TSqlParserToken token, string keyword)
         {
-            return false;
+            if (IsTrivia(token))
+            {
+                return false;
+            }
+
+            if (token.TokenType == TSqlTokenType.Identifier ||
+                token.TokenType == TSqlTokenType.QuotedIdentifier)
+            {
+                return false;
+            }
+
+            var text = token.Text;
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            return string.Equals(text, keyword, StringComparison.OrdinalIgnoreCase);
         }
 
-        // COMMIT/ROLLBACK WORK - ANSI compatible syntax, not standalone (and we don't want to change it)
-        if (TokenHelpers.IsKeyword(nextToken, "WORK"))
+        private static bool IsTranKeyword(TSqlParserToken token) => IsKeyword(token, "TRAN");
+
+        private static bool IsTransactionKeyword(TSqlParserToken token) => IsKeyword(token, "TRANSACTION");
+
+        private static bool IsWorkKeyword(TSqlParserToken token)
         {
-            return false;
+            if (token.TokenType == TSqlTokenType.QuotedIdentifier)
+            {
+                return false;
+            }
+
+            var text = token.Text;
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            return string.Equals(text, "WORK", StringComparison.OrdinalIgnoreCase);
         }
 
-        // Anything else means standalone
-        return true;
+        private static TsqlRefine.PluginSdk.Range GetTokenRange(TSqlParserToken token)
+        {
+            var start = new Position(token.Line - 1, token.Column - 1);
+            var length = token.Text?.Length ?? 0;
+            var end = new Position(token.Line - 1, token.Column - 1 + length);
+            return new TsqlRefine.PluginSdk.Range(start, end);
+        }
     }
 
 }
