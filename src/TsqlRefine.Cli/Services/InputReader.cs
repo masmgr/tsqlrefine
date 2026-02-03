@@ -98,10 +98,11 @@ public sealed class InputReader
             return false;
 
         var matcher = GetIgnoreMatcher(ignorePatterns);
-        var fileName = Path.GetFileName(filePath);
-        var directoryPath = Path.GetDirectoryName(filePath) ?? string.Empty;
+        var fullPath = Path.GetFullPath(filePath);
+        var fileName = Path.GetFileName(fullPath);
+        var directoryPath = Path.GetDirectoryName(fullPath)!;
 
-        var result = matcher.Match(directoryPath, new[] { fileName });
+        var result = matcher.Match(directoryPath, [fileName]);
         return result.HasMatches;
     }
 
