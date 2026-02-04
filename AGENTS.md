@@ -1,6 +1,6 @@
 # AGENTS.md (tsqlrefine)
 
-このリポジトリは、T-SQL を対象にした **lint / check / format / fix** を提供する .NET CLI ツール `tsqlrefine` と、そのルール/フォーマッタ/プラグインホストを含みます。
+このリポジトリは、T-SQL を対象にした **lint / format / fix** を提供する .NET CLI ツール `tsqlrefine` と、そのルール/フォーマッタ/プラグインホストを含みます。
 
 ## まず最初に見る場所
 
@@ -15,7 +15,7 @@
 - JSON Schema: `schemas/`
 - ドキュメント: `docs/`
 - ルール個別ドキュメント: `docs/Rules/`
-- 開発用スクリプト/補助: ルート直下の `*.ps1` と `tools/`
+- 開発用スクリプト/補助: `scripts/`（`*.ps1`）と `tools/`
 
 ## 開発環境
 
@@ -33,16 +33,23 @@ dotnet test  src/TsqlRefine.sln -c Release
 # CLI をローカル実行（例）
 "select * from t;" | dotnet run --project src/TsqlRefine.Cli -c Release -- lint --stdin --output json
 
-# format / fix
+# format（paths 指定は自動でファイルへ書き戻し。stdin は stdout へ出力）
 dotnet run --project src/TsqlRefine.Cli -c Release -- format path\to\file.sql
-dotnet run --project src/TsqlRefine.Cli -c Release -- fix --write path\to\dir
+"select * from t;" | dotnet run --project src/TsqlRefine.Cli -c Release -- format --stdin
 
-# init / list
+# fix（paths 指定は自動でファイルへ書き戻し。--output json はドライラン用途）
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix path\to\dir
+dotnet run --project src/TsqlRefine.Cli -c Release -- fix --output json path\to\file.sql
+
+# init / list / config
 dotnet run --project src/TsqlRefine.Cli -c Release -- init
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-config --output json
+dotnet run --project src/TsqlRefine.Cli -c Release -- print-format-config --show-sources
 dotnet run --project src/TsqlRefine.Cli -c Release -- list-rules
+dotnet run --project src/TsqlRefine.Cli -c Release -- list-plugins --verbose
 
-# ルール/ドキュメント生成（必要に応じて）
-.\extract-all-rules.ps1
+# coverage
+.\scripts\run-coverage.ps1
 ```
 
 ## コーディング規約（最低限）
@@ -55,15 +62,17 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- list-rules
 
 ## 変更時の注意（よく漏れる点）
 
-- **CLI のオプション/出力 JSON を変える場合**: `docs/cli.md` とテスト（`tests/TsqlRefine.Cli.Tests/`）も更新する。
-- **設定ファイル（config/ruleset/plugins）を変える場合**: `schemas/` の JSON Schema と `samples/` を更新する。
+- **CLI のオプション/出力 JSON を変える場合**: `docs/cli.md`、`README.md` とテスト（`tests/TsqlRefine.Cli.Tests/`）も更新する。
+- **設定ファイル（config/ruleset/plugins）を変える場合**: `schemas/`（`tsqlrefine.schema.json` / `ruleset.schema.json`）と `samples/` を更新する。
 - **ルールを追加/変更する場合**:
   - ルール実装: `src/TsqlRefine.Rules/Rules/`
   - ルール一覧/プリセット: `rulesets/`（必要なら）
   - テスト: `tests/TsqlRefine.Rules.Tests/` や `tests/TsqlRefine.Core.Tests/`
-- **ルールメタデータ/ルールドキュメントを更新する場合**: `rules-metadata.json` と `docs/Rules/`（必要なら生成スクリプト）も更新する。
+- **ルール個別ドキュメントを更新する場合**: `docs/Rules/`（と `docs/Rules/README.md`）を更新する。
 - **プラグインロード周りを触る場合**: `src/TsqlRefine.PluginHost/` は AssemblyLoadContext 境界があるため、依存 DLL の解決/重複ロードに注意する。
 
 ## 仕様と実装の差分メモ
 
-- `lint` と `check` は現状同じ実装で、`TsqlRefineEngine.Run(command, ...)` に渡す `command` 文字列だけが異なります（将来的に `check` に semantic を載せる想定のため）。
+- CLI はサブコマンド必須です（省略時に `lint` にはなりません）。
+- `format` / `fix` は paths 指定時に自動でファイルへ書き戻します。stdin の場合は stdout へ出力します。
+- `fix --output json` は診断のみを出力し、ファイルへの書き戻しは行いません。
