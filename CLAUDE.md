@@ -110,7 +110,8 @@ indent_size = 4
 - [docs/configuration.md](docs/configuration.md): Configuration format
 - [docs/formatting.md](docs/formatting.md): Formatting options
 - [docs/plugin-api.md](docs/plugin-api.md): Plugin API contract
-- [docs/Rules/README.md](docs/Rules/README.md): All 89 built-in rules
+- [docs/Rules/README.md](docs/Rules/README.md): Rules overview and guide
+- [docs/Rules/REFERENCE.md](docs/Rules/REFERENCE.md): Full rule reference (auto-generated)
 
 ## Development Guidelines
 

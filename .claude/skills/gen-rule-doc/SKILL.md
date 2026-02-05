@@ -16,7 +16,9 @@ Generate or update rule documentation in `docs/Rules/`.
 3. Determine output path: `docs/Rules/{category}/{rule-id}.md`
    - Categories: correctness, safety, security, performance, style, transactions, schema, debug
 4. Generate markdown using the template below
-5. Update `docs/Rules/README.md` if a new rule was added
+5. Update `docs/Rules/REFERENCE.md` if a new rule was added
+   - This file is auto-generated and contains all rule listings and statistics
+   - Do not modify `docs/Rules/README.md` (manual overview/guide content)
 
 ## Template
 

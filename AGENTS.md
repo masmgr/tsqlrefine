@@ -68,7 +68,7 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- list-plugins --verbose
   - ルール実装: `src/TsqlRefine.Rules/Rules/`
   - ルール一覧/プリセット: `rulesets/`（必要なら）
   - テスト: `tests/TsqlRefine.Rules.Tests/` や `tests/TsqlRefine.Core.Tests/`
-- **ルール個別ドキュメントを更新する場合**: `docs/Rules/`（と `docs/Rules/README.md`）を更新する。
+- **ルール個別ドキュメントを更新する場合**: `docs/Rules/`（と `docs/Rules/REFERENCE.md`）を更新する。`docs/Rules/README.md` は手動管理のため通常は編集不要。
 - **プラグインロード周りを触る場合**: `src/TsqlRefine.PluginHost/` は AssemblyLoadContext 境界があるため、依存 DLL の解決/重複ロードに注意する。
 
 ## 仕様と実装の差分メモ

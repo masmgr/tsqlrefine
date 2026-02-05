@@ -173,7 +173,7 @@ tsqlrefine list-rules
 tsqlrefine list-plugins
 ```
 
-See [docs/Rules/README.md](docs/Rules/README.md) for the full rule reference.
+See [docs/Rules/README.md](docs/Rules/README.md) for a rules overview, or [docs/Rules/REFERENCE.md](docs/Rules/REFERENCE.md) for the full rule reference.
 
 ## Documentation
 
@@ -181,7 +181,8 @@ See [docs/Rules/README.md](docs/Rules/README.md) for the full rule reference.
 - [Configuration](docs/configuration.md)
 - [Formatting Options](docs/formatting.md)
 - [Plugin API](docs/plugin-api.md)
-- [Rule Reference](docs/Rules/README.md)
+- [Rules Overview](docs/Rules/README.md)
+- [Rule Reference](docs/Rules/REFERENCE.md)
 
 ## License
 
