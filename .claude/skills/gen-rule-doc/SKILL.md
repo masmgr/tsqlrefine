@@ -1,19 +1,22 @@
 ---
 name: gen-rule-doc
-description: Generate or update rule documentation for tsqlrefine. Use when: creating docs for new rules, updating existing rule docs, verifying docs are in sync with implementation, or regenerating docs/Rules/ content.
+description: Generate or update rule documentation. Use when asked to create docs for a new rule, update existing rule docs, or regenerate docs/Rules/ content.
 ---
 
 # Rule Documentation Generator
 
-Generate rule documentation in `docs/Rules/`.
+Generate or update rule documentation in `docs/Rules/`.
 
 ## Workflow
 
 1. Read rule metadata from `src/TsqlRefine.Rules/Rules/{RuleName}Rule.cs`
-2. Extract: RuleId, Description, Category, DefaultSeverity, Fixable
-3. Get examples from `tests/TsqlRefine.Rules.Tests/{RuleName}RuleTests.cs`
-4. Generate markdown following template below
-5. Save to `docs/Rules/{category}/{rule-id}.md`
+   - Extract: RuleId, Description, Category, DefaultSeverity, Fixable
+2. Read test file `tests/TsqlRefine.Rules.Tests/{RuleName}RuleTests.cs`
+   - Extract example SQL for good/bad cases
+3. Determine output path: `docs/Rules/{category}/{rule-id}.md`
+   - Categories: correctness, safety, security, performance, style, transactions, schema, debug
+4. Generate markdown using the template below
+5. Update `docs/Rules/README.md` if a new rule was added
 
 ## Template
 
@@ -31,7 +34,7 @@ Generate rule documentation in `docs/Rules/`.
 
 ## Rationale
 
-{Why this rule exists}
+{Why this rule exists - infer from the detection logic}
 
 ## Examples
 
@@ -62,24 +65,4 @@ To disable this rule:
 ## See Also
 
 - [TsqlRefine Rules Documentation](../README.md)
-```
-
-## Category Directories
-
-| Category | Directory |
-|----------|-----------|
-| Correctness | `docs/Rules/correctness/` |
-| Safety | `docs/Rules/safety/` |
-| Security | `docs/Rules/security/` |
-| Performance | `docs/Rules/performance/` |
-| Style | `docs/Rules/style/` |
-| Transactions | `docs/Rules/transactions/` |
-| Schema | `docs/Rules/schema/` |
-| Debug | `docs/Rules/debug/` |
-
-## Commands
-
-```powershell
-# List all rules with metadata
-dotnet run --project src/TsqlRefine.Cli -c Release -- list-rules --output json
 ```
