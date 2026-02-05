@@ -10,7 +10,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 - Plugin system for custom rules
 - CLI tool and library for integration
 
-Key patterns: rules use ScriptDOM AST (not token-based), helpers live in organized subdirectories under `Helpers/`, and autofix logic uses shared helper classes. When refactoring rules, follow the AST-based pattern used by other rules in the codebase.
+Key patterns: most rules use ScriptDOM AST (preferred over token-based), helpers live in organized subdirectories under `Helpers/`, and autofix logic uses shared helper classes. When refactoring rules, follow the AST-based pattern used by other rules in the codebase.
 
 ## Workflow
 
@@ -59,7 +59,8 @@ src/
 ├── TsqlRefine.Rules/         # Built-in rules and helper classes
 ├── TsqlRefine.Formatting/    # SQL formatter
 ├── TsqlRefine.PluginHost/    # Plugin loading infrastructure
-└── TsqlRefine.Cli/           # Command-line interface
+├── TsqlRefine.Cli/           # Command-line interface
+└── TsqlRefine.DebugTool/     # Development/debugging utility
 ```
 
 **Dependency flow**: `Cli` → `Core`/`Formatting`/`PluginHost`/`Rules` → `PluginSdk`
@@ -79,9 +80,9 @@ src/
 ```
 
 **Preset rulesets** in `rulesets/`:
-- `recommended.json`: Balanced production use (49 rules)
-- `strict.json`: Maximum enforcement (86 rules)
-- `pragmatic.json`: Production-ready minimum (30 rules)
+- `recommended.json`: Balanced production use (47 rules)
+- `strict.json`: Maximum enforcement (87 rules)
+- `pragmatic.json`: Production-ready minimum (28 rules)
 - `security-only.json`: Security and critical safety (10 rules)
 
 ### .editorconfig
@@ -99,9 +100,9 @@ indent_size = 4
 |------|---------|
 | 0 | Success (no violations) |
 | 1 | Rule violations found |
-| 2 | Parse error |
+| 2 | Analysis error |
 | 3 | Config error |
-| 4 | Runtime exception |
+| 4 | Fatal error |
 
 ## Documentation
 
@@ -109,7 +110,7 @@ indent_size = 4
 - [docs/configuration.md](docs/configuration.md): Configuration format
 - [docs/formatting.md](docs/formatting.md): Formatting options
 - [docs/plugin-api.md](docs/plugin-api.md): Plugin API contract
-- [docs/Rules/README.md](docs/Rules/README.md): All 86 built-in rules
+- [docs/Rules/README.md](docs/Rules/README.md): All 89 built-in rules
 
 ## Development Guidelines
 
@@ -126,16 +127,3 @@ Path-specific development patterns are in `.claude/rules/`:
 | [testing-patterns.md](.claude/rules/testing-patterns.md) | `tests/**` |
 
 These rules use YAML frontmatter with `paths` field to automatically load context-specific guidance when working with files in those directories.
-
-
-Before committing any refactoring changes: 1) run dotnet build to verify no namespace/reference issues, 2) run the full test suite, 3) if any tests fail, fix them and re-run before committing. Pay special attention to test project using statements when files are moved.
-
-Create a detailed todo plan for this refactoring. Include explicit checkpoints: after any file moves, run dotnet build before proceeding. After logic changes, run tests on just the affected test files before running the full suite. Then execute the plan step by step.
-
-I need to refactor these rule files to use the same AST-based pattern: [Rule1.cs, Rule2.cs, Rule3.cs]. Start with Rule1 — analyze it, refactor it, and run tests. Then apply the same patterns to Rule2 and Rule3. Run the full test suite after each rule and commit each separately.
-
-Analyze the rules directory and identify all T-SQL lint rule files still using token-based approaches instead of ScriptDOM AST. For each one, spawn a separate Task that: 1) reads the existing rule and its tests, 2) studies the pattern used in recently refactored AST-based rules (e.g., UndefinedAliasRule.cs, JoinKeywordRule.cs) for consistency, 3) rewrites the rule to use ScriptDOM AST with proper visitor patterns, 4) updates or adds unit tests, 5) runs the full test suite with 'dotnet test' and only commits if all tests pass. Process up to 4 rules in parallel. After all tasks complete, summarize what was refactored, any failures, and remaining candidates.
-
-Perform a systematic edge-case audit of all T-SQL lint rules in the codebase. For each rule: 1) Read the rule implementation and existing tests, 2) Identify categories of T-SQL constructs that could trigger edge cases (CTEs, nested subqueries, CROSS APPLY, PIVOT, window functions, temp tables, dynamic SQL, multi-part names, quoted identifiers), 3) Write 5-10 targeted test cases per rule exercising these edge cases, 4) Run 'dotnet test' to see which new tests fail, 5) For each failure, determine if it's a genuine bug in the rule (not the test), fix the rule, and re-run until all tests pass, 6) Commit passing tests and fixes per-rule with descriptive messages. Track results in a markdown report at docs/EDGE_CASE_AUDIT.md with columns: Rule, Edge Cases Found, Bugs Fixed, Tests Added.
-
-You are a CI repair agent. Run 'dotnet build' and 'dotnet test' for the solution. If either fails: 1) Parse the error output to identify every failing file, line number, and error code, 2) Categorize each error (missing using/namespace, incorrect test assertion, moved file reference, type mismatch, etc.), 3) For namespace/using errors: scan for the correct namespace in the target file and update the reference. For test assertion errors: run the test in isolation, capture actual output, determine if the actual behavior is correct (by reading the rule logic), and update the expected value. For build errors from file moves: use Glob to find the new file location and update all references. 4) After applying fixes, re-run 'dotnet build' and 'dotnet test'. 5) Repeat up to 3 cycles until everything passes. 6) Commit all fixes with message 'fix: resolve build/test failures from [root cause summary]'. Report what was broken and how each issue was resolved.
