@@ -10,6 +10,24 @@ This file provides guidance to Claude Code when working with code in this reposi
 - Plugin system for custom rules
 - CLI tool and library for integration
 
+Key patterns: rules use ScriptDOM AST (not token-based), helpers live in organized subdirectories under `Helpers/`, and autofix logic uses shared helper classes. When refactoring rules, follow the AST-based pattern used by other rules in the codebase.
+
+## Workflow
+
+After any refactoring or code changes, always run the full test suite (all ~2000 tests) before committing. Never commit with failing tests.
+
+## Refactoring Checklist
+
+When moving/renaming files or reorganizing directories, always update namespaces AND using statements in both the main project and the test project. Build before running tests to catch missing references early.
+
+## Testing
+
+When adding new tests, double-check expected error counts and assertion values against the actual rule behavior. Run the specific new tests first before running the full suite.
+
+## Performance Conventions
+
+Prefer `FrozenSet`/`FrozenDictionary` over `HashSet`/`Dictionary` for static lookup collections. Use `StringBuilder` for string concatenation in hot paths. Cache repeated computations.
+
 ## Quick Reference Commands
 
 ```powershell
@@ -108,3 +126,4 @@ Path-specific development patterns are in `.claude/rules/`:
 | [testing-patterns.md](.claude/rules/testing-patterns.md) | `tests/**` |
 
 These rules use YAML frontmatter with `paths` field to automatically load context-specific guidance when working with files in those directories.
+
