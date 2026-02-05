@@ -35,6 +35,8 @@ public sealed class TopWithoutOrderByRuleTests
     [InlineData("SELECT TOP 1 * FROM customers ORDER BY last_login DESC;")]
     [InlineData("SELECT * FROM users;")]  // no TOP
     [InlineData("SELECT * FROM users ORDER BY id;")]  // no TOP
+    [InlineData("SELECT TOP 0 * FROM users;")]  // TOP 0
+    [InlineData("SELECT TOP (0) * FROM users;")]  // TOP (0)
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new TopWithoutOrderByRule();

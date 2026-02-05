@@ -42,7 +42,8 @@ public sealed class TopWithoutOrderByRule : IRule
             var querySpec = node.QueryExpression as QuerySpecification;
             if (querySpec != null &&
                 querySpec.TopRowFilter != null &&
-                querySpec.OrderByClause == null)
+                querySpec.OrderByClause == null &&
+                !IsTopZero(querySpec.TopRowFilter.Expression))
             {
                 AddDiagnostic(
                     fragment: querySpec.TopRowFilter,
@@ -55,5 +56,9 @@ public sealed class TopWithoutOrderByRule : IRule
 
             base.ExplicitVisit(node);
         }
+
+        private static bool IsTopZero(ScalarExpression expression) =>
+            expression is IntegerLiteral lit && lit.Value == "0" ||
+            expression is ParenthesisExpression paren && IsTopZero(paren.Expression);
     }
 }
