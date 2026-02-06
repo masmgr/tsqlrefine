@@ -135,6 +135,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new ForbidTop100PercentOrderByRule(),
         new OrderByInSubqueryRule(),
         new StuffWithoutOrderByRule(),
+        new StringAggWithoutOrderByRule(),
         new BanQueryHintsRule(),
 
         // === Debug ===
