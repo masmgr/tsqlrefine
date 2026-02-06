@@ -134,6 +134,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidMagicConvertStyleForDatetimeRule(),
         new ForbidTop100PercentOrderByRule(),
         new OrderByInSubqueryRule(),
+        new StuffWithoutOrderByRule(),
         new BanQueryHintsRule(),
 
         // === Debug ===

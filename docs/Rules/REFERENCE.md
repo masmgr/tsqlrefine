@@ -13,17 +13,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 89
+- **Total Rules**: 90
 - **Fixable Rules**: 10 (11%)
 - **Error Severity**: 11 rules (12%)
-- **Warning Severity**: 49 rules (55%)
-- **Information Severity**: 29 rules (33%)
+- **Warning Severity**: 50 rules (56%)
+- **Information Severity**: 29 rules (32%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 25 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 26 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 4 | Prevents destructive or dangerous operations |
 | **Security** | 1 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 17 | Flags patterns that can cause performance issues |
@@ -34,7 +34,7 @@
 
 ## Rules by Category
 
-### Correctness (25 rules)
+### Correctness (26 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -62,6 +62,7 @@
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 | [semantic/undefined-alias](correctness/semantic-undefined-alias.md) | Detects references to undefined table aliases in column qualifiers. | Error | No |
+| [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 
 ### Safety (4 rules)
@@ -179,7 +180,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (49 rules)
+### Warning (50 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -222,6 +223,7 @@
 - [semantic/return-after-statements](correctness/semantic-return-after-statements.md)
 - [semantic/schema-qualify](style/semantic-schema-qualify.md)
 - [semantic/set-variable](correctness/semantic-set-variable.md)
+- [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [set-ansi](transactions/set-ansi.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-quoted-identifier](transactions/set-quoted-identifier.md)
