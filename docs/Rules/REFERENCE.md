@@ -13,20 +13,20 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 91
-- **Fixable Rules**: 10 (11%)
-- **Error Severity**: 11 rules (12%)
-- **Warning Severity**: 51 rules (56%)
-- **Information Severity**: 29 rules (32%)
+- **Total Rules**: 96
+- **Fixable Rules**: 10 (10%)
+- **Error Severity**: 11 rules (11%)
+- **Warning Severity**: 55 rules (57%)
+- **Information Severity**: 30 rules (31%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 27 | Detects code that may produce incorrect results or runtime errors |
-| **Safety** | 4 | Prevents destructive or dangerous operations |
-| **Security** | 1 | Identifies security vulnerabilities like SQL injection |
-| **Performance** | 17 | Flags patterns that can cause performance issues |
+| **Correctness** | 28 | Detects code that may produce incorrect results or runtime errors |
+| **Safety** | 5 | Prevents destructive or dangerous operations |
+| **Security** | 3 | Identifies security vulnerabilities like SQL injection |
+| **Performance** | 18 | Flags patterns that can cause performance issues |
 | **Style** | 29 | Maintains code formatting and consistency |
 | **Transactions** | 9 | Ensures proper transaction handling and session settings |
 | **Schema** | 3 | Enforces database schema best practices |
@@ -34,12 +34,13 @@
 
 ## Rules by Category
 
-### Correctness (27 rules)
+### Correctness (28 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md) | Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601. | Warning | No |
 | [avoid-atat-identity](correctness/avoid-atat-identity.md) | Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT. | Warning | No |
+| [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
 | [avoid-null-comparison](correctness/avoid-null-comparison.md) | Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN. | Warning | No |
 | [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
@@ -66,7 +67,7 @@
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 
-### Safety (4 rules)
+### Safety (5 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -74,14 +75,17 @@
 | [cross-database-transaction](safety/cross-database-transaction.md) | Discourage cross-database transactions to avoid distributed transaction issues | Warning | No |
 | [dangerous-ddl](safety/dangerous-ddl.md) | Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss. | Warning | No |
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications. | Error | No |
+| [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-### Security (1 rules)
+### Security (3 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md) | Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks. | Warning | No |
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection | Warning | No |
+| [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
 
-### Performance (17 rules)
+### Performance (18 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -96,6 +100,7 @@
 | [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md) | Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer. | Warning | No |
 | [full-text](performance/full-text.md) | Prohibit full-text search predicates; use alternative search strategies for better performance | Information | No |
 | [information-schema](performance/information-schema.md) | Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance | Information | No |
+| [like-leading-wildcard](performance/like-leading-wildcard.md) | Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans. | Warning | No |
 | [linked-server](performance/linked-server.md) | Prohibit linked server queries (4-part identifiers); use alternative data access patterns | Information | No |
 | [non-sargable](performance/non-sargable.md) | Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates) | Warning | No |
 | [object-property](performance/object-property.md) | Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead | Warning | No |
@@ -181,16 +186,19 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (51 rules)
+### Warning (55 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
+- [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md)
 - [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md)
+- [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md)
 - [avoid-heap-table](schema/avoid-heap-table.md)
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
 - [avoid-merge](safety/avoid-merge.md)
 - [avoid-nolock](correctness/avoid-nolock.md)
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
+- [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md)
 - [avoid-select-star](performance/avoid-select-star.md)
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
 - [ban-query-hints](performance/ban-query-hints.md)
@@ -201,6 +209,7 @@
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
 - [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md)
 - [join-keyword](style/join-keyword.md)
+- [like-leading-wildcard](performance/like-leading-wildcard.md)
 - [nested-block-comments](style/nested-block-comments.md)
 - [non-sargable](performance/non-sargable.md)
 - [object-property](performance/object-property.md)
@@ -235,7 +244,7 @@
 - [upper-lower](performance/upper-lower.md)
 - [utc-datetime](performance/utc-datetime.md)
 
-### Information (29 rules)
+### Information (30 rules)
 
 - [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md)
 - [conditional-begin-end](style/conditional-begin-end.md)
@@ -264,6 +273,7 @@
 - [qualified-select-columns](style/qualified-select-columns.md)
 - [require-as-for-column-alias](style/require-as-for-column-alias.md)
 - [require-as-for-table-alias](style/require-as-for-table-alias.md)
+- [require-drop-if-exists](safety/require-drop-if-exists.md)
 - [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md)
 - [semicolon-termination](style/semicolon-termination.md)
 

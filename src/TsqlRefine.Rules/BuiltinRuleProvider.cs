@@ -35,6 +35,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new CaseSensitiveVariablesRule(),
         new DataTypeLengthRule(),
         new AvoidAmbiguousDatetimeLiteralRule(),
+        new AvoidFloatForDecimalRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -47,6 +48,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidImplicitConversionInPredicateRule(),
         new NonSargableRule(),
         new DisallowSelectDistinctRule(),
+        new LikeLeadingWildcardRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
@@ -56,9 +58,12 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DangerousDdlRule(),
         new AvoidTopInDmlRule(),
         new NoTopWithoutOrderByInSelectIntoRule(),
+        new RequireDropIfExistsRule(),
 
         // === Security ===
         new AvoidExecDynamicSqlRule(),
+        new AvoidDangerousProceduresRule(),
+        new AvoidOpenrowsetOpendatasourceRule(),
         new AvoidNolockRule(),
         new LinkedServerRule(),
 

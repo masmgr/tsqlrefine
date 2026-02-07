@@ -1,6 +1,8 @@
 {
   "rules": [
     { "id": "avoid-exec-dynamic-sql", "enabled": true },
+    { "id": "avoid-dangerous-procedures", "enabled": true },
+    { "id": "avoid-openrowset-opendatasource", "enabled": true },
     { "id": "dml-without-where", "enabled": true },
     { "id": "avoid-merge", "enabled": true },
     { "id": "cross-database-transaction", "enabled": true },
