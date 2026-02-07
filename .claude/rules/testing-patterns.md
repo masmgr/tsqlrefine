@@ -13,7 +13,14 @@ Development patterns for all test projects in TsqlRefine.
 tests/
 ├── TsqlRefine.Core.Tests/          # Engine and tokenizer tests
 ├── TsqlRefine.Rules.Tests/         # Rule and helper tests
-│   ├── *RuleTests.cs               # Individual rule tests
+│   ├── Correctness/                # Correctness rule tests
+│   ├── Debug/                      # Debug rule tests
+│   ├── Performance/                # Performance rule tests
+│   ├── Safety/                     # Safety rule tests
+│   ├── Schema/                     # Schema rule tests
+│   ├── Security/                   # Security rule tests
+│   ├── Style/                      # Style rule tests
+│   ├── Transactions/               # Transaction rule tests
 │   └── Helpers/                    # Helper utility tests
 ├── TsqlRefine.Cli.Tests/           # CLI integration tests
 └── TsqlRefine.Formatting.Tests/    # Formatter tests

@@ -70,9 +70,10 @@ Uses **Microsoft.SqlServer.TransactSql.ScriptDom** for T-SQL parsing.
 | 100 | SQL Server 2008 | TSql100Parser |
 | 110 | SQL Server 2012 | TSql110Parser |
 | 120 | SQL Server 2014 | TSql120Parser |
+| 130 | SQL Server 2016 | TSql130Parser |
+| 140 | SQL Server 2017 | TSql140Parser |
 | 150 | SQL Server 2019 | TSql150Parser |
 | 160 | SQL Server 2022 | TSql160Parser |
-| 170 | SQL Server 2025 | TSql170Parser |
 
 ### Updating ScriptDom Parser
 
@@ -92,7 +93,7 @@ Rules get both:
 ```csharp
 public sealed record RuleContext(
     string FilePath,
-    int CompatLevel,           // 100-170 (SQL Server 2008-2025)
+    int CompatLevel,           // 100-160 (SQL Server 2008-2022)
     ScriptDomAst Ast,          // Parsed AST (TSqlFragment)
     IReadOnlyList<Token> Tokens, // Flat token stream
     RuleSettings Settings       // Per-rule config

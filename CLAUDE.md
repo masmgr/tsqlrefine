@@ -14,7 +14,7 @@ Key patterns: most rules use ScriptDOM AST (preferred over token-based), helpers
 
 ## Workflow
 
-After any refactoring or code changes, always run the full test suite (all ~2000 tests) before committing. Never commit with failing tests.
+After any refactoring or code changes, always run the full test suite (all ~1600 tests) before committing. Never commit with failing tests.
 
 ## Refactoring Checklist
 
@@ -80,10 +80,10 @@ src/
 ```
 
 **Preset rulesets** in `rulesets/`:
-- `recommended.json`: Balanced production use (47 rules)
-- `strict.json`: Maximum enforcement (87 rules)
-- `pragmatic.json`: Production-ready minimum (28 rules)
-- `security-only.json`: Security and critical safety (10 rules)
+- `recommended.json`: Balanced production use (58 rules)
+- `strict.json`: Maximum enforcement (99 rules)
+- `pragmatic.json`: Production-ready minimum (36 rules)
+- `security-only.json`: Security and critical safety (13 rules)
 
 ### .editorconfig
 
@@ -109,7 +109,10 @@ indent_size = 4
 - [docs/cli.md](docs/cli.md): CLI specification
 - [docs/configuration.md](docs/configuration.md): Configuration format
 - [docs/formatting.md](docs/formatting.md): Formatting options
+- [docs/granular-casing.md](docs/granular-casing.md): Granular element casing
+- [docs/inline-disable.md](docs/inline-disable.md): Inline disable comments
 - [docs/plugin-api.md](docs/plugin-api.md): Plugin API contract
+- [docs/release.md](docs/release.md): Release procedures
 - [docs/Rules/README.md](docs/Rules/README.md): Rules overview and guide
 - [docs/Rules/REFERENCE.md](docs/Rules/REFERENCE.md): Full rule reference (auto-generated)
 

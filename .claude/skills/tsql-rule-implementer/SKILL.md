@@ -12,11 +12,11 @@ Implement a new linting rule from scratch using TDD methodology.
 1. **Understand the requirement**: Clarify what SQL pattern should be detected and why
 2. **Check for existing rules**: Search `src/TsqlRefine.Rules/Rules/` to avoid duplicating existing rules
 3. **Study a similar rule**: Read the most similar existing rule and its tests for patterns to follow
-4. **Write tests first** in `tests/TsqlRefine.Rules.Tests/{RuleName}RuleTests.cs`
+4. **Write tests first** in `tests/TsqlRefine.Rules.Tests/{Category}/{RuleName}RuleTests.cs`
    - Include SQL that should trigger violations (positive cases)
    - Include SQL that should NOT trigger violations (negative cases)
    - Check expected diagnostic count, message, and position
-5. **Implement the rule** in `src/TsqlRefine.Rules/Rules/{RuleName}Rule.cs`
+5. **Implement the rule** in `src/TsqlRefine.Rules/Rules/{Category}/{RuleName}Rule.cs`
    - Prefer AST-based (visitor pattern) over token-based
    - Use helpers from `src/TsqlRefine.Rules/Helpers/` — never duplicate common logic
    - See `.claude/rules/rules-development.md` for templates and helper reference

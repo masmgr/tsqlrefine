@@ -12,7 +12,7 @@ Development patterns for the TsqlRefine.Rules project - T-SQL lint rules impleme
 
 ### Step 1: Create Rule Class
 
-Create `src/TsqlRefine.Rules/Rules/{RuleName}Rule.cs`:
+Create `src/TsqlRefine.Rules/Rules/{Category}/{RuleName}Rule.cs`:
 
 **AST-based rule (recommended for structural analysis):**
 ```csharp
@@ -128,7 +128,7 @@ Add to `src/TsqlRefine.Rules/BuiltinRuleProvider.cs` in `GetRules()` array.
 
 ### Step 3: Add Tests
 
-Create `tests/TsqlRefine.Rules.Tests/{RuleName}RuleTests.cs` with positive and negative cases.
+Create `tests/TsqlRefine.Rules.Tests/{Category}/{RuleName}RuleTests.cs` with positive and negative cases.
 
 ### Step 4: Add Sample SQL
 
@@ -136,9 +136,34 @@ Create `samples/sql/{rule-id}.sql` demonstrating the violation.
 
 ## Helper Classes Reference
 
-**Always use helper classes** - never duplicate common patterns.
+**Always use helper classes** - never duplicate common patterns. Helpers are organized into subdirectories:
 
-### DiagnosticVisitorBase
+```
+Helpers/
+├── Analysis/          # Expression and data analysis
+│   ├── DatePartHelper.cs
+│   ├── ExpressionAnalysisHelpers.cs
+│   └── SqlDataTypeHelpers.cs
+├── Diagnostics/       # Diagnostic creation utilities
+│   ├── BeginEndHelpers.cs
+│   ├── RuleHelpers.cs
+│   └── ScriptDomHelpers.cs
+├── Scope/             # Alias and reference tracking
+│   ├── AliasScopeManager.cs
+│   ├── ColumnReferenceHelpers.cs
+│   └── TableReferenceHelpers.cs
+├── Tokens/            # Token stream utilities
+│   ├── TextAnalysisHelpers.cs
+│   ├── TextPositionHelpers.cs
+│   └── TokenHelpers.cs
+└── Visitors/          # AST visitor base classes
+    ├── DiagnosticVisitorBase.cs
+    ├── PredicateAwareVisitorBase.cs
+    ├── ScopeBlockingVisitor.cs
+    └── ScopeDelegatingVisitor.cs
+```
+
+### Visitors/DiagnosticVisitorBase
 
 Base class for AST visitors with automatic diagnostic collection:
 ```csharp
@@ -158,7 +183,17 @@ private sealed class MyVisitor : DiagnosticVisitorBase
 }
 ```
 
-### TokenHelpers
+### Visitors/PredicateAwareVisitorBase
+
+Visitor with predicate context tracking:
+- Extends `DiagnosticVisitorBase` with `IsInPredicate` property
+- Tracks WHERE, JOIN ON, and HAVING clause contexts
+
+### Visitors/ScopeBlockingVisitor & ScopeDelegatingVisitor
+
+Advanced visitors for scope-aware traversal (subquery boundaries, CTE scopes).
+
+### Tokens/TokenHelpers
 
 Token stream analysis utilities:
 - `IsKeyword(Token, string)`: Case-insensitive keyword matching
@@ -166,45 +201,59 @@ Token stream analysis utilities:
 - `IsPrefixedByDot(IReadOnlyList<Token>, int)`: Checks for qualified identifiers
 - `GetTokenEnd(Token)`: Calculates token end position
 
-### ScriptDomHelpers
+### Tokens/TextAnalysisHelpers
+
+Raw text analysis:
+- `SplitSqlLines(string)`: Splits SQL handling all line endings
+- `CreateLineRangeDiagnostic(...)`: Creates diagnostics for specific lines
+
+### Tokens/TextPositionHelpers
+
+Position calculation utilities for token-based rules.
+
+### Diagnostics/ScriptDomHelpers
 
 AST fragment utilities:
 - `GetRange(TSqlFragment)`: Converts ScriptDom coordinates (1-based) to PluginSdk Range (0-based)
 
-### RuleHelpers
+### Diagnostics/RuleHelpers
 
 Common rule patterns:
 - `NoFixes(RuleContext, Diagnostic)`: Standard implementation for non-fixable rules
 
-### PredicateAwareVisitorBase
+### Diagnostics/BeginEndHelpers
 
-Visitor with predicate context tracking:
-- Extends `DiagnosticVisitorBase` with `IsInPredicate` property
-- Tracks WHERE, JOIN ON, and HAVING clause contexts
+BEGIN/END block detection and analysis utilities.
 
-### TableReferenceHelpers
+### Scope/TableReferenceHelpers
 
 Table reference utilities:
 - `CollectTableReferences(...)`: Recursively collects leaf table references from JOINs
 - `CollectTableAliases(...)`: Collects all declared table aliases/names
 - `GetAliasOrTableName(TableReference)`: Gets alias or base table name
 
-### DatePartHelper
+### Scope/ColumnReferenceHelpers
+
+Column reference resolution and analysis.
+
+### Scope/AliasScopeManager
+
+Tracks alias declarations and validates scope visibility.
+
+### Analysis/DatePartHelper
 
 Date/time function detection:
 - `IsDatePartFunction(FunctionCall)`: Checks for DATEADD, DATEDIFF, DATEPART, DATENAME
 - `IsDatePartLiteralParameter(...)`: Detects datepart literal parameters
 
-### ExpressionAnalysisHelpers
+### Analysis/ExpressionAnalysisHelpers
 
 Expression analysis:
 - `ContainsColumnReference(ScalarExpression)`: Checks if expression contains column references
 
-### TextAnalysisHelpers
+### Analysis/SqlDataTypeHelpers
 
-Raw text analysis:
-- `SplitSqlLines(string)`: Splits SQL handling all line endings
-- `CreateLineRangeDiagnostic(...)`: Creates diagnostics for specific lines
+SQL data type classification and compatibility checks.
 
 ## Common AST Nodes
 
@@ -233,6 +282,6 @@ Add breakpoints in:
 
 ## Reference Files
 
-- Pattern reference: `src/TsqlRefine.Rules/Rules/AvoidSelectStarRule.cs`
-- Test reference: `tests/TsqlRefine.Rules.Tests/AvoidSelectStarRuleTests.cs`
-- Helpers: `src/TsqlRefine.Rules/Helpers/`
+- Pattern reference: `src/TsqlRefine.Rules/Rules/Performance/AvoidSelectStarRule.cs`
+- Test reference: `tests/TsqlRefine.Rules.Tests/Performance/AvoidSelectStarRuleTests.cs`
+- Helpers: `src/TsqlRefine.Rules/Helpers/` (Analysis, Diagnostics, Scope, Tokens, Visitors)
