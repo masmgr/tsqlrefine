@@ -13,7 +13,7 @@ public sealed class AvoidExecuteAsRuleTests
     {
         Assert.Equal("avoid-execute-as", _rule.Metadata.RuleId);
         Assert.Equal("Security", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 

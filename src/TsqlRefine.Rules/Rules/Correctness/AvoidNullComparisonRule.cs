@@ -12,7 +12,7 @@ public sealed class AvoidNullComparisonRule : IRule
         RuleId: "avoid-null-comparison",
         Description: "Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN.",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Error,
         Fixable: false
     );
 

@@ -15,9 +15,9 @@
 
 - **Total Rules**: 101
 - **Fixable Rules**: 10 (10%)
-- **Error Severity**: 11 rules (11%)
-- **Warning Severity**: 57 rules (56%)
-- **Information Severity**: 33 rules (33%)
+- **Error Severity**: 12 rules (12%)
+- **Warning Severity**: 54 rules (53%)
+- **Information Severity**: 35 rules (35%)
 
 ## Rule Categories
 
@@ -177,8 +177,9 @@
 
 ## Rules by Severity
 
-### Error (11 rules)
+### Error (12 rules)
 
+- [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
 - [named-constraint](correctness/named-constraint.md)
@@ -191,18 +192,18 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (57 rules)
+### Warning (54 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
 - [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md)
 - [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md)
+- [avoid-execute-as](security/avoid-execute-as.md)
 - [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md)
 - [avoid-heap-table](schema/avoid-heap-table.md)
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
 - [avoid-merge](safety/avoid-merge.md)
 - [avoid-nolock](correctness/avoid-nolock.md)
-- [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md)
 - [avoid-select-star](performance/avoid-select-star.md)
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
@@ -230,7 +231,6 @@
 - [require-try-catch-for-transaction](transactions/require-try-catch-for-transaction.md)
 - [require-xact-abort-on](transactions/require-xact-abort-on.md)
 - [semantic/alias-scope-violation](correctness/semantic-alias-scope-violation.md)
-- [semantic/case-sensitive-variables](style/semantic-case-sensitive-variables.md)
 - [semantic/join-condition-always-true](correctness/semantic-join-condition-always-true.md)
 - [semantic/join-table-not-referenced-in-on](correctness/semantic-join-table-not-referenced-in-on.md)
 - [semantic/left-join-filtered-by-where](correctness/semantic-left-join-filtered-by-where.md)
@@ -238,22 +238,19 @@
 - [semantic/return-after-statements](correctness/semantic-return-after-statements.md)
 - [semantic/schema-qualify](style/semantic-schema-qualify.md)
 - [semantic/set-variable](correctness/semantic-set-variable.md)
+- [set-ansi](transactions/set-ansi.md)
+- [set-quoted-identifier](transactions/set-quoted-identifier.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
-- [union-type-mismatch](correctness/union-type-mismatch.md)
-- [unreachable-case-when](correctness/unreachable-case-when.md)
-- [set-ansi](transactions/set-ansi.md)
-- [set-nocount](transactions/set-nocount.md)
-- [set-quoted-identifier](transactions/set-quoted-identifier.md)
-- [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
+- [union-type-mismatch](correctness/union-type-mismatch.md)
+- [unreachable-case-when](correctness/unreachable-case-when.md)
 - [upper-lower](performance/upper-lower.md)
 - [utc-datetime](performance/utc-datetime.md)
 
-### Information (33 rules)
+### Information (35 rules)
 
-- [avoid-execute-as](security/avoid-execute-as.md)
 - [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md)
 - [conditional-begin-end](style/conditional-begin-end.md)
 - [data-compression](performance/data-compression.md)
@@ -286,6 +283,9 @@
 - [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md)
 - [require-save-transaction-in-nested](transactions/require-save-transaction-in-nested.md)
 - [semicolon-termination](style/semicolon-termination.md)
+- [semantic/case-sensitive-variables](style/semantic-case-sensitive-variables.md)
+- [set-nocount](transactions/set-nocount.md)
+- [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
 
 ## Fixable Rules
 

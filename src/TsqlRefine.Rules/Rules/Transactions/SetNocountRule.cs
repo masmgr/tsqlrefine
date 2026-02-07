@@ -12,7 +12,7 @@ public sealed class SetNocountRule : IRule
         RuleId: "set-nocount",
         Description: "Files should start with SET NOCOUNT ON within the first 10 statements.",
         Category: "Transactions",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

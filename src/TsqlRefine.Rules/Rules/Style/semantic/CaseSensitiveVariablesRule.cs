@@ -12,7 +12,7 @@ public sealed class CaseSensitiveVariablesRule : IRule
         RuleId: "semantic/case-sensitive-variables",
         Description: "Ensures variable references match the exact casing used in their declarations for consistency.",
         Category: "Style",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

@@ -12,7 +12,7 @@ public sealed class SetTransactionIsolationLevelRule : IRule
         RuleId: "set-transaction-isolation-level",
         Description: "Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements.",
         Category: "Transactions",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 

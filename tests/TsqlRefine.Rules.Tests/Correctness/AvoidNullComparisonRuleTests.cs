@@ -140,7 +140,7 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
 
         Assert.Equal("avoid-null-comparison", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
         Assert.Contains("NULL", rule.Metadata.Description);
     }

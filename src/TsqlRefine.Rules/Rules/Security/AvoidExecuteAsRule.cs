@@ -12,7 +12,7 @@ public sealed class AvoidExecuteAsRule : IRule
         RuleId: "avoid-execute-as",
         Description: "Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation.",
         Category: "Security",
-        DefaultSeverity: RuleSeverity.Information,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
