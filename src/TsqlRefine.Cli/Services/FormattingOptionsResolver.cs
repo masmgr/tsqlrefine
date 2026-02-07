@@ -4,6 +4,9 @@ using TsqlRefine.Formatting;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Resolves formatting options from multiple sources with priority: CLI args > .editorconfig > tsqlrefine.json > defaults.
+/// </summary>
 public sealed class FormattingOptionsResolver
 {
     public FormattingOptionsResolver()

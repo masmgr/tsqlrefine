@@ -4,8 +4,14 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Core.Engine;
 
+/// <summary>
+/// Represents the result of ScriptDOM analysis, including the parsed AST and token stream.
+/// </summary>
 internal sealed record ScriptDomAnalysis(ScriptDomAst Ast, IReadOnlyList<Token> Tokens);
 
+/// <summary>
+/// Tokenizes SQL text using Microsoft ScriptDOM parser and converts to TsqlRefine token representation.
+/// </summary>
 internal static class ScriptDomTokenizer
 {
     private static readonly Dictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();

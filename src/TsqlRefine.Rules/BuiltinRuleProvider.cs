@@ -12,6 +12,9 @@ using TsqlRefine.Rules.Rules.Transactions;
 
 namespace TsqlRefine.Rules;
 
+/// <summary>
+/// Provides all built-in T-SQL lint rules included with TsqlRefine.
+/// </summary>
 public sealed class BuiltinRuleProvider : IRuleProvider
 {
     private static readonly Lazy<IRule[]> s_rules = new(CreateRules);

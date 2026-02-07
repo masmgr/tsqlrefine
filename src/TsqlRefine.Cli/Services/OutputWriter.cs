@@ -3,6 +3,9 @@ using TsqlRefine.Core;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Writes output in various formats (text, JSON) to stdout/stderr.
+/// </summary>
 public sealed class OutputWriter
 {
     public static async Task<int> WriteErrorAsync(TextWriter stderr, string message)

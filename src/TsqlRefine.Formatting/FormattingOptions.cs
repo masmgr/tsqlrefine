@@ -1,11 +1,19 @@
 namespace TsqlRefine.Formatting;
 
+/// <summary>
+/// Indentation style for formatted SQL code.
+/// </summary>
 public enum IndentStyle
 {
+    /// <summary>Use tab characters for indentation.</summary>
     Tabs,
+    /// <summary>Use space characters for indentation.</summary>
     Spaces
 }
 
+/// <summary>
+/// Casing transformation to apply to SQL elements.
+/// </summary>
 public enum ElementCasing
 {
     /// <summary>No casing change (preserve original)</summary>
@@ -16,6 +24,9 @@ public enum ElementCasing
     Lower
 }
 
+/// <summary>
+/// Comma placement style for multi-element lists in SQL.
+/// </summary>
 public enum CommaStyle
 {
     /// <summary>Trailing comma: SELECT a, b, c</summary>
@@ -29,6 +40,9 @@ public enum CommaStyle
     Leading
 }
 
+/// <summary>
+/// Line ending style for formatted SQL output.
+/// </summary>
 public enum LineEnding
 {
     /// <summary>Auto-detect from input, fallback to CRLF (Windows-preferred)</summary>
@@ -39,6 +53,9 @@ public enum LineEnding
     CrLf
 }
 
+/// <summary>
+/// Configuration options for SQL formatting including casing, indentation, whitespace, and line ending preferences.
+/// </summary>
 public sealed record FormattingOptions
 {
     /// <summary>SQL Server compatibility level (100=2008, 110=2012, 120=2014, 150=2019, 160=2022). Default: 150</summary>

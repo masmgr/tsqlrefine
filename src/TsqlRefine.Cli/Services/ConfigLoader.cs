@@ -6,6 +6,9 @@ using TsqlRefine.Rules;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Loads and merges configuration from files, CLI arguments, and presets.
+/// </summary>
 public sealed class ConfigLoader
 {
     private static string? ResolveConfigPath(CliArgs args)

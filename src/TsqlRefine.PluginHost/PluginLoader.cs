@@ -5,16 +5,36 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.PluginHost;
 
+/// <summary>
+/// Status of a plugin load operation.
+/// </summary>
 public enum PluginLoadStatus
 {
+    /// <summary>Plugin loaded successfully.</summary>
     Success,
+    /// <summary>Plugin is disabled in configuration.</summary>
     Disabled,
+    /// <summary>Plugin file was not found.</summary>
     FileNotFound,
+    /// <summary>Plugin failed to load due to an error.</summary>
     LoadError,
+    /// <summary>Plugin API version does not match host version.</summary>
     VersionMismatch,
+    /// <summary>Plugin has no IRuleProvider implementations.</summary>
     NoProviders
 }
 
+/// <summary>
+/// Diagnostic information about a plugin load operation.
+/// </summary>
+/// <param name="Status">The load status.</param>
+/// <param name="Message">A human-readable message describing the load result.</param>
+/// <param name="ActualApiVersion">The plugin's declared API version (for version mismatches).</param>
+/// <param name="ExpectedApiVersion">The host's expected API version (for version mismatches).</param>
+/// <param name="ExceptionType">The type of exception that occurred (for load errors).</param>
+/// <param name="StackTrace">The stack trace of the exception (for load errors).</param>
+/// <param name="NativeDllProbeAttempts">List of native DLL probe attempts (for debugging native dependency issues).</param>
+/// <param name="MissingNativeDll">The name of the missing native DLL (for DllNotFoundException).</param>
 public sealed record PluginLoadDiagnostic(
     PluginLoadStatus Status,
     string? Message = null,
@@ -26,6 +46,9 @@ public sealed record PluginLoadDiagnostic(
     string? MissingNativeDll = null
 );
 
+/// <summary>
+/// Represents a loaded plugin with its rule providers and load diagnostic information.
+/// </summary>
 public sealed class LoadedPlugin : IDisposable
 {
     private AssemblyLoadContext? _loadContext;
@@ -67,6 +90,14 @@ public sealed class LoadedPlugin : IDisposable
     }
 }
 
+/// <summary>
+/// Summary statistics for a batch of plugin load operations.
+/// </summary>
+/// <param name="TotalPlugins">Total number of plugins processed.</param>
+/// <param name="SuccessCount">Number of plugins that loaded successfully.</param>
+/// <param name="DisabledCount">Number of plugins that were disabled.</param>
+/// <param name="ErrorCount">Number of plugins that failed to load.</param>
+/// <param name="StatusBreakdown">Breakdown of plugin counts by status.</param>
 public sealed record PluginLoadSummary(
     int TotalPlugins,
     int SuccessCount,
@@ -75,6 +106,9 @@ public sealed record PluginLoadSummary(
     IReadOnlyDictionary<PluginLoadStatus, int> StatusBreakdown
 )
 {
+    /// <summary>
+    /// Creates a summary from a collection of loaded plugins.
+    /// </summary>
     public static PluginLoadSummary Create(IEnumerable<LoadedPlugin> plugins)
     {
         ArgumentNullException.ThrowIfNull(plugins);
@@ -113,8 +147,14 @@ public sealed record PluginLoadSummary(
     }
 };
 
+/// <summary>
+/// Loads plugin assemblies and discovers rule providers within them.
+/// </summary>
 public sealed class PluginLoader
 {
+    /// <summary>
+    /// Loads plugins and returns both the loaded plugins and a summary of the load operation.
+    /// </summary>
     public static (IReadOnlyList<LoadedPlugin> Plugins, PluginLoadSummary Summary) LoadWithSummary(IEnumerable<PluginDescriptor> plugins)
     {
         var loadedPlugins = Load(plugins);
@@ -122,6 +162,9 @@ public sealed class PluginLoader
         return (loadedPlugins, summary);
     }
 
+    /// <summary>
+    /// Loads plugins from the specified descriptors and returns a list of loaded plugins.
+    /// </summary>
     public static IReadOnlyList<LoadedPlugin> Load(IEnumerable<PluginDescriptor> plugins)
     {
         var results = new List<LoadedPlugin>();

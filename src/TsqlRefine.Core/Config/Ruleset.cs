@@ -3,8 +3,16 @@ using System.Text.Json.Serialization;
 
 namespace TsqlRefine.Core.Config;
 
+/// <summary>
+/// Represents a rule configuration within a ruleset.
+/// </summary>
+/// <param name="Id">The unique identifier of the rule.</param>
+/// <param name="Enabled">Whether the rule is enabled. Default is true.</param>
 public sealed record RulesetRule(string Id, bool Enabled = true);
 
+/// <summary>
+/// Represents a collection of rule configurations that determine which rules are enabled during analysis.
+/// </summary>
 public sealed class Ruleset
 {
     private readonly IReadOnlyList<RulesetRule> _rules;

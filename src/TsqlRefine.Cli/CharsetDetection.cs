@@ -3,8 +3,17 @@ using UtfUnknown;
 
 namespace TsqlRefine.Cli;
 
+/// <summary>
+/// Detects and decodes text file encodings using BOM detection and heuristic analysis.
+/// </summary>
 internal static class CharsetDetection
 {
+    /// <summary>
+    /// Represents decoded text with the detected read encoding and the encoding to use when writing.
+    /// </summary>
+    /// <param name="Text">The decoded text content.</param>
+    /// <param name="ReadEncoding">The encoding that was detected and used to read the file.</param>
+    /// <param name="WriteEncoding">The encoding to use when writing the file (may include BOM).</param>
     public sealed record DecodedText(string Text, Encoding ReadEncoding, Encoding WriteEncoding);
 
     public static async Task<DecodedText> ReadFileAsync(string path, CancellationToken cancellationToken = default)

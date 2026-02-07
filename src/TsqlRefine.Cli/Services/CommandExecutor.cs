@@ -10,6 +10,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Executes CLI commands (lint, format, fix, etc.) and returns appropriate exit codes.
+/// </summary>
 public sealed class CommandExecutor
 {
     private readonly InputReader _inputReader;

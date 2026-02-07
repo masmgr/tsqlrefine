@@ -2,6 +2,9 @@ using TsqlRefine.Formatting;
 
 namespace TsqlRefine.Core.Config;
 
+/// <summary>
+/// Maps between configuration file formatting settings and internal formatting options.
+/// </summary>
 public static class FormattingConfigMapper
 {
     public static FormattingOptions ToFormattingOptions(FormattingConfig? config)

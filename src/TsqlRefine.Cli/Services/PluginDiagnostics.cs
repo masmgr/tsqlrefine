@@ -2,6 +2,9 @@ using TsqlRefine.PluginHost;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Provides diagnostic messages and remediation hints for plugin loading issues.
+/// </summary>
 public sealed class PluginDiagnostics
 {
     public static string GetRemediationHint(PluginLoadDiagnostic diagnostic)

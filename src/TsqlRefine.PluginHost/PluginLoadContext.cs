@@ -4,6 +4,9 @@ using System.Runtime.Loader;
 
 namespace TsqlRefine.PluginHost;
 
+/// <summary>
+/// Custom AssemblyLoadContext for loading plugin assemblies in isolation with support for cross-platform native dependencies.
+/// </summary>
 internal sealed class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;

@@ -19,8 +19,29 @@ public sealed record ConfigLoadResult<T>(
         new(false, null, message, exception);
 }
 
+/// <summary>
+/// Configuration for a plugin to be loaded.
+/// </summary>
+/// <param name="Path">The file system path to the plugin assembly.</param>
+/// <param name="Enabled">Whether the plugin is enabled. Default is true.</param>
 public sealed record PluginConfig(string Path, bool Enabled = true);
 
+/// <summary>
+/// Formatting configuration options for SQL code.
+/// </summary>
+/// <param name="IndentStyle">Indentation style: "spaces" or "tabs". Default is "spaces".</param>
+/// <param name="IndentSize">Number of spaces per indent level. Default is 4.</param>
+/// <param name="KeywordCasing">Casing for SQL keywords: "upper", "lower", or "none". Default is "upper".</param>
+/// <param name="FunctionCasing">Casing for built-in functions: "upper", "lower", or "none". Default is "upper".</param>
+/// <param name="DataTypeCasing">Casing for data types: "upper", "lower", or "none". Default is "lower".</param>
+/// <param name="SchemaCasing">Casing for schema names: "upper", "lower", or "none". Default is "lower".</param>
+/// <param name="TableCasing">Casing for table names: "upper", "lower", or "none". Default is "upper".</param>
+/// <param name="ColumnCasing">Casing for column names: "upper", "lower", or "none". Default is "upper".</param>
+/// <param name="VariableCasing">Casing for variables: "upper", "lower", or "none". Default is "lower".</param>
+/// <param name="CommaStyle">Comma placement: "trailing" or "leading". Default is "trailing".</param>
+/// <param name="MaxLineLength">Maximum line length (0 for no limit). Default is 0.</param>
+/// <param name="InsertFinalNewline">Whether to insert a final newline. Default is true.</param>
+/// <param name="TrimTrailingWhitespace">Whether to trim trailing whitespace. Default is true.</param>
 public sealed record FormattingConfig(
     string IndentStyle = "spaces",
     int IndentSize = 4,
@@ -37,6 +58,13 @@ public sealed record FormattingConfig(
     bool TrimTrailingWhitespace = true
 );
 
+/// <summary>
+/// Main configuration for TsqlRefine behavior and analysis options.
+/// </summary>
+/// <param name="CompatLevel">SQL Server compatibility level (100-160). Default is 150 (SQL Server 2019).</param>
+/// <param name="Ruleset">Path to a ruleset JSON file specifying which rules to enable.</param>
+/// <param name="Plugins">List of plugin configurations to load.</param>
+/// <param name="Formatting">Formatting configuration options.</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,

@@ -3,6 +3,9 @@ using TsqlRefine.Cli.Services;
 
 namespace TsqlRefine.Cli;
 
+/// <summary>
+/// Main entry point for the TsqlRefine CLI application.
+/// </summary>
 public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)

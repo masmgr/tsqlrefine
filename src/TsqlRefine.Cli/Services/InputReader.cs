@@ -5,6 +5,9 @@ using TsqlRefine.Core.Engine;
 
 namespace TsqlRefine.Cli.Services;
 
+/// <summary>
+/// Reads SQL input from files, stdin, or glob patterns while respecting ignore patterns and encoding detection.
+/// </summary>
 public sealed class InputReader
 {
     private Matcher? _cachedIgnoreMatcher;

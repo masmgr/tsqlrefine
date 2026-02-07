@@ -5,6 +5,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Cli;
 
+/// <summary>
+/// Parses command-line arguments using System.CommandLine.
+/// </summary>
 public static class CliParser
 {
     private static readonly HashSet<string> HelpVersionTokens = new(StringComparer.Ordinal)
