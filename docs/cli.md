@@ -25,6 +25,7 @@ Commands:
 | `fix` | Diagnostics + auto-fix within "safe scope" |
 | `init` | Generate default configuration file |
 | `print-config` | Output effective configuration in JSON format |
+| `print-format-config` | Output effective formatting options |
 | `list-rules` | List available rules (loaded) |
 | `list-plugins` | List loaded plugins (Rule plugins only) |
 
@@ -64,6 +65,40 @@ tsqlrefine lint [options] [paths...]
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
 | `--ruleset <path>` | Custom ruleset file |
+| `--verbose` | Show detailed information (execution time) |
+| `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
+
+##### Default Command Behavior
+
+When no subcommand is specified, `lint` is assumed. The following are equivalent:
+
+```bash
+tsqlrefine lint --stdin --output json
+tsqlrefine --stdin --output json
+```
+
+##### Summary Output
+
+After lint execution, a summary is always written to stderr:
+
+```
+3 problems (1 error, 2 warnings) in 5 files. 1 auto-fixable.
+```
+
+When no violations are found:
+
+```
+No problems found in 1 file.
+```
+
+With `--verbose`, execution time is additionally displayed:
+
+```
+No problems found in 5 files.
+Time: 42ms
+```
+
+With `--quiet` (`-q`), all informational stderr output is suppressed. Only stdout diagnostics and the exit code remain. This is designed for IDE/extension integration where machine-readable output is consumed programmatically.
 
 #### format
 
@@ -80,8 +115,12 @@ tsqlrefine format [options] [paths...]
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--indent-style <tabs\|spaces>` | Indentation type |
 | `--indent-size <n>` | Indentation width |
+| `--line-ending <auto\|lf\|crlf>` | Line ending style |
+| `-q, --quiet` | Suppress informational stderr output |
 
 > **Note**: When files are specified, formatted results are automatically written to the files. When using standard input (`--stdin`), results are output to stdout.
+
+Progress messages (`Formatted: file.sql` / `Unchanged: file.sql`) are written to stderr by default. Use `--quiet` to suppress them.
 
 #### fix
 
@@ -100,16 +139,42 @@ tsqlrefine fix [options] [paths...]
 | `--preset <name>` | Preset selection |
 | `--ruleset <path>` | Custom ruleset file |
 | `--rule <id>` | Rule ID to apply |
+| `-q, --quiet` | Suppress informational stderr output |
 
 > **Note**: When files are specified, fixed results are automatically written to the files. When using standard input (`--stdin`), results are output to stdout.
+
+Progress messages (`Fixed: file.sql (N fixes applied)` / `Unchanged: file.sql`) are written to stderr by default. Use `--quiet` to suppress them.
 
 #### init
 
 ```
-tsqlrefine init
+tsqlrefine init [options]
 ```
 
-No options. Generates `tsqlrefine.json` and `tsqlrefine.ignore`.
+| Option | Description |
+|------------|------|
+| `--force` | Overwrite existing configuration files |
+| `--preset <name>` | Preset ruleset to use (default: `recommended`) |
+| `--compat-level <100-160>` | SQL Server compatibility level (default: `150`) |
+
+Generates `tsqlrefine.json` and `tsqlrefine.ignore` in the current directory.
+
+- The generated `tsqlrefine.json` includes a `$schema` reference for IDE autocompletion
+- If configuration files already exist, returns an error with a hint to use `--force`
+- Success messages are written to stdout
+
+Example:
+
+```bash
+# Default initialization
+tsqlrefine init
+
+# Initialize with strict preset and SQL Server 2022
+tsqlrefine init --preset strict --compat-level 160
+
+# Overwrite existing configuration
+tsqlrefine init --force
+```
 
 #### print-config
 
@@ -121,6 +186,20 @@ tsqlrefine print-config [options]
 |------------|------|
 | `--output <text\|json>` | Output format (default: `text`) |
 
+#### print-format-config
+
+```
+tsqlrefine print-format-config [options] [paths...]
+```
+
+| Option | Description |
+|------------|------|
+| `--output <text\|json>` | Output format (default: `text`) |
+| `--indent-style <tabs\|spaces>` | Indentation type |
+| `--indent-size <n>` | Indentation width |
+| `--line-ending <auto\|lf\|crlf>` | Line ending style |
+| `--show-sources` | Show where each option value originated |
+
 #### list-rules
 
 ```
@@ -130,6 +209,36 @@ tsqlrefine list-rules [options]
 | Option | Description |
 |------------|------|
 | `--output <text\|json>` | Output format (default: `text`) |
+| `--category <name>` | Filter rules by category |
+| `--fixable` | Show only fixable rules |
+| `--preset <name>` | Show enabled status for the specified preset |
+
+Text output displays a formatted table:
+
+```
+Rule ID                                Category         Severity      Fixable
+──────────────────────────────────────────────────────────────────────────────
+avoid-select-star                      Performance      Warning       No
+semantic/undefined-alias               Correctness      Error         No
+
+Total: 101 rules
+```
+
+JSON output returns an array of rule objects:
+
+```json
+[
+  {
+    "id": "avoid-select-star",
+    "description": "Avoid SELECT *; explicitly list required columns.",
+    "category": "Performance",
+    "defaultSeverity": "warning",
+    "fixable": false,
+    "minCompatLevel": 100,
+    "maxCompatLevel": 160
+  }
+]
+```
 
 #### list-plugins
 
@@ -149,9 +258,16 @@ tsqlrefine list-plugins [options]
 | Preset | Description |
 |------------|------|
 | `recommended` | Balanced for production use (default) |
-| `strict` | Maximum enforcement |
+| `strict` | Maximum enforcement including style rules |
+| `strict-logic` | Comprehensive correctness without cosmetic rules |
 | `pragmatic` | Production minimum (bug and data loss prevention) |
 | `security-only` | Security and critical safety only |
+
+When an unknown preset name is specified, the error message lists available presets:
+
+```
+Unknown preset: 'foo'. Available presets: pragmatic, recommended, security-only, strict, strict-logic
+```
 
 #### Encoding Detection (`--detect-encoding`)
 
@@ -178,7 +294,7 @@ tsqlrefine list-plugins [options]
 For `--output text` (default), diagnostics are output in the following format:
 
 ```
-<filepath>:<line>:<column>: <severity>: <message> (<rule-id>)
+<filepath>:<line>:<column>: <severity>: <message> (<rule-id>[,Fixable])
 ```
 
 Example:
@@ -186,6 +302,7 @@ Example:
 ```
 file.sql:1:8: Warning: Avoid SELECT *; explicitly list required columns. (avoid-select-star)
 file.sql:1:15: Warning: Table reference 'users' should include schema qualification. (semantic/schema-qualify)
+file.sql:3:1: Warning: Use uppercase for SQL keywords. (keyword-casing,Fixable)
 ```
 
 - `<filepath>`: File path (`<stdin>` for stdin)
@@ -194,6 +311,7 @@ file.sql:1:15: Warning: Table reference 'users' should include schema qualificat
 - `<severity>`: `Error` / `Warning` / `Information` / `Hint`
 - `<message>`: Diagnostic message
 - `<rule-id>`: Rule ID
+- `,Fixable`: Appended when the violation is auto-fixable
 
 This format is similar to ESLint / GCC / rustc and is recognized as clickable links in many editors and IDEs.
 
@@ -271,4 +389,28 @@ Fixed exit codes by result type for easy CI handling.
 - `3`: Configuration error (config/ignore load failure, invalid compatibility level, etc.)
 - `4`: Runtime exception (internal error)
 
-For `format`/`fix` with `--write`, the same rules apply (if violations remain after fixes, exit code is `1`).
+For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
+
+---
+
+## 6. IDE / Extension Integration
+
+For integration from VS Code extensions or other tools, use `--quiet` (`-q`) with `--output json`:
+
+```bash
+# Lint with JSON output, no stderr noise
+tsqlrefine lint --stdin --output json -q
+
+# Fix via stdin, no progress messages
+tsqlrefine fix --stdin -q
+
+# Format via stdin, no progress messages
+tsqlrefine format --stdin -q
+```
+
+With `--quiet`:
+- **stdout**: Contains only data output (diagnostics in text/JSON format, or formatted/fixed SQL for stdin)
+- **stderr**: Empty (informational messages suppressed). Error messages (config errors, "No input") are still emitted
+- **Exit code**: Unchanged (0/1/2/3/4)
+
+This ensures clean machine consumption without needing to filter stderr.
