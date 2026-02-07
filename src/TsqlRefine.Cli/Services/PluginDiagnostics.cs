@@ -33,15 +33,27 @@ public sealed class PluginDiagnostics
     /// </summary>
     public static void WriteFailedPluginWarnings(IReadOnlyList<LoadedPlugin> plugins, TextWriter stderr)
     {
-        var failedPlugins = plugins
-            .Where(p => p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled)
-            .ToList();
+        List<LoadedPlugin>? failedPlugins = null;
+        var totalEnabled = 0;
+        foreach (var plugin in plugins)
+        {
+            if (plugin.Enabled)
+            {
+                totalEnabled++;
+            }
 
-        if (failedPlugins.Count == 0)
+            var status = plugin.Diagnostic.Status;
+            if (status != PluginLoadStatus.Success && status != PluginLoadStatus.Disabled)
+            {
+                failedPlugins ??= new List<LoadedPlugin>();
+                failedPlugins.Add(plugin);
+            }
+        }
+
+        if (failedPlugins is null || failedPlugins.Count == 0)
             return;
 
-        var totalPlugins = plugins.Count(p => p.Enabled);
-        stderr.WriteLine($"Warning: {failedPlugins.Count} of {totalPlugins} plugin{(totalPlugins == 1 ? "" : "s")} failed to load. Run 'tsqlrefine list-plugins' for details.");
+        stderr.WriteLine($"Warning: {failedPlugins.Count} of {totalEnabled} plugin{(totalEnabled == 1 ? "" : "s")} failed to load. Run 'tsqlrefine list-plugins' for details.");
 
         foreach (var p in failedPlugins)
         {
@@ -256,9 +268,25 @@ public sealed class PluginDiagnostics
     private static PluginLoadSummary CalculateSummary(IReadOnlyList<LoadedPlugin> plugins)
     {
         var totalPlugins = plugins.Count;
-        var successCount = plugins.Count(p => p.Diagnostic.Status == PluginLoadStatus.Success);
-        var disabledCount = plugins.Count(p => p.Diagnostic.Status == PluginLoadStatus.Disabled);
-        var errorCount = plugins.Count(p => p.Diagnostic.Status != PluginLoadStatus.Success && p.Diagnostic.Status != PluginLoadStatus.Disabled);
+        var successCount = 0;
+        var disabledCount = 0;
+        var errorCount = 0;
+
+        foreach (var plugin in plugins)
+        {
+            switch (plugin.Diagnostic.Status)
+            {
+                case PluginLoadStatus.Success:
+                    successCount++;
+                    break;
+                case PluginLoadStatus.Disabled:
+                    disabledCount++;
+                    break;
+                default:
+                    errorCount++;
+                    break;
+            }
+        }
 
         return new PluginLoadSummary(totalPlugins, successCount, disabledCount, errorCount);
     }

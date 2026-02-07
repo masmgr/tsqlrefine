@@ -54,8 +54,6 @@ public static class CliApp
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        EncodingProviderRegistry.EnsureRegistered();
-
         // Require explicit subcommand
         if (!parsed.IsExplicitCommand)
         {

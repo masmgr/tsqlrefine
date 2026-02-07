@@ -26,7 +26,9 @@ public static class ScriptDomElementCaser
 
         var parser = CreateParser(compatLevel);
         using var reader = new StringReader(input);
-        var tokens = parser.GetTokenStream(reader, out _).ToList();
+        var tokens = parser.GetTokenStream(reader, out _);
+        var previousNonTriviaIndexes = BuildPreviousNonTriviaIndexes(tokens);
+        var nextNonTriviaIndexes = BuildNextNonTriviaIndexes(tokens);
 
         var sb = new StringBuilder(input.Length + 16);
         var context = new CasingContext();
@@ -43,8 +45,8 @@ public static class ScriptDomElementCaser
             var text = token.Text ?? string.Empty;
 
             // Get surrounding tokens for categorization
-            var previousToken = GetPreviousNonTriviaToken(tokens, i);
-            var nextToken = GetNextNonTriviaToken(tokens, i);
+            var previousToken = GetToken(tokens, previousNonTriviaIndexes[i]);
+            var nextToken = GetToken(tokens, nextNonTriviaIndexes[i]);
 
             // Categorize token with context tracking
             var category = SqlElementCategorizer.Categorize(token, previousToken, nextToken, context);
@@ -91,39 +93,42 @@ public static class ScriptDomElementCaser
         return sb.ToString();
     }
 
-    /// <summary>
-    /// Gets the previous non-trivia (non-whitespace, non-comment) token.
-    /// </summary>
-    private static TSqlParserToken? GetPreviousNonTriviaToken(List<TSqlParserToken> tokens, int currentIndex)
+    private static int[] BuildPreviousNonTriviaIndexes(IList<TSqlParserToken> tokens)
     {
-        for (int i = currentIndex - 1; i >= 0; i--)
+        var indexes = new int[tokens.Count];
+        var previousIndex = -1;
+
+        for (var i = 0; i < tokens.Count; i++)
         {
-            var token = tokens[i];
-            if (!IsTrivia(token))
+            indexes[i] = previousIndex;
+            if (!IsTrivia(tokens[i]))
             {
-                return token;
+                previousIndex = i;
             }
         }
 
-        return null;
+        return indexes;
     }
 
-    /// <summary>
-    /// Gets the next non-trivia (non-whitespace, non-comment) token.
-    /// </summary>
-    private static TSqlParserToken? GetNextNonTriviaToken(List<TSqlParserToken> tokens, int currentIndex)
+    private static int[] BuildNextNonTriviaIndexes(IList<TSqlParserToken> tokens)
     {
-        for (int i = currentIndex + 1; i < tokens.Count; i++)
+        var indexes = new int[tokens.Count];
+        var nextIndex = -1;
+
+        for (var i = tokens.Count - 1; i >= 0; i--)
         {
-            var token = tokens[i];
-            if (!IsTrivia(token))
+            indexes[i] = nextIndex;
+            if (!IsTrivia(tokens[i]))
             {
-                return token;
+                nextIndex = i;
             }
         }
 
-        return null;
+        return indexes;
     }
+
+    private static TSqlParserToken? GetToken(IList<TSqlParserToken> tokens, int index) =>
+        index >= 0 ? tokens[index] : null;
 
     /// <summary>
     /// Checks if a token is trivia (whitespace or comment).

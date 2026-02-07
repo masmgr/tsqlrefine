@@ -77,17 +77,37 @@ public sealed record PluginLoadSummary(
 {
     public static PluginLoadSummary Create(IEnumerable<LoadedPlugin> plugins)
     {
-        var pluginList = plugins.ToList();
-        var total = pluginList.Count;
-        var successCount = pluginList.Count(p => p.Diagnostic.Status == PluginLoadStatus.Success);
-        var disabledCount = pluginList.Count(p => p.Diagnostic.Status == PluginLoadStatus.Disabled);
-        var errorCount = pluginList.Count(p =>
-            p.Diagnostic.Status != PluginLoadStatus.Success &&
-            p.Diagnostic.Status != PluginLoadStatus.Disabled);
+        ArgumentNullException.ThrowIfNull(plugins);
 
-        var breakdown = pluginList
-            .GroupBy(p => p.Diagnostic.Status)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var total = 0;
+        var successCount = 0;
+        var disabledCount = 0;
+        var errorCount = 0;
+        var breakdown = new Dictionary<PluginLoadStatus, int>();
+
+        foreach (var plugin in plugins)
+        {
+            total++;
+
+            var status = plugin.Diagnostic.Status;
+            if (!breakdown.TryAdd(status, 1))
+            {
+                breakdown[status]++;
+            }
+
+            switch (status)
+            {
+                case PluginLoadStatus.Success:
+                    successCount++;
+                    break;
+                case PluginLoadStatus.Disabled:
+                    disabledCount++;
+                    break;
+                default:
+                    errorCount++;
+                    break;
+            }
+        }
 
         return new PluginLoadSummary(total, successCount, disabledCount, errorCount, breakdown);
     }

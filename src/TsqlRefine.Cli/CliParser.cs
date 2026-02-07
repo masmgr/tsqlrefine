@@ -7,6 +7,12 @@ namespace TsqlRefine.Cli;
 
 public static class CliParser
 {
+    private static readonly HashSet<string> HelpVersionTokens = new(StringComparer.Ordinal)
+    {
+        "--help", "-h", "-?", "/?",
+        "--version"
+    };
+
     // =================================================================
     // Option Definitions
     // =================================================================
@@ -264,13 +270,7 @@ public static class CliParser
     /// </summary>
     public static bool IsHelpOrVersionRequest(string[] args)
     {
-        var helpVersionTokens = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "--help", "-h", "-?", "/?",
-            "--version"
-        };
-
-        return args.Any(arg => helpVersionTokens.Contains(arg));
+        return args.Any(static arg => HelpVersionTokens.Contains(arg));
     }
 
     /// <summary>

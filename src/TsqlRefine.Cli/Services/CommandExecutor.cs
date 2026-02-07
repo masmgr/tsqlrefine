@@ -132,6 +132,7 @@ public sealed class CommandExecutor
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
         var result = engine.Run(command, read.Inputs, options);
+        var diagnosticsSummary = SummarizeDiagnostics(result.Files);
 
         stopwatch.Stop();
 
@@ -161,7 +162,7 @@ public sealed class CommandExecutor
         if (args.Verbose)
         {
             var fileCount = result.Files.Count;
-            var errorCount = result.Files.Sum(f => f.Diagnostics.Count);
+            var errorCount = diagnosticsSummary.TotalDiagnostics;
             var elapsed = stopwatch.Elapsed;
             var elapsedText = elapsed.TotalSeconds >= 1
                 ? $"{elapsed.TotalSeconds:F2}s"
@@ -170,15 +171,12 @@ public sealed class CommandExecutor
             await stderr.WriteLineAsync($"Files: {fileCount}, Errors: {errorCount}, Time: {elapsedText}");
         }
 
-        var hasParseErrors = result.Files.Any(f =>
-            f.Diagnostics.Any(d => d.Code == TsqlRefineEngine.ParseErrorCode));
-        if (hasParseErrors)
+        if (diagnosticsSummary.HasParseErrors)
         {
             return ExitCodes.AnalysisError;
         }
 
-        var hasIssues = result.Files.Any(f => f.Diagnostics.Count > 0);
-        return hasIssues ? ExitCodes.Violations : 0;
+        return diagnosticsSummary.TotalDiagnostics > 0 ? ExitCodes.Violations : 0;
     }
 
     public async Task<int> ExecuteFormatAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
@@ -281,9 +279,7 @@ public sealed class CommandExecutor
         }
 
         // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）
-        var hasParseErrors = result.Files.Any(f =>
-            f.Diagnostics.Any(d => d.Code == TsqlRefineEngine.ParseErrorCode));
-        return hasParseErrors ? ExitCodes.AnalysisError : 0;
+        return HasParseErrors(result.Files) ? ExitCodes.AnalysisError : 0;
     }
 
     private static EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
@@ -312,4 +308,49 @@ public sealed class CommandExecutor
 
         return (read, null);
     }
+
+    private static LintDiagnosticsSummary SummarizeDiagnostics(IReadOnlyList<FileResult> files)
+    {
+        var totalDiagnostics = 0;
+        var hasParseErrors = false;
+
+        foreach (var file in files)
+        {
+            totalDiagnostics += file.Diagnostics.Count;
+
+            if (hasParseErrors)
+            {
+                continue;
+            }
+
+            foreach (var diagnostic in file.Diagnostics)
+            {
+                if (diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
+                {
+                    hasParseErrors = true;
+                    break;
+                }
+            }
+        }
+
+        return new LintDiagnosticsSummary(totalDiagnostics, hasParseErrors);
+    }
+
+    private static bool HasParseErrors(IReadOnlyList<FixedFileResult> files)
+    {
+        foreach (var file in files)
+        {
+            foreach (var diagnostic in file.Diagnostics)
+            {
+                if (diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private readonly record struct LintDiagnosticsSummary(int TotalDiagnostics, bool HasParseErrors);
 }

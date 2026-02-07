@@ -8,20 +8,23 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class ConfigLoader
 {
+    private static string? ResolveConfigPath(CliArgs args)
+    {
+        if (args.ConfigPath is not null)
+        {
+            return args.ConfigPath;
+        }
+
+        var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
+        return File.Exists(defaultPath) ? defaultPath : null;
+    }
+
     /// <summary>
     /// Gets the path to the config file that would be loaded, or null if using defaults.
     /// </summary>
     public static string? GetConfigPath(CliArgs args)
     {
-        var path = args.ConfigPath;
-        if (path is null)
-        {
-            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-            if (File.Exists(defaultPath))
-            {
-                path = defaultPath;
-            }
-        }
+        var path = ResolveConfigPath(args);
 
         if (path is not null && File.Exists(path))
         {
@@ -33,15 +36,7 @@ public sealed class ConfigLoader
 
     public static TsqlRefineConfig LoadConfig(CliArgs args)
     {
-        var path = args.ConfigPath;
-        if (path is null)
-        {
-            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-            if (File.Exists(defaultPath))
-            {
-                path = defaultPath;
-            }
-        }
+        var path = ResolveConfigPath(args);
 
         if (path is null)
         {
@@ -180,11 +175,19 @@ public sealed class ConfigLoader
 
         try
         {
-            var lines = File.ReadAllLines(path, Encoding.UTF8);
-            return lines
-                .Select(l => l.Trim())
-                .Where(l => !string.IsNullOrEmpty(l) && !l.StartsWith('#'))
-                .ToList();
+            var patterns = new List<string>();
+            foreach (var line in File.ReadLines(path, Encoding.UTF8))
+            {
+                var trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                patterns.Add(trimmed);
+            }
+
+            return patterns;
         }
 
 #pragma warning disable CA1031 // Wrap ignore list read failures into ConfigException

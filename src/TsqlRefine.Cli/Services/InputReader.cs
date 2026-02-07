@@ -8,7 +8,7 @@ namespace TsqlRefine.Cli.Services;
 public sealed class InputReader
 {
     private Matcher? _cachedIgnoreMatcher;
-    private List<string>? _cachedIgnorePatterns;
+    private IReadOnlyList<string>? _cachedIgnorePatterns;
 
     public sealed record ReadInputsResult(
         List<SqlInput> Inputs,
@@ -22,16 +22,27 @@ public sealed class InputReader
     {
         var inputs = new List<SqlInput>();
         var encodings = new Dictionary<string, Encoding>(StringComparer.OrdinalIgnoreCase);
-        var paths = args.Paths.ToArray();
 
-        if (args.Stdin || paths.Any(p => p == "-"))
+        var paths = new List<string>(args.Paths.Count);
+        var readFromStdin = args.Stdin;
+        foreach (var path in args.Paths)
+        {
+            if (path == "-")
+            {
+                readFromStdin = true;
+                continue;
+            }
+
+            paths.Add(path);
+        }
+
+        if (readFromStdin)
         {
             var sql = await stdin.ReadToEndAsync();
             inputs.Add(new SqlInput("<stdin>", sql));
-            paths = paths.Where(p => p != "-").ToArray();
         }
 
-        var ignoreList = ignorePatterns.ToList();
+        var ignoreList = ignorePatterns as IReadOnlyList<string> ?? ignorePatterns.ToArray();
         foreach (var path in ExpandPaths(paths, ignoreList))
         {
             if (!File.Exists(path))
@@ -64,7 +75,7 @@ public sealed class InputReader
         return new ReadInputsResult(inputs, encodings);
     }
 
-    private IEnumerable<string> ExpandPaths(IEnumerable<string> paths, List<string> ignorePatterns)
+    private IEnumerable<string> ExpandPaths(IEnumerable<string> paths, IReadOnlyList<string> ignorePatterns)
     {
         foreach (var path in paths)
         {
@@ -73,8 +84,10 @@ public sealed class InputReader
                 var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
                 matcher.AddInclude("**/*.sql");
 
-                foreach (var pattern in ignorePatterns)
-                    matcher.AddExclude(pattern);
+                for (var i = 0; i < ignorePatterns.Count; i++)
+                {
+                    matcher.AddExclude(ignorePatterns[i]);
+                }
 
                 var result = matcher.Execute(
                     new DirectoryInfoWrapper(new DirectoryInfo(path)));
@@ -91,7 +104,7 @@ public sealed class InputReader
         }
     }
 
-    private bool ShouldIgnoreFile(string filePath, List<string> ignorePatterns)
+    private bool ShouldIgnoreFile(string filePath, IReadOnlyList<string> ignorePatterns)
     {
         if (ignorePatterns.Count == 0)
             return false;
@@ -105,7 +118,7 @@ public sealed class InputReader
         return result.HasMatches;
     }
 
-    private Matcher GetIgnoreMatcher(List<string> ignorePatterns)
+    private Matcher GetIgnoreMatcher(IReadOnlyList<string> ignorePatterns)
     {
         if (_cachedIgnoreMatcher is not null &&
             _cachedIgnorePatterns is not null &&
@@ -115,9 +128,9 @@ public sealed class InputReader
         }
 
         var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
-        foreach (var pattern in ignorePatterns)
+        for (var i = 0; i < ignorePatterns.Count; i++)
         {
-            matcher.AddInclude(pattern);
+            matcher.AddInclude(ignorePatterns[i]);
         }
 
         _cachedIgnoreMatcher = matcher;

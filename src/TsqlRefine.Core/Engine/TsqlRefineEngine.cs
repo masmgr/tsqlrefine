@@ -6,7 +6,8 @@ namespace TsqlRefine.Core.Engine;
 
 public sealed class TsqlRefineEngine
 {
-    private readonly IReadOnlyList<IRule> _rules;
+    private readonly IRule[] _rules;
+    private static readonly RuleSettings DefaultRuleSettings = new();
 
     public TsqlRefineEngine(IEnumerable<IRule> rules)
     {
@@ -149,12 +150,24 @@ public sealed class TsqlRefineEngine
         return asm.GetName().Version?.ToString() ?? "0.0.0";
     }
 
-    private IReadOnlyList<IRule> GetActiveRules(EngineOptions options)
+    private IRule[] GetActiveRules(EngineOptions options)
     {
         var ruleset = options.Ruleset;
-        return ruleset is null
-            ? _rules
-            : _rules.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId)).ToArray();
+        if (ruleset is null || _rules.Length == 0)
+        {
+            return _rules;
+        }
+
+        var activeRules = new List<IRule>(_rules.Length);
+        foreach (var rule in _rules)
+        {
+            if (ruleset.IsRuleEnabled(rule.Metadata.RuleId))
+            {
+                activeRules.Add(rule);
+            }
+        }
+
+        return activeRules.Count == _rules.Length ? _rules : activeRules.ToArray();
     }
 
     private static readonly TsqlRefine.PluginSdk.Range ZeroRange =
@@ -207,7 +220,7 @@ public sealed class TsqlRefineEngine
 
     private static RuleContext CreateContext(SqlInput input, EngineOptions options)
     {
-        var ruleSettings = options.RuleSettings ?? new RuleSettings();
+        var ruleSettings = options.RuleSettings ?? DefaultRuleSettings;
         var analysis = ScriptDomTokenizer.Analyze(input.Text, options.CompatLevel);
         return new RuleContext(
             FilePath: input.FilePath,
@@ -254,10 +267,17 @@ public sealed class TsqlRefineEngine
                 {
                     try
                     {
-                        var fixes = (rule.GetFixes(context, normalized) ?? Array.Empty<Fix>())
-                            .Where(f => f.Edits is not null && f.Edits.Count > 0)
-                            .ToArray();
-                        if (fixes.Length > 0)
+                        List<Fix>? fixes = null;
+                        foreach (var fix in rule.GetFixes(context, normalized) ?? Array.Empty<Fix>())
+                        {
+                            if (fix.Edits is not null && fix.Edits.Count > 0)
+                            {
+                                fixes ??= new List<Fix>();
+                                fixes.Add(fix);
+                            }
+                        }
+
+                        if (fixes is not null)
                         {
                             fixGroups.Add(new DiagnosticFixGroup(rule, normalized, fixes));
                         }
