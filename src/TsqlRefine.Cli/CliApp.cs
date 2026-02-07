@@ -57,12 +57,8 @@ public static class CliApp
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        // Require explicit subcommand
-        if (!parsed.IsExplicitCommand)
-        {
-            await stderr.WriteLineAsync("Error: No command specified. Run 'tsqlrefine --help' for usage.");
-            return ExitCodes.Fatal;
-        }
+        // Default to lint when no subcommand is specified
+        var command = parsed.IsExplicitCommand ? parsed.Command : "lint";
 
         try
         {
@@ -70,7 +66,7 @@ public static class CliApp
             var inputReader = new InputReader();
             var commandExecutor = new CommandExecutor(inputReader);
 
-            return parsed.Command switch
+            return command switch
             {
                 "init" => await CommandExecutor.ExecuteInitAsync(parsed, stdout, stderr),
                 "print-config" => await CommandExecutor.ExecutePrintConfigAsync(parsed, stdout, stderr),
@@ -80,7 +76,7 @@ public static class CliApp
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
-                _ => await UnknownCommandAsync(parsed.Command, stderr)
+                _ => await UnknownCommandAsync(command, stderr)
             };
         }
         catch (ConfigException ex)

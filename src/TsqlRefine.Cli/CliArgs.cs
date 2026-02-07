@@ -22,6 +22,9 @@ namespace TsqlRefine.Cli;
 /// <param name="LineEnding">Line ending style override.</param>
 /// <param name="Verbose">Whether to enable verbose output.</param>
 /// <param name="ShowSources">Whether to show formatting option sources.</param>
+/// <param name="Force">Whether to overwrite existing files (for init command).</param>
+/// <param name="Category">Filter rules by category (for list-rules command).</param>
+/// <param name="FixableOnly">Show only fixable rules (for list-rules command).</param>
 /// <param name="Paths">File paths to analyze.</param>
 /// <param name="RuleId">Specific rule ID to run (for single-rule mode).</param>
 public sealed record CliArgs(
@@ -41,6 +44,9 @@ public sealed record CliArgs(
     LineEnding? LineEnding,
     bool Verbose,
     bool ShowSources,
+    bool Force,
+    string? Category,
+    bool FixableOnly,
     IReadOnlyList<string> Paths,
     string? RuleId
 );

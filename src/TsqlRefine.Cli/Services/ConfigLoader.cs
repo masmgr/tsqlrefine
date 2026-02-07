@@ -78,6 +78,16 @@ public sealed class ConfigLoader
         if (!string.IsNullOrWhiteSpace(args.Preset))
         {
             path = Path.Combine(Directory.GetCurrentDirectory(), "rulesets", $"{args.Preset}.json");
+
+            if (!File.Exists(path))
+            {
+                var available = DiscoverPresetNames();
+                var list = available.Count > 0
+                    ? string.Join(", ", available)
+                    : "none found";
+                throw new ConfigException(
+                    $"Unknown preset: '{args.Preset}'. Available presets: {list}");
+            }
         }
 
         if (string.IsNullOrWhiteSpace(path))
@@ -199,5 +209,19 @@ public sealed class ConfigLoader
         {
             throw new ConfigException($"Failed to read ignore list: {ex.Message}");
         }
+    }
+
+    private static List<string> DiscoverPresetNames()
+    {
+        var rulesetsDir = Path.Combine(Directory.GetCurrentDirectory(), "rulesets");
+        if (!Directory.Exists(rulesetsDir))
+        {
+            return [];
+        }
+
+        return Directory.GetFiles(rulesetsDir, "*.json")
+            .Select(f => Path.GetFileNameWithoutExtension(f))
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

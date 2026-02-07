@@ -18,7 +18,7 @@ public sealed class CliListRulesTests
     }
 
     [Fact]
-    public async Task ListRules_IncludesRuleMetadata()
+    public async Task ListRules_IncludesTableHeader()
     {
         var stdout = new StringWriter();
         var stderr = new StringWriter();
@@ -26,9 +26,11 @@ public sealed class CliListRulesTests
         await CliApp.RunAsync(new[] { "list-rules" }, TextReader.Null, stdout, stderr);
 
         var output = stdout.ToString();
-        // Should include rule ID, category, severity, and fixable info
-        Assert.Contains("\t", output); // Tab-separated format
-        Assert.Contains("fixable=", output);
+        Assert.Contains("Rule ID", output);
+        Assert.Contains("Category", output);
+        Assert.Contains("Severity", output);
+        Assert.Contains("Fixable", output);
+        Assert.Contains("Total:", output);
     }
 
     [Fact]
@@ -65,5 +67,45 @@ public sealed class CliListRulesTests
         var rules = doc.RootElement.EnumerateArray().ToList();
 
         Assert.Contains(rules, r => r.GetProperty("id").GetString() == "avoid-select-star");
+    }
+
+    [Fact]
+    public async Task ListRules_WithCategoryFilter_FiltersRules()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "list-rules", "--category", "Security" }, TextReader.Null, stdout, stderr);
+
+        var output = stdout.ToString();
+        Assert.Contains("Security", output);
+        // Security rules should not include performance-only rules
+        Assert.DoesNotContain("avoid-select-star", output);
+    }
+
+    [Fact]
+    public async Task ListRules_WithFixableFilter_ShowsOnlyFixableRules()
+    {
+        var stdoutAll = new StringWriter();
+        var stdoutFixable = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "list-rules" }, TextReader.Null, stdoutAll, new StringWriter());
+        await CliApp.RunAsync(new[] { "list-rules", "--fixable" }, TextReader.Null, stdoutFixable, new StringWriter());
+
+        // Fixable list should be shorter than full list
+        var allLines = stdoutAll.ToString().Split('\n').Length;
+        var fixableLines = stdoutFixable.ToString().Split('\n').Length;
+        Assert.True(fixableLines < allLines);
+
+        // All listed rules should contain "Yes" in the Fixable column
+        var lines = stdoutFixable.ToString().Split('\n')
+            .Select(l => l.TrimEnd())
+            .Where(l => l.Length > 0 && !l.StartsWith("Rule ID") && !l.StartsWith("\u2500") && !l.StartsWith("Total:"))
+            .ToArray();
+        Assert.True(lines.Length > 0);
+        foreach (var line in lines)
+        {
+            Assert.Contains("Yes", line);
+        }
     }
 }

@@ -24,24 +24,33 @@ public sealed class CommandExecutor
 
     public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        _ = stdout;
         var configPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
         var ignorePath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
 
-        if (File.Exists(configPath) || File.Exists(ignorePath))
+        if (!args.Force && (File.Exists(configPath) || File.Exists(ignorePath)))
         {
-            await stderr.WriteLineAsync("Config files already exist.");
+            await stderr.WriteLineAsync("Config files already exist. Use --force to overwrite.");
             return ExitCodes.Fatal;
         }
 
+        var preset = args.Preset ?? "recommended";
         var config = new TsqlRefineConfig(
             CompatLevel: args.CompatLevel ?? 150,
-            Ruleset: "rulesets/recommended.json",
+            Ruleset: $"rulesets/{preset}.json",
             Plugins: Array.Empty<PluginConfig>()
         );
 
-        await File.WriteAllTextAsync(configPath, System.Text.Json.JsonSerializer.Serialize(config, JsonDefaults.Options), Encoding.UTF8);
+        // Serialize with $schema reference for IDE support
+        var jsonNode = System.Text.Json.JsonSerializer.SerializeToNode(config, JsonDefaults.Options)!;
+        var jsonObj = jsonNode.AsObject();
+        jsonObj.Insert(0, "$schema", "schemas/tsqlrefine.schema.json");
+        var json = System.Text.Json.JsonSerializer.Serialize(jsonObj, JsonDefaults.Options);
+
+        await File.WriteAllTextAsync(configPath, json, Encoding.UTF8);
         await File.WriteAllTextAsync(ignorePath, "# One glob per line\nbin/\nobj/\n", Encoding.UTF8);
+
+        await stdout.WriteLineAsync($"Created {configPath}");
+        await stdout.WriteLineAsync($"Created {ignorePath}");
         return 0;
     }
 
@@ -77,7 +86,30 @@ public sealed class CommandExecutor
     public static async Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         var config = ConfigLoader.LoadConfig(args);
-        var rules = ConfigLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
+        var allRules = ConfigLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
+
+        // Apply filters
+        IEnumerable<IRule> filtered = allRules;
+
+        if (!string.IsNullOrWhiteSpace(args.Category))
+        {
+            filtered = filtered.Where(r =>
+                string.Equals(r.Metadata.Category, args.Category, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (args.FixableOnly)
+        {
+            filtered = filtered.Where(r => r.Metadata.Fixable);
+        }
+
+        // Apply preset filter if specified
+        Ruleset? presetRuleset = null;
+        if (!string.IsNullOrWhiteSpace(args.Preset))
+        {
+            presetRuleset = ConfigLoader.LoadRuleset(args, config);
+        }
+
+        var rules = filtered.ToArray();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -89,19 +121,51 @@ public sealed class CommandExecutor
                 defaultSeverity = r.Metadata.DefaultSeverity.ToString().ToLowerInvariant(),
                 fixable = r.Metadata.Fixable,
                 minCompatLevel = r.Metadata.MinCompatLevel,
-                maxCompatLevel = r.Metadata.MaxCompatLevel
+                maxCompatLevel = r.Metadata.MaxCompatLevel,
+                enabled = presetRuleset?.IsRuleEnabled(r.Metadata.RuleId)
             });
             await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
         }
         else
         {
-            foreach (var rule in rules)
-            {
-                await stdout.WriteLineAsync($"{rule.Metadata.RuleId}\t{rule.Metadata.Category}\t{rule.Metadata.DefaultSeverity}\tfixable={rule.Metadata.Fixable}");
-            }
+            await WriteRulesTableAsync(stdout, rules, presetRuleset);
         }
 
         return 0;
+    }
+
+    private static async Task WriteRulesTableAsync(TextWriter stdout, IRule[] rules, Ruleset? preset)
+    {
+        const int idWidth = 38;
+        const int categoryWidth = 16;
+        const int severityWidth = 13;
+        const int fixableWidth = 7;
+
+        var showEnabled = preset is not null;
+        var header = $"{"Rule ID",-idWidth} {"Category",-categoryWidth} {"Severity",-severityWidth} {"Fixable",-fixableWidth}";
+        if (showEnabled)
+            header += " Enabled";
+
+        await stdout.WriteLineAsync(header);
+        var separatorLength = header.Length;
+        await stdout.WriteLineAsync(new string('\u2500', separatorLength));
+
+        foreach (var rule in rules)
+        {
+            var m = rule.Metadata;
+            var fixable = m.Fixable ? "Yes" : "No";
+            var line = $"{m.RuleId,-idWidth} {m.Category,-categoryWidth} {m.DefaultSeverity,-severityWidth} {fixable,-fixableWidth}";
+            if (showEnabled)
+            {
+                var enabled = preset!.IsRuleEnabled(m.RuleId) ? "Yes" : "No";
+                line += $" {enabled}";
+            }
+
+            await stdout.WriteLineAsync(line);
+        }
+
+        await stdout.WriteLineAsync();
+        await stdout.WriteLineAsync($"Total: {rules.Length} rules");
     }
 
     public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
@@ -162,16 +226,17 @@ public sealed class CommandExecutor
             }
         }
 
+        // Always show summary to stderr
+        await stderr.WriteLineAsync();
+        await stderr.WriteLineAsync(FormatSummary(diagnosticsSummary));
+
         if (args.Verbose)
         {
-            var fileCount = result.Files.Count;
-            var errorCount = diagnosticsSummary.TotalDiagnostics;
             var elapsed = stopwatch.Elapsed;
             var elapsedText = elapsed.TotalSeconds >= 1
                 ? $"{elapsed.TotalSeconds:F2}s"
                 : $"{elapsed.TotalMilliseconds:F0}ms";
-            await stderr.WriteLineAsync();
-            await stderr.WriteLineAsync($"Files: {fileCount}, Errors: {errorCount}, Time: {elapsedText}");
+            await stderr.WriteLineAsync($"Time: {elapsedText}");
         }
 
         if (diagnosticsSummary.HasParseErrors)
@@ -315,28 +380,69 @@ public sealed class CommandExecutor
     private static LintDiagnosticsSummary SummarizeDiagnostics(IReadOnlyList<FileResult> files)
     {
         var totalDiagnostics = 0;
+        var errors = 0;
+        var warnings = 0;
+        var fixable = 0;
         var hasParseErrors = false;
 
         foreach (var file in files)
         {
             totalDiagnostics += file.Diagnostics.Count;
 
-            if (hasParseErrors)
-            {
-                continue;
-            }
-
             foreach (var diagnostic in file.Diagnostics)
             {
-                if (diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
-                {
+                if (diagnostic.Severity == DiagnosticSeverity.Error)
+                    errors++;
+                else if (diagnostic.Severity == DiagnosticSeverity.Warning)
+                    warnings++;
+
+                if (diagnostic.Data?.Fixable == true)
+                    fixable++;
+
+                if (!hasParseErrors && diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
                     hasParseErrors = true;
-                    break;
-                }
             }
         }
 
-        return new LintDiagnosticsSummary(totalDiagnostics, hasParseErrors);
+        return new LintDiagnosticsSummary(totalDiagnostics, errors, warnings, fixable, files.Count, hasParseErrors);
+    }
+
+    private static string FormatSummary(LintDiagnosticsSummary summary)
+    {
+        var fileLabel = summary.FileCount == 1 ? "file" : "files";
+
+        if (summary.TotalDiagnostics == 0)
+        {
+            return $"No problems found in {summary.FileCount} {fileLabel}.";
+        }
+
+        var parts = new List<string>(3);
+        if (summary.Errors > 0)
+        {
+            var label = summary.Errors == 1 ? "error" : "errors";
+            parts.Add($"{summary.Errors} {label}");
+        }
+        if (summary.Warnings > 0)
+        {
+            var label = summary.Warnings == 1 ? "warning" : "warnings";
+            parts.Add($"{summary.Warnings} {label}");
+        }
+        var otherCount = summary.TotalDiagnostics - summary.Errors - summary.Warnings;
+        if (otherCount > 0)
+        {
+            parts.Add($"{otherCount} info/hint");
+        }
+
+        var problemLabel = summary.TotalDiagnostics == 1 ? "problem" : "problems";
+        var detail = parts.Count > 0 ? $" ({string.Join(", ", parts)})" : "";
+        var result = $"{summary.TotalDiagnostics} {problemLabel}{detail} in {summary.FileCount} {fileLabel}.";
+
+        if (summary.Fixable > 0)
+        {
+            result += $" {summary.Fixable} auto-fixable.";
+        }
+
+        return result;
     }
 
     private static bool HasParseErrors(IReadOnlyList<FixedFileResult> files)
@@ -355,5 +461,11 @@ public sealed class CommandExecutor
         return false;
     }
 
-    private readonly record struct LintDiagnosticsSummary(int TotalDiagnostics, bool HasParseErrors);
+    private readonly record struct LintDiagnosticsSummary(
+        int TotalDiagnostics,
+        int Errors,
+        int Warnings,
+        int Fixable,
+        int FileCount,
+        bool HasParseErrors);
 }

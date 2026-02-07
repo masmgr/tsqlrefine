@@ -83,4 +83,54 @@ public sealed class CliPresetTests
             }
         }
     }
+
+    [Fact]
+    public async Task Lint_WithNonexistentPreset_ShowsAvailablePresets()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var originalDir = Directory.GetCurrentDirectory();
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.SetCurrentDirectory(tempDir);
+
+            // Create rulesets directory with some presets
+            var rulesetsDir = Path.Combine(tempDir, "rulesets");
+            Directory.CreateDirectory(rulesetsDir);
+            await File.WriteAllTextAsync(
+                Path.Combine(rulesetsDir, "recommended.json"),
+                """{"rules": []}""");
+            await File.WriteAllTextAsync(
+                Path.Combine(rulesetsDir, "strict.json"),
+                """{"rules": []}""");
+
+            var stdin = new StringReader("SELECT 1;");
+            var stdout = new StringWriter();
+            var stderr = new StringWriter();
+
+            var code = await CliApp.RunAsync(new[] { "lint", "--stdin", "--preset", "nonexistent" }, stdin, stdout, stderr);
+
+            Assert.Equal(ExitCodes.ConfigError, code);
+            var stderrOutput = stderr.ToString();
+            Assert.Contains("Unknown preset: 'nonexistent'", stderrOutput);
+            Assert.Contains("Available presets:", stderrOutput);
+            Assert.Contains("recommended", stderrOutput);
+            Assert.Contains("strict", stderrOutput);
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDir);
+            await Task.Delay(100);
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+            catch (IOException)
+            {
+                // Ignore cleanup errors
+            }
+        }
+    }
 }

@@ -105,6 +105,24 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        // Init options
+        public static readonly Option<bool> Force = new("--force")
+        {
+            Description = "Overwrite existing configuration files"
+        };
+
+        // List-rules filter options
+        public static readonly Option<string?> Category = new("--category")
+        {
+            Description = "Filter rules by category",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> Fixable = new("--fixable")
+        {
+            Description = "Show only fixable rules"
+        };
+
         // Misc options
         public static readonly Option<bool> Verbose = new("--verbose")
         {
@@ -209,16 +227,28 @@ public static class CliParser
             .WithRuleIdOption()
             .WithPathsArgument();
 
-    private static Command BuildInitCommand() =>
-        new Command("init", "Initialize configuration files");
+    private static Command BuildInitCommand()
+    {
+        var command = new Command("init", "Initialize configuration files");
+        command.Options.Add(Options.Force);
+        command.Options.Add(Options.Preset);
+        command.Options.Add(Options.CompatLevel);
+        return command;
+    }
 
     private static Command BuildPrintConfigCommand() =>
         new Command("print-config", "Print effective configuration")
             .WithOutputOption();
 
-    private static Command BuildListRulesCommand() =>
-        new Command("list-rules", "List available rules")
+    private static Command BuildListRulesCommand()
+    {
+        var command = new Command("list-rules", "List available rules")
             .WithOutputOption();
+        command.Options.Add(Options.Category);
+        command.Options.Add(Options.Fixable);
+        command.Options.Add(Options.Preset);
+        return command;
+    }
 
     private static Command BuildListPluginsCommand()
     {
@@ -250,6 +280,15 @@ public static class CliParser
 
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
+
+        // Root command supports lint options for default command behavior
+        // (tsqlrefine *.sql == tsqlrefine lint *.sql)
+        root.WithInputOptions();
+        root.WithOutputOption();
+        root.WithCompatLevelOption();
+        root.WithRuleOptions();
+        root.WithPathsArgument();
+        root.Options.Add(Options.Verbose);
 
         // Subcommands
         root.Subcommands.Add(BuildLintCommand());
@@ -315,6 +354,9 @@ public static class CliParser
             LineEnding: ParseLineEnding(GetOptionValue<string?>(parseResult, "--line-ending")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
             ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
+            Force: GetOptionValue<bool>(parseResult, "--force"),
+            Category: GetOptionValue<string?>(parseResult, "--category"),
+            FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             Paths: GetPaths(parseResult),
             RuleId: GetOptionValue<string?>(parseResult, "--rule")
         );

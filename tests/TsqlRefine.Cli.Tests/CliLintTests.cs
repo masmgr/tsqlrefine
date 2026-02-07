@@ -80,7 +80,35 @@ public sealed class CliLintTests
     }
 
     [Fact]
-    public async Task Lint_Verbose_OutputsSummaryToStderr()
+    public async Task Lint_AlwaysOutputsSummaryToStderr()
+    {
+        var stdin = new StringReader("SELECT id FROM dbo.t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
+
+        var stderrOutput = stderr.ToString();
+        Assert.Contains("No problems found in 1 file.", stderrOutput);
+    }
+
+    [Fact]
+    public async Task Lint_Summary_ShowsProblemCount()
+    {
+        // This SQL has violations: SELECT * and missing schema prefix
+        var stdin = new StringReader("SELECT * FROM unqualified_table;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
+
+        var stderrOutput = stderr.ToString();
+        Assert.Matches(@"\d+ problems? \(", stderrOutput);
+        Assert.Contains("in 1 file.", stderrOutput);
+    }
+
+    [Fact]
+    public async Task Lint_Verbose_OutputsTimeToStderr()
     {
         var stdin = new StringReader("SELECT id FROM dbo.t;");
         var stdout = new StringWriter();
@@ -89,29 +117,12 @@ public sealed class CliLintTests
         await CliApp.RunAsync(new[] { "lint", "--stdin", "--verbose" }, stdin, stdout, stderr);
 
         var stderrOutput = stderr.ToString();
-        Assert.Contains("Files: 1", stderrOutput);
-        Assert.Contains("Errors: 0", stderrOutput);
+        Assert.Contains("No problems found in 1 file.", stderrOutput);
         Assert.Contains("Time:", stderrOutput);
     }
 
     [Fact]
-    public async Task Lint_Verbose_WithMultipleErrors_ShowsCorrectCount()
-    {
-        // This SQL has 2 violations: SELECT * and missing schema prefix
-        var stdin = new StringReader("SELECT * FROM unqualified_table;");
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
-
-        await CliApp.RunAsync(new[] { "lint", "--stdin", "--verbose" }, stdin, stdout, stderr);
-
-        var stderrOutput = stderr.ToString();
-        Assert.Contains("Files: 1", stderrOutput);
-        Assert.Matches(@"Errors: [2-9]|\d{2,}", stderrOutput); // 2 or more errors
-        Assert.Contains("Time:", stderrOutput);
-    }
-
-    [Fact]
-    public async Task Lint_WithoutVerbose_DoesNotOutputSummary()
+    public async Task Lint_WithoutVerbose_DoesNotOutputTime()
     {
         var stdin = new StringReader("SELECT * FROM t;");
         var stdout = new StringWriter();
@@ -120,8 +131,37 @@ public sealed class CliLintTests
         await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
 
         var stderrOutput = stderr.ToString();
-        Assert.DoesNotContain("Files:", stderrOutput);
         Assert.DoesNotContain("Time:", stderrOutput);
+    }
+
+    [Fact]
+    public async Task DefaultCommand_WithoutLint_RunsLint()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        // No "lint" subcommand - should default to lint
+        var code = await CliApp.RunAsync(new[] { "--stdin" }, stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        var output = stdout.ToString();
+        Assert.Contains("avoid-select-star", output);
+    }
+
+    [Fact]
+    public async Task DefaultCommand_WithJsonOutput_RunsLint()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "--stdin", "--output", "json" }, stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        Assert.Equal("tsqlrefine", doc.RootElement.GetProperty("tool").GetString());
+        Assert.Equal("lint", doc.RootElement.GetProperty("command").GetString());
     }
 }
 
