@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="TsqlRefine.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TsqlRefine.PluginSdk\TsqlRefine.PluginSdk.csproj" />
     <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
   </ItemGroup>
