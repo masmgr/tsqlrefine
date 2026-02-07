@@ -36,6 +36,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DataTypeLengthRule(),
         new AvoidAmbiguousDatetimeLiteralRule(),
         new AvoidFloatForDecimalRule(),
+        new UnreachableCaseWhenRule(),
+        new UnionTypeMismatchRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -49,6 +51,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new NonSargableRule(),
         new DisallowSelectDistinctRule(),
         new LikeLeadingWildcardRule(),
+        new PreferExistsOverInSubqueryRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
@@ -66,6 +69,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidOpenrowsetOpendatasourceRule(),
         new AvoidNolockRule(),
         new LinkedServerRule(),
+        new AvoidExecuteAsRule(),
 
         // === Schema ===
         new NamedConstraintRule(),
@@ -118,6 +122,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new TransactionWithoutCommitOrRollbackRule(),
         new UncommittedTransactionRule(),
         new CatchSwallowingRule(),
+        new RequireSaveTransactionInNestedRule(),
 
         // === SET Options ===
         new SetAnsiRule(),

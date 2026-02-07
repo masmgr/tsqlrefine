@@ -50,6 +50,11 @@
     { "id": "dangerous-ddl", "enabled": true },
     { "id": "catch-swallowing", "enabled": true },
     { "id": "ban-query-hints", "enabled": true },
-    { "id": "transaction-without-commit-or-rollback", "enabled": true }
+    { "id": "transaction-without-commit-or-rollback", "enabled": true },
+    { "id": "avoid-execute-as", "enabled": true },
+    { "id": "prefer-exists-over-in-subquery", "enabled": true },
+    { "id": "unreachable-case-when", "enabled": true },
+    { "id": "union-type-mismatch", "enabled": true },
+    { "id": "require-save-transaction-in-nested", "enabled": true }
   ]
 }

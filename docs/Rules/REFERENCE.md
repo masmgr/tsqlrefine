@@ -13,28 +13,28 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 96
+- **Total Rules**: 101
 - **Fixable Rules**: 10 (10%)
 - **Error Severity**: 11 rules (11%)
-- **Warning Severity**: 55 rules (57%)
-- **Information Severity**: 30 rules (31%)
+- **Warning Severity**: 57 rules (56%)
+- **Information Severity**: 33 rules (33%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 28 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 30 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Security** | 3 | Identifies security vulnerabilities like SQL injection |
-| **Performance** | 18 | Flags patterns that can cause performance issues |
+| **Security** | 4 | Identifies security vulnerabilities like SQL injection |
+| **Performance** | 19 | Flags patterns that can cause performance issues |
 | **Style** | 29 | Maintains code formatting and consistency |
-| **Transactions** | 9 | Ensures proper transaction handling and session settings |
+| **Transactions** | 10 | Ensures proper transaction handling and session settings |
 | **Schema** | 3 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Category
 
-### Correctness (28 rules)
+### Correctness (30 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -66,6 +66,8 @@
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
+| [union-type-mismatch](correctness/union-type-mismatch.md) | Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation. | Warning | No |
+| [unreachable-case-when](correctness/unreachable-case-when.md) | Detects duplicate WHEN conditions in CASE expressions that make later branches unreachable. | Warning | No |
 
 ### Safety (5 rules)
 
@@ -77,15 +79,16 @@
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications. | Error | No |
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-### Security (3 rules)
+### Security (4 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md) | Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks. | Warning | No |
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection | Warning | No |
+| [avoid-execute-as](security/avoid-execute-as.md) | Detects EXECUTE AS clauses that change execution context, which can lead to unintended privilege escalation. | Information | No |
 | [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
 
-### Performance (18 rules)
+### Performance (19 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -104,6 +107,7 @@
 | [linked-server](performance/linked-server.md) | Prohibit linked server queries (4-part identifiers); use alternative data access patterns | Information | No |
 | [non-sargable](performance/non-sargable.md) | Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates) | Warning | No |
 | [object-property](performance/object-property.md) | Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead | Warning | No |
+| [prefer-exists-over-in-subquery](performance/prefer-exists-over-in-subquery.md) | Detects WHERE column IN (SELECT ...) patterns and recommends EXISTS for potentially better performance with large datasets. | Information | No |
 | [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY, which produces non-deterministic results. | Warning | No |
 | [upper-lower](performance/upper-lower.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
 | [utc-datetime](performance/utc-datetime.md) | Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones | Warning | No |
@@ -142,11 +146,12 @@
 | [semantic/schema-qualify](style/semantic-schema-qualify.md) | Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity. | Warning | No |
 | [semicolon-termination](style/semicolon-termination.md) | SQL statements should be terminated with a semicolon | Information | **Yes** |
 
-### Transactions (9 rules)
+### Transactions (10 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [catch-swallowing](transactions/catch-swallowing.md) | Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures. | Warning | No |
+| [require-save-transaction-in-nested](transactions/require-save-transaction-in-nested.md) | Detects nested BEGIN TRANSACTION without SAVE TRANSACTION. Without a savepoint, ROLLBACK in a nested transaction rolls back the entire outer transaction. | Information | No |
 | [require-try-catch-for-transaction](transactions/require-try-catch-for-transaction.md) | Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently. | Warning | No |
 | [require-xact-abort-on](transactions/require-xact-abort-on.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 | [set-ansi](transactions/set-ansi.md) | Files should start with SET ANSI_NULLS ON within the first 10 statements. | Warning | No |
@@ -186,7 +191,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (55 rules)
+### Warning (57 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -235,6 +240,8 @@
 - [semantic/set-variable](correctness/semantic-set-variable.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
+- [union-type-mismatch](correctness/union-type-mismatch.md)
+- [unreachable-case-when](correctness/unreachable-case-when.md)
 - [set-ansi](transactions/set-ansi.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-quoted-identifier](transactions/set-quoted-identifier.md)
@@ -244,8 +251,9 @@
 - [upper-lower](performance/upper-lower.md)
 - [utc-datetime](performance/utc-datetime.md)
 
-### Information (30 rules)
+### Information (33 rules)
 
+- [avoid-execute-as](security/avoid-execute-as.md)
 - [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md)
 - [conditional-begin-end](style/conditional-begin-end.md)
 - [data-compression](performance/data-compression.md)
@@ -264,6 +272,7 @@
 - [prefer-concat-over-plus](style/prefer-concat-over-plus.md)
 - [prefer-concat-over-plus-when-nullable-or-convert](style/prefer-concat-over-plus-when-nullable-or-convert.md)
 - [prefer-concat-ws](style/prefer-concat-ws.md)
+- [prefer-exists-over-in-subquery](performance/prefer-exists-over-in-subquery.md)
 - [prefer-json-functions](style/prefer-json-functions.md)
 - [prefer-string-agg-over-stuff](style/prefer-string-agg-over-stuff.md)
 - [prefer-trim-over-ltrim-rtrim](style/prefer-trim-over-ltrim-rtrim.md)
@@ -275,6 +284,7 @@
 - [require-as-for-table-alias](style/require-as-for-table-alias.md)
 - [require-drop-if-exists](safety/require-drop-if-exists.md)
 - [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md)
+- [require-save-transaction-in-nested](transactions/require-save-transaction-in-nested.md)
 - [semicolon-termination](style/semicolon-termination.md)
 
 ## Fixable Rules

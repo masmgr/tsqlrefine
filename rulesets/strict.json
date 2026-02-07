@@ -91,6 +91,11 @@
     { "id": "transaction-without-commit-or-rollback", "enabled": true },
     { "id": "normalize-execute-keyword", "enabled": true },
     { "id": "normalize-procedure-keyword", "enabled": true },
-    { "id": "normalize-transaction-keyword", "enabled": true }
+    { "id": "normalize-transaction-keyword", "enabled": true },
+    { "id": "avoid-execute-as", "enabled": true },
+    { "id": "prefer-exists-over-in-subquery", "enabled": true },
+    { "id": "unreachable-case-when", "enabled": true },
+    { "id": "union-type-mismatch", "enabled": true },
+    { "id": "require-save-transaction-in-nested", "enabled": true }
   ]
 }
