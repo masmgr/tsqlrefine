@@ -2,7 +2,7 @@
 
 **Rule ID:** `dangerous-ddl`
 **Category:** Safety
-**Severity:** Error (DROP DATABASE), Warning (others)
+**Severity:** Warning (default), Information (when IF EXISTS is used)
 **Fixable:** No
 
 ## Description
@@ -26,11 +26,13 @@ Even with backups, recovery causes downtime and potential data loss (transaction
 ### Bad
 
 ```sql
--- ERROR: Catastrophic data loss
+-- WARNING: Catastrophic data loss
 DROP DATABASE Production_DB;
 
 -- WARNING: Table-level data loss
 DROP TABLE dbo.Orders;
+
+-- INFORMATION: IF EXISTS lowers severity, but still flagged
 DROP TABLE IF EXISTS dbo.Customers;
 
 -- WARNING: All data removed
@@ -62,6 +64,20 @@ UPDATE dbo.Users SET Email = EmailAddress WHERE Email IS NULL;
 -- Step 3: Drop old column (after verification)
 -- ALTER TABLE dbo.Users DROP COLUMN EmailAddress;
 ```
+
+## Severity Behavior
+
+The severity is lowered from **Warning** to **Information** when `IF EXISTS` is used on DROP TABLE, DROP VIEW, DROP PROCEDURE, or DROP FUNCTION statements. This recognizes that `IF EXISTS` indicates an intentional, idempotent deployment pattern rather than an accidental destructive operation.
+
+| Statement | Without IF EXISTS | With IF EXISTS |
+|-----------|-------------------|----------------|
+| `DROP TABLE` | Warning | Information |
+| `DROP VIEW` | Warning | Information |
+| `DROP PROCEDURE` | Warning | Information |
+| `DROP FUNCTION` | Warning | Information |
+| `DROP DATABASE` | Warning | — (no IF EXISTS support) |
+| `TRUNCATE TABLE` | Warning | — (no IF EXISTS support) |
+| `ALTER TABLE DROP` | Warning | — (no IF EXISTS support) |
 
 ## Common Patterns
 
@@ -128,6 +144,6 @@ In `custom-ruleset.json`:
 
 ## See Also
 
-- [TsqlRefine Rules Documentation](../README.md)
+- [require-drop-if-exists](require-drop-if-exists.md) - Requires IF EXISTS on DROP statements
 - [dml-without-where](dml-without-where.md) - Related rule for destructive DML
-- [Microsoft Documentation: DROP Statements](https://docs.microsoft.com/en-us/sql/t-sql/statements/drop-transact-sql)
+- [TsqlRefine Rules Documentation](../README.md)

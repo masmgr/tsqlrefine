@@ -211,6 +211,53 @@ public sealed class NonSargableRuleTests
     }
 
     [Fact]
+    public void Analyze_ScalarUdfOnColumnInWhere_ReturnsDiagnostic()
+    {
+        // Arrange - Schema-qualified scalar UDF wrapping a column
+        var sql = "SELECT * FROM orders WHERE dbo.FormatDate(order_date) = '2023-01-01';";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("non-sargable", diagnostic.Code);
+    }
+
+    [Fact]
+    public void Analyze_ScalarUdfOnColumnInJoin_ReturnsDiagnostic()
+    {
+        // Arrange - Scalar UDF in JOIN ON clause
+        const string sql = @"
+            SELECT *
+            FROM orders o
+            INNER JOIN customers c ON dbo.NormalizeCode(o.customer_code) = c.code;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("non-sargable", diagnostic.Code);
+    }
+
+    [Fact]
+    public void Analyze_ScalarUdfOnLiteral_NoDiagnostic()
+    {
+        // Arrange - Scalar UDF on literal value, not a column
+        var sql = "SELECT * FROM orders WHERE order_code = dbo.FormatCode('ABC');";
+        var context = RuleTestContext.CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsNoFixes()
     {
         // Arrange

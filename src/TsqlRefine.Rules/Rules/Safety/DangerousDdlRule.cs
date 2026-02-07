@@ -1,6 +1,7 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
+using TsqlRefine.Rules.Helpers.Diagnostics;
+using TsqlRefine.Rules.Helpers.Visitors;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
@@ -60,7 +61,7 @@ public sealed class DangerousDdlRule : IRule
                     if (obj.BaseIdentifier != null)
                     {
                         var tableName = obj.BaseIdentifier.Value;
-                        if (tableName.StartsWith("#"))
+                        if (tableName.StartsWith('#'))
                         {
                             // Temp table - skip warning
                             continue;
@@ -68,10 +69,11 @@ public sealed class DangerousDdlRule : IRule
 
                         AddDiagnostic(
                             fragment: node,
-                            message: $"DROP TABLE is a destructive operation that causes irreversible data loss. Ensure this is intentional.",
+                            message: "DROP TABLE is a destructive operation that causes irreversible data loss. Ensure this is intentional.",
                             code: "dangerous-ddl",
                             category: "Safety",
-                            fixable: false
+                            fixable: false,
+                            severity: node.IsIfExists ? DiagnosticSeverity.Information : null
                         );
                         break; // Only report once per statement
                     }
@@ -88,7 +90,8 @@ public sealed class DangerousDdlRule : IRule
                 message: "DROP PROCEDURE is a destructive operation. Ensure this is intentional and the procedure is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
-                fixable: false
+                fixable: false,
+                severity: node.IsIfExists ? DiagnosticSeverity.Information : null
             );
 
             base.ExplicitVisit(node);
@@ -101,7 +104,8 @@ public sealed class DangerousDdlRule : IRule
                 message: "DROP VIEW is a destructive operation. Ensure this is intentional and the view definition is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
-                fixable: false
+                fixable: false,
+                severity: node.IsIfExists ? DiagnosticSeverity.Information : null
             );
 
             base.ExplicitVisit(node);
@@ -114,7 +118,8 @@ public sealed class DangerousDdlRule : IRule
                 message: "DROP FUNCTION is a destructive operation. Ensure this is intentional and the function definition is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
-                fixable: false
+                fixable: false,
+                severity: node.IsIfExists ? DiagnosticSeverity.Information : null
             );
 
             base.ExplicitVisit(node);

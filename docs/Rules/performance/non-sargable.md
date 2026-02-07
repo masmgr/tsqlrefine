@@ -23,8 +23,9 @@ When functions are applied to columns in predicates, SQL Server cannot use index
 - String functions: `UPPER(column)`, `LOWER(column)`, `SUBSTRING(column, ...)`, `LTRIM(column)`, `RTRIM(column)`
 - Date functions: `YEAR(column)`, `MONTH(column)`, `DAY(column)`
 - Math functions: `ABS(column)`, `ROUND(column, ...)`
+- Scalar UDFs: `dbo.MyFunction(column)` — user-defined scalar functions wrapping columns are also non-sargable
 
-**Solution:** Use indexed computed columns, rewrite predicates, or apply functions to literal values instead.
+**Solution:** Use indexed computed columns, rewrite predicates, or apply functions to literal values instead. For scalar UDFs, consider inline table-valued functions or computed columns.
 
 ## Examples
 
@@ -47,6 +48,14 @@ INNER JOIN profiles p ON SUBSTRING(u.username, 1, 5) = p.code;
 -- Multiple functions
 SELECT * FROM orders
 WHERE YEAR(order_date) = 2023 AND MONTH(order_date) = 12;
+
+-- Scalar UDF wrapping a column
+SELECT * FROM orders
+WHERE dbo.FormatDate(order_date) = '2023-01-01';
+
+-- Scalar UDF in JOIN condition
+SELECT * FROM orders o
+INNER JOIN customers c ON dbo.NormalizeCode(o.customer_code) = c.code;
 ```
 
 ### Good
@@ -70,6 +79,11 @@ SELECT * FROM users WHERE username_upper = 'ADMIN';
 -- Direct column comparison in joins
 SELECT * FROM users u
 INNER JOIN profiles p ON u.username = p.code;
+
+-- For scalar UDFs, use computed columns or rewrite
+ALTER TABLE orders ADD formatted_date AS dbo.FormatDate(order_date) PERSISTED;
+CREATE INDEX IX_Orders_FormattedDate ON orders(formatted_date);
+SELECT * FROM orders WHERE formatted_date = '2023-01-01';
 ```
 
 ## Configuration
