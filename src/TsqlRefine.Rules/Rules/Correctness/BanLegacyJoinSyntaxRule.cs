@@ -2,6 +2,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results.
+/// </summary>
 public sealed class BanLegacyJoinSyntaxRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

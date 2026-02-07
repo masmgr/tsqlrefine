@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Stricter variant that also detects CAST/CONVERT in concatenations; enable instead of prefer-concat-over-plus for comprehensive coverage (SQL Server 2012+).
+/// </summary>
 public sealed class PreferConcatOverPlusWhenNullableOrConvertRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

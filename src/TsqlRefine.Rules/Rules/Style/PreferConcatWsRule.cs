@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Recommends CONCAT_WS() when concatenation repeats the same separator literal; improves readability and reduces duplication (SQL Server 2017+).
+/// </summary>
 public sealed class PreferConcatWsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Requires qualifying columns in SELECT lists when multiple tables are referenced; prevents subtle 'wrong table' mistakes when column names overlap.
+/// </summary>
 public sealed class QualifiedSelectColumnsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

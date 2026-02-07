@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style.Semantic;
 
+/// <summary>
+/// Ensures variable references match the exact casing used in their declarations for consistency.
+/// </summary>
 public sealed class CaseSensitiveVariablesRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

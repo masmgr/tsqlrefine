@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects duplicate table aliases in the same scope, which causes ambiguous references.
+/// </summary>
 public sealed class DuplicateAliasRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

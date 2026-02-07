@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead
+/// </summary>
 public sealed class ObjectPropertyRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

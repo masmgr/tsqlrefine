@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision.
+/// </summary>
 public sealed class AvoidFloatForDecimalRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

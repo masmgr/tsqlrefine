@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
+/// <summary>
+/// Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss.
+/// </summary>
 public sealed class DangerousDdlRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

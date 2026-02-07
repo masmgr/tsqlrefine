@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Security;
 
+/// <summary>
+/// Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation.
+/// </summary>
 public sealed class AvoidExecuteAsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates)
+/// </summary>
 public sealed class NonSargableRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage
+/// </summary>
 public sealed class AvoidImplicitConversionInPredicateRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

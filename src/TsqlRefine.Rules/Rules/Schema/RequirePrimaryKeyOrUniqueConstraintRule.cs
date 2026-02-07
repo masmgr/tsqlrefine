@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
+/// <summary>
+/// Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.
+/// </summary>
 public sealed class RequirePrimaryKeyOrUniqueConstraintRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

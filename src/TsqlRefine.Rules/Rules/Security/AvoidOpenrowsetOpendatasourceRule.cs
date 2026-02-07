@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Security;
 
+/// <summary>
+/// Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access.
+/// </summary>
 public sealed class AvoidOpenrowsetOpendatasourceRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

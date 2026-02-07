@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation.
+/// </summary>
 public sealed class UnionTypeMismatchRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

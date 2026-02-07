@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes.
+/// </summary>
 public sealed class PreferUnicodeStringLiteralsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results.
+/// </summary>
 public sealed class StuffWithoutOrderByRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

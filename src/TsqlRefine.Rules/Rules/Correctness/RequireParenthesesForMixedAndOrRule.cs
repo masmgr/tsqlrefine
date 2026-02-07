@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion.
+/// </summary>
 public sealed class RequireParenthesesForMixedAndOrRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

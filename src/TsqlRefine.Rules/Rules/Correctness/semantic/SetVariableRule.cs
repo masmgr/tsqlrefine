@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Recommends using SELECT for variable assignment instead of SET for consistency.
+/// </summary>
 public sealed class SetVariableRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

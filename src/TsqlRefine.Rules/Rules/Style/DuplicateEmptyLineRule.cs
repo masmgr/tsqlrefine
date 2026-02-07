@@ -2,6 +2,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Avoid consecutive empty lines (more than one blank line in a row).
+/// </summary>
 public sealed class DuplicateEmptyLineRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

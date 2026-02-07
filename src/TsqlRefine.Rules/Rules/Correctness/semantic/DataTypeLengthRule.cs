@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).
+/// </summary>
 public sealed class DataTypeLengthRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results.
+/// </summary>
 public sealed class StringAggWithoutOrderByRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

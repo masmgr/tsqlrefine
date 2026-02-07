@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Prohibit full-text search predicates; use alternative search strategies for better performance
+/// </summary>
 public sealed class FullTextRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

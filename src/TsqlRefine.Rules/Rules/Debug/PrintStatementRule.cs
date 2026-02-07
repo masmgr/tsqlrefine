@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Debug;
 
+/// <summary>
+/// Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging
+/// </summary>
 public sealed class PrintStatementRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

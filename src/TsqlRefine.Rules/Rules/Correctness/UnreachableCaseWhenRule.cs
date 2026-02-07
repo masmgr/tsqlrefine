@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects duplicate WHEN conditions in CASE expressions that make later branches unreachable.
+/// </summary>
 public sealed class UnreachableCaseWhenRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
+/// <summary>
+/// Discourage cross-database transactions to avoid distributed transaction issues
+/// </summary>
 public sealed class CrossDatabaseTransactionRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

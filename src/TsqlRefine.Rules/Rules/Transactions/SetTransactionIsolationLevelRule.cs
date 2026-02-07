@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements.
+/// </summary>
 public sealed class SetTransactionIsolationLevelRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects TOP clause without ORDER BY, which produces non-deterministic results.
+/// </summary>
 public sealed class TopWithoutOrderByRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

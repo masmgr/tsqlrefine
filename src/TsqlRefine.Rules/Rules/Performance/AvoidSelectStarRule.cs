@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Avoid SELECT * in queries.
+/// </summary>
 public sealed class AvoidSelectStarRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

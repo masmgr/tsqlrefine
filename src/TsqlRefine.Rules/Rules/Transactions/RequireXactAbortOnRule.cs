@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.
+/// </summary>
 public sealed class RequireXactAbortOnRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior.
+/// </summary>
 public sealed class PreferCoalesceOverNestedIsnullRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

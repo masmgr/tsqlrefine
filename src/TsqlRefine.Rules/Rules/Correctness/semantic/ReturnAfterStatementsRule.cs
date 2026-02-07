@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects unreachable statements after a RETURN statement in stored procedures or functions.
+/// </summary>
 public sealed class ReturnAfterStatementsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

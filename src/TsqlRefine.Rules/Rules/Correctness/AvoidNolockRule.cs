@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Avoid using NOLOCK hint or READ UNCOMMITTED isolation level
+/// </summary>
 public sealed class AvoidNolockRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

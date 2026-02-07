@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Recommends CONCAT() when + concatenation uses ISNULL/COALESCE; avoids subtle NULL propagation (SQL Server 2012+).
+/// </summary>
 public sealed class PreferConcatOverPlusRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

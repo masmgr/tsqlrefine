@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Recommends TRIM(x) instead of LTRIM(RTRIM(x)); clearer and less error-prone (SQL Server 2017+).
+/// </summary>
 public sealed class PreferTrimOverLtrimRtrimRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

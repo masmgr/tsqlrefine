@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones
+/// </summary>
 public sealed class UtcDatetimeRule : IRule
 {
     private static readonly FrozenSet<string> LocalDatetimeFunctions = FrozenSet.ToFrozenSet(

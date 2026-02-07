@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Require BEGIN/END blocks in conditional statements for clarity and maintainability
+/// </summary>
 public sealed class ConditionalBeginEndRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

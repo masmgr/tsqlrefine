@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.
+/// </summary>
 public sealed class LeftJoinFilteredByWhereRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

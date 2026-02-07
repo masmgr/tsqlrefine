@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans.
+/// </summary>
 public sealed class LikeLeadingWildcardRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
+/// <summary>
+/// Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.
+/// </summary>
 public sealed class DmlWithoutWhereRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

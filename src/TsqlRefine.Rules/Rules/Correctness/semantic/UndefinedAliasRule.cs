@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects references to undefined table aliases in column qualifiers.
+/// </summary>
 public sealed class UndefinedAliasRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

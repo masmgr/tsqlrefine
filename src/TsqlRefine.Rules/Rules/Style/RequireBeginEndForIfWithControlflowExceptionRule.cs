@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Enforces BEGIN/END for IF/ELSE blocks, while allowing a single control-flow statement (e.g., RETURN) without a block.
+/// </summary>
 public sealed class RequireBeginEndForIfWithControlflowExceptionRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

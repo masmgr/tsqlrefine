@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Encourages built-in JSON features (OPENJSON, JSON_VALUE, FOR JSON, etc.) over manual string parsing/building (SQL Server 2016+).
+/// </summary>
 public sealed class PreferJsonFunctionsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -2,6 +2,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Avoid consecutive GO batch separators.
+/// </summary>
 public sealed class DuplicateGoRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

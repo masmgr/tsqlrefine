@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
+/// </summary>
 public sealed class RequireExplicitJoinTypeRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

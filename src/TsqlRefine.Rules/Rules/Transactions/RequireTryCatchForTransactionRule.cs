@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently.
+/// </summary>
 public sealed class RequireTryCatchForTransactionRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

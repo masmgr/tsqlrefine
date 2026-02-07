@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.
+/// </summary>
 public sealed class DisallowSelectIntoRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

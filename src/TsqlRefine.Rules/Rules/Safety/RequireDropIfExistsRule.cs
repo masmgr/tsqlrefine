@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
+/// <summary>
+/// Requires IF EXISTS on DROP statements for idempotent deployment scripts.
+/// </summary>
 public sealed class RequireDropIfExistsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

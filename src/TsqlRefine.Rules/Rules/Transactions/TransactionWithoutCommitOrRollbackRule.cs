@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.
+/// </summary>
 public sealed class TransactionWithoutCommitOrRollbackRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

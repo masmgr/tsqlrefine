@@ -2,6 +2,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Avoid nested block comments (/* /* */ */).
+/// </summary>
 public sealed class NestedBlockCommentsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

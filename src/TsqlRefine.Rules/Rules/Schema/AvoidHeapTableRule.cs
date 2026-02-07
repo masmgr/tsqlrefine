@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
+/// <summary>
+/// Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.
+/// </summary>
 public sealed class AvoidHeapTableRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

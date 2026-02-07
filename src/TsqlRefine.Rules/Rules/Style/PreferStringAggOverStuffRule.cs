@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Recommends STRING_AGG() over STUFF(... FOR XML PATH('') ...); simpler and typically faster/safer (SQL Server 2017+).
+/// </summary>
 public sealed class PreferStringAggOverStuffRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

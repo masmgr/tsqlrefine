@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style.Semantic;
 
+/// <summary>
+/// Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.
+/// </summary>
 public sealed class SchemaQualifyRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

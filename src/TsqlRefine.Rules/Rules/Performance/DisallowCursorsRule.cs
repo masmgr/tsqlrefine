@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Prohibit cursor usage; prefer set-based operations for better performance
+/// </summary>
 public sealed class DisallowCursorsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

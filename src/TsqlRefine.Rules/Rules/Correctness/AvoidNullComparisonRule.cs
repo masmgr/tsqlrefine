@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects NULL comparisons using = or &lt;&gt; instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN.
+/// </summary>
 public sealed class AvoidNullComparisonRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

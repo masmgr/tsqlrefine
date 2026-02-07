@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.
+/// </summary>
 public sealed class CatchSwallowingRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy.
+/// </summary>
 public sealed class AvoidTopInDmlRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

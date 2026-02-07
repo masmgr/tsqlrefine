@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Security;
 
+/// <summary>
+/// Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks.
+/// </summary>
 public sealed class AvoidDangerousProceduresRule : IRule
 {
     private static readonly FrozenSet<string> s_dangerousProcedures = new[]

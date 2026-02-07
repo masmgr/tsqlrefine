@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
+/// <summary>
+/// Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.
+/// </summary>
 public sealed class RequireMsDescriptionForTableDefinitionFileRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

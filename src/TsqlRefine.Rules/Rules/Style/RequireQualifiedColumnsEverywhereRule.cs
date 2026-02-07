@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns.
+/// </summary>
 public sealed class RequireQualifiedColumnsEverywhereRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues.
+/// </summary>
 public sealed class BanQueryHintsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

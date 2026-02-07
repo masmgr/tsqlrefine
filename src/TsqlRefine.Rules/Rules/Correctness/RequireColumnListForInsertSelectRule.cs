@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes
+/// </summary>
 public sealed class RequireColumnListForInsertSelectRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

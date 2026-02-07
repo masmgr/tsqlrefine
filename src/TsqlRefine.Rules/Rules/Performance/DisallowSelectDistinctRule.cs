@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.
+/// </summary>
 public sealed class DisallowSelectDistinctRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.
+/// </summary>
 public sealed class NoTopWithoutOrderByInSelectIntoRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

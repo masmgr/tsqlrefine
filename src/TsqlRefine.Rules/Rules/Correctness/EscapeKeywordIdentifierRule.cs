@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
+/// </summary>
 public sealed class EscapeKeywordIdentifierRule : IRule
 {
     private const string RuleId = "escape-keyword-identifier";

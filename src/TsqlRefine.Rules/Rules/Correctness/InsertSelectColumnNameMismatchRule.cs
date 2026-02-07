@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.
+/// </summary>
 public sealed class InsertSelectColumnNameMismatchRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

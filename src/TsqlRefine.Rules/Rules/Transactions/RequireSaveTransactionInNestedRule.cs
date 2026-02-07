@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Detects nested BEGIN TRANSACTION without SAVE TRANSACTION. Without a savepoint, ROLLBACK in a nested transaction rolls back the entire outer transaction.
+/// </summary>
 public sealed class RequireSaveTransactionInNestedRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

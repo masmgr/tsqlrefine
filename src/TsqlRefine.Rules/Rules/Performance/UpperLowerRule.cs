@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage
+/// </summary>
 public sealed class UpperLowerRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

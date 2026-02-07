@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Security;
 
+/// <summary>
+/// Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection
+/// </summary>
 public sealed class AvoidExecDynamicSqlRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

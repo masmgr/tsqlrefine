@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization
+/// </summary>
 public sealed class DataCompressionRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

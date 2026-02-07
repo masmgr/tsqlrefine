@@ -2,6 +2,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT.
+/// </summary>
 public sealed class AvoidAtatIdentityRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

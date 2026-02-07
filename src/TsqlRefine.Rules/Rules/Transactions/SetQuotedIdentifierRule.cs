@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
+/// <summary>
+/// Files should start with SET QUOTED_IDENTIFIER ON within the first 10 statements.
+/// </summary>
 public sealed class SetQuotedIdentifierRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

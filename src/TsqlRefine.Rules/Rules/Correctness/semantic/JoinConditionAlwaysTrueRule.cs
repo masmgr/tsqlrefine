@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.
+/// </summary>
 public sealed class JoinConditionAlwaysTrueRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

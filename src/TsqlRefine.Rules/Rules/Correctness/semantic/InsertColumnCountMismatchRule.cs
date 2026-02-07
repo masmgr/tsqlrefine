@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects column count mismatches between the target column list and the source in INSERT statements.
+/// </summary>
 public sealed class InsertColumnCountMismatchRule : IRule
 {
     private const string RuleId = "semantic/insert-column-count-mismatch";

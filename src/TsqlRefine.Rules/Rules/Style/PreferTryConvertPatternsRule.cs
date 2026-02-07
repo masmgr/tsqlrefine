@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Recommends TRY_CONVERT/TRY_CAST over CASE + ISNUMERIC/ISDATE; fewer false positives and clearer intent.
+/// </summary>
 public sealed class PreferTryConvertPatternsRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

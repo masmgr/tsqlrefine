@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns.
+/// </summary>
 public sealed class AvoidMagicConvertStyleForDatetimeRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

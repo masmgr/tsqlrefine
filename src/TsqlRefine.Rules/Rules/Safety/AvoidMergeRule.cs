@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
+/// <summary>
+/// Avoid using MERGE statement due to known bugs (see KB 3180087, KB 4519788)
+/// </summary>
 public sealed class AvoidMergeRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

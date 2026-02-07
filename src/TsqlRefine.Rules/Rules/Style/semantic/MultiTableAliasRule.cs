@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style.Semantic;
 
+/// <summary>
+/// Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.
+/// </summary>
 public sealed class MultiTableAliasRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

@@ -4,6 +4,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601.
+/// </summary>
 public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
 {
     [GeneratedRegex(@"^\s*\d{1,2}[/]\d{1,2}[/]\d{2,4}\s*$", RegexOptions.Compiled)]

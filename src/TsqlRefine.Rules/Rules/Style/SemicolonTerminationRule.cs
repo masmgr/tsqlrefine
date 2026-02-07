@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// SQL statements should be terminated with a semicolon
+/// </summary>
 public sealed class SemicolonTerminationRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

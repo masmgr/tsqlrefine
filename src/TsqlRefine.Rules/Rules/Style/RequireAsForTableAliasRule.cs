@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Table aliases should use the AS keyword
+/// </summary>
 public sealed class RequireAsForTableAliasRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

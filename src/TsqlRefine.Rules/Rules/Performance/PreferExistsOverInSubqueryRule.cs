@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Detects WHERE column IN (SELECT ...) patterns and recommends using EXISTS instead for better performance with large datasets.
+/// </summary>
 public sealed class PreferExistsOverInSubqueryRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

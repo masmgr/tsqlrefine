@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
+/// <summary>
+/// Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited.
+/// </summary>
 public sealed class RequireBeginEndForWhileRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

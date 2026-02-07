@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
+/// <summary>
+/// Detects CTE name conflicts with other CTEs or table aliases in the same scope.
+/// </summary>
 public sealed class CteNameConflictRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

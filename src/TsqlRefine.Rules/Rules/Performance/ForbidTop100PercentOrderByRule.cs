@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.
+/// </summary>
 public sealed class ForbidTop100PercentOrderByRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

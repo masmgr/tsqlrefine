@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
+/// <summary>
+/// Prohibit named constraints in temp tables to avoid naming conflicts
+/// </summary>
 public sealed class NamedConstraintRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

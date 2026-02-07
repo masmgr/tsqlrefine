@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance
+/// </summary>
 public sealed class InformationSchemaRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(

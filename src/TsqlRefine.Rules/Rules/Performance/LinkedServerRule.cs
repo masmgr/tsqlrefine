@@ -3,6 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Performance;
 
+/// <summary>
+/// Prohibit linked server queries (4-part identifiers); use alternative data access patterns
+/// </summary>
 public sealed class LinkedServerRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
