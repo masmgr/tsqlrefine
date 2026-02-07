@@ -145,7 +145,7 @@ public sealed class PluginLoader
                 // Check for version mismatches
                 if (compatibleProviders.Count == 0 && incompatibleProviders.Count > 0)
                 {
-                    var mismatchedVersion = incompatibleProviders.First().PluginApiVersion;
+                    var mismatchedVersion = incompatibleProviders[0].PluginApiVersion;
                     results.Add(new LoadedPlugin(
                         plugin.Path,
                         true,

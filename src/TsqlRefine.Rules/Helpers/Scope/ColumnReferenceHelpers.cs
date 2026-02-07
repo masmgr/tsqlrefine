@@ -1,5 +1,4 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
-using TsqlRefine.Rules.Helpers.Visitors;
 
 namespace TsqlRefine.Rules.Helpers.Scope;
 

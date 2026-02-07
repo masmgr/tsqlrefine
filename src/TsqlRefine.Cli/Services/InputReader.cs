@@ -1,7 +1,6 @@
 using System.Text;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
-using TsqlRefine.Core;
 using TsqlRefine.Core.Engine;
 
 namespace TsqlRefine.Cli.Services;

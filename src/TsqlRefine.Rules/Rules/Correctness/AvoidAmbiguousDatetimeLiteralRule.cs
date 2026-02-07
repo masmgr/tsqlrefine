@@ -1,8 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers.Diagnostics;
-using TsqlRefine.Rules.Helpers.Visitors;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 

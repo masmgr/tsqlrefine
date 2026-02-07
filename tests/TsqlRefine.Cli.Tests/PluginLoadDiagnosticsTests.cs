@@ -1,6 +1,4 @@
 using System.Text;
-using TsqlRefine.Cli;
-using TsqlRefine.PluginHost;
 
 namespace TsqlRefine.Cli.Tests;
 

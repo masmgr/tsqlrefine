@@ -1,4 +1,3 @@
-using TsqlRefine.Formatting;
 using TsqlRefine.Formatting.Helpers.Whitespace;
 using Xunit;
 

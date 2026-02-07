@@ -1,5 +1,3 @@
-using Xunit;
-
 namespace TsqlRefine.Cli.Tests;
 
 public class FormatterOptionsTests

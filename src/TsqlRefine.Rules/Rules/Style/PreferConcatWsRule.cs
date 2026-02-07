@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
@@ -94,9 +93,9 @@ public sealed class PreferConcatWsRule : IRule
             var frequencyMap = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var candidate in candidates)
             {
-                if (frequencyMap.ContainsKey(candidate))
+                if (frequencyMap.TryGetValue(candidate, out var count))
                 {
-                    frequencyMap[candidate]++;
+                    frequencyMap[candidate] = count + 1;
                 }
                 else
                 {

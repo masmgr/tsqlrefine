@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using System.Text;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
@@ -13,27 +12,14 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class CommandExecutor
 {
-    private readonly ConfigLoader _configLoader;
     private readonly InputReader _inputReader;
-    private readonly FormattingOptionsResolver _formattingOptionsResolver;
-    private readonly OutputWriter _outputWriter;
-    private readonly PluginDiagnostics _pluginDiagnostics;
 
-    public CommandExecutor(
-        ConfigLoader configLoader,
-        InputReader inputReader,
-        FormattingOptionsResolver formattingOptionsResolver,
-        OutputWriter outputWriter,
-        PluginDiagnostics pluginDiagnostics)
+    public CommandExecutor(InputReader inputReader)
     {
-        _configLoader = configLoader;
         _inputReader = inputReader;
-        _formattingOptionsResolver = formattingOptionsResolver;
-        _outputWriter = outputWriter;
-        _pluginDiagnostics = pluginDiagnostics;
     }
 
-    public async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         _ = stdout;
         var configPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
@@ -56,22 +42,22 @@ public sealed class CommandExecutor
         return 0;
     }
 
-    public async Task<int> ExecutePrintConfigAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecutePrintConfigAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        var config = _configLoader.LoadConfig(args);
+        var config = ConfigLoader.LoadConfig(args);
         _ = stderr;
-        await _outputWriter.WriteJsonOutputAsync(stdout, config);
+        await OutputWriter.WriteJsonOutputAsync(stdout, config);
         return 0;
     }
 
-    public async Task<int> ExecutePrintFormatConfigAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecutePrintFormatConfigAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         _ = stderr;
 
         // Determine file path for resolution (first path or current directory)
-        var filePath = args.Paths.FirstOrDefault() ?? Directory.GetCurrentDirectory();
+        var filePath = args.Paths.Count > 0 ? args.Paths[0] : Directory.GetCurrentDirectory();
 
-        var resolved = _formattingOptionsResolver.ResolveFormattingOptionsWithSources(args, filePath);
+        var resolved = FormattingOptionsResolver.ResolveFormattingOptionsWithSources(args, filePath);
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -85,10 +71,10 @@ public sealed class CommandExecutor
         return 0;
     }
 
-    public async Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecuteListRulesAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        var config = _configLoader.LoadConfig(args);
-        var rules = _configLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
+        var config = ConfigLoader.LoadConfig(args);
+        var rules = ConfigLoader.LoadRules(args, config, stderr).OrderBy(r => r.Metadata.RuleId).ToArray();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
@@ -102,7 +88,7 @@ public sealed class CommandExecutor
                 minCompatLevel = r.Metadata.MinCompatLevel,
                 maxCompatLevel = r.Metadata.MaxCompatLevel
             });
-            await _outputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
+            await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
         }
         else
         {
@@ -115,16 +101,16 @@ public sealed class CommandExecutor
         return 0;
     }
 
-    public async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         _ = stderr;
-        var config = _configLoader.LoadConfig(args);
+        var config = ConfigLoader.LoadConfig(args);
         var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
             .Select(p => new PluginDescriptor(p.Path, p.Enabled))
             .ToArray();
 
         var (loaded, _) = PluginLoader.LoadWithSummary(plugins);
-        await _pluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+        await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
 
         return 0;
     }
@@ -139,9 +125,9 @@ public sealed class CommandExecutor
             return errorCode!.Value;
         }
 
-        var config = _configLoader.LoadConfig(args);
-        var ruleset = _configLoader.LoadRuleset(args, config);
-        var rules = _configLoader.LoadRules(args, config, stderr);
+        var config = ConfigLoader.LoadConfig(args);
+        var ruleset = ConfigLoader.LoadRuleset(args, config);
+        var rules = ConfigLoader.LoadRules(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -151,7 +137,7 @@ public sealed class CommandExecutor
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
-            await _outputWriter.WriteJsonOutputAsync(stdout, result);
+            await OutputWriter.WriteJsonOutputAsync(stdout, result);
         }
         else
         {
@@ -205,7 +191,7 @@ public sealed class CommandExecutor
 
         foreach (var input in read.Inputs)
         {
-            var options = _formattingOptionsResolver.ResolveFormattingOptions(args, input);
+            var options = FormattingOptionsResolver.ResolveFormattingOptions(args, input);
             var formatted = SqlFormatter.Format(input.Text, options);
 
             if (input.FilePath != "<stdin>")
@@ -243,13 +229,13 @@ public sealed class CommandExecutor
 
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
 
-        var config = _configLoader.LoadConfig(args);
-        var rules = _configLoader.LoadRules(args, config, stderr);
+        var config = ConfigLoader.LoadConfig(args);
+        var rules = ConfigLoader.LoadRules(args, config, stderr);
 
         // --rule オプションのバリデーション（存在確認 + Fixable 確認）
-        _configLoader.ValidateRuleIdForFix(args, rules);
+        ConfigLoader.ValidateRuleIdForFix(args, rules);
 
-        var ruleset = _configLoader.LoadRuleset(args, config);
+        var ruleset = ConfigLoader.LoadRuleset(args, config);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -263,7 +249,7 @@ public sealed class CommandExecutor
                 Command: result.Command,
                 Files: result.Files.Select(f => new FileResult(f.FilePath, f.Diagnostics)).ToArray()
             );
-            await _outputWriter.WriteJsonOutputAsync(stdout, lintResult);
+            await OutputWriter.WriteJsonOutputAsync(stdout, lintResult);
         }
         else
         {
@@ -300,7 +286,7 @@ public sealed class CommandExecutor
         return hasParseErrors ? ExitCodes.AnalysisError : 0;
     }
 
-    private EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
+    private static EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
@@ -315,12 +301,12 @@ public sealed class CommandExecutor
         TextReader stdin,
         TextWriter stderr)
     {
-        var ignorePatterns = _configLoader.LoadIgnorePatterns(args.IgnoreListPath);
+        var ignorePatterns = ConfigLoader.LoadIgnorePatterns(args.IgnoreListPath);
         var read = await _inputReader.ReadInputsAsync(args, stdin, ignorePatterns, stderr);
 
         if (read.Inputs.Count == 0)
         {
-            var errorCode = await _outputWriter.WriteErrorAsync(stderr, "No input.");
+            var errorCode = await OutputWriter.WriteErrorAsync(stderr, "No input.");
             return (null, errorCode);
         }
 

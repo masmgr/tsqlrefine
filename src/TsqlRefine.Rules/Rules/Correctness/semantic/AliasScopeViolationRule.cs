@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
@@ -100,7 +99,7 @@ public sealed class AliasScopeViolationRule : IRule
             base.ExplicitVisit(node);
         }
 
-        private void CollectAliasesFromFrom(IList<TableReference> tableRefs, QueryContext context)
+        private static void CollectAliasesFromFrom(IList<TableReference> tableRefs, QueryContext context)
         {
             foreach (var tableRef in tableRefs)
             {
@@ -108,13 +107,13 @@ public sealed class AliasScopeViolationRule : IRule
             }
         }
 
-        private void CollectAliasesFromTableReference(TableReference tableRef, QueryContext context)
+        private static void CollectAliasesFromTableReference(TableReference tableRef, QueryContext context)
         {
             if (tableRef is QueryDerivedTable derivedTable)
             {
                 // Mark all subsequent aliases as "later" for this derived table
                 // (aliases defined after this point aren't available inside the derived table)
-                context.EnteringDerivedTable();
+                QueryContext.EnteringDerivedTable();
 
                 // Add the derived table's own alias as available
                 if (derivedTable.Alias?.Value is { } derivedAlias)
@@ -194,7 +193,7 @@ public sealed class AliasScopeViolationRule : IRule
                 LaterAliases.Add(alias);
             }
 
-            public void EnteringDerivedTable()
+            public static void EnteringDerivedTable()
             {
                 // When entering a derived table, current "later" aliases become unavailable
                 // This method is called before processing the derived table

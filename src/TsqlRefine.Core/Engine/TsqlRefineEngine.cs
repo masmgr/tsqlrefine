@@ -1,5 +1,4 @@
 using System.Reflection;
-using TsqlRefine.Core.Config;
 using TsqlRefine.Core.Model;
 using TsqlRefine.PluginSdk;
 

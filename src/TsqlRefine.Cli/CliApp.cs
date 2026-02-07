@@ -1,6 +1,5 @@
 using System.Text;
 using TsqlRefine.Cli.Services;
-using TsqlRefine.Core;
 
 namespace TsqlRefine.Cli;
 
@@ -67,25 +66,16 @@ public static class CliApp
         try
         {
             // Initialize services
-            var configLoader = new ConfigLoader();
             var inputReader = new InputReader();
-            var formattingOptionsResolver = new FormattingOptionsResolver(configLoader);
-            var outputWriter = new OutputWriter();
-            var pluginDiagnostics = new PluginDiagnostics();
-            var commandExecutor = new CommandExecutor(
-                configLoader,
-                inputReader,
-                formattingOptionsResolver,
-                outputWriter,
-                pluginDiagnostics);
+            var commandExecutor = new CommandExecutor(inputReader);
 
             return parsed.Command switch
             {
-                "init" => await commandExecutor.ExecuteInitAsync(parsed, stdout, stderr),
-                "print-config" => await commandExecutor.ExecutePrintConfigAsync(parsed, stdout, stderr),
-                "print-format-config" => await commandExecutor.ExecutePrintFormatConfigAsync(parsed, stdout, stderr),
-                "list-rules" => await commandExecutor.ExecuteListRulesAsync(parsed, stdout, stderr),
-                "list-plugins" => await commandExecutor.ExecuteListPluginsAsync(parsed, stdout, stderr),
+                "init" => await CommandExecutor.ExecuteInitAsync(parsed, stdout, stderr),
+                "print-config" => await CommandExecutor.ExecutePrintConfigAsync(parsed, stdout, stderr),
+                "print-format-config" => await CommandExecutor.ExecutePrintFormatConfigAsync(parsed, stdout, stderr),
+                "list-rules" => await CommandExecutor.ExecuteListRulesAsync(parsed, stdout, stderr),
+                "list-plugins" => await CommandExecutor.ExecuteListPluginsAsync(parsed, stdout, stderr),
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
@@ -97,7 +87,10 @@ public static class CliApp
             await stderr.WriteLineAsync(ex.Message);
             return ExitCodes.ConfigError;
         }
+
+#pragma warning disable CA1031 // Top-level CLI error boundary
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             await stderr.WriteLineAsync(ex.ToString());
             return ExitCodes.Fatal;

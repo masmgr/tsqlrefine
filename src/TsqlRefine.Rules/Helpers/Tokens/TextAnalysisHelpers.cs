@@ -19,7 +19,7 @@ public static class TextAnalysisHelpers
             return Array.Empty<string>();
         }
 
-        return sql.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        return sql.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
     }
 
     /// <summary>

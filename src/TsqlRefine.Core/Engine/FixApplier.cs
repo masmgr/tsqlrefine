@@ -71,7 +71,7 @@ internal sealed class FixApplier
         return new FixOutcome(fixedText, appliedFixes, skippedFixes);
     }
 
-    private static IReadOnlyList<DiagnosticFixGroup> OrderFixGroups(IReadOnlyList<DiagnosticFixGroup> fixGroups)
+    private static DiagnosticFixGroup[] OrderFixGroups(IReadOnlyList<DiagnosticFixGroup> fixGroups)
     {
         return fixGroups
             .OrderBy(g => g.Diagnostic.Range.Start.Line)
@@ -138,7 +138,7 @@ internal sealed class FixApplier
         return true;
     }
 
-    private static bool HasInternalOverlap(IReadOnlyList<ResolvedEdit> edits)
+    private static bool HasInternalOverlap(List<ResolvedEdit> edits)
     {
         if (edits.Count <= 1)
         {

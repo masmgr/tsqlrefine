@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
@@ -37,7 +36,7 @@ public sealed class OrderByInSubqueryRule : IRule
 
     private sealed class OrderByInSubqueryVisitor : DiagnosticVisitorBase
     {
-        private int _queryDepth = 0;
+        private int _queryDepth;
 
         public override void ExplicitVisit(SelectStatement node)
         {

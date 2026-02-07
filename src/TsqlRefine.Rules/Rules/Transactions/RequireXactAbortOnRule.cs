@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Transactions;
 
@@ -38,7 +37,7 @@ public sealed class RequireXactAbortOnRule : IRule
     private sealed class RequireXactAbortOnVisitor : DiagnosticVisitorBase
     {
         private readonly TSqlScript _script;
-        private bool _hasXactAbortOn = false;
+        private bool _hasXactAbortOn;
 
         public RequireXactAbortOnVisitor(TSqlScript script)
         {

@@ -1,6 +1,5 @@
 using System.Collections.Frozen;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style;
 

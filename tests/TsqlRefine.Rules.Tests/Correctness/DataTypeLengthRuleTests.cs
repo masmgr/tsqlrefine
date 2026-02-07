@@ -1,4 +1,3 @@
-using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness.Semantic;
 using TsqlRefine.Rules.Tests.Helpers;
 

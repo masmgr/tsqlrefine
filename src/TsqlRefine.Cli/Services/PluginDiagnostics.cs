@@ -87,7 +87,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    public async Task WritePluginSummaryAsync(
+    public static async Task WritePluginSummaryAsync(
         IReadOnlyList<LoadedPlugin> plugins,
         bool verbose,
         TextWriter stdout)
@@ -125,7 +125,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    private async Task WritePluginDetailsAsync(LoadedPlugin plugin, bool verbose, TextWriter stdout)
+    private static async Task WritePluginDetailsAsync(LoadedPlugin plugin, bool verbose, TextWriter stdout)
     {
         var statusIcon = plugin.Diagnostic.Status switch
         {
@@ -165,14 +165,14 @@ public sealed class PluginDiagnostics
         await stdout.WriteLineAsync();
     }
 
-    private async Task WriteSuccessDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
+    private static async Task WriteSuccessDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
     {
         await stdout.WriteLineAsync($"  Providers: {plugin.Providers.Count}");
         var ruleCount = plugin.Providers.SelectMany(prov => prov.GetRules()).Count();
         await stdout.WriteLineAsync($"  Rules: {ruleCount}");
     }
 
-    private async Task WriteVersionMismatchDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
+    private static async Task WriteVersionMismatchDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
     {
         await stdout.WriteLineAsync($"  Message: {plugin.Diagnostic.Message}");
         await stdout.WriteLineAsync($"  Expected API Version: {plugin.Diagnostic.ExpectedApiVersion}");
@@ -185,7 +185,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    private async Task WriteLoadErrorDetailsAsync(LoadedPlugin plugin, bool verbose, TextWriter stdout)
+    private static async Task WriteLoadErrorDetailsAsync(LoadedPlugin plugin, bool verbose, TextWriter stdout)
     {
         await stdout.WriteLineAsync($"  Error: {plugin.Diagnostic.ExceptionType}: {plugin.Diagnostic.Message}");
 
@@ -218,7 +218,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    private async Task WriteStackTraceAsync(string stackTrace, bool verbose, TextWriter stdout)
+    private static async Task WriteStackTraceAsync(string stackTrace, bool verbose, TextWriter stdout)
     {
         if (verbose)
         {
@@ -242,7 +242,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    private async Task WriteGenericErrorDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
+    private static async Task WriteGenericErrorDetailsAsync(LoadedPlugin plugin, TextWriter stdout)
     {
         await stdout.WriteLineAsync($"  Message: {plugin.Diagnostic.Message}");
 
@@ -253,7 +253,7 @@ public sealed class PluginDiagnostics
         }
     }
 
-    private PluginLoadSummary CalculateSummary(IReadOnlyList<LoadedPlugin> plugins)
+    private static PluginLoadSummary CalculateSummary(IReadOnlyList<LoadedPlugin> plugins)
     {
         var totalPlugins = plugins.Count;
         var successCount = plugins.Count(p => p.Diagnostic.Status == PluginLoadStatus.Success);

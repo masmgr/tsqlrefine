@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Safety;
 
@@ -37,7 +36,7 @@ public sealed class CrossDatabaseTransactionRule : IRule
 
     private sealed class CrossDatabaseTransactionVisitor : DiagnosticVisitorBase
     {
-        private int _transactionDepth = 0;
+        private int _transactionDepth;
         private readonly HashSet<string> _databasesInTransaction = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<TSqlFragment> _problemFragments = new();
 

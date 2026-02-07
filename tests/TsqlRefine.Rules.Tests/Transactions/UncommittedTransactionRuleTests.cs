@@ -1,4 +1,3 @@
-using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Transactions;
 using TsqlRefine.Rules.Tests.Helpers;
 

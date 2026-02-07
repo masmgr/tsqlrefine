@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
@@ -84,10 +83,10 @@ public sealed class PreferJsonFunctionsRule : IRule
             {
                 var value = strLit.Value;
                 // Check for common JSON patterns
-                return value.Contains("{", StringComparison.Ordinal) ||
-                       value.Contains("}", StringComparison.Ordinal) ||
-                       value.Contains("[", StringComparison.Ordinal) ||
-                       value.Contains("]", StringComparison.Ordinal) ||
+                return value.Contains('{') ||
+                       value.Contains('}') ||
+                       value.Contains('[') ||
+                       value.Contains(']') ||
                        value.Contains("\":", StringComparison.Ordinal) ||
                        value.Contains("':", StringComparison.Ordinal);
             }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using TsqlRefine.Core;
 
@@ -47,9 +48,9 @@ public static class FormatConfigWriter
     {
         await stdout.WriteLineAsync("Effective Formatting Options:");
 
-        await WriteOptionLineAsync(stdout, "compatLevel", resolved.CompatLevel.Value.ToString(), resolved.CompatLevel.Source, showSources);
+        await WriteOptionLineAsync(stdout, "compatLevel", resolved.CompatLevel.Value.ToString(CultureInfo.InvariantCulture), resolved.CompatLevel.Source, showSources);
         await WriteOptionLineAsync(stdout, "indentStyle", resolved.IndentStyle.Value.ToString().ToLowerInvariant(), resolved.IndentStyle.Source, showSources);
-        await WriteOptionLineAsync(stdout, "indentSize", resolved.IndentSize.Value.ToString(), resolved.IndentSize.Source, showSources);
+        await WriteOptionLineAsync(stdout, "indentSize", resolved.IndentSize.Value.ToString(CultureInfo.InvariantCulture), resolved.IndentSize.Source, showSources);
         await WriteOptionLineAsync(stdout, "keywordCasing", resolved.KeywordCasing.Value.ToString().ToLowerInvariant(), resolved.KeywordCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "builtInFunctionCasing", resolved.BuiltInFunctionCasing.Value.ToString().ToLowerInvariant(), resolved.BuiltInFunctionCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "dataTypeCasing", resolved.DataTypeCasing.Value.ToString().ToLowerInvariant(), resolved.DataTypeCasing.Source, showSources);
@@ -58,7 +59,7 @@ public static class FormatConfigWriter
         await WriteOptionLineAsync(stdout, "columnCasing", resolved.ColumnCasing.Value.ToString().ToLowerInvariant(), resolved.ColumnCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "variableCasing", resolved.VariableCasing.Value.ToString().ToLowerInvariant(), resolved.VariableCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "commaStyle", resolved.CommaStyle.Value.ToString().ToLowerInvariant(), resolved.CommaStyle.Source, showSources);
-        await WriteOptionLineAsync(stdout, "maxLineLength", resolved.MaxLineLength.Value.ToString(), resolved.MaxLineLength.Source, showSources);
+        await WriteOptionLineAsync(stdout, "maxLineLength", resolved.MaxLineLength.Value.ToString(CultureInfo.InvariantCulture), resolved.MaxLineLength.Source, showSources);
         await WriteOptionLineAsync(stdout, "insertFinalNewline", resolved.InsertFinalNewline.Value.ToString().ToLowerInvariant(), resolved.InsertFinalNewline.Source, showSources);
         await WriteOptionLineAsync(stdout, "trimTrailingWhitespace", resolved.TrimTrailingWhitespace.Value.ToString().ToLowerInvariant(), resolved.TrimTrailingWhitespace.Source, showSources);
         await WriteOptionLineAsync(stdout, "normalizeInlineSpacing", resolved.NormalizeInlineSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeInlineSpacing.Source, showSources);

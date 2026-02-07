@@ -1,5 +1,4 @@
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers.Tokens;
 
 namespace TsqlRefine.Rules.Helpers.Diagnostics;
 

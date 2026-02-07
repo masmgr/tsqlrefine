@@ -1,7 +1,5 @@
-using System.IO;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Debug;
 
 namespace TsqlRefine.Rules.Tests.Debug;

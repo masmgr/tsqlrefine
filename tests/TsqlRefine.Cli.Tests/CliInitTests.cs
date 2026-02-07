@@ -1,5 +1,3 @@
-using TsqlRefine.Cli;
-
 namespace TsqlRefine.Cli.Tests;
 
 /// <summary>

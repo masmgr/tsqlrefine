@@ -149,7 +149,7 @@ internal sealed class PluginLoadContext : AssemblyLoadContext
         return "unknown";
     }
 
-    private static IEnumerable<string> GetArchitectureNames()
+    private static string[] GetArchitectureNames()
     {
         var arch = RuntimeInformation.ProcessArchitecture;
         return arch switch

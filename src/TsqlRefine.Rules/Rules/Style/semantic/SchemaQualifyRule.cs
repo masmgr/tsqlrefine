@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Style.Semantic;
 
@@ -51,14 +50,14 @@ public sealed class SchemaQualifyRule : IRule
             var tableName = schemaObject.BaseIdentifier.Value;
 
             // Skip temp tables (#temp, ##global)
-            if (tableName.StartsWith("#"))
+            if (tableName.StartsWith('#'))
             {
                 base.ExplicitVisit(node);
                 return;
             }
 
             // Skip table variables (@table)
-            if (tableName.StartsWith("@"))
+            if (tableName.StartsWith('@'))
             {
                 base.ExplicitVisit(node);
                 return;

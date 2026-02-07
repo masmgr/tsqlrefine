@@ -1,4 +1,3 @@
-using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
 using TsqlRefine.Core.Engine;
 using TsqlRefine.Formatting;
@@ -7,15 +6,11 @@ namespace TsqlRefine.Cli.Services;
 
 public sealed class FormattingOptionsResolver
 {
-    private readonly ConfigLoader _configLoader;
-    private readonly EditorConfigReader _editorConfigReader = new();
-
-    public FormattingOptionsResolver(ConfigLoader configLoader)
+    public FormattingOptionsResolver()
     {
-        _configLoader = configLoader;
     }
 
-    public FormattingOptions ResolveFormattingOptions(CliArgs args, SqlInput input)
+    public static FormattingOptions ResolveFormattingOptions(CliArgs args, SqlInput input)
     {
         // Priority: CLI args > .editorconfig > tsqlrefine.json > defaults
         var options = new FormattingOptions();
@@ -24,7 +19,7 @@ public sealed class FormattingOptionsResolver
         options = TryApplyConfigOptions(args, options);
 
         // Override with .editorconfig
-        var editorConfig = _editorConfigReader.TryRead(input.FilePath);
+        var editorConfig = EditorConfigReader.TryRead(input.FilePath);
         options = ApplyEditorConfigOptions(options, editorConfig);
 
         // Override with CLI args
@@ -34,7 +29,7 @@ public sealed class FormattingOptionsResolver
     /// <summary>
     /// Resolves formatting options with source tracking for display purposes.
     /// </summary>
-    public ResolvedFormattingOptions ResolveFormattingOptionsWithSources(CliArgs args, string? filePath)
+    public static ResolvedFormattingOptions ResolveFormattingOptionsWithSources(CliArgs args, string? filePath)
     {
         var builder = new ResolvedFormattingOptionsBuilder
         {
@@ -45,7 +40,7 @@ public sealed class FormattingOptionsResolver
         TryApplyConfigToBuilder(args, builder);
 
         // Layer .editorconfig values
-        var editorConfig = _editorConfigReader.TryRead(filePath);
+        var editorConfig = EditorConfigReader.TryRead(filePath);
         if (editorConfig.Path is not null)
         {
             builder.EditorConfigPath = editorConfig.Path;
@@ -58,11 +53,11 @@ public sealed class FormattingOptionsResolver
         return builder.Build();
     }
 
-    private FormattingOptions TryApplyConfigOptions(CliArgs args, FormattingOptions options)
+    private static FormattingOptions TryApplyConfigOptions(CliArgs args, FormattingOptions options)
     {
         try
         {
-            var config = _configLoader.LoadConfig(args);
+            var config = ConfigLoader.LoadConfig(args);
             if (config.Formatting is not null)
             {
                 return FormattingConfigMapper.ToFormattingOptions(config.Formatting);
@@ -75,12 +70,12 @@ public sealed class FormattingOptionsResolver
         return options;
     }
 
-    private void TryApplyConfigToBuilder(CliArgs args, ResolvedFormattingOptionsBuilder builder)
+    private static void TryApplyConfigToBuilder(CliArgs args, ResolvedFormattingOptionsBuilder builder)
     {
         try
         {
-            var config = _configLoader.LoadConfig(args);
-            builder.ConfigPath = _configLoader.GetConfigPath(args);
+            var config = ConfigLoader.LoadConfig(args);
+            builder.ConfigPath = ConfigLoader.GetConfigPath(args);
 
             if (config.Formatting is not null)
             {

@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
@@ -41,7 +40,7 @@ public sealed class NamedConstraintRule : IRule
         {
             // Check if table is a temp table (starts with # or ##)
             var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && (tableName.StartsWith("#") || tableName.StartsWith("##")))
+            if (tableName != null && tableName.StartsWith('#'))
             {
                 // Check for named constraints
                 if (node.Definition != null)

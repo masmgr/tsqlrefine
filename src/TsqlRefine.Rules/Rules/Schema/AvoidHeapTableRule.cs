@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
@@ -41,7 +40,7 @@ public sealed class AvoidHeapTableRule : IRule
         {
             // Skip temporary tables (#temp, ##temp)
             var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && tableName.StartsWith("#"))
+            if (tableName != null && tableName.StartsWith('#'))
             {
                 base.ExplicitVisit(node);
                 return;

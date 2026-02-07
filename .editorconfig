@@ -11,6 +11,103 @@ indent_style = space
 indent_size = 4
 dotnet_sort_system_directives_first = true
 
+# ==========================================================================
+# .NET Analyzer Diagnostic Severity
+# ==========================================================================
+
+# CA1000: Do not declare static members on generic types
+# Factory methods like ConfigLoadResult<T>.Ok() are a valid pattern
+dotnet_diagnostic.CA1000.severity = suggestion
+
+# CA1002: Do not expose generic lists
+dotnet_diagnostic.CA1002.severity = suggestion
+
+# CA1031: Do not catch general exception types
+dotnet_diagnostic.CA1031.severity = warning
+
+# CA1034: Nested types should not be visible
+dotnet_diagnostic.CA1034.severity = suggestion
+
+# CA1716: Identifiers should not match keywords
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1724: Type names should not match namespaces
+dotnet_diagnostic.CA1724.severity = none
+
+# CA1848: Use LoggerMessage delegates
+dotnet_diagnostic.CA1848.severity = none
+
+# CA1852: Seal internal types
+dotnet_diagnostic.CA1852.severity = warning
+
+# CS1591: Missing XML comment for publicly visible type or member
+# Required for IDE0005 (GenerateDocumentationFile=true), suppress globally
+dotnet_diagnostic.CS1591.severity = none
+
+# ==========================================================================
+# IDE Code Style Rules
+# ==========================================================================
+
+# IDE0005: Remove unnecessary using directives
+dotnet_diagnostic.IDE0005.severity = warning
+
+# IDE0055: Fix formatting
+dotnet_diagnostic.IDE0055.severity = warning
+
+# IDE0161: Use file-scoped namespace
+csharp_style_namespace_declarations = file_scoped:warning
+
+# IDE0090: Simplify new expression
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+
+# IDE0063: Use simple using statement
+csharp_prefer_simple_using_statement = true:suggestion
+
+# IDE0066: Use switch expression
+csharp_style_prefer_switch_expression = true:suggestion
+
+# IDE0078: Use pattern matching
+csharp_style_prefer_pattern_matching = true:suggestion
+
+# IDE0074: Use coalesce compound assignment
+dotnet_style_prefer_compound_assignment = true:suggestion
+
+# IDE0028: Use collection initializers
+dotnet_style_collection_initializer = true:suggestion
+
+# IDE0017: Use object initializers
+dotnet_style_object_initializer = true:suggestion
+
+# IDE0290: Use primary constructors
+csharp_style_prefer_primary_constructors = false:none
+
+# ==========================================================================
+# Test project relaxations
+# ==========================================================================
+[tests/**/*.cs]
+# CA1707: Test methods use underscores for readability (Method_Condition_Expected)
+dotnet_diagnostic.CA1707.severity = none
+# CA1861: Static readonly arrays not needed in test setup
+dotnet_diagnostic.CA1861.severity = none
+# CA1305: IFormatProvider not critical in test assertions
+dotnet_diagnostic.CA1305.severity = suggestion
+# CA1310: StringComparison in test assertions
+dotnet_diagnostic.CA1310.severity = suggestion
+# CA1822: Making test helpers static is low value
+dotnet_diagnostic.CA1822.severity = suggestion
+# CA1826: Enumerable vs indexer in test code
+dotnet_diagnostic.CA1826.severity = suggestion
+# CA1847/CA1865/CA1866: Char overloads in test code
+dotnet_diagnostic.CA1847.severity = suggestion
+dotnet_diagnostic.CA1865.severity = suggestion
+dotnet_diagnostic.CA1866.severity = suggestion
+# CA1805: Default value initialization in test code
+dotnet_diagnostic.CA1805.severity = suggestion
+# CA1859: Concrete return types in test helpers
+dotnet_diagnostic.CA1859.severity = suggestion
+# CA1711: xUnit collection fixture classes use 'Collection' suffix by convention
+dotnet_diagnostic.CA1711.severity = suggestion
+
 [*.md]
 trim_trailing_whitespace = false
 

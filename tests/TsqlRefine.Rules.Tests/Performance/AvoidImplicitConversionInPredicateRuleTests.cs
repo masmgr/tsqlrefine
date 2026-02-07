@@ -1,5 +1,4 @@
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Rules;
 using TsqlRefine.Rules.Rules.Performance;
 using TsqlRefine.Rules.Tests.Helpers;
 

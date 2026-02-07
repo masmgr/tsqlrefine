@@ -1,5 +1,4 @@
 using System.Text;
-using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
@@ -12,7 +11,7 @@ public sealed class ConfigLoader
     /// <summary>
     /// Gets the path to the config file that would be loaded, or null if using defaults.
     /// </summary>
-    public string? GetConfigPath(CliArgs args)
+    public static string? GetConfigPath(CliArgs args)
     {
         var path = args.ConfigPath;
         if (path is null)
@@ -32,7 +31,7 @@ public sealed class ConfigLoader
         return null;
     }
 
-    public TsqlRefineConfig LoadConfig(CliArgs args)
+    public static TsqlRefineConfig LoadConfig(CliArgs args)
     {
         var path = args.ConfigPath;
         if (path is null)
@@ -58,13 +57,16 @@ public sealed class ConfigLoader
         {
             return TsqlRefineConfig.Load(path);
         }
+
+#pragma warning disable CA1031 // Wrap config parse failures into ConfigException
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             throw new ConfigException($"Failed to parse config: {ex.Message}");
         }
     }
 
-    public Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
+    public static Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // --rule が指定された場合、単一ルールのホワイトリストを作成
         // バリデーションは ValidateRuleId で行う
@@ -94,13 +96,16 @@ public sealed class ConfigLoader
         {
             return Ruleset.Load(path);
         }
+
+#pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             throw new ConfigException($"Failed to parse ruleset: {ex.Message}");
         }
     }
 
-    public IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
     {
         _ = args;
 
@@ -134,7 +139,7 @@ public sealed class ConfigLoader
     /// fix コマンドで --rule オプションが指定された場合、ルールIDのバリデーションを行う。
     /// 存在しないルールID、または Fixable でないルールの場合は ConfigException をスローする。
     /// </summary>
-    public void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
+    public static void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
     {
         if (string.IsNullOrWhiteSpace(args.RuleId))
         {
@@ -156,7 +161,7 @@ public sealed class ConfigLoader
         }
     }
 
-    public List<string> LoadIgnorePatterns(string? ignoreListPath)
+    public static List<string> LoadIgnorePatterns(string? ignoreListPath)
     {
         // Check explicit path first, then default tsqlrefine.ignore
         var path = ignoreListPath;
@@ -181,7 +186,10 @@ public sealed class ConfigLoader
                 .Where(l => !string.IsNullOrEmpty(l) && !l.StartsWith('#'))
                 .ToList();
         }
+
+#pragma warning disable CA1031 // Wrap ignore list read failures into ConfigException
         catch (Exception ex) when (ex is not ConfigException)
+#pragma warning restore CA1031
         {
             throw new ConfigException($"Failed to read ignore list: {ex.Message}");
         }

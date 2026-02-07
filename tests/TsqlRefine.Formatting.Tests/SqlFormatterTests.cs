@@ -1,4 +1,3 @@
-using TsqlRefine.Formatting;
 using Xunit;
 
 namespace TsqlRefine.Formatting.Tests;

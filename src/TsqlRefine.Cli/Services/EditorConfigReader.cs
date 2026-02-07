@@ -19,7 +19,7 @@ internal sealed class EditorConfigReader
     /// <summary>
     /// Tries to read formatting options from .editorconfig for the given file path.
     /// </summary>
-    public EditorConfigResult TryRead(string? filePath)
+    public static EditorConfigResult TryRead(string? filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath) ||
             string.Equals(filePath, "<stdin>", StringComparison.Ordinal))
@@ -61,7 +61,10 @@ internal sealed class EditorConfigReader
             var editorConfigPath = FindEditorConfigPath(fullPath);
             return new EditorConfigResult(indentStyleValue, indentSizeValue, lineEndingValue, editorConfigPath);
         }
+
+#pragma warning disable CA1031 // Graceful degradation when .editorconfig parsing fails
         catch (Exception)
+#pragma warning restore CA1031
         {
             return new EditorConfigResult(null, null, null, null);
         }
@@ -95,7 +98,7 @@ internal sealed class EditorConfigReader
         return null;
     }
 
-    private static IndentStyle? ParseIndentStyle(IReadOnlyDictionary<string, string> properties)
+    private static IndentStyle? ParseIndentStyle(Dictionary<string, string> properties)
     {
         if (!properties.TryGetValue("indent_style", out var styleValue))
         {
@@ -110,7 +113,7 @@ internal sealed class EditorConfigReader
         };
     }
 
-    private static int? ParseIndentSize(IReadOnlyDictionary<string, string> properties)
+    private static int? ParseIndentSize(Dictionary<string, string> properties)
     {
         if (!properties.TryGetValue("indent_size", out var sizeValue) || string.IsNullOrWhiteSpace(sizeValue))
         {
@@ -133,7 +136,7 @@ internal sealed class EditorConfigReader
         return int.TryParse(sizeValue, out var parsed) && parsed > 0 ? parsed : null;
     }
 
-    private static LineEnding? ParseLineEnding(IReadOnlyDictionary<string, string> properties)
+    private static LineEnding? ParseLineEnding(Dictionary<string, string> properties)
     {
         if (!properties.TryGetValue("end_of_line", out var value))
         {

@@ -1,6 +1,3 @@
-using TsqlRefine.Rules.Helpers;
-using Xunit;
-
 namespace TsqlRefine.Rules.Tests.Helpers;
 
 public sealed class TextAnalysisHelpersTests

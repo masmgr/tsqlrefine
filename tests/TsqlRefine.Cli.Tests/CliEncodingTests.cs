@@ -1,5 +1,4 @@
 using System.Text;
-using TsqlRefine.Cli;
 
 namespace TsqlRefine.Cli.Tests;
 

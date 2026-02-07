@@ -5,12 +5,10 @@ namespace TsqlRefine.Cli.Tests.Services;
 
 public sealed class EditorConfigReaderTests
 {
-    private readonly EditorConfigReader _reader = new();
-
     [Fact]
     public void TryRead_WithNullPath_ReturnsEmptyResult()
     {
-        var result = _reader.TryRead(null);
+        var result = EditorConfigReader.TryRead(null);
 
         Assert.Null(result.IndentStyle);
         Assert.Null(result.IndentSize);
@@ -21,7 +19,7 @@ public sealed class EditorConfigReaderTests
     [Fact]
     public void TryRead_WithEmptyPath_ReturnsEmptyResult()
     {
-        var result = _reader.TryRead(string.Empty);
+        var result = EditorConfigReader.TryRead(string.Empty);
 
         Assert.Null(result.IndentStyle);
         Assert.Null(result.IndentSize);
@@ -32,7 +30,7 @@ public sealed class EditorConfigReaderTests
     [Fact]
     public void TryRead_WithStdinPath_ReturnsEmptyResult()
     {
-        var result = _reader.TryRead("<stdin>");
+        var result = EditorConfigReader.TryRead("<stdin>");
 
         Assert.Null(result.IndentStyle);
         Assert.Null(result.IndentSize);
@@ -52,7 +50,7 @@ public sealed class EditorConfigReaderTests
             var txtPath = Path.Combine(tempDir, "test.txt");
             File.WriteAllText(txtPath, "content");
 
-            var result = _reader.TryRead(txtPath);
+            var result = EditorConfigReader.TryRead(txtPath);
 
             Assert.Null(result.IndentStyle);
             Assert.Null(result.IndentSize);
@@ -77,7 +75,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(IndentStyle.Tabs, result.IndentStyle);
             Assert.Equal(editorConfigPath, result.Path);
@@ -100,7 +98,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(IndentStyle.Spaces, result.IndentStyle);
         }
@@ -122,7 +120,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(2, result.IndentSize);
         }
@@ -144,7 +142,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(LineEnding.Lf, result.LineEnding);
         }
@@ -166,7 +164,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(LineEnding.CrLf, result.LineEnding);
         }
@@ -188,7 +186,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(LineEnding.Lf, result.LineEnding);
         }
@@ -210,7 +208,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(8, result.IndentSize);
         }
@@ -229,7 +227,7 @@ public sealed class EditorConfigReaderTests
             var editorConfigPath = Path.Combine(tempDir, ".editorconfig");
             File.WriteAllText(editorConfigPath, "root = true\n[*.sql]\nindent_style = tab\nindent_size = 2\n");
 
-            var result = _reader.TryRead(tempDir);
+            var result = EditorConfigReader.TryRead(tempDir);
 
             Assert.Equal(IndentStyle.Tabs, result.IndentStyle);
             Assert.Equal(2, result.IndentSize);
@@ -253,7 +251,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Equal(IndentStyle.Tabs, result.IndentStyle);
             Assert.Equal(2, result.IndentSize);
@@ -278,7 +276,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Null(result.IndentStyle);
             Assert.Null(result.IndentSize);
@@ -303,7 +301,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Null(result.IndentSize);
         }
@@ -325,7 +323,7 @@ public sealed class EditorConfigReaderTests
             var sqlPath = Path.Combine(tempDir, "test.sql");
             File.WriteAllText(sqlPath, "SELECT 1");
 
-            var result = _reader.TryRead(sqlPath);
+            var result = EditorConfigReader.TryRead(sqlPath);
 
             Assert.Null(result.IndentSize);
         }

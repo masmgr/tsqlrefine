@@ -1,7 +1,6 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Style;
 using TsqlRefine.Rules.Tests.Helpers;
-using Xunit;
 
 namespace TsqlRefine.Rules.Tests.Style;
 

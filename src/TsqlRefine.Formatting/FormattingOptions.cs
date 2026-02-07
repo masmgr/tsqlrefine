@@ -96,7 +96,7 @@ public sealed record FormattingOptions
     public CommaStyle CommaStyle { get; init; } = CommaStyle.Trailing;
 
     /// <summary>Maximum line length (0 = no limit)</summary>
-    public int MaxLineLength { get; init; } = 0;
+    public int MaxLineLength { get; init; }
 
     /// <summary>Insert final newline at end of file</summary>
     public bool InsertFinalNewline { get; init; } = true;
