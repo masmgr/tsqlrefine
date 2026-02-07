@@ -129,6 +129,11 @@ public static class CliParser
             Description = "Show detailed information"
         };
 
+        public static readonly Option<bool> Quiet = new("--quiet", "-q")
+        {
+            Description = "Suppress informational stderr output (for IDE/extension integration)"
+        };
+
         public static readonly Option<bool> ShowSources = new("--show-sources")
         {
             Description = "Show where each option value originated"
@@ -207,25 +212,34 @@ public static class CliParser
             .WithRuleOptions()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
+        command.Options.Add(Options.Quiet);
         return command;
     }
 
-    private static Command BuildFormatCommand() =>
-        new Command("format", "Format SQL files (keyword casing, whitespace)")
+    private static Command BuildFormatCommand()
+    {
+        var command = new Command("format", "Format SQL files (keyword casing, whitespace)")
             .WithInputOptions()
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithFormatOptions()
             .WithPathsArgument();
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
 
-    private static Command BuildFixCommand() =>
-        new Command("fix", "Auto-fix issues that support fixing")
+    private static Command BuildFixCommand()
+    {
+        var command = new Command("fix", "Auto-fix issues that support fixing")
             .WithInputOptions()
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithRuleOptions()
             .WithRuleIdOption()
             .WithPathsArgument();
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
 
     private static Command BuildInitCommand()
     {
@@ -289,6 +303,7 @@ public static class CliParser
         root.WithRuleOptions();
         root.WithPathsArgument();
         root.Options.Add(Options.Verbose);
+        root.Options.Add(Options.Quiet);
 
         // Subcommands
         root.Subcommands.Add(BuildLintCommand());
@@ -353,6 +368,7 @@ public static class CliParser
             IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
             LineEnding: ParseLineEnding(GetOptionValue<string?>(parseResult, "--line-ending")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
+            Quiet: GetOptionValue<bool>(parseResult, "--quiet"),
             ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
             Force: GetOptionValue<bool>(parseResult, "--force"),
             Category: GetOptionValue<string?>(parseResult, "--category"),

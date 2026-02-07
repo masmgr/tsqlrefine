@@ -21,6 +21,7 @@ namespace TsqlRefine.Cli;
 /// <param name="IndentSize">Indentation size override.</param>
 /// <param name="LineEnding">Line ending style override.</param>
 /// <param name="Verbose">Whether to enable verbose output.</param>
+/// <param name="Quiet">Whether to suppress informational stderr output (for IDE/extension integration).</param>
 /// <param name="ShowSources">Whether to show formatting option sources.</param>
 /// <param name="Force">Whether to overwrite existing files (for init command).</param>
 /// <param name="Category">Filter rules by category (for list-rules command).</param>
@@ -43,6 +44,7 @@ public sealed record CliArgs(
     int? IndentSize,
     LineEnding? LineEnding,
     bool Verbose,
+    bool Quiet,
     bool ShowSources,
     bool Force,
     string? Category,

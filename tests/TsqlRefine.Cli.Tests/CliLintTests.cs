@@ -135,6 +135,64 @@ public sealed class CliLintTests
     }
 
     [Fact]
+    public async Task Lint_Quiet_SuppressesStderrSummary()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "lint", "--stdin", "--quiet" }, stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        // stdout still has diagnostics
+        Assert.Contains("avoid-select-star", stdout.ToString());
+        // stderr should be empty (no summary)
+        Assert.Equal("", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Lint_Quiet_ShortFlag_SuppressesStderrSummary()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "lint", "--stdin", "-q" }, stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        Assert.Contains("avoid-select-star", stdout.ToString());
+        Assert.Equal("", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Lint_Quiet_JsonOutput_StillWorks()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "lint", "--stdin", "--output", "json", "-q" }, stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        Assert.Equal("tsqlrefine", doc.RootElement.GetProperty("tool").GetString());
+        Assert.Equal("", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Lint_Quiet_NoViolations_EmptyStderr()
+    {
+        var stdin = new StringReader("SELECT id FROM dbo.t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "lint", "--stdin", "-q" }, stdin, stdout, stderr);
+
+        Assert.Equal(0, code);
+        Assert.Equal("", stderr.ToString());
+    }
+
+    [Fact]
     public async Task DefaultCommand_WithoutLint_RunsLint()
     {
         var stdin = new StringReader("SELECT * FROM t;");

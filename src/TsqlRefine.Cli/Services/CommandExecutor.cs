@@ -226,17 +226,20 @@ public sealed class CommandExecutor
             }
         }
 
-        // Always show summary to stderr
-        await stderr.WriteLineAsync();
-        await stderr.WriteLineAsync(FormatSummary(diagnosticsSummary));
-
-        if (args.Verbose)
+        if (!args.Quiet)
         {
-            var elapsed = stopwatch.Elapsed;
-            var elapsedText = elapsed.TotalSeconds >= 1
-                ? $"{elapsed.TotalSeconds:F2}s"
-                : $"{elapsed.TotalMilliseconds:F0}ms";
-            await stderr.WriteLineAsync($"Time: {elapsedText}");
+            // Show summary to stderr (suppressed in quiet mode for IDE integration)
+            await stderr.WriteLineAsync();
+            await stderr.WriteLineAsync(FormatSummary(diagnosticsSummary));
+
+            if (args.Verbose)
+            {
+                var elapsed = stopwatch.Elapsed;
+                var elapsedText = elapsed.TotalSeconds >= 1
+                    ? $"{elapsed.TotalSeconds:F2}s"
+                    : $"{elapsed.TotalMilliseconds:F0}ms";
+                await stderr.WriteLineAsync($"Time: {elapsedText}");
+            }
         }
 
         if (diagnosticsSummary.HasParseErrors)
@@ -269,11 +272,13 @@ public sealed class CommandExecutor
                         ? resolved
                         : Encoding.UTF8;
                     await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
-                    await stderr.WriteLineAsync($"Formatted: {input.FilePath}");
+                    if (!args.Quiet)
+                        await stderr.WriteLineAsync($"Formatted: {input.FilePath}");
                 }
                 else
                 {
-                    await stderr.WriteLineAsync($"Unchanged: {input.FilePath}");
+                    if (!args.Quiet)
+                        await stderr.WriteLineAsync($"Unchanged: {input.FilePath}");
                 }
             }
             else
@@ -330,13 +335,17 @@ public sealed class CommandExecutor
                             ? resolved
                             : Encoding.UTF8;
                         await File.WriteAllTextAsync(file.FilePath, file.FixedText, encoding);
-                        var fixCount = file.AppliedFixes.Count;
-                        var fixLabel = fixCount == 1 ? "fix" : "fixes";
-                        await stderr.WriteLineAsync($"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
+                        if (!args.Quiet)
+                        {
+                            var fixCount = file.AppliedFixes.Count;
+                            var fixLabel = fixCount == 1 ? "fix" : "fixes";
+                            await stderr.WriteLineAsync($"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
+                        }
                     }
                     else
                     {
-                        await stderr.WriteLineAsync($"Unchanged: {file.FilePath}");
+                        if (!args.Quiet)
+                            await stderr.WriteLineAsync($"Unchanged: {file.FilePath}");
                     }
                 }
                 else
