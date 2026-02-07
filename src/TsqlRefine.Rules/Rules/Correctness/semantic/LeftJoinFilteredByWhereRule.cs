@@ -127,7 +127,6 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             {
                 case BooleanComparisonExpression comparison:
                     // Check if this is a filter on a right-side table
-                    // But exclude IS NULL / IS NOT NULL checks (they preserve LEFT JOIN semantics)
                     CheckComparison(comparison, rightSideTables, filteredTables);
                     break;
 
@@ -145,17 +144,40 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                     FindFilteredTablesRecursive(paren.Expression, rightSideTables, filteredTables);
                     break;
 
+                case BooleanNotExpression notExpr:
+                    // NOT on right-side filter still negates LEFT JOIN (NOT NULL = UNKNOWN)
+                    FindFilteredTablesRecursive(notExpr.Expression, rightSideTables, filteredTables);
+                    break;
+
                 case InPredicate inPred:
                     // IN predicate on right-side table
-                    if (inPred.Expression is ColumnReferenceExpression colRef)
-                    {
-                        var tableName = ColumnReferenceHelpers.GetTableQualifier(colRef);
-                        if (tableName != null && rightSideTables.Contains(tableName))
-                        {
-                            filteredTables.Add(tableName);
-                        }
-                    }
+                    CheckColumnReference(inPred.Expression, rightSideTables, filteredTables);
                     break;
+
+                case LikePredicate likePred:
+                    // LIKE on right-side table negates LEFT JOIN (NULLs fail LIKE)
+                    CheckColumnReference(likePred.FirstExpression, rightSideTables, filteredTables);
+                    break;
+
+                case BooleanTernaryExpression ternary:
+                    // BETWEEN on right-side table negates LEFT JOIN
+                    CheckColumnReference(ternary.FirstExpression, rightSideTables, filteredTables);
+                    break;
+            }
+        }
+
+        private static void CheckColumnReference(
+            ScalarExpression expression,
+            HashSet<string> rightSideTables,
+            HashSet<string> filteredTables)
+        {
+            if (expression is ColumnReferenceExpression colRef)
+            {
+                var tableName = ColumnReferenceHelpers.GetTableQualifier(colRef);
+                if (tableName != null && rightSideTables.Contains(tableName))
+                {
+                    filteredTables.Add(tableName);
+                }
             }
         }
 

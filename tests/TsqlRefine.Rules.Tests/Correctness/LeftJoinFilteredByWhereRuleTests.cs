@@ -12,6 +12,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.name = 'test'")]  // string comparison
     [InlineData("SELECT * FROM t1 a LEFT JOIN t2 b ON a.id = b.id WHERE b.status = 1")]  // with aliases
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.active = 1")]  // boolean field
+    [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t1.id = 1 AND t2.status > 0")]  // AND with right-side comparison
     public void Analyze_WhenLeftJoinFilteredByWhere_ReturnsDiagnostic(string sql)
     {
         var rule = new LeftJoinFilteredByWhereRule();
@@ -70,6 +71,45 @@ public sealed class LeftJoinFilteredByWhereRuleTests
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
 
+        Assert.NotEmpty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_LikeOnRightSide_ReturnsDiagnostic()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.name LIKE '%test%'";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+
+        // LIKE on right-side table negates LEFT JOIN (NULLs will fail LIKE)
+        Assert.NotEmpty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_BetweenOnRightSide_ReturnsDiagnostic()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.val BETWEEN 1 AND 10";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+
+        // BETWEEN on right-side table negates LEFT JOIN
+        Assert.NotEmpty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotExpressionOnRightSide_ReturnsDiagnostic()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE NOT t2.status = 0";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+
+        // NOT on right-side filter still negates LEFT JOIN
         Assert.NotEmpty(diagnostics);
     }
 

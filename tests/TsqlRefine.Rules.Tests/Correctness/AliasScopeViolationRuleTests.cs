@@ -9,6 +9,8 @@ public sealed class AliasScopeViolationRuleTests
     [Theory]
     [InlineData("SELECT * FROM (SELECT * FROM t1 WHERE t2.id = 1) x JOIN t2 ON 1=1")]  // Inner references t2 before defined
     [InlineData("SELECT * FROM (SELECT t3.col FROM t1) x, t2, t3")]  // Subquery references t3 from outer scope (order issue)
+    [InlineData("SELECT * FROM (SELECT t2.col FROM t1) x JOIN t2 ON x.col = t2.id")]  // Derived table forward-references t2 in JOIN
+    [InlineData("SELECT * FROM t1, (SELECT t3.id FROM t2) x, t3")]  // Middle derived table forward-references t3 at end
     public void Analyze_WhenAliasScopeViolation_ReturnsDiagnostic(string sql)
     {
         var rule = new AliasScopeViolationRule();
@@ -31,6 +33,11 @@ public sealed class AliasScopeViolationRuleTests
     [InlineData("SELECT * FROM t1, (SELECT * FROM t2) x WHERE t1.id = x.id")]  // Valid reference
     [InlineData("SELECT * FROM t1 WHERE t1.id IN (SELECT t2.id FROM t2)")]  // Valid subquery
     [InlineData("SELECT * FROM (SELECT * FROM t1 WHERE t1.id = 1) x")]  // Self-reference in subquery
+    [InlineData("SELECT * FROM t1, (SELECT t1.col FROM t1 AS t1inner) x")]  // Derived table references t1 defined before it
+    [InlineData("SELECT * FROM t1 a JOIN (SELECT a.id FROM t2) x ON 1=1")]  // Derived table references alias 'a' defined before it in JOIN
+    [InlineData("SELECT * FROM t1, t2, (SELECT t1.col, t2.col FROM t3) x")]  // Derived table references t1, t2 both defined before it
+    [InlineData("SELECT * FROM t1 LEFT JOIN (SELECT * FROM t2) x ON t1.id = x.id")]  // Derived table in LEFT JOIN, no forward ref
+    [InlineData("SELECT * FROM (SELECT 1 AS id) x")]  // Derived table with no external references at all
     public void Analyze_WhenNoAliasScopeViolation_ReturnsEmpty(string sql)
     {
         var rule = new AliasScopeViolationRule();

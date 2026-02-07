@@ -13,6 +13,8 @@ public sealed class InsertColumnCountMismatchRuleTests
     [InlineData("INSERT INTO t (a, b) SELECT 1, 2, 3")]  // 3 values vs 2 cols
     [InlineData("INSERT INTO t (col1, col2, col3, col4) VALUES (1, 2, 3)")]  // 3 values vs 4 cols
     [InlineData("INSERT INTO t (x) SELECT a, b FROM t2")]  // 2 cols vs 1 col
+    [InlineData("INSERT INTO t (a, b) SELECT x, y, z FROM t2 UNION ALL SELECT p, q, r FROM t3")]  // UNION: 3 cols vs 2
+    [InlineData("INSERT INTO t (a) SELECT x, y FROM t2 UNION SELECT p, q FROM t3")]  // UNION: 2 cols vs 1
     public void Analyze_WhenColumnCountMismatch_ReturnsDiagnostic(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();
@@ -41,6 +43,9 @@ public sealed class InsertColumnCountMismatchRuleTests
     [InlineData("INSERT INTO t (a, b) SELECT * FROM t2")]  // SELECT * - can't verify without schema
     [InlineData("INSERT INTO t (a, b, c) SELECT t2.* FROM t2")]  // SELECT t2.* - can't verify without schema
     [InlineData("INSERT INTO t (a, b) SELECT *, x FROM t2")]  // SELECT * with other columns - can't verify
+    [InlineData("INSERT INTO t (a, b) SELECT x, y FROM t2 UNION ALL SELECT p, q FROM t3")]  // UNION with matching counts
+    [InlineData("INSERT INTO t (a, b, c) SELECT x, y, z FROM t2 UNION SELECT p, q, r FROM t3")]  // UNION with matching counts
+    [InlineData("INSERT INTO t (a, b) SELECT * FROM t2 UNION ALL SELECT * FROM t3")]  // UNION with SELECT * - can't verify
     public void Analyze_WhenColumnCountMatches_ReturnsEmpty(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();

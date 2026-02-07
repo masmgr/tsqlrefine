@@ -46,7 +46,19 @@ SELECT * FROM t1, (SELECT * FROM t2) x WHERE t1.id = x.id;
 
 -- Valid self-reference within subquery
 SELECT * FROM (SELECT * FROM t1 WHERE t1.id = 1) x;
+
+-- Derived table references table defined BEFORE it (valid)
+SELECT * FROM t1, (SELECT t1.col FROM t1 AS t1inner) x;
+
+-- Derived table references multiple tables defined before it (valid)
+SELECT * FROM t1, t2, (SELECT t1.col, t2.col FROM t3) x;
 ```
+
+## Scope Rules
+
+This rule only flags **forward references** — when a derived table references an alias that is defined **after** it in the FROM clause. References to aliases defined **before** the derived table are valid and not flagged.
+
+For JOINs, the left side of a JOIN is considered "before" the right side, following the standard SQL evaluation order.
 
 ## Configuration
 

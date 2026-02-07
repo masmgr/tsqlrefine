@@ -134,6 +134,15 @@ FROM Orders o
 JOIN ContactInfo c ON o.CustomerId = c.CustomerId;
 ```
 
+## Limitations
+
+This rule cannot verify column counts in the following cases (analysis is skipped):
+
+- **SELECT \***: `INSERT INTO t (a, b) SELECT * FROM t2` — Column count of `*` requires schema information which is not available during static analysis.
+- **table.\***: `INSERT INTO t (a, b) SELECT t2.* FROM t2` — Same limitation as `SELECT *`.
+
+For UNION/INTERSECT/EXCEPT queries, the column count is determined from the first SELECT branch.
+
 ## Configuration
 
 To disable this rule, add it to your `tsqlrefine.json`:

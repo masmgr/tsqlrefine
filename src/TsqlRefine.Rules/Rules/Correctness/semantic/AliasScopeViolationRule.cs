@@ -45,10 +45,10 @@ public sealed class AliasScopeViolationRule : IRule
                 // Build context for this query
                 var context = new QueryContext();
 
-                // Collect aliases from FROM clause
+                // Collect aliases and derived tables from FROM clause
                 if (querySpec.FromClause != null)
                 {
-                    CollectAliasesFromFrom(querySpec.FromClause.TableReferences, context);
+                    CollectFromClauseInfo(querySpec.FromClause.TableReferences, context);
                 }
 
                 // Push onto stack (this makes outer contexts available to inner queries)
@@ -70,28 +70,30 @@ public sealed class AliasScopeViolationRule : IRule
         {
             // This is a derived table (subquery in FROM clause)
             // Check if it references aliases that aren't available yet in the outer FROM clause
-            // This is a common error pattern
 
             if (_queryStack.Count > 0)
             {
                 var outerContext = _queryStack.Peek();
 
-                // Get aliases referenced in this derived table using helper
-                var referencedAliases = CollectReferencedAliases(node);
-
-                // Check if any referenced aliases are from the outer query but defined AFTER this derived table
-                foreach (var alias in referencedAliases)
+                // Get the set of aliases defined AFTER this derived table
+                if (outerContext.DerivedTableLaterAliases.TryGetValue(node, out var laterAliases))
                 {
-                    // If the alias is in the outer context's "later" aliases, it's a potential violation
-                    if (outerContext.LaterAliases.Contains(alias))
+                    // Get aliases referenced in this derived table using helper
+                    var referencedAliases = CollectReferencedAliases(node);
+
+                    // Check if any referenced aliases are from the outer query but defined AFTER this derived table
+                    foreach (var alias in referencedAliases)
                     {
-                        AddDiagnostic(
-                            fragment: node,
-                            message: $"Derived table references alias '{alias}' which is defined later in the outer query's FROM clause. This may cause unexpected behavior or errors. Consider reordering tables or using explicit correlation.",
-                            code: "semantic/alias-scope-violation",
-                            category: "Correctness",
-                            fixable: false
-                        );
+                        if (laterAliases.Contains(alias))
+                        {
+                            AddDiagnostic(
+                                fragment: node,
+                                message: $"Derived table references alias '{alias}' which is defined later in the outer query's FROM clause. This may cause unexpected behavior or errors. Consider reordering tables or using explicit correlation.",
+                                code: "semantic/alias-scope-violation",
+                                category: "Correctness",
+                                fixable: false
+                            );
+                        }
                     }
                 }
             }
@@ -99,42 +101,59 @@ public sealed class AliasScopeViolationRule : IRule
             base.ExplicitVisit(node);
         }
 
-        private static void CollectAliasesFromFrom(IList<TableReference> tableRefs, QueryContext context)
+        private static void CollectFromClauseInfo(IList<TableReference> tableRefs, QueryContext context)
         {
-            foreach (var tableRef in tableRefs)
+            // First pass: flatten all table references in order to track positions
+            var flatRefs = new List<TableReference>();
+            FlattenTableReferences(tableRefs, flatRefs);
+
+            // Second pass: for each derived table, compute which aliases come AFTER it
+            var allAliases = new List<(int Index, string Alias)>();
+            var derivedTableIndices = new List<(int Index, QueryDerivedTable DerivedTable)>();
+
+            for (var i = 0; i < flatRefs.Count; i++)
             {
-                CollectAliasesFromTableReference(tableRef, context);
+                var tableRef = flatRefs[i];
+                if (tableRef is QueryDerivedTable derivedTable)
+                {
+                    derivedTableIndices.Add((i, derivedTable));
+                }
+                else if (tableRef is NamedTableReference namedTable)
+                {
+                    var alias = namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value;
+                    allAliases.Add((i, alias));
+                }
+            }
+
+            // For each derived table, "later aliases" are those with index > derived table index
+            foreach (var (dtIndex, dt) in derivedTableIndices)
+            {
+                var laterAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (aliasIndex, alias) in allAliases)
+                {
+                    if (aliasIndex > dtIndex)
+                    {
+                        laterAliases.Add(alias);
+                    }
+                }
+
+                context.DerivedTableLaterAliases[dt] = laterAliases;
             }
         }
 
-        private static void CollectAliasesFromTableReference(TableReference tableRef, QueryContext context)
+        private static void FlattenTableReferences(IList<TableReference> tableRefs, List<TableReference> result)
         {
-            if (tableRef is QueryDerivedTable derivedTable)
+            foreach (var tableRef in tableRefs)
             {
-                // Mark all subsequent aliases as "later" for this derived table
-                // (aliases defined after this point aren't available inside the derived table)
-                QueryContext.EnteringDerivedTable();
-
-                // Add the derived table's own alias as available
-                if (derivedTable.Alias?.Value is { } derivedAlias)
+                if (tableRef is JoinTableReference join)
                 {
-                    context.AddAvailableAlias(derivedAlias);
+                    FlattenTableReferences([join.FirstTableReference], result);
+                    FlattenTableReferences([join.SecondTableReference], result);
                 }
-
-                return;
-            }
-
-            if (tableRef is NamedTableReference namedTable)
-            {
-                var alias = namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value;
-                context.AddLaterAlias(alias);
-                return;
-            }
-
-            if (tableRef is JoinTableReference join)
-            {
-                CollectAliasesFromTableReference(join.FirstTableReference, context);
-                CollectAliasesFromTableReference(join.SecondTableReference, context);
+                else
+                {
+                    result.Add(tableRef);
+                }
             }
         }
 
@@ -180,24 +199,8 @@ public sealed class AliasScopeViolationRule : IRule
 
         private sealed class QueryContext
         {
-            public HashSet<string> AvailableAliases { get; } = new(StringComparer.OrdinalIgnoreCase);
-            public HashSet<string> LaterAliases { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-            public void AddAvailableAlias(string alias)
-            {
-                AvailableAliases.Add(alias);
-            }
-
-            public void AddLaterAlias(string alias)
-            {
-                LaterAliases.Add(alias);
-            }
-
-            public static void EnteringDerivedTable()
-            {
-                // When entering a derived table, current "later" aliases become unavailable
-                // This method is called before processing the derived table
-            }
+            // Maps each derived table to the set of aliases defined after it in the FROM clause
+            public Dictionary<QueryDerivedTable, HashSet<string>> DerivedTableLaterAliases { get; } = [];
         }
     }
 }

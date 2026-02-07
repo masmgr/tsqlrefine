@@ -104,13 +104,18 @@ public sealed class InsertColumnCountMismatchRule : IRule
 
         private static int? CountSelectElements(QueryExpression? queryExpression)
         {
-            // Only QuerySpecification (main SELECT) can be reliably counted
-            // UNION/INTERSECT/EXCEPT require more complex analysis
-            if (queryExpression is not QuerySpecification querySpec)
+            return queryExpression switch
             {
-                return null;
-            }
+                QuerySpecification querySpec => CountQuerySpecificationElements(querySpec),
+                // UNION/INTERSECT/EXCEPT: count from the first branch (all branches must match)
+                BinaryQueryExpression binary => CountSelectElements(binary.FirstQueryExpression),
+                QueryParenthesisExpression paren => CountSelectElements(paren.QueryExpression),
+                _ => null,
+            };
+        }
 
+        private static int? CountQuerySpecificationElements(QuerySpecification querySpec)
+        {
             if (querySpec.SelectElements is not { Count: > 0 })
             {
                 return 0;

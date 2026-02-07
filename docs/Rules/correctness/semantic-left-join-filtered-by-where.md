@@ -76,6 +76,23 @@ LEFT JOIN employees e ON d.id = e.department_id AND e.status = 'active'
 GROUP BY d.name;
 ```
 
+## Detected Predicate Types
+
+This rule detects the following predicate types on right-side tables in WHERE clauses:
+
+- **Comparison operators**: `=`, `<>`, `>`, `<`, `>=`, `<=`
+- **IN predicates**: `column IN (values)`
+- **LIKE predicates**: `column LIKE pattern`
+- **BETWEEN predicates**: `column BETWEEN x AND y`
+- **NOT expressions**: `NOT (condition)` wrapping any of the above
+
+## Exceptions
+
+The following predicate types on right-side tables are **not** flagged as violations because they preserve LEFT JOIN semantics:
+
+- **IS NULL**: `WHERE right_table.col IS NULL` — This is a common and valid pattern to find rows with no match (anti-join). NULL right-side columns are the expected result of LEFT JOIN when no match exists.
+- **IS NOT NULL**: `WHERE right_table.col IS NOT NULL` — While this does filter out non-matching rows (similar to INNER JOIN), it is treated as an explicit intent to check for NULL and is not flagged.
+
 ## Configuration
 
 To disable this rule, add it to your `tsqlrefine.json`:
