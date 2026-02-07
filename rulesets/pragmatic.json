@@ -32,6 +32,7 @@
     { "id": "dangerous-ddl", "enabled": true },
     { "id": "transaction-without-commit-or-rollback", "enabled": true },
     { "id": "unreachable-case-when", "enabled": true },
-    { "id": "union-type-mismatch", "enabled": true }
+    { "id": "union-type-mismatch", "enabled": true },
+    { "id": "avoid-select-star", "enabled": true }
   ]
 }

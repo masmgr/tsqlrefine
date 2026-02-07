@@ -81,8 +81,9 @@ src/
 
 **Preset rulesets** in `rulesets/`:
 - `recommended.json`: Balanced production use (58 rules)
-- `strict.json`: Maximum enforcement (99 rules)
-- `pragmatic.json`: Production-ready minimum (36 rules)
+- `strict.json`: Maximum enforcement including style (97 rules)
+- `strict-logic.json`: Comprehensive correctness without cosmetic rules (74 rules)
+- `pragmatic.json`: Production-ready minimum (34 rules)
 - `security-only.json`: Security and critical safety (13 rules)
 
 ### .editorconfig

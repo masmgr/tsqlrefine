@@ -103,10 +103,20 @@ Example `custom-ruleset.json`:
 
 The repository includes preset rulesets under `rulesets/`:
 
-- `rulesets/recommended.json`
-- `rulesets/strict.json`
-- `rulesets/pragmatic.json`
-- `rulesets/security-only.json`
+| Ruleset | Rules | Description |
+|---------|-------|-------------|
+| `recommended.json` | 58 | Balanced production use with semantic analysis (default) |
+| `strict.json` | 97 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic.json` | 74 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `pragmatic.json` | 34 | Production-ready minimum focusing on safety and critical issues |
+| `security-only.json` | 13 | Security vulnerabilities and critical safety only |
 
 You can reference them from `tsqlrefine.json` via `ruleset`, or use the CLI `--preset` option (if supported by your version of the CLI).
+
+**Choosing a ruleset:**
+- Start with `recommended.json` for most projects - it provides balanced production-ready linting
+- Use `pragmatic.json` for minimal enforcement in legacy codebases or when first introducing linting
+- Use `strict-logic.json` for comprehensive correctness checking without style/cosmetic noise
+- Use `strict.json` for maximum enforcement when you want both logic and style consistency
+- Use `security-only.json` for security-focused code review or CI gates
 

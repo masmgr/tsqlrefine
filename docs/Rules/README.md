@@ -75,13 +75,24 @@ To disable specific rules, use a ruleset file:
 
 ### Preset Rulesets
 
-TsqlRefine provides three preset rulesets:
+TsqlRefine provides five preset rulesets:
 
-- **recommended**: Balanced set of rules for general use (default)
-- **strict**: All rules enabled for maximum code quality
-- **security-only**: Only security and safety-critical rules
+| Ruleset | Rules | Use Case |
+|---------|-------|----------|
+| **recommended** | 58 | Balanced production use with semantic analysis (default) |
+| **strict** | 97 | Maximum enforcement including all style/cosmetic rules |
+| **strict-logic** | 74 | Comprehensive correctness without cosmetic style rules |
+| **pragmatic** | 34 | Production-ready minimum for legacy codebases |
+| **security-only** | 13 | Security vulnerabilities and critical safety only |
 
 ```powershell
+# Use recommended preset (default)
+dotnet run --project src/TsqlRefine.Cli -- lint file.sql
+
+# Use strict-logic for comprehensive checking without style noise
+dotnet run --project src/TsqlRefine.Cli -- lint --preset strict-logic file.sql
+
+# Use strict for maximum enforcement
 dotnet run --project src/TsqlRefine.Cli -- lint --preset strict file.sql
 ```
 
