@@ -102,13 +102,13 @@ Pushing a tag automatically triggers GitHub Actions to:
 4. Publish to NuGet.org (stable versions only, pre-releases excluded)
 
 Check release progress at:
-- GitHub Actions: https://github.com/imasa/tsqlrefine/actions
+- GitHub Actions: https://github.com/masmgr/tsqlrefine/actions
 
 ### 6. Edit Release Notes
 
 After GitHub Release is created, edit release notes if needed:
 
-1. Go to https://github.com/imasa/tsqlrefine/releases
+1. Go to https://github.com/masmgr/tsqlrefine/releases
 2. Select the latest release
 3. Click "Edit release"
 4. Enhance release notes (Breaking changes, Migration guide, etc.)

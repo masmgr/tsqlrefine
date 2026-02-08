@@ -24,5 +24,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/imasa/tsqlrefine/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/imasa/tsqlrefine/releases/tag/v0.1.0
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/masmgr/tsqlrefine/releases/tag/v0.1.0
