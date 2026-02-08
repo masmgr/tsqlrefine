@@ -70,12 +70,14 @@ public sealed class InsertColumnCountMismatchRule : IRule
 
         private void CheckSelectInsertSource(InsertStatement node, SelectInsertSource selectSource, int targetColumnCount)
         {
-            var sourceColumnCount = CountSelectElements(selectSource.Select);
-            if (sourceColumnCount is not null && sourceColumnCount.Value != targetColumnCount)
+            var branchColumnCounts = CountSelectElementsForAllBranches(selectSource.Select);
+            var mismatchedCount = branchColumnCounts.FirstOrDefault(c => c.HasValue && c.Value != targetColumnCount);
+
+            if (mismatchedCount.HasValue)
             {
                 AddDiagnostic(
                     fragment: node,
-                    message: $"Column count mismatch in INSERT statement. Target has {targetColumnCount} column(s), but SELECT provides {sourceColumnCount.Value} column(s).",
+                    message: $"Column count mismatch in INSERT statement. Target has {targetColumnCount} column(s), but SELECT provides {mismatchedCount.Value} column(s).",
                     code: RuleId,
                     category: Category,
                     fixable: false
@@ -102,16 +104,37 @@ public sealed class InsertColumnCountMismatchRule : IRule
             }
         }
 
-        private static int? CountSelectElements(QueryExpression? queryExpression)
+        private static List<int?> CountSelectElementsForAllBranches(QueryExpression? queryExpression)
         {
-            return queryExpression switch
+            var counts = new List<int?>();
+            CollectSelectElementCounts(queryExpression, counts);
+            return counts;
+        }
+
+        private static void CollectSelectElementCounts(QueryExpression? queryExpression, ICollection<int?> counts)
+        {
+            switch (queryExpression)
             {
-                QuerySpecification querySpec => CountQuerySpecificationElements(querySpec),
-                // UNION/INTERSECT/EXCEPT: count from the first branch (all branches must match)
-                BinaryQueryExpression binary => CountSelectElements(binary.FirstQueryExpression),
-                QueryParenthesisExpression paren => CountSelectElements(paren.QueryExpression),
-                _ => null,
-            };
+                case QuerySpecification querySpec:
+                    counts.Add(CountQuerySpecificationElements(querySpec));
+                    break;
+                // UNION/INTERSECT/EXCEPT: collect each branch count separately
+                case BinaryQueryExpression binary:
+                    CollectBinaryQueryExpressionCounts(binary, counts);
+                    break;
+                case QueryParenthesisExpression paren:
+                    CollectSelectElementCounts(paren.QueryExpression, counts);
+                    break;
+                default:
+                    counts.Add(null);
+                    break;
+            }
+        }
+
+        private static void CollectBinaryQueryExpressionCounts(BinaryQueryExpression binary, ICollection<int?> counts)
+        {
+            CollectSelectElementCounts(binary.FirstQueryExpression, counts);
+            CollectSelectElementCounts(binary.SecondQueryExpression, counts);
         }
 
         private static int? CountQuerySpecificationElements(QuerySpecification querySpec)

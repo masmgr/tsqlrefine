@@ -14,6 +14,9 @@ public sealed class CteNameConflictRuleTests
     [InlineData("WITH myalias AS (SELECT 1) SELECT * FROM (SELECT * FROM t) myalias")]  // CTE conflicts with subquery alias
     [InlineData("WITH cte AS (SELECT 1) SELECT * FROM dbo.cte")]  // Schema-qualified table name matches CTE
     [InlineData("WITH cte AS (SELECT 1) SELECT * FROM t1 JOIN t2 cte ON t1.id = t2.id")]  // Table alias in JOIN conflicts with CTE
+    [InlineData("WITH cte AS (SELECT 1), cte AS (SELECT 2) DELETE FROM t WHERE 1 = 0")]  // duplicate CTE names in DELETE
+    [InlineData("WITH cte AS (SELECT 1), cte AS (SELECT 2) UPDATE t SET id = 1")]  // duplicate CTE names in UPDATE
+    [InlineData("WITH cte AS (SELECT 1), cte AS (SELECT 2) INSERT INTO t (id) SELECT 1")]  // duplicate CTE names in INSERT
     public void Analyze_WhenCteNameConflict_ReturnsDiagnostic(string sql)
     {
         var rule = new CteNameConflictRule();
@@ -40,6 +43,7 @@ public sealed class CteNameConflictRuleTests
     [InlineData("WITH cte1 AS (SELECT 1), cte2 AS (SELECT * FROM cte1) SELECT * FROM cte2")]  // CTE references earlier CTE
     [InlineData("WITH cte AS (SELECT 1) SELECT * FROM cte JOIN Table1 t ON cte.id = t.id")]  // CTE used as table source with different alias on other table
     [InlineData("WITH cte AS (SELECT 1) SELECT * FROM cte CROSS APPLY (SELECT * FROM t) x")]  // CTE with CROSS APPLY
+    [InlineData("WITH cte AS (SELECT 1) DELETE FROM t WHERE 1 = 0")]  // DELETE with unique CTE name
     public void Analyze_WhenNoCteNameConflict_ReturnsEmpty(string sql)
     {
         var rule = new CteNameConflictRule();

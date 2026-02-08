@@ -13,6 +13,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
     [InlineData("SELECT * FROM t1 a LEFT JOIN t2 b ON a.id = b.id WHERE b.status = 1")]  // with aliases
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.active = 1")]  // boolean field
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t1.id = 1 AND t2.status > 0")]  // AND with right-side comparison
+    [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.status = 1 OR t2.status = 2")]  // OR where both branches still filter right-side table
     public void Analyze_WhenLeftJoinFilteredByWhere_ReturnsDiagnostic(string sql)
     {
         var rule = new LeftJoinFilteredByWhereRule();
@@ -38,6 +39,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id")]  // no WHERE clause
     [InlineData("SELECT * FROM t1 a LEFT JOIN t2 b ON a.id = b.id WHERE a.status = 1")]  // filters left side with alias
     [InlineData("SELECT * FROM t1 a LEFT JOIN t2 b ON a.id = b.id WHERE a.id = 1 AND b.id IS NOT NULL")]  // explicit NULL check
+    [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.status = 1 OR t1.kind = 'A'")]  // OR condition can preserve NULL-extended rows
     public void Analyze_WhenLeftJoinNotFilteredByWhere_ReturnsEmpty(string sql)
     {
         var rule = new LeftJoinFilteredByWhereRule();

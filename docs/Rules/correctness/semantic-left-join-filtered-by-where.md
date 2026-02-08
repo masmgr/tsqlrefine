@@ -92,6 +92,7 @@ The following predicate types on right-side tables are **not** flagged as violat
 
 - **IS NULL**: `WHERE right_table.col IS NULL` — This is a common and valid pattern to find rows with no match (anti-join). NULL right-side columns are the expected result of LEFT JOIN when no match exists.
 - **IS NOT NULL**: `WHERE right_table.col IS NOT NULL` — While this does filter out non-matching rows (similar to INNER JOIN), it is treated as an explicit intent to check for NULL and is not flagged.
+- **OR conditions that can keep NULL-extended rows**: `WHERE right_table.col = 1 OR left_table.flag = 1` — The right-side predicate is not mandatory, so LEFT JOIN semantics may still be preserved.
 
 ## Configuration
 

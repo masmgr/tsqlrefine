@@ -106,71 +106,70 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             BooleanExpression? condition,
             HashSet<string> rightSideTables)
         {
-            var filteredTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
             if (condition == null)
             {
-                return filteredTables;
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
 
-            FindFilteredTablesRecursive(condition, rightSideTables, filteredTables);
-
-            return filteredTables;
+            return FindFilteredTablesRecursive(condition, rightSideTables);
         }
 
-        private static void FindFilteredTablesRecursive(
+        private static HashSet<string> FindFilteredTablesRecursive(
             BooleanExpression condition,
-            HashSet<string> rightSideTables,
-            HashSet<string> filteredTables)
+            HashSet<string> rightSideTables)
         {
             switch (condition)
             {
                 case BooleanComparisonExpression comparison:
                     // Check if this is a filter on a right-side table
-                    CheckComparison(comparison, rightSideTables, filteredTables);
-                    break;
+                    return GetFilteredTablesFromComparison(comparison, rightSideTables);
 
                 case BooleanIsNullExpression:
                     // IS NULL / IS NOT NULL on right-side tables is OK - doesn't negate LEFT JOIN
-                    break;
+                    return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 case BooleanBinaryExpression binary:
-                    // Recursively check both sides of AND/OR
-                    FindFilteredTablesRecursive(binary.FirstExpression, rightSideTables, filteredTables);
-                    FindFilteredTablesRecursive(binary.SecondExpression, rightSideTables, filteredTables);
-                    break;
+                    // For OR, table filters are only guaranteed if both branches reject NULL-extended rows.
+                    var first = FindFilteredTablesRecursive(binary.FirstExpression, rightSideTables);
+                    var second = FindFilteredTablesRecursive(binary.SecondExpression, rightSideTables);
+                    if (binary.BinaryExpressionType == BooleanBinaryExpressionType.Or)
+                    {
+                        first.IntersectWith(second);
+                        return first;
+                    }
+
+                    first.UnionWith(second);
+                    return first;
 
                 case BooleanParenthesisExpression paren:
-                    FindFilteredTablesRecursive(paren.Expression, rightSideTables, filteredTables);
-                    break;
+                    return FindFilteredTablesRecursive(paren.Expression, rightSideTables);
 
                 case BooleanNotExpression notExpr:
                     // NOT on right-side filter still negates LEFT JOIN (NOT NULL = UNKNOWN)
-                    FindFilteredTablesRecursive(notExpr.Expression, rightSideTables, filteredTables);
-                    break;
+                    return FindFilteredTablesRecursive(notExpr.Expression, rightSideTables);
 
                 case InPredicate inPred:
                     // IN predicate on right-side table
-                    CheckColumnReference(inPred.Expression, rightSideTables, filteredTables);
-                    break;
+                    return GetFilteredTablesFromColumnReference(inPred.Expression, rightSideTables);
 
                 case LikePredicate likePred:
                     // LIKE on right-side table negates LEFT JOIN (NULLs fail LIKE)
-                    CheckColumnReference(likePred.FirstExpression, rightSideTables, filteredTables);
-                    break;
+                    return GetFilteredTablesFromColumnReference(likePred.FirstExpression, rightSideTables);
 
                 case BooleanTernaryExpression ternary:
                     // BETWEEN on right-side table negates LEFT JOIN
-                    CheckColumnReference(ternary.FirstExpression, rightSideTables, filteredTables);
-                    break;
+                    return GetFilteredTablesFromColumnReference(ternary.FirstExpression, rightSideTables);
+
+                default:
+                    return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             }
         }
 
-        private static void CheckColumnReference(
+        private static HashSet<string> GetFilteredTablesFromColumnReference(
             ScalarExpression expression,
-            HashSet<string> rightSideTables,
-            HashSet<string> filteredTables)
+            HashSet<string> rightSideTables)
         {
+            var filteredTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (expression is ColumnReferenceExpression colRef)
             {
                 var tableName = ColumnReferenceHelpers.GetTableQualifier(colRef);
@@ -179,13 +178,16 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                     filteredTables.Add(tableName);
                 }
             }
+
+            return filteredTables;
         }
 
-        private static void CheckComparison(
+        private static HashSet<string> GetFilteredTablesFromComparison(
             BooleanComparisonExpression comparison,
-            HashSet<string> rightSideTables,
-            HashSet<string> filteredTables)
+            HashSet<string> rightSideTables)
         {
+            var filteredTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             // Check if either side references a right-side table
             var firstTable = comparison.FirstExpression is ColumnReferenceExpression firstCol
                 ? ColumnReferenceHelpers.GetTableQualifier(firstCol)
@@ -205,6 +207,8 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
             {
                 filteredTables.Add(secondTable);
             }
+
+            return filteredTables;
         }
     }
 }
