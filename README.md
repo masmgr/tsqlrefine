@@ -4,11 +4,29 @@ T-SQL linter, auto-fixer, and formatter for SQL Server.
 
 > Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
 
+## Why T-SQL Refine?
+
+Managing T-SQL queries in a Git repository without a live database connection introduces unique risks:
+
+- Queries can silently break during merges or refactoring, with errors surfacing only at execution time
+- Stored procedures and views may reference dropped columns or mismatched types that go unnoticed until deployment
+- Inconsistent formatting creates noisy diffs and slows code review
+
+T-SQL Refine catches these problems **before execution** using static analysis on the SQL script alone — no database connection required. It is designed for CI/CD pipelines and offline validation, so your team can enforce quality gates on every pull request.
+
 ## Features
 
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 86 built-in rules covering security, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 89 built-in rules covering security, performance, and coding conventions.
+
+Each rule is classified by severity:
+
+- **Error** — Likely to cause runtime failures or data corruption
+- **Warning** — Valid SQL but risky or discouraged patterns
+- **Information** — Style or maintainability recommendations
+
+This allows teams to gradually enforce stricter rules without blocking development.
 
 ```bash
 # Lint a file
@@ -34,6 +52,8 @@ path/to/file.sql:7:5: error missing-where-clause: UPDATE/DELETE without WHERE cl
 ### Fix - Auto-fix
 
 Automatically fixes detected issues. Rules with `fixable: true` can be auto-fixed.
+
+> **Safe by design:** Auto-fix is applied only to rules explicitly marked as fixable. All fixes are deterministic and syntax-aware — they never produce invalid SQL. Use dry-run mode (the default) to preview changes before writing.
 
 ```bash
 # Preview fixes (dry run)
@@ -134,10 +154,11 @@ Creates the following files:
 
 | Preset | Rules | Use Case |
 |--------|-------|----------|
-| `recommended` | 49 | Balanced for production (default) |
-| `strict` | 86 | Maximum enforcement |
-| `pragmatic` | 30 | Production-ready minimum |
-| `security-only` | 10 | Security-focused |
+| `recommended` | 58 | Balanced for production (default) |
+| `strict` | 97 | Maximum enforcement including style |
+| `strict-logic` | 74 | Comprehensive correctness without cosmetic rules |
+| `pragmatic` | 34 | Production-ready minimum for legacy codebases |
+| `security-only` | 13 | Security vulnerabilities and critical safety |
 
 ```bash
 tsqlrefine lint --preset strict path/to/file.sql
