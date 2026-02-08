@@ -11,14 +11,14 @@ internal sealed class ProtectedRegionTracker
     private bool _inString;
     private bool _inDoubleQuote;
     private bool _inBracket;
-    private bool _inBlockComment;
+    private int _blockCommentDepth;
 
     /// <summary>
     /// Checks if currently inside a protected region.
     /// </summary>
     /// <returns>True if inside a string, comment, or bracket; false otherwise</returns>
     public bool IsInProtectedRegion() =>
-        _inString || _inBlockComment || _inDoubleQuote || _inBracket;
+        _inString || _blockCommentDepth > 0 || _inDoubleQuote || _inBracket;
 
     /// <summary>
     /// Updates tracker state for a character without producing output.
@@ -173,16 +173,24 @@ internal sealed class ProtectedRegionTracker
 
     private bool TryConsumeBlockComment(string text, StringBuilder output, ref int index)
     {
-        if (!_inBlockComment)
+        if (_blockCommentDepth <= 0)
         {
             return false;
         }
 
         var c = text[index];
+        if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
+        {
+            _blockCommentDepth++;
+            output.Append("/*");
+            index += 2;
+            return true;
+        }
+
         if (c == '*' && index + 1 < text.Length && text[index + 1] == '/')
         {
             output.Append("*/");
-            _inBlockComment = false;
+            _blockCommentDepth--;
             index += 2;
             return true;
         }
@@ -197,7 +205,7 @@ internal sealed class ProtectedRegionTracker
         var c = text[index];
         if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
         {
-            _inBlockComment = true;
+            _blockCommentDepth = 1;
             output.Append("/*");
             index += 2;
             return true;
@@ -265,7 +273,7 @@ internal sealed class ProtectedRegionTracker
             return TryConsumeBracketWithoutOutput(text, ref index);
         }
 
-        if (_inBlockComment)
+        if (_blockCommentDepth > 0)
         {
             return TryConsumeBlockCommentWithoutOutput(text, ref index);
         }
@@ -280,7 +288,7 @@ internal sealed class ProtectedRegionTracker
         // Block comment: /*
         if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
         {
-            _inBlockComment = true;
+            _blockCommentDepth = 1;
             index += 2;
             return true;
         }
@@ -365,9 +373,16 @@ internal sealed class ProtectedRegionTracker
     private bool TryConsumeBlockCommentWithoutOutput(string text, ref int index)
     {
         var c = text[index];
+        if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
+        {
+            _blockCommentDepth++;
+            index += 2;
+            return true;
+        }
+
         if (c == '*' && index + 1 < text.Length && text[index + 1] == '/')
         {
-            _inBlockComment = false;
+            _blockCommentDepth--;
             index += 2;
             return true;
         }

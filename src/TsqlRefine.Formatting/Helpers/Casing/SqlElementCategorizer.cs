@@ -188,7 +188,7 @@ public static class SqlElementCategorizer
         // 6. Identifiers (schema.table.column, table.column, alias, etc.)
         if (tokenCategory == TokenTypeCategory.Identifier)
         {
-            var category = CategorizeIdentifier(token, previousToken, nextToken, context);
+            var category = CategorizeIdentifier(previousToken, nextToken, context);
 
             // Track schema name if this is a schema identifier
             if (category == ElementCategory.Schema)
@@ -290,19 +290,18 @@ public static class SqlElementCategorizer
     /// Categorizes an unquoted identifier based on context
     /// </summary>
     private static ElementCategory CategorizeIdentifier(
-        TSqlParserToken token,
         TSqlParserToken? previousToken,
         TSqlParserToken? nextToken,
         CasingContext context)
     {
-        var text = token.Text ?? "";
-
-        // Check if this is a stored procedure (in EXEC/EXECUTE context)
-        // Stored procedures appear immediately after EXEC/EXECUTE keyword
-        // Only the first identifier after EXEC is the procedure name
-        if (context.InExecuteContext && !context.ExecuteProcedureProcessed)
+        // Handle EXEC/EXECUTE multipart procedure names:
+        // EXEC proc
+        // EXEC schema.proc
+        // Qualifiers should follow SchemaCasing and the final identifier should
+        // follow StoredProcedureCasing.
+        if (TryCategorizeExecuteIdentifier(previousToken, nextToken, context, out var executeCategory))
         {
-            return ElementCategory.StoredProcedure;
+            return executeCategory;
         }
 
         var identContext = DetermineIdentifierContext(previousToken, nextToken, context);
@@ -323,6 +322,49 @@ public static class SqlElementCategorizer
         }
 
         return baseCategory;
+    }
+
+    private static bool TryCategorizeExecuteIdentifier(
+        TSqlParserToken? previousToken,
+        TSqlParserToken? nextToken,
+        CasingContext context,
+        out ElementCategory category)
+    {
+        category = ElementCategory.Other;
+
+        if (!context.InExecuteContext || context.ExecuteProcedureProcessed)
+        {
+            return false;
+        }
+
+        var prevText = previousToken?.Text ?? "";
+        var nextText = nextToken?.Text ?? "";
+
+        // Qualifier in multipart name (schema., db., etc.)
+        if (nextText == ".")
+        {
+            category = ElementCategory.Schema;
+            return true;
+        }
+
+        // Final identifier in multipart name
+        if (prevText == ".")
+        {
+            category = ElementCategory.StoredProcedure;
+            return true;
+        }
+
+        // Single identifier procedure name immediately after EXEC/EXECUTE
+        if (prevText.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
+            prevText.Equals("EXECUTE", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ElementCategory.StoredProcedure;
+            return true;
+        }
+
+        // Conservative fallback for edge tokenization cases.
+        category = ElementCategory.StoredProcedure;
+        return true;
     }
 
     /// <summary>

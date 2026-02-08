@@ -438,6 +438,23 @@ where u.isactive = 1 and u.createdate >= dateadd(day, -30, getdate());
     }
 
     [Fact]
+    public void Apply_StoredProcedure_SchemaQualified_AppliesSchemaAndProcedureCasing()
+    {
+        var sql = "EXEC DBO.myStoredProc @param = 1";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            SchemaCasing = ElementCasing.Lower,
+            StoredProcedureCasing = ElementCasing.Upper
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        Assert.Contains("EXEC", result);
+        Assert.Contains("dbo.MYSTOREDPROC", result);
+    }
+
+    [Fact]
     public void Apply_Execute_VariousFormats()
     {
         var sql = "EXECUTE myProc1; EXEC myProc2;";

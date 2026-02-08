@@ -155,6 +155,14 @@ public class OperatorSpaceNormalizerTests
         Assert.Equal(expected, result);
     }
 
+    [Fact]
+    public void Normalize_NestedBlockComment_Preserved()
+    {
+        var input = "SELECT /* outer /* inner */ still=a+b */ c";
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(input, result);
+    }
+
     // Multi-line block comments - closing */ must not be split
     [Theory]
     [InlineData("comment text */", "comment text */")]
