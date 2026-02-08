@@ -221,10 +221,24 @@ public static class DisableDirectiveParser
             return null;
         }
 
-        // Parse rule IDs (if any)
-        var ruleIds = ParseRuleIds(remainder);
+        // Split on first colon to separate rule IDs from reason
+        string? reason = null;
+        var colonIndex = remainder.IndexOf(':');
+        string ruleIdsPart;
+        if (colonIndex >= 0)
+        {
+            ruleIdsPart = remainder[..colonIndex];
+            var reasonText = remainder[(colonIndex + 1)..].Trim();
+            reason = string.IsNullOrEmpty(reasonText) ? null : reasonText;
+        }
+        else
+        {
+            ruleIdsPart = remainder;
+        }
 
-        return new DisableDirective(type, ruleIds, token.Start.Line);
+        var ruleIds = ParseRuleIds(ruleIdsPart);
+
+        return new DisableDirective(type, ruleIds, token.Start.Line, reason);
     }
 
     private static IReadOnlyList<string> ParseRuleIds(string remainder)
@@ -318,10 +332,10 @@ public static class DisableDirectiveParser
         }
 
         var nextChar = content[prefix.Length];
-        if (char.IsWhiteSpace(nextChar))
+        if (char.IsWhiteSpace(nextChar) || nextChar == ':')
         {
-            // Followed by whitespace (for rule IDs)
-            remainder = content.Substring(prefix.Length);
+            // Followed by whitespace or colon (for rule IDs and/or reason)
+            remainder = content[prefix.Length..];
             return true;
         }
 

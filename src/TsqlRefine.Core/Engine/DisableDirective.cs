@@ -18,10 +18,12 @@ public enum DisableDirectiveType
 /// <param name="Type">Whether this is a disable or enable directive.</param>
 /// <param name="RuleIds">Specific rule IDs to disable/enable, or empty for all rules.</param>
 /// <param name="Line">The 0-based line number where the directive appears.</param>
+/// <param name="Reason">Optional reason text explaining why rules are disabled.</param>
 public sealed record DisableDirective(
     DisableDirectiveType Type,
     IReadOnlyList<string> RuleIds,
-    int Line
+    int Line,
+    string? Reason = null
 );
 
 /// <summary>
