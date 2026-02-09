@@ -44,6 +44,8 @@ public sealed record ResolvedFormattingOptions(
     ResolvedFormattingOption<bool> InsertFinalNewline,
     ResolvedFormattingOption<bool> TrimTrailingWhitespace,
     ResolvedFormattingOption<bool> NormalizeInlineSpacing,
+    ResolvedFormattingOption<bool> NormalizeOperatorSpacing,
+    ResolvedFormattingOption<bool> NormalizeKeywordSpacing,
     ResolvedFormattingOption<LineEnding> LineEnding
 )
 {

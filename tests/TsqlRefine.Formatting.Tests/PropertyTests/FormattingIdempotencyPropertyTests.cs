@@ -40,7 +40,7 @@ public sealed class FormattingIdempotencyPropertyTests
 
     private static FormattingOptions GenerateOptions(
         bool useSpaces, int sizeIdx, int casingIdx, bool leading, bool useLf,
-        bool insertFinal, bool trim, bool normInline, bool normOp)
+        bool insertFinal, bool trim, bool normInline, bool normOp, bool normKeyword)
     {
         int[] sizes = [2, 4, 8];
         ElementCasing[] casings = [ElementCasing.Upper, ElementCasing.Lower, ElementCasing.None];
@@ -56,6 +56,7 @@ public sealed class FormattingIdempotencyPropertyTests
             TrimTrailingWhitespace = trim,
             NormalizeInlineSpacing = normInline,
             NormalizeOperatorSpacing = normOp,
+            NormalizeKeywordSpacing = normKeyword,
         };
     }
 
@@ -63,10 +64,10 @@ public sealed class FormattingIdempotencyPropertyTests
     public bool Format_IsIdempotent(
         int templateIdx, int colIdx, int tblIdx,
         bool useSpaces, int sizeIdx, int casingIdx, bool leading, bool useLf,
-        bool insertFinal, bool trim, bool normInline, bool normOp)
+        bool insertFinal, bool trim, bool normInline, bool normOp, bool normKeyword)
     {
         var sql = GenerateSql(templateIdx, colIdx, tblIdx);
-        var opts = GenerateOptions(useSpaces, sizeIdx, casingIdx, leading, useLf, insertFinal, trim, normInline, normOp);
+        var opts = GenerateOptions(useSpaces, sizeIdx, casingIdx, leading, useLf, insertFinal, trim, normInline, normOp, normKeyword);
 
         var once = SqlFormatter.Format(sql, opts);
         var twice = SqlFormatter.Format(once, opts);
@@ -86,9 +87,9 @@ public sealed class FormattingIdempotencyPropertyTests
     [Property(MaxTest = 100)]
     public bool Format_EmptyInput_IsIdempotent(
         bool useSpaces, int sizeIdx, int casingIdx, bool leading, bool useLf,
-        bool insertFinal, bool trim, bool normInline, bool normOp)
+        bool insertFinal, bool trim, bool normInline, bool normOp, bool normKeyword)
     {
-        var opts = GenerateOptions(useSpaces, sizeIdx, casingIdx, leading, useLf, insertFinal, trim, normInline, normOp);
+        var opts = GenerateOptions(useSpaces, sizeIdx, casingIdx, leading, useLf, insertFinal, trim, normInline, normOp, normKeyword);
 
         var once = SqlFormatter.Format("", opts);
         var twice = SqlFormatter.Format(once, opts);

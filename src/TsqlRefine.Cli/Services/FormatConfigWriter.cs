@@ -30,6 +30,8 @@ public static class FormatConfigWriter
                 insertFinalNewline = new { value = resolved.InsertFinalNewline.Value, source = FormatSource(resolved.InsertFinalNewline.Source) },
                 trimTrailingWhitespace = new { value = resolved.TrimTrailingWhitespace.Value, source = FormatSource(resolved.TrimTrailingWhitespace.Source) },
                 normalizeInlineSpacing = new { value = resolved.NormalizeInlineSpacing.Value, source = FormatSource(resolved.NormalizeInlineSpacing.Source) },
+                normalizeOperatorSpacing = new { value = resolved.NormalizeOperatorSpacing.Value, source = FormatSource(resolved.NormalizeOperatorSpacing.Source) },
+                normalizeKeywordSpacing = new { value = resolved.NormalizeKeywordSpacing.Value, source = FormatSource(resolved.NormalizeKeywordSpacing.Source) },
                 lineEnding = new { value = resolved.LineEnding.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.LineEnding.Source) }
             },
             sourcePaths = new
@@ -63,6 +65,8 @@ public static class FormatConfigWriter
         await WriteOptionLineAsync(stdout, "insertFinalNewline", resolved.InsertFinalNewline.Value.ToString().ToLowerInvariant(), resolved.InsertFinalNewline.Source, showSources);
         await WriteOptionLineAsync(stdout, "trimTrailingWhitespace", resolved.TrimTrailingWhitespace.Value.ToString().ToLowerInvariant(), resolved.TrimTrailingWhitespace.Source, showSources);
         await WriteOptionLineAsync(stdout, "normalizeInlineSpacing", resolved.NormalizeInlineSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeInlineSpacing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "normalizeOperatorSpacing", resolved.NormalizeOperatorSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeOperatorSpacing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "normalizeKeywordSpacing", resolved.NormalizeKeywordSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeKeywordSpacing.Source, showSources);
         await WriteOptionLineAsync(stdout, "lineEnding", resolved.LineEnding.Value.ToString().ToLowerInvariant(), resolved.LineEnding.Source, showSources);
 
         if (showSources)

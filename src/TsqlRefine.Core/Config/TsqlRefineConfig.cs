@@ -42,6 +42,9 @@ public sealed record PluginConfig(string Path, bool Enabled = true);
 /// <param name="MaxLineLength">Maximum line length (0 for no limit). Default is 0.</param>
 /// <param name="InsertFinalNewline">Whether to insert a final newline. Default is true.</param>
 /// <param name="TrimTrailingWhitespace">Whether to trim trailing whitespace. Default is true.</param>
+/// <param name="NormalizeInlineSpacing">Whether to normalize inline spacing (space after commas). Default is true.</param>
+/// <param name="NormalizeOperatorSpacing">Whether to normalize operator spacing. Default is true.</param>
+/// <param name="NormalizeKeywordSpacing">Whether to normalize compound keyword spacing. Default is true.</param>
 public sealed record FormattingConfig(
     string IndentStyle = "spaces",
     int IndentSize = 4,
@@ -55,7 +58,10 @@ public sealed record FormattingConfig(
     string CommaStyle = "trailing",
     int MaxLineLength = 0,
     bool InsertFinalNewline = true,
-    bool TrimTrailingWhitespace = true
+    bool TrimTrailingWhitespace = true,
+    bool NormalizeInlineSpacing = true,
+    bool NormalizeOperatorSpacing = true,
+    bool NormalizeKeywordSpacing = true
 );
 
 /// <summary>
