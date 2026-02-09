@@ -41,14 +41,56 @@ public sealed class CteNameConflictRule : IRule
     {
         public override void ExplicitVisit(SelectStatement node)
         {
-            // Check for CTE conflicts
-            if (node.WithCtesAndXmlNamespaces?.CommonTableExpressions != null)
-            {
-                CheckCteDuplicates(node.WithCtesAndXmlNamespaces.CommonTableExpressions);
-                CheckCteTableAliasConflicts(node);
-            }
+            CheckStatementCteConflicts(
+                node.WithCtesAndXmlNamespaces?.CommonTableExpressions,
+                queryExpression: node.QueryExpression);
 
             base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(DeleteStatement node)
+        {
+            CheckStatementCteConflicts(
+                node.WithCtesAndXmlNamespaces?.CommonTableExpressions,
+                tableReferences: node.DeleteSpecification?.FromClause?.TableReferences,
+                targetReference: node.DeleteSpecification?.Target);
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(UpdateStatement node)
+        {
+            CheckStatementCteConflicts(
+                node.WithCtesAndXmlNamespaces?.CommonTableExpressions,
+                tableReferences: node.UpdateSpecification?.FromClause?.TableReferences,
+                targetReference: node.UpdateSpecification?.Target);
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(InsertStatement node)
+        {
+            CheckStatementCteConflicts(
+                node.WithCtesAndXmlNamespaces?.CommonTableExpressions,
+                queryExpression: (node.InsertSpecification?.InsertSource as SelectInsertSource)?.Select,
+                targetReference: node.InsertSpecification?.Target);
+
+            base.ExplicitVisit(node);
+        }
+
+        private void CheckStatementCteConflicts(
+            IList<CommonTableExpression>? ctes,
+            QueryExpression? queryExpression = null,
+            IList<TableReference>? tableReferences = null,
+            TableReference? targetReference = null)
+        {
+            if (ctes == null)
+            {
+                return;
+            }
+
+            CheckCteDuplicates(ctes);
+            CheckCteTableAliasConflicts(ctes, queryExpression, tableReferences, targetReference);
         }
 
         private void CheckCteDuplicates(IList<CommonTableExpression> ctes)
@@ -81,16 +123,15 @@ public sealed class CteNameConflictRule : IRule
             }
         }
 
-        private void CheckCteTableAliasConflicts(SelectStatement node)
+        private void CheckCteTableAliasConflicts(
+            IList<CommonTableExpression> ctes,
+            QueryExpression? queryExpression,
+            IList<TableReference>? tableReferences,
+            TableReference? targetReference)
         {
-            if (node.WithCtesAndXmlNamespaces?.CommonTableExpressions == null)
-            {
-                return;
-            }
-
             // Collect CTE names
             var cteNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var cte in node.WithCtesAndXmlNamespaces.CommonTableExpressions)
+            foreach (var cte in ctes)
             {
                 if (cte.ExpressionName?.Value != null)
                 {
@@ -98,22 +139,87 @@ public sealed class CteNameConflictRule : IRule
                 }
             }
 
-            // Collect table aliases from the main query
-            if (node.QueryExpression is QuerySpecification querySpec && querySpec.FromClause != null)
+            foreach (var tableRefs in CollectTableReferencesFromQueryExpression(queryExpression))
             {
-                var conflicts = CollectConflictingAliases(querySpec.FromClause.TableReferences, cteNames);
+                ReportConflicts(CollectConflictingAliases(tableRefs, cteNames));
+            }
 
-                // Check for conflicts
-                foreach (var (alias, tableRef) in conflicts)
+            if (tableReferences != null)
+            {
+                ReportConflicts(CollectConflictingAliases(tableReferences, cteNames));
+            }
+
+            if (targetReference is NamedTableReference namedTable)
+            {
+                if (namedTable.Alias != null)
                 {
-                    AddDiagnostic(
-                        fragment: tableRef,
-                        message: $"Table alias '{alias}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                        code: "semantic/cte-name-conflict",
-                        category: "Correctness",
-                        fixable: false
-                    );
+                    var aliasName = namedTable.Alias.Value;
+                    if (cteNames.Contains(aliasName))
+                    {
+                        AddDiagnostic(
+                            fragment: targetReference,
+                            message: $"Table alias '{aliasName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
+                            code: "semantic/cte-name-conflict",
+                            category: "Correctness",
+                            fixable: false
+                        );
+                    }
                 }
+                else
+                {
+                    var tableName = namedTable.SchemaObject.BaseIdentifier.Value;
+                    if (namedTable.SchemaObject.SchemaIdentifier != null && cteNames.Contains(tableName))
+                    {
+                        AddDiagnostic(
+                            fragment: targetReference,
+                            message: $"Table alias '{tableName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
+                            code: "semantic/cte-name-conflict",
+                            category: "Correctness",
+                            fixable: false
+                        );
+                    }
+                }
+            }
+        }
+
+        private void ReportConflicts(IEnumerable<(string Alias, TableReference TableRef)> conflicts)
+        {
+            foreach (var (alias, tableRef) in conflicts)
+            {
+                AddDiagnostic(
+                    fragment: tableRef,
+                    message: $"Table alias '{alias}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
+                    code: "semantic/cte-name-conflict",
+                    category: "Correctness",
+                    fixable: false
+                );
+            }
+        }
+
+        private static IEnumerable<IList<TableReference>> CollectTableReferencesFromQueryExpression(QueryExpression? queryExpression)
+        {
+            switch (queryExpression)
+            {
+                case QuerySpecification querySpec when querySpec.FromClause != null:
+                    yield return querySpec.FromClause.TableReferences;
+                    break;
+                case BinaryQueryExpression binary:
+                    foreach (var refs in CollectTableReferencesFromQueryExpression(binary.FirstQueryExpression))
+                    {
+                        yield return refs;
+                    }
+
+                    foreach (var refs in CollectTableReferencesFromQueryExpression(binary.SecondQueryExpression))
+                    {
+                        yield return refs;
+                    }
+                    break;
+                case QueryParenthesisExpression paren:
+                    foreach (var refs in CollectTableReferencesFromQueryExpression(paren.QueryExpression))
+                    {
+                        yield return refs;
+                    }
+                    break;
             }
         }
 

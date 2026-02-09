@@ -15,6 +15,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     [InlineData("INSERT INTO t (x) SELECT a, b FROM t2")]  // 2 cols vs 1 col
     [InlineData("INSERT INTO t (a, b) SELECT x, y, z FROM t2 UNION ALL SELECT p, q, r FROM t3")]  // UNION: 3 cols vs 2
     [InlineData("INSERT INTO t (a) SELECT x, y FROM t2 UNION SELECT p, q FROM t3")]  // UNION: 2 cols vs 1
+    [InlineData("INSERT INTO t (a, b) SELECT x, y FROM t2 UNION ALL SELECT z FROM t3")]  // UNION: later branch has 1 col vs 2
     public void Analyze_WhenColumnCountMismatch_ReturnsDiagnostic(string sql)
     {
         var rule = new InsertColumnCountMismatchRule();

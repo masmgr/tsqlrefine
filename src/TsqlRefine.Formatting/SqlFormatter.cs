@@ -11,10 +11,12 @@ namespace TsqlRefine.Formatting;
 /// string literals, and code structure.
 ///
 /// Formatting pipeline:
-/// 1. Granular element casing (ScriptDomElementCaser)
-/// 2. Whitespace normalization (WhitespaceNormalizer)
-/// 3. Inline spacing normalization (InlineSpaceNormalizer)
-/// 4. Comma style transformation (CommaStyleTransformer, optional)
+/// 1. Keyword space normalization (KeywordSpaceNormalizer)
+/// 2. Granular element casing (ScriptDomElementCaser)
+/// 3. Whitespace normalization (WhitespaceNormalizer)
+/// 4. Inline spacing normalization (InlineSpaceNormalizer)
+/// 5. Operator spacing normalization (OperatorSpaceNormalizer)
+/// 6. Comma style transformation (CommaStyleTransformer, optional)
 /// </summary>
 public static class SqlFormatter
 {
@@ -50,8 +52,11 @@ public static class SqlFormatter
         // Build AST position map for operator context detection (if AST provided)
         var positionMap = AstPositionMap.Build(ast);
 
+        // Apply keyword space normalization (collapse multi-space between compound keyword pairs)
+        var keywordNormalized = KeywordSpaceNormalizer.Normalize(sql, options);
+
         // Apply granular element-based casing
-        var casedSql = ScriptDomElementCaser.Apply(sql, options, compatLevel: options.CompatLevel);
+        var casedSql = ScriptDomElementCaser.Apply(keywordNormalized, options, compatLevel: options.CompatLevel);
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 

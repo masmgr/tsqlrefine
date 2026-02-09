@@ -7,7 +7,9 @@
 
 ## Description
 
-Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.
+Ensures table definition files include an MS_Description extended property for both **tables and columns** so schema intent is captured alongside DDL.
+
+Both named parameters (`@name = N'MS_Description'`) and positional parameters (`'MS_Description', N'...', 'SCHEMA', ...`) are recognized.
 
 ## Rationale
 
@@ -146,17 +148,15 @@ EXEC sp_addextendedproperty
     @level1type = N'TABLE', @level1name = N'OrderTransactionLog',
     @level2type = N'COLUMN', @level2name = N'StatusFlag';
 
--- View descriptions with extended properties
-SELECT
-    s.name AS SchemaName,
-    t.name AS TableName,
-    ep.value AS TableDescription
-FROM sys.tables t
-INNER JOIN sys.schemas s ON t.schema_id = s.schema_id
-LEFT JOIN sys.extended_properties ep ON ep.major_id = t.object_id
-    AND ep.minor_id = 0
-    AND ep.name = 'MS_Description'
-WHERE s.name = 'dbo';
+-- Positional parameters are also supported
+CREATE TABLE dbo.Employees (
+    Id INT PRIMARY KEY,
+    DepartmentId INT
+);
+
+EXECUTE sp_addextendedproperty 'MS_Description', N'Employee records', 'SCHEMA', 'dbo', 'TABLE', 'Employees';
+EXECUTE sp_addextendedproperty 'MS_Description', N'Employee ID', 'SCHEMA', 'dbo', 'TABLE', 'Employees', 'COLUMN', 'Id';
+EXECUTE sp_addextendedproperty 'MS_Description', N'Department reference', 'SCHEMA', 'dbo', 'TABLE', 'Employees', 'COLUMN', 'DepartmentId';
 ```
 
 ## Configuration

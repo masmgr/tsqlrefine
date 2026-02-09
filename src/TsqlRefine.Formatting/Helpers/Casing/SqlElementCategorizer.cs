@@ -130,10 +130,19 @@ public static class SqlElementCategorizer
         CasingContext? context = null)
     {
         context ??= new CasingContext();
+        var category = CategorizeCore(token, previousToken, nextToken, context);
+        UpdateContext(token, context);
+        return category;
+    }
 
+    private static ElementCategory CategorizeCore(
+        TSqlParserToken token,
+        TSqlParserToken? previousToken,
+        TSqlParserToken? nextToken,
+        CasingContext context)
+    {
         if (string.IsNullOrEmpty(token.Text))
         {
-            UpdateContext(token, context);
             return ElementCategory.Other;
         }
 
@@ -143,7 +152,6 @@ public static class SqlElementCategorizer
         // 1. Variables (@var, @@var)
         if (tokenCategory == TokenTypeCategory.Variable || text.StartsWith('@'))
         {
-            UpdateContext(token, context);
             return ElementCategory.Variable;
         }
 
@@ -151,44 +159,38 @@ public static class SqlElementCategorizer
         if (!IsWordToken(text) ||
             tokenCategory is TokenTypeCategory.Literal or TokenTypeCategory.Comment or TokenTypeCategory.WhiteSpace)
         {
-            UpdateContext(token, context);
             return ElementCategory.Other;
         }
 
-        // 3. Quoted identifiers → determine from context
+        // 3. Quoted identifiers -> determine from context
         if (text.StartsWith('[') || text.StartsWith('"'))
         {
-            var category = CategorizeQuotedIdentifier(previousToken, nextToken, context);
-            UpdateContext(token, context);
-            return category;
+            return CategorizeQuotedIdentifier(previousToken, nextToken, context);
         }
 
         // 4. Built-in functions (check before keywords, as some overlap)
         // Check for parenthesis-free functions first (e.g., CURRENT_TIMESTAMP)
         if (BuiltInFunctionRegistry.IsParenthesisFreeFunction(text))
         {
-            UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // Check for regular built-in functions that require parentheses
         if (BuiltInFunctionRegistry.IsBuiltInFunction(text) && IsFollowedByParenthesis(nextToken))
         {
-            UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // 5. Data types
         if (DataTypeRegistry.IsDataType(text))
         {
-            UpdateContext(token, context);
             return ElementCategory.DataType;
         }
 
         // 6. Identifiers (schema.table.column, table.column, alias, etc.)
         if (tokenCategory == TokenTypeCategory.Identifier)
         {
-            var category = CategorizeIdentifier(token, previousToken, nextToken, context);
+            var category = CategorizeIdentifier(previousToken, nextToken, context);
 
             // Track schema name if this is a schema identifier
             if (category == ElementCategory.Schema)
@@ -202,12 +204,10 @@ public static class SqlElementCategorizer
                 context.ExecuteProcedureProcessed = true;
             }
 
-            UpdateContext(token, context);
             return category;
         }
 
         // 7. Keywords (SELECT, FROM, WHERE, etc.) - default for all other word tokens
-        UpdateContext(token, context);
         return ElementCategory.Keyword;
     }
 
@@ -290,19 +290,18 @@ public static class SqlElementCategorizer
     /// Categorizes an unquoted identifier based on context
     /// </summary>
     private static ElementCategory CategorizeIdentifier(
-        TSqlParserToken token,
         TSqlParserToken? previousToken,
         TSqlParserToken? nextToken,
         CasingContext context)
     {
-        var text = token.Text ?? "";
-
-        // Check if this is a stored procedure (in EXEC/EXECUTE context)
-        // Stored procedures appear immediately after EXEC/EXECUTE keyword
-        // Only the first identifier after EXEC is the procedure name
-        if (context.InExecuteContext && !context.ExecuteProcedureProcessed)
+        // Handle EXEC/EXECUTE multipart procedure names:
+        // EXEC proc
+        // EXEC schema.proc
+        // Qualifiers should follow SchemaCasing and the final identifier should
+        // follow StoredProcedureCasing.
+        if (TryCategorizeExecuteIdentifier(previousToken, nextToken, context, out var executeCategory))
         {
-            return ElementCategory.StoredProcedure;
+            return executeCategory;
         }
 
         var identContext = DetermineIdentifierContext(previousToken, nextToken, context);
@@ -323,6 +322,49 @@ public static class SqlElementCategorizer
         }
 
         return baseCategory;
+    }
+
+    private static bool TryCategorizeExecuteIdentifier(
+        TSqlParserToken? previousToken,
+        TSqlParserToken? nextToken,
+        CasingContext context,
+        out ElementCategory category)
+    {
+        category = ElementCategory.Other;
+
+        if (!context.InExecuteContext || context.ExecuteProcedureProcessed)
+        {
+            return false;
+        }
+
+        var prevText = previousToken?.Text ?? "";
+        var nextText = nextToken?.Text ?? "";
+
+        // Qualifier in multipart name (schema., db., etc.)
+        if (nextText == ".")
+        {
+            category = ElementCategory.Schema;
+            return true;
+        }
+
+        // Final identifier in multipart name
+        if (prevText == ".")
+        {
+            category = ElementCategory.StoredProcedure;
+            return true;
+        }
+
+        // Single identifier procedure name immediately after EXEC/EXECUTE
+        if (prevText.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
+            prevText.Equals("EXECUTE", StringComparison.OrdinalIgnoreCase))
+        {
+            category = ElementCategory.StoredProcedure;
+            return true;
+        }
+
+        // Conservative fallback for edge tokenization cases.
+        category = ElementCategory.StoredProcedure;
+        return true;
     }
 
     /// <summary>

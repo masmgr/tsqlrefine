@@ -8,13 +8,35 @@
     <!-- XML documentation generation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <!-- Package metadata for NuGet publishing -->
+    <!-- NuGet package configuration -->
+    <IsPackable>true</IsPackable>
+    <PackageId>TsqlRefine.PluginSdk</PackageId>
+    <PackageOutputPath>../../nupkg</PackageOutputPath>
+
+    <!-- Package metadata -->
+    <Authors>masmgr</Authors>
     <Description>Plugin SDK for TsqlRefine - T-SQL linter and static analyzer</Description>
     <PackageTags>tsql;sql-server;linter;analyzer;plugin;sdk</PackageTags>
+    <PackageProjectUrl>https://github.com/masmgr/tsqlrefine</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/masmgr/tsqlrefine</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageReleaseNotes>See https://github.com/masmgr/tsqlrefine/releases</PackageReleaseNotes>
+
+    <!-- Build options -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

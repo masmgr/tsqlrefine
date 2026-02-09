@@ -513,6 +513,26 @@ public class ProtectedRegionTrackerTests
     }
 
     [Fact]
+    public void Workflow_NestedBlockComment_TracksDepthUntilOuterClose()
+    {
+        var tracker = new ProtectedRegionTracker();
+        var output = new StringBuilder();
+        var text = "/* outer /* inner */ still outer */";
+        var index = 0;
+
+        tracker.TryStartProtectedRegion(text, output, ref index);
+
+        while (index < text.Length && tracker.IsInProtectedRegion())
+        {
+            tracker.TryConsume(text, output, ref index);
+        }
+
+        Assert.False(tracker.IsInProtectedRegion());
+        Assert.Equal(text.Length, index);
+        Assert.Equal(text, output.ToString());
+    }
+
+    [Fact]
     public void Workflow_NestedQuoteInString_HandlesCorrectly()
     {
         var tracker = new ProtectedRegionTracker();
@@ -531,6 +551,25 @@ public class ProtectedRegionTrackerTests
 
         Assert.False(tracker.IsInProtectedRegion());
         Assert.Equal("'it''s ok'", output.ToString());
+    }
+
+    [Fact]
+    public void TryAdvance_NestedBlockComment_TracksDepthWithoutOutput()
+    {
+        var tracker = new ProtectedRegionTracker();
+        var text = "/* outer /* inner */ still outer */";
+        var index = 0;
+
+        while (index < text.Length)
+        {
+            if (!tracker.TryAdvance(text, ref index))
+            {
+                index++;
+            }
+        }
+
+        Assert.False(tracker.IsInProtectedRegion());
+        Assert.Equal(text.Length, index);
     }
 
     #endregion

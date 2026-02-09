@@ -24,6 +24,8 @@ internal sealed class ResolvedFormattingOptionsBuilder
     private ResolvedFormattingOption<bool> _insertFinalNewline;
     private ResolvedFormattingOption<bool> _trimTrailingWhitespace;
     private ResolvedFormattingOption<bool> _normalizeInlineSpacing;
+    private ResolvedFormattingOption<bool> _normalizeOperatorSpacing;
+    private ResolvedFormattingOption<bool> _normalizeKeywordSpacing;
     private ResolvedFormattingOption<LineEnding> _lineEnding;
 
     public string? ConfigPath { get; set; }
@@ -48,6 +50,8 @@ internal sealed class ResolvedFormattingOptionsBuilder
         _insertFinalNewline = new(_defaults.InsertFinalNewline, FormattingOptionSource.Default);
         _trimTrailingWhitespace = new(_defaults.TrimTrailingWhitespace, FormattingOptionSource.Default);
         _normalizeInlineSpacing = new(_defaults.NormalizeInlineSpacing, FormattingOptionSource.Default);
+        _normalizeOperatorSpacing = new(_defaults.NormalizeOperatorSpacing, FormattingOptionSource.Default);
+        _normalizeKeywordSpacing = new(_defaults.NormalizeKeywordSpacing, FormattingOptionSource.Default);
         _lineEnding = new(_defaults.LineEnding, FormattingOptionSource.Default);
     }
 
@@ -86,6 +90,10 @@ internal sealed class ResolvedFormattingOptionsBuilder
             _trimTrailingWhitespace = new(configOptions.TrimTrailingWhitespace, FormattingOptionSource.Config);
         if (configOptions.NormalizeInlineSpacing != _defaults.NormalizeInlineSpacing)
             _normalizeInlineSpacing = new(configOptions.NormalizeInlineSpacing, FormattingOptionSource.Config);
+        if (configOptions.NormalizeOperatorSpacing != _defaults.NormalizeOperatorSpacing)
+            _normalizeOperatorSpacing = new(configOptions.NormalizeOperatorSpacing, FormattingOptionSource.Config);
+        if (configOptions.NormalizeKeywordSpacing != _defaults.NormalizeKeywordSpacing)
+            _normalizeKeywordSpacing = new(configOptions.NormalizeKeywordSpacing, FormattingOptionSource.Config);
         if (configOptions.LineEnding != _defaults.LineEnding)
             _lineEnding = new(configOptions.LineEnding, FormattingOptionSource.Config);
 
@@ -146,6 +154,8 @@ internal sealed class ResolvedFormattingOptionsBuilder
             InsertFinalNewline: _insertFinalNewline,
             TrimTrailingWhitespace: _trimTrailingWhitespace,
             NormalizeInlineSpacing: _normalizeInlineSpacing,
+            NormalizeOperatorSpacing: _normalizeOperatorSpacing,
+            NormalizeKeywordSpacing: _normalizeKeywordSpacing,
             LineEnding: _lineEnding
         )
         {

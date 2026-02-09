@@ -28,7 +28,10 @@ public static class FormattingConfigMapper
             CommaStyle = ParseCommaStyle(config.CommaStyle),
             MaxLineLength = config.MaxLineLength,
             InsertFinalNewline = config.InsertFinalNewline,
-            TrimTrailingWhitespace = config.TrimTrailingWhitespace
+            TrimTrailingWhitespace = config.TrimTrailingWhitespace,
+            NormalizeInlineSpacing = config.NormalizeInlineSpacing,
+            NormalizeOperatorSpacing = config.NormalizeOperatorSpacing,
+            NormalizeKeywordSpacing = config.NormalizeKeywordSpacing
         };
     }
 

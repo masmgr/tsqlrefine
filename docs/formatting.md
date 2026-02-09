@@ -23,23 +23,35 @@ SQL input is processed in the following order:
 ```
 SQL Input
     ↓
-1. Element-wise Casing (ScriptDomElementCaser)
+1. Keyword Space Normalization (KeywordSpaceNormalizer)
+    - Uses ScriptDom token stream
+    - Collapses multi-space between compound keyword pairs
+      (e.g., LEFT   OUTER   JOIN → LEFT OUTER JOIN)
+    - Only normalizes predefined safe keyword pairs
+    - Preserves all non-keyword spacing
+    ↓
+2. Element-wise Casing (ScriptDomElementCaser)
     - Uses ScriptDom token stream
     - Categorizes keywords, functions, data types, identifiers
     - Applies upper/lower case per category
     ↓
-2. Whitespace Normalization (WhitespaceNormalizer)
+3. Whitespace Normalization (WhitespaceNormalizer)
     - Line ending normalization (CRLF → LF)
     - Indentation normalization (.editorconfig compatible)
     - Trailing whitespace removal (optional)
     - Final newline insertion (optional)
     ↓
-3. Inline Space Normalization (InlineSpaceNormalizer)
+4. Inline Space Normalization (InlineSpaceNormalizer)
     - Add space after comma (a,b → a, b)
-    - Remove duplicate spaces (SELECT  * → SELECT *)
+    - Remove trailing space before comma
     - Protected regions unchanged
     ↓
-4. Comma Style Transformation (CommaStyleTransformer, optional)
+5. Operator Space Normalization (OperatorSpaceNormalizer)
+    - Add space around binary operators (a=b → a = b)
+    - Preserve existing alignment (multi-space preserved)
+    - Unary operators, scientific notation preserved
+    ↓
+6. Comma Style Transformation (CommaStyleTransformer, optional)
     - Convert trailing commas to leading commas
     ↓
 Formatted SQL Output
@@ -67,7 +79,9 @@ Formatted SQL Output
 | `MaxLineLength` | `int` | `0` | Maximum line length (0 = unlimited) |
 | `InsertFinalNewline` | `bool` | `true` | Insert newline at end of file |
 | `TrimTrailingWhitespace` | `bool` | `true` | Remove trailing whitespace from lines |
-| `NormalizeInlineSpacing` | `bool` | `true` | Normalize inline spacing |
+| `NormalizeInlineSpacing` | `bool` | `true` | Normalize inline spacing (space after commas) |
+| `NormalizeOperatorSpacing` | `bool` | `true` | Normalize operator spacing (space around binary operators) |
+| `NormalizeKeywordSpacing` | `bool` | `true` | Normalize compound keyword spacing (e.g., LEFT  OUTER  JOIN → LEFT OUTER JOIN) |
 
 ### 3.2 Enumerations
 
@@ -229,23 +243,39 @@ var normalized = WhitespaceNormalizer.Normalize(sql, options);
 - Trailing whitespace removal
 - Final newline insertion
 
-### 6.5 InlineSpaceNormalizer
+### 6.5 KeywordSpaceNormalizer
+
+Normalizes spacing between compound keyword pairs using ScriptDom token stream.
+
+```csharp
+using TsqlRefine.Formatting.Helpers.Whitespace;
+
+var normalized = KeywordSpaceNormalizer.Normalize(sql, options);
+```
+
+**Processing**:
+- Collapse multi-space between known keyword pairs to single space
+- Only normalizes predefined safe pairs (JOIN variants, GROUP BY, ORDER BY, IS NOT NULL, etc.)
+- Preserve spacing between keywords and identifiers
+- Protected regions unchanged (ScriptDom token-based, not text-based)
+
+### 6.6 InlineSpaceNormalizer
 
 Normalizes inline spacing.
 
 ```csharp
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Whitespace;
 
 var normalized = InlineSpaceNormalizer.Normalize(sql, options);
 ```
 
 **Processing**:
 - Add space after commas
-- Reduce duplicate spaces to one
+- Remove trailing space before commas
 - Preserve leading indentation
 - Protected regions unchanged
 
-### 6.6 CommaStyleTransformer
+### 6.7 CommaStyleTransformer
 
 Transforms comma style.
 
@@ -260,7 +290,7 @@ var leading = CommaStyleTransformer.ToLeadingCommas(sql);
 - Does not detect commas inside strings/comments
 - Does not handle complex nested structures
 
-### 6.7 CasingHelpers
+### 6.8 CasingHelpers
 
 Casing conversion utilities.
 
@@ -271,7 +301,7 @@ var upper = CasingHelpers.ApplyCasing("select", ElementCasing.Upper);
 // Result: "SELECT"
 ```
 
-### 6.8 ProtectedRegionTracker
+### 6.9 ProtectedRegionTracker
 
 Internal class that tracks state inside strings, comments, and brackets.
 

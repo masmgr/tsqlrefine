@@ -121,8 +121,11 @@ public sealed record FormattingOptions
     /// <summary>Trim trailing whitespace on lines</summary>
     public bool TrimTrailingWhitespace { get; init; } = true;
 
-    /// <summary>Normalize inline spacing (collapse duplicates, space after commas)</summary>
+    /// <summary>Normalize inline spacing (space after commas, remove trailing space before commas)</summary>
     public bool NormalizeInlineSpacing { get; init; } = true;
+
+    /// <summary>Normalize spacing between compound keyword pairs (e.g., LEFT  OUTER  JOIN -> LEFT OUTER JOIN)</summary>
+    public bool NormalizeKeywordSpacing { get; init; } = true;
 
     /// <summary>Normalize spacing around operators (space before and after binary operators)</summary>
     public bool NormalizeOperatorSpacing { get; init; } = true;

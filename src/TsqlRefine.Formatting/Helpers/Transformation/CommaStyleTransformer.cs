@@ -1,5 +1,6 @@
 using System.Text;
 using TsqlRefine.Formatting.Helpers.Protection;
+using TsqlRefine.Formatting.Helpers.Whitespace;
 
 namespace TsqlRefine.Formatting.Helpers.Transformation;
 
@@ -30,61 +31,47 @@ public static class CommaStyleTransformer
     /// <returns>SQL text with leading commas</returns>
     public static string ToLeadingCommas(string input)
     {
-        var lines = input.Split('\n');
-        var result = new StringBuilder(input.Length);
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
+        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
         var tracker = new ProtectedRegionTracker();
+        var trailingCommaLines = new bool[lines.Length];
 
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
 
-            // Check if this line ends with a comma outside protected regions
+            // Check if this line ends with a comma outside protected regions.
+            // This also advances protected-region state for the current line.
             var (hasTrailingComma, commaPosition) = FindTrailingComma(line, tracker);
 
             if (hasTrailingComma && commaPosition >= 0)
             {
-                // This line has a trailing comma outside protected regions
-                var withoutComma = line[..commaPosition].TrimEnd();
-                result.Append(withoutComma);
-
-                // If there's a next line, prepend the comma to it
-                if (i + 1 < lines.Length)
-                {
-                    result.Append('\n');
-                    var nextLine = lines[i + 1];
-                    var nextTrimStart = nextLine.TrimStart();
-                    var leadingWhitespace = nextLine[..^nextTrimStart.Length];
-                    result.Append(leadingWhitespace);
-                    result.Append(',');
-                    if (nextTrimStart.Length > 0)
-                    {
-                        result.Append(' ');
-                        result.Append(nextTrimStart);
-                    }
-
-                    // Update tracker state with the next line content
-                    UpdateTrackerState(nextLine, tracker);
-                    i++; // Skip next line as we already processed it
-                }
-                else
-                {
-                    // Last line with comma, keep it trailing
-                    result.Append(',');
-                }
+                trailingCommaLines[i] = true;
             }
-            else
+        }
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (trailingCommaLines[i] && i + 1 < lines.Length)
             {
-                result.Append(line);
-                // Update tracker state for non-comma lines
-                if (!hasTrailingComma)
-                {
-                    UpdateTrackerState(line, tracker);
-                }
+                lines[i] = RemoveTrailingComma(lines[i]);
+                lines[i + 1] = PrependLeadingComma(lines[i + 1]);
             }
+        }
+
+        var result = new StringBuilder(input.Length + 16);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            result.Append(lines[i]);
 
             if (i < lines.Length - 1)
             {
-                result.Append('\n');
+                result.Append(lineEnding);
             }
         }
 
@@ -154,28 +141,32 @@ public static class CommaStyleTransformer
         return (isTrailing, isTrailing ? lastCommaOutsideProtected : -1);
     }
 
-    /// <summary>
-    /// Updates the tracker state by processing a line without outputting.
-    /// This keeps the tracker state in sync when we skip lines.
-    /// </summary>
-    private static void UpdateTrackerState(string line, ProtectedRegionTracker tracker)
+    private static string RemoveTrailingComma(string line)
     {
-        for (var i = 0; i < line.Length;)
+        var trimmed = line.TrimEnd();
+        if (trimmed.Length == 0 || trimmed[^1] != ',')
         {
-            // Check for line comment first
-            if (ProtectedRegionTracker.IsLineCommentStart(line, i))
-            {
-                // Rest of line is comment - no state change needed
-                break;
-            }
-
-            // Try to consume or start protected region
-            if (tracker.TryAdvance(line, ref i))
-            {
-                continue;
-            }
-
-            i++;
+            return line;
         }
+
+        return trimmed[..^1].TrimEnd();
+    }
+
+    private static string PrependLeadingComma(string line)
+    {
+        var nextTrimStart = line.TrimStart();
+        var leadingWhitespace = line[..^nextTrimStart.Length];
+
+        if (nextTrimStart.Length == 0)
+        {
+            return leadingWhitespace + ",";
+        }
+
+        if (nextTrimStart[0] == ',')
+        {
+            return line;
+        }
+
+        return leadingWhitespace + ", " + nextTrimStart;
     }
 }

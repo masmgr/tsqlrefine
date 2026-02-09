@@ -37,6 +37,30 @@ UPDATE Users SET Status = 1;
 
 Multiple rule IDs can be specified separated by commas.
 
+### Reason Text
+
+You can add a reason after a colon (`:`) to explain why rules are disabled:
+
+```sql
+/* tsqlrefine-disable avoid-select-star: legacy view depends on column order */
+SELECT * FROM LegacyView;
+/* tsqlrefine-enable avoid-select-star */
+```
+
+The reason is separated from rule IDs by the first colon. Multiple rules with a reason:
+
+```sql
+/* tsqlrefine-disable avoid-select-star, dml-without-where: known migration pattern */
+```
+
+Disable all rules with a reason:
+
+```sql
+-- tsqlrefine-disable: this section is auto-generated code
+```
+
+Reason text is purely informational and does not affect suppression behavior.
+
 ---
 
 ## Disable for Entire Script
@@ -179,6 +203,7 @@ Usage examples are available in the `samples/sql/inline-disable/` directory:
 - `disable-specific.sql` - Disable specific rules
 - `disable-region.sql` - Disable only specific regions
 - `disable-multiple.sql` - Disable multiple rules
+- `disable-with-reason.sql` - Disable rules with reason text
 
 ---
 

@@ -391,6 +391,165 @@ public sealed class DisableDirectiveParserTests
 
     #endregion
 
+    #region Reason Parsing Tests
+
+    [Fact]
+    public void ParseDirectives_BlockComment_DisableWithReason_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable avoid-select-star: legacy view depends on column order */", new Position(0, 0), 78, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(DisableDirectiveType.Disable, result[0].Type);
+        Assert.Equal(["avoid-select-star"], result[0].RuleIds);
+        Assert.Equal("legacy view depends on column order", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_BlockComment_DisableAllWithReason_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable: this whole section is generated code */", new Position(0, 0), 62, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Empty(result[0].RuleIds);
+        Assert.Equal("this whole section is generated code", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_LineComment_DisableAllWithReason_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("-- tsqlrefine-disable: generated code", new Position(0, 0), 36, "SingleLineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Empty(result[0].RuleIds);
+        Assert.Equal("generated code", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_MultipleRulesWithReason_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable avoid-select-star, dml-without-where: known pattern */", new Position(0, 0), 76, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(["avoid-select-star", "dml-without-where"], result[0].RuleIds);
+        Assert.Equal("known pattern", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_ReasonContainingColon_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable rule-a: reason: with extra colon */", new Position(0, 0), 57, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(["rule-a"], result[0].RuleIds);
+        Assert.Equal("reason: with extra colon", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_EmptyReasonAfterColon_ReasonIsNull()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable rule-a: */", new Position(0, 0), 31, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(["rule-a"], result[0].RuleIds);
+        Assert.Null(result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_ColonOnlyAfterDirective_ReasonIsNull_RuleIdsEmpty()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable: */", new Position(0, 0), 24, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Empty(result[0].RuleIds);
+        Assert.Null(result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_NoColon_ReasonIsNull()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable avoid-select-star */", new Position(0, 0), 42, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(["avoid-select-star"], result[0].RuleIds);
+        Assert.Null(result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_EnableWithReason_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-enable avoid-select-star: re-enable after generated section */", new Position(0, 0), 76, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(DisableDirectiveType.Enable, result[0].Type);
+        Assert.Equal(["avoid-select-star"], result[0].RuleIds);
+        Assert.Equal("re-enable after generated section", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_ColonDirectlyAfterPrefix_NoSpace_ParsesCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("-- tsqlrefine-disable:no space before colon", new Position(0, 0), 43, "SingleLineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Empty(result[0].RuleIds);
+        Assert.Equal("no space before colon", result[0].Reason);
+    }
+
+    [Fact]
+    public void ParseDirectives_ReasonWithExtraWhitespace_TrimmedCorrectly()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable rule-a:   lots of spaces   */", new Position(0, 0), 51, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal("lots of spaces", result[0].Reason);
+    }
+
+    #endregion
+
     #region CountLines Tests
 
     [Fact]

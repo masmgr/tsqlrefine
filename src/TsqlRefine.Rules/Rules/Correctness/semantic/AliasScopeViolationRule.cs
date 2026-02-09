@@ -78,8 +78,8 @@ public sealed class AliasScopeViolationRule : IRule
                 // Get the set of aliases defined AFTER this derived table
                 if (outerContext.DerivedTableLaterAliases.TryGetValue(node, out var laterAliases))
                 {
-                    // Get aliases referenced in this derived table using helper
-                    var referencedAliases = CollectReferencedAliases(node);
+                    // Collect aliases that are referenced from outer scope (not locally declared)
+                    var referencedAliases = CollectExternalReferencedAliases(node);
 
                     // Check if any referenced aliases are from the outer query but defined AFTER this derived table
                     foreach (var alias in referencedAliases)
@@ -118,9 +118,10 @@ public sealed class AliasScopeViolationRule : IRule
                 {
                     derivedTableIndices.Add((i, derivedTable));
                 }
-                else if (tableRef is NamedTableReference namedTable)
+
+                var alias = TableReferenceHelpers.GetAliasOrTableName(tableRef);
+                if (alias != null)
                 {
-                    var alias = namedTable.Alias?.Value ?? namedTable.SchemaObject.BaseIdentifier.Value;
                     allAliases.Add((i, alias));
                 }
             }
@@ -157,43 +158,68 @@ public sealed class AliasScopeViolationRule : IRule
             }
         }
 
-        private static HashSet<string> CollectReferencedAliases(QueryDerivedTable derivedTable)
+        private static HashSet<string> CollectExternalReferencedAliases(QueryDerivedTable derivedTable)
         {
-            var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var visitor = new AliasCollector(aliases);
-            derivedTable.Accept(visitor);
-            return aliases;
+            var externalAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var visitor = new ExternalAliasCollector(externalAliases);
+
+            if (derivedTable.QueryExpression != null)
+            {
+                derivedTable.QueryExpression.Accept(visitor);
+            }
+
+            return externalAliases;
         }
 
-        /// <summary>
-        /// Collects table qualifiers from column references, stopping at nested SELECT scope boundaries.
-        /// Note: Does NOT stop at QueryDerivedTable since we need to traverse into the derived table
-        /// we're analyzing - only stops at nested SELECT statements within.
-        /// </summary>
-        private sealed class AliasCollector : TSqlFragmentVisitor
+        private sealed class ExternalAliasCollector : TSqlFragmentVisitor
         {
-            private readonly HashSet<string> _aliases;
+            private readonly HashSet<string> _externalAliases;
+            private readonly Stack<HashSet<string>> _localScopes = new();
 
-            public AliasCollector(HashSet<string> aliases)
+            public ExternalAliasCollector(HashSet<string> externalAliases)
             {
-                _aliases = aliases;
+                _externalAliases = externalAliases;
+            }
+
+            public override void ExplicitVisit(QuerySpecification node)
+            {
+                HashSet<string> localAliases;
+                if (node.FromClause != null)
+                {
+                    localAliases = TableReferenceHelpers.CollectTableAliases(node.FromClause.TableReferences);
+                }
+                else
+                {
+                    localAliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                }
+
+                _localScopes.Push(localAliases);
+                base.ExplicitVisit(node);
+                _localScopes.Pop();
             }
 
             public override void ExplicitVisit(ColumnReferenceExpression node)
             {
                 var qualifier = ColumnReferenceHelpers.GetTableQualifier(node);
-                if (qualifier != null)
+                if (qualifier != null && !IsDefinedInAnyLocalScope(qualifier))
                 {
-                    _aliases.Add(qualifier);
+                    _externalAliases.Add(qualifier);
                 }
 
                 base.ExplicitVisit(node);
             }
 
-            // Stop at nested SELECT statements - they have their own scope
-            public override void ExplicitVisit(SelectStatement node)
+            private bool IsDefinedInAnyLocalScope(string alias)
             {
-                // Stop here - don't traverse into nested SELECT statements
+                foreach (var scope in _localScopes)
+                {
+                    if (scope.Contains(alias))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
 

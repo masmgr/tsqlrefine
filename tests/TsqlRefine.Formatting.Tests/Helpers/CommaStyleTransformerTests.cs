@@ -48,11 +48,7 @@ public class CommaStyleTransformerTests
     {
         var input = "SELECT id,\n    name,\n    email";
         var result = CommaStyleTransformer.ToLeadingCommas(input);
-        // The algorithm processes line by line - when a line ends with comma,
-        // it removes the comma and prepends it to the next line.
-        // Since "email" has no trailing comma, "name," keeps its trailing comma
-        // but "id," is moved to next line
-        Assert.Equal("SELECT id\n    , name,\n    email", result);
+        Assert.Equal("SELECT id\n    , name\n    , email", result);
     }
 
     [Fact]
@@ -83,7 +79,7 @@ public class CommaStyleTransformerTests
         var input = "SELECT id,\nname,";
         var result = CommaStyleTransformer.ToLeadingCommas(input);
         // First comma moves to second line, but last comma has no next line
-        Assert.Contains(", name,", result);
+        Assert.Equal("SELECT id\n, name,", result);
     }
 
     #endregion
@@ -124,13 +120,10 @@ public class CommaStyleTransformerTests
     {
         var input = "SELECT id,\n    name,\n    email\nFROM Users\nWHERE active = 1";
         var result = CommaStyleTransformer.ToLeadingCommas(input);
-        // The algorithm processes sequentially:
-        // 1. "id," ends with comma, so comma moves to next line -> "id\n    , name,"
-        // 2. Next processed line is now ", name," which ends with comma
-        // 3. But due to how i++ skips, the actual behavior is different
-        // The result is: "SELECT id\n    , name,\n    email\nFROM Users\nWHERE active = 1"
         Assert.Contains(", name", result);
+        Assert.Contains(", email", result);
         Assert.DoesNotContain("id,", result); // id's comma was moved
+        Assert.DoesNotContain("name,", result); // name's comma was also moved
         // FROM and WHERE should remain unchanged
         Assert.Contains("FROM Users", result);
     }
@@ -207,6 +200,14 @@ public class CommaStyleTransformerTests
         // The trailing comma after comment triggers transformation
         Assert.Contains(", name", result);
         Assert.Contains("/* comma here, */", result); // Comment content preserved
+    }
+
+    [Fact]
+    public void ToLeadingCommas_CrlfInput_PreservesCrlf()
+    {
+        var input = "SELECT id,\r\n    name,\r\n    email";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        Assert.Equal("SELECT id\r\n    , name\r\n    , email", result);
     }
 
     [Fact]

@@ -16,7 +16,9 @@ Development patterns for the TsqlRefine.Formatting project - SQL formatter imple
 - Keyword casing normalization (uppercase)
 - Identifier casing (with escaping for reserved words like `[Order]`)
 - Whitespace normalization (respects .editorconfig)
-- Space after commas, remove duplicate spaces
+- Space after commas
+- Compound keyword spacing (LEFT  OUTER  JOIN → LEFT OUTER JOIN)
+- Operator spacing (a=b → a = b)
 
 **Does NOT**:
 - Reformat layout or line breaks
@@ -26,12 +28,14 @@ Development patterns for the TsqlRefine.Formatting project - SQL formatter imple
 
 ## Formatter Pipeline
 
-`SqlFormatter.Format()` orchestrates a 4-step pipeline:
+`SqlFormatter.Format()` orchestrates a 6-step pipeline:
 
-1. **ScriptDomElementCaser** - Granular element casing (keywords, functions, data types, schemas, tables, columns, variables)
-2. **WhitespaceNormalizer** - Indentation and whitespace (respects .editorconfig)
-3. **InlineSpaceNormalizer** - Inline spacing (space after commas, remove duplicate spaces)
-4. **CommaStyleTransformer** - Comma style transformation (trailing to leading, optional)
+1. **KeywordSpaceNormalizer** - Compound keyword spacing (ScriptDom token-based, safe pairs only)
+2. **ScriptDomElementCaser** - Granular element casing (keywords, functions, data types, schemas, tables, columns, variables)
+3. **WhitespaceNormalizer** - Indentation and whitespace (respects .editorconfig)
+4. **InlineSpaceNormalizer** - Inline spacing (space after commas, remove trailing space before commas)
+5. **OperatorSpaceNormalizer** - Operator spacing (space around binary operators, preserves alignment)
+6. **CommaStyleTransformer** - Comma style transformation (trailing to leading, optional)
 
 Each pass is independently testable with single responsibility.
 
@@ -116,12 +120,26 @@ Indentation and whitespace normalization:
 - Respects `.editorconfig` settings (indent_style, indent_size)
 - Normalizes leading whitespace per line
 
+### KeywordSpaceNormalizer
+
+Compound keyword spacing (ScriptDom token-based):
+- Collapses multi-space between known keyword pairs (e.g., LEFT OUTER JOIN, GROUP BY)
+- Only normalizes predefined safe pairs (not all keyword-keyword whitespace)
+- Uses `ScriptDomTokenHelper` for token parsing and trivia detection
+
 ### InlineSpaceNormalizer
 
 Inline spacing:
 - Adds space after commas
-- Removes duplicate spaces
+- Removes trailing space before commas
 - Preserves protected regions (strings, comments)
+
+### OperatorSpaceNormalizer
+
+Operator spacing:
+- Adds space around binary operators (a=b → a = b)
+- Preserves existing alignment (multi-space preserved)
+- Handles unary operators, scientific notation, SELECT *, COUNT(*)
 
 ### CommaStyleTransformer
 

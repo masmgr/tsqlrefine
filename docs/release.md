@@ -97,18 +97,18 @@ git push origin v0.2.0
 Pushing a tag automatically triggers GitHub Actions to:
 
 1. Build and test
-2. Create NuGet packages
+2. Create NuGet packages (TsqlRefine CLI tool + TsqlRefine.PluginSdk library)
 3. Create GitHub Release (with package files attached)
 4. Publish to NuGet.org (stable versions only, pre-releases excluded)
 
 Check release progress at:
-- GitHub Actions: https://github.com/imasa/tsqlrefine/actions
+- GitHub Actions: https://github.com/masmgr/tsqlrefine/actions
 
 ### 6. Edit Release Notes
 
 After GitHub Release is created, edit release notes if needed:
 
-1. Go to https://github.com/imasa/tsqlrefine/releases
+1. Go to https://github.com/masmgr/tsqlrefine/releases
 2. Select the latest release
 3. Click "Edit release"
 4. Enhance release notes (Breaking changes, Migration guide, etc.)
@@ -124,12 +124,15 @@ dotnet build src/TsqlRefine.sln -c Release
 # Build (stable version)
 dotnet build src/TsqlRefine.sln -c Release /p:VersionSuffix=
 
-# Create package
+# Create packages
 dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release /p:VersionSuffix=
+dotnet pack src/TsqlRefine.PluginSdk/TsqlRefine.PluginSdk.csproj -c Release /p:VersionSuffix=
 
 # Output location
 # nupkg/TsqlRefine.0.2.0.nupkg
 # nupkg/TsqlRefine.0.2.0.snupkg (symbols package)
+# nupkg/TsqlRefine.PluginSdk.0.2.0.nupkg
+# nupkg/TsqlRefine.PluginSdk.0.2.0.snupkg (symbols package)
 ```
 
 ## Installation Methods

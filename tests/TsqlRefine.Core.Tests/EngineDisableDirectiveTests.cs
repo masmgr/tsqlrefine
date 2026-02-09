@@ -286,4 +286,70 @@ public sealed class EngineDisableDirectiveTests
         // Line 7 should NOT be suppressed (after both enables on lines 4 and 6)
         Assert.Contains(dmlDiagnostics, d => d.Range.Start.Line == 7);
     }
+
+    [Fact]
+    public void DisableSpecificRuleWithReason_StillSuppressesDiagnostics()
+    {
+        var sql = "/* tsqlrefine-disable avoid-select-star: legacy view depends on column order */\nselect * from t;";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.DoesNotContain(result.Files[0].Diagnostics, d => d.Code == "avoid-select-star");
+    }
+
+    [Fact]
+    public void DisableAllWithReasonColonOnly_StillSuppressesAllDiagnostics()
+    {
+        var sql = "/* tsqlrefine-disable: generated code */\nselect * from t;";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.DoesNotContain(result.Files[0].Diagnostics, d => d.Code == "avoid-select-star");
+    }
+
+    [Fact]
+    public void DisableEnableWithReasons_RegionStillWorks()
+    {
+        var sql = "/* tsqlrefine-disable dml-without-where: migration script */\nupdate t set x = 1;\n/* tsqlrefine-enable dml-without-where: end migration */\nupdate t set y = 2;";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        var dmlDiags = result.Files[0].Diagnostics
+            .Where(d => d.Code == "dml-without-where").ToList();
+
+        // Line 1: suppressed (within disable region)
+        Assert.DoesNotContain(dmlDiags, d => d.Range.Start.Line == 1);
+        // Line 3: NOT suppressed (after enable)
+        Assert.Contains(dmlDiags, d => d.Range.Start.Line == 3);
+    }
+
+    [Fact]
+    public void DisableAllWithReasonNoSpace_LineComment_StillSuppresses()
+    {
+        var sql = "-- tsqlrefine-disable:generated code\nselect * from t;";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.DoesNotContain(result.Files[0].Diagnostics, d => d.Code == "avoid-select-star");
+    }
 }

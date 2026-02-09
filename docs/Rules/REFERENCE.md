@@ -13,11 +13,11 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 101
+- **Total Rules**: 105
 - **Fixable Rules**: 10 (10%)
-- **Error Severity**: 12 rules (12%)
-- **Warning Severity**: 54 rules (53%)
-- **Information Severity**: 35 rules (35%)
+- **Error Severity**: 13 rules (12%)
+- **Warning Severity**: 57 rules (54%)
+- **Information Severity**: 35 rules (33%)
 
 ## Rule Categories
 
@@ -29,7 +29,7 @@
 | **Performance** | 19 | Flags patterns that can cause performance issues |
 | **Style** | 29 | Maintains code formatting and consistency |
 | **Transactions** | 10 | Ensures proper transaction handling and session settings |
-| **Schema** | 3 | Enforces database schema best practices |
+| **Schema** | 7 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Category
@@ -161,11 +161,15 @@
 | [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
 | [uncommitted-transaction](transactions/uncommitted-transaction.md) | BEGIN TRANSACTION requires corresponding COMMIT TRANSACTION in the same file | Warning | No |
 
-### Schema (3 rules)
+### Schema (7 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-heap-table](schema/avoid-heap-table.md) | Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs. | Warning | No |
+| [duplicate-column-definition](schema/duplicate-column-definition.md) | Detects duplicate column names in CREATE TABLE definitions; duplicate columns always cause a runtime error. | Error | No |
+| [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md) | Detects duplicate columns within a single FOREIGN KEY constraint definition. | Warning | No |
+| [duplicate-index-column](schema/duplicate-index-column.md) | Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition. | Warning | No |
+| [duplicate-index-definition](schema/duplicate-index-definition.md) | Detects multiple indexes or unique constraints within a table that have the exact same column composition. | Warning | No |
 | [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md) | Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL. | Information | No |
 | [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md) | Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity. | Warning | No |
 
@@ -177,11 +181,12 @@
 
 ## Rules by Severity
 
-### Error (12 rules)
+### Error (13 rules)
 
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
+- [duplicate-column-definition](schema/duplicate-column-definition.md)
 - [named-constraint](correctness/named-constraint.md)
 - [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
@@ -192,7 +197,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (54 rules)
+### Warning (57 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -212,6 +217,9 @@
 - [cross-database-transaction](safety/cross-database-transaction.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
 - [disallow-cursors](performance/disallow-cursors.md)
+- [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md)
+- [duplicate-index-column](schema/duplicate-index-column.md)
+- [duplicate-index-definition](schema/duplicate-index-definition.md)
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
 - [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md)
 - [join-keyword](style/join-keyword.md)
