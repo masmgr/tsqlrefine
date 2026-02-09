@@ -79,6 +79,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new RequirePrimaryKeyOrUniqueConstraintRule(),
         new AvoidHeapTableRule(),
         new RequireMsDescriptionForTableDefinitionFileRule(),
+        new DuplicateColumnDefinitionRule(),
+        new DuplicateIndexColumnRule(),
+        new DuplicateIndexDefinitionRule(),
+        new DuplicateForeignKeyColumnRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
