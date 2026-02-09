@@ -130,10 +130,19 @@ public static class SqlElementCategorizer
         CasingContext? context = null)
     {
         context ??= new CasingContext();
+        var category = CategorizeCore(token, previousToken, nextToken, context);
+        UpdateContext(token, context);
+        return category;
+    }
 
+    private static ElementCategory CategorizeCore(
+        TSqlParserToken token,
+        TSqlParserToken? previousToken,
+        TSqlParserToken? nextToken,
+        CasingContext context)
+    {
         if (string.IsNullOrEmpty(token.Text))
         {
-            UpdateContext(token, context);
             return ElementCategory.Other;
         }
 
@@ -143,7 +152,6 @@ public static class SqlElementCategorizer
         // 1. Variables (@var, @@var)
         if (tokenCategory == TokenTypeCategory.Variable || text.StartsWith('@'))
         {
-            UpdateContext(token, context);
             return ElementCategory.Variable;
         }
 
@@ -151,37 +159,31 @@ public static class SqlElementCategorizer
         if (!IsWordToken(text) ||
             tokenCategory is TokenTypeCategory.Literal or TokenTypeCategory.Comment or TokenTypeCategory.WhiteSpace)
         {
-            UpdateContext(token, context);
             return ElementCategory.Other;
         }
 
-        // 3. Quoted identifiers → determine from context
+        // 3. Quoted identifiers -> determine from context
         if (text.StartsWith('[') || text.StartsWith('"'))
         {
-            var category = CategorizeQuotedIdentifier(previousToken, nextToken, context);
-            UpdateContext(token, context);
-            return category;
+            return CategorizeQuotedIdentifier(previousToken, nextToken, context);
         }
 
         // 4. Built-in functions (check before keywords, as some overlap)
         // Check for parenthesis-free functions first (e.g., CURRENT_TIMESTAMP)
         if (BuiltInFunctionRegistry.IsParenthesisFreeFunction(text))
         {
-            UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // Check for regular built-in functions that require parentheses
         if (BuiltInFunctionRegistry.IsBuiltInFunction(text) && IsFollowedByParenthesis(nextToken))
         {
-            UpdateContext(token, context);
             return ElementCategory.BuiltInFunction;
         }
 
         // 5. Data types
         if (DataTypeRegistry.IsDataType(text))
         {
-            UpdateContext(token, context);
             return ElementCategory.DataType;
         }
 
@@ -202,12 +204,10 @@ public static class SqlElementCategorizer
                 context.ExecuteProcedureProcessed = true;
             }
 
-            UpdateContext(token, context);
             return category;
         }
 
         // 7. Keywords (SELECT, FROM, WHERE, etc.) - default for all other word tokens
-        UpdateContext(token, context);
         return ElementCategory.Keyword;
     }
 

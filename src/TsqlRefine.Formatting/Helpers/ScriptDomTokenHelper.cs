@@ -75,6 +75,25 @@ internal static class ScriptDomTokenHelper
         return indexes;
     }
 
+    /// <summary>
+    /// Builds index arrays for previous and next non-trivia tokens in one call.
+    /// </summary>
+    /// <param name="tokens">Token stream.</param>
+    /// <returns>
+    /// A tuple containing:
+    /// - previousNonTriviaIndexes: index of previous non-trivia token for each token
+    /// - nextNonTriviaIndexes: index of next non-trivia token for each token
+    /// </returns>
+    public static (int[] previousNonTriviaIndexes, int[] nextNonTriviaIndexes) BuildNonTriviaNeighborIndexes(
+        IList<TSqlParserToken> tokens)
+    {
+        return
+        (
+            BuildPreviousNonTriviaIndexes(tokens),
+            BuildNextNonTriviaIndexes(tokens)
+        );
+    }
+
     private static FrozenSet<TSqlTokenType> BuildTriviaTokenTypes()
     {
         var triviaTypes = new HashSet<TSqlTokenType>();

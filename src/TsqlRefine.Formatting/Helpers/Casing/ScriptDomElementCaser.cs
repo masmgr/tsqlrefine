@@ -24,8 +24,8 @@ public static class ScriptDomElementCaser
         var parser = ScriptDomTokenHelper.CreateParser(compatLevel);
         using var reader = new StringReader(input);
         var tokens = parser.GetTokenStream(reader, out _);
-        var previousNonTriviaIndexes = ScriptDomTokenHelper.BuildPreviousNonTriviaIndexes(tokens);
-        var nextNonTriviaIndexes = ScriptDomTokenHelper.BuildNextNonTriviaIndexes(tokens);
+        var (previousNonTriviaIndexes, nextNonTriviaIndexes) =
+            ScriptDomTokenHelper.BuildNonTriviaNeighborIndexes(tokens);
 
         var sb = new StringBuilder(input.Length + 16);
         var context = new CasingContext();
@@ -48,46 +48,65 @@ public static class ScriptDomElementCaser
             // Categorize token with context tracking
             var category = SqlElementCategorizer.Categorize(token, previousToken, nextToken, context);
 
-            // Apply casing based on category
-            var casedText = category switch
-            {
-                SqlElementCategorizer.ElementCategory.Keyword =>
-                    CasingHelpers.ApplyCasing(text, options.KeywordElementCasing),
-
-                SqlElementCategorizer.ElementCategory.BuiltInFunction =>
-                    CasingHelpers.ApplyCasing(text, options.BuiltInFunctionCasing),
-
-                SqlElementCategorizer.ElementCategory.DataType =>
-                    CasingHelpers.ApplyCasing(text, options.DataTypeCasing),
-
-                SqlElementCategorizer.ElementCategory.Schema =>
-                    CasingHelpers.ApplyCasing(text, options.SchemaCasing),
-
-                SqlElementCategorizer.ElementCategory.Table =>
-                    CasingHelpers.ApplyCasing(text, options.TableCasing),
-
-                SqlElementCategorizer.ElementCategory.Column =>
-                    CasingHelpers.ApplyCasing(text, options.ColumnCasing),
-
-                SqlElementCategorizer.ElementCategory.Variable =>
-                    CasingHelpers.ApplyCasing(text, options.VariableCasing),
-
-                SqlElementCategorizer.ElementCategory.SystemTable =>
-                    CasingHelpers.ApplyCasing(text, options.SystemTableCasing),
-
-                SqlElementCategorizer.ElementCategory.StoredProcedure =>
-                    CasingHelpers.ApplyCasing(text, options.StoredProcedureCasing),
-
-                SqlElementCategorizer.ElementCategory.UserDefinedFunction =>
-                    CasingHelpers.ApplyCasing(text, options.UserDefinedFunctionCasing),
-
-                _ => text
-            };
+            var casedText = ApplyCategoryCasing(text, category, options);
 
             sb.Append(casedText);
         }
 
         return sb.ToString();
+    }
+
+    private static string ApplyCategoryCasing(
+        string text,
+        SqlElementCategorizer.ElementCategory category,
+        FormattingOptions options)
+    {
+        return TryGetElementCasing(category, options, out var casing)
+            ? CasingHelpers.ApplyCasing(text, casing)
+            : text;
+    }
+
+    private static bool TryGetElementCasing(
+        SqlElementCategorizer.ElementCategory category,
+        FormattingOptions options,
+        out ElementCasing casing)
+    {
+        switch (category)
+        {
+            case SqlElementCategorizer.ElementCategory.Keyword:
+                casing = options.KeywordElementCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.BuiltInFunction:
+                casing = options.BuiltInFunctionCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.DataType:
+                casing = options.DataTypeCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.Schema:
+                casing = options.SchemaCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.Table:
+                casing = options.TableCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.Column:
+                casing = options.ColumnCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.Variable:
+                casing = options.VariableCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.SystemTable:
+                casing = options.SystemTableCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.StoredProcedure:
+                casing = options.StoredProcedureCasing;
+                return true;
+            case SqlElementCategorizer.ElementCategory.UserDefinedFunction:
+                casing = options.UserDefinedFunctionCasing;
+                return true;
+            default:
+                casing = default;
+                return false;
+        }
     }
 
     private static TSqlParserToken? GetToken(IList<TSqlParserToken> tokens, int index) =>
