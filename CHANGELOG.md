@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-10
+
+### Added
+
+- Schema duplicate detection rules: `duplicate-column-definition`, `duplicate-index-column`, `duplicate-index-definition`, `duplicate-foreign-key-column`
+- Positional parameter and column-level MS_Description checks in `require-ms-description` rule
+- Reason text support in inline disable comments (`-- tsqlrefine-disable rule-id: reason`)
+- `--utf8` global option for console encoding on Windows
+- `KeywordSpaceNormalizer` for compound keyword spacing (e.g., `LEFT  OUTER  JOIN` → `LEFT OUTER JOIN`)
+- TsqlRefine.PluginSdk published as NuGet package
+
+### Changed
+
+- Refactored formatting casing and token helper structure
+
+### Fixed
+
+- Semantic rule edge cases with expanded regression tests
+- Leading comma conversion and nested comment protection
+- GitHub repository URL
+
 ## [0.1.0] - 2026-02-08
 
 ### Added
@@ -24,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/masmgr/tsqlrefine/releases/tag/v0.1.0
