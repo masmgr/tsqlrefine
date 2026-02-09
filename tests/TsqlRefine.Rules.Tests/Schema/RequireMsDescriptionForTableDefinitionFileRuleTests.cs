@@ -46,7 +46,17 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
                 @name = N'MS_Description',
                 @value = N'User accounts table',
                 @level0type = N'SCHEMA', @level0name = N'dbo',
-                @level1type = N'TABLE', @level1name = N'users';";
+                @level1type = N'TABLE', @level1name = N'users';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'User ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'users',
+                @level2type = N'COLUMN', @level2name = N'id';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'User name',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'users',
+                @level2type = N'COLUMN', @level2name = N'name';";
         var context = CreateContext(sql);
 
         // Act
@@ -70,7 +80,17 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
                 @name = N'MS_Description',
                 @value = N'Customer orders',
                 @level0type = N'SCHEMA', @level0name = N'dbo',
-                @level1type = N'TABLE', @level1name = N'orders';";
+                @level1type = N'TABLE', @level1name = N'orders';
+            EXEC sys.sp_addextendedproperty
+                @name = N'MS_Description', @value = N'Order ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'orders',
+                @level2type = N'COLUMN', @level2name = N'order_id';
+            EXEC sys.sp_addextendedproperty
+                @name = N'MS_Description', @value = N'Customer ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'orders',
+                @level2type = N'COLUMN', @level2name = N'customer_id';";
         var context = CreateContext(sql);
 
         // Act
@@ -81,7 +101,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
     }
 
     [Fact]
-    public void Analyze_MultipleTablesOnlyOneWithDescription_MayDetect()
+    public void Analyze_MultipleTablesOnlyOneWithDescription_DetectsProductsTableAndColumns()
     {
         // Arrange
         const string sql = @"
@@ -92,17 +112,19 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
                 @name = N'MS_Description',
                 @value = N'User accounts',
                 @level0type = N'SCHEMA', @level0name = N'dbo',
-                @level1type = N'TABLE', @level1name = N'users';";
+                @level1type = N'TABLE', @level1name = N'users';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'ID', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'users', @level2type = N'COLUMN', @level2name = N'id';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'Name', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'users', @level2type = N'COLUMN', @level2name = N'name';";
         var context = CreateContext(sql);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        // Assert - Rule may detect missing description for products table
-        if (diagnostics.Length > 0)
-        {
-            Assert.Contains("products", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
-        }
+        // Assert - products table + its 2 columns missing descriptions
+        Assert.Equal(3, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Table 'products'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'id' in table 'products'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'name' in table 'products'", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -116,7 +138,17 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
                 @name = N'MS_Description',
                 @value = N'User table',
                 @level0type = N'SCHEMA', @level0name = N'dbo',
-                @level1type = N'TABLE', @level1name = N'USERS';";
+                @level1type = N'TABLE', @level1name = N'USERS';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'USERS',
+                @level2type = N'COLUMN', @level2name = N'ID';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'Name',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'USERS',
+                @level2type = N'COLUMN', @level2name = N'NAME';";
         var context = CreateContext(sql);
 
         // Act
@@ -135,7 +167,11 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
             CREATE TABLE orders (id INT, user_id INT);
 
             EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'Users', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'users';
-            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'Orders', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'orders';";
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'ID', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'users', @level2type = N'COLUMN', @level2name = N'id';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'Name', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'users', @level2type = N'COLUMN', @level2name = N'name';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'Orders', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'orders';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'ID', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'orders', @level2type = N'COLUMN', @level2name = N'id';
+            EXEC sp_addextendedproperty @name = N'MS_Description', @value = N'User ID', @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'TABLE', @level1name = N'orders', @level2type = N'COLUMN', @level2name = N'user_id';";
         var context = CreateContext(sql);
 
         // Act
@@ -170,9 +206,9 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
     }
 
     [Fact]
-    public void Analyze_ExtendedPropertyForColumn_MayDetect()
+    public void Analyze_ExtendedPropertyForColumnOnly_ReturnsDiagnosticsForTableAndMissingColumn()
     {
-        // Arrange - Property for column, not table
+        // Arrange - Only column-level property, no table-level description
         const string sql = @"
             CREATE TABLE data (id INT, col1 VARCHAR(50));
 
@@ -187,11 +223,10 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        // Assert - Table itself may need description (depends on AST structure)
-        if (diagnostics.Length > 0)
-        {
-            Assert.Equal("require-ms-description-for-table-definition-file", diagnostics[0].Code);
-        }
+        // Assert - Table needs description + column 'id' needs description
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Table 'data'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'id'", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -234,6 +269,148 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
 
         // Assert
         Assert.Empty(fixes);
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersTableAndColumnDescriptions_ReturnsEmpty()
+    {
+        // Arrange - Positional parameters with both table and column descriptions
+        const string sql = @"
+            CREATE TABLE employees (id INT, department_id INT);
+
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Employee records', 'SCHEMA', 'dbo', 'TABLE', 'employees';
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Employee ID', 'SCHEMA', 'dbo', 'TABLE', 'employees', 'COLUMN', 'id';
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Department ID', 'SCHEMA', 'dbo', 'TABLE', 'employees', 'COLUMN', 'department_id';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersColumnOnly_ReturnsDiagnosticForTable()
+    {
+        // Arrange - Only column-level description via positional parameters
+        const string sql = @"
+            CREATE TABLE employees (id INT, department_id INT);
+
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Employee ID', 'SCHEMA', 'dbo', 'TABLE', 'employees', 'COLUMN', 'id';
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Department ID', 'SCHEMA', 'dbo', 'TABLE', 'employees', 'COLUMN', 'department_id';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - Table description is missing
+        Assert.Single(diagnostics);
+        Assert.Contains("Table 'employees'", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersTableOnly_ReturnsDiagnosticsForColumns()
+    {
+        // Arrange - Only table-level description via positional parameters
+        const string sql = @"
+            CREATE TABLE employees (id INT, department_id INT);
+
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Employee records', 'SCHEMA', 'dbo', 'TABLE', 'employees';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - Column descriptions are missing
+        Assert.Equal(2, diagnostics.Length);
+        Assert.All(diagnostics, d => Assert.Contains("Column", d.Message));
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersCaseInsensitive_ReturnsEmpty()
+    {
+        // Arrange
+        const string sql = @"
+            CREATE TABLE Users (id INT);
+
+            EXECUTE sp_addextendedproperty 'MS_Description', N'User table', 'SCHEMA', 'dbo', 'TABLE', 'USERS';
+            EXECUTE sp_addextendedproperty 'MS_Description', N'ID', 'SCHEMA', 'dbo', 'TABLE', 'USERS', 'COLUMN', 'ID';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersNonMsDescription_ReturnsDiagnostics()
+    {
+        // Arrange - Property name is not MS_Description
+        const string sql = @"
+            CREATE TABLE logs (id INT, message VARCHAR(MAX));
+
+            EXECUTE sp_addextendedproperty 'CustomProperty', N'Some value', 'SCHEMA', 'dbo', 'TABLE', 'logs';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - Table + all columns missing MS_Description
+        Assert.Equal(3, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Table 'logs'", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Analyze_PositionalParametersPartialColumnDescriptions_ReturnsDiagnosticsForMissing()
+    {
+        // Arrange - One column has description, another does not
+        const string sql = @"
+            CREATE TABLE employees (id INT, department_id INT, name NVARCHAR(100));
+
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Employee records', 'SCHEMA', 'dbo', 'TABLE', 'employees';
+            EXECUTE sp_addextendedproperty 'MS_Description', N'Department ID', 'SCHEMA', 'dbo', 'TABLE', 'employees', 'COLUMN', 'department_id';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - 'id' and 'name' columns missing descriptions
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'id'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'name'", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Analyze_NamedParametersTableAndAllColumnDescriptions_ReturnsEmpty()
+    {
+        // Arrange - Named parameters with full coverage
+        const string sql = @"
+            CREATE TABLE data (id INT, col1 VARCHAR(50));
+
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'Data table',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'data';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'data',
+                @level2type = N'COLUMN', @level2name = N'id';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'Column 1',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'data',
+                @level2type = N'COLUMN', @level2name = N'col1';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
     }
 
     private static RuleContext CreateContext(string sql, int compatLevel = 150)
