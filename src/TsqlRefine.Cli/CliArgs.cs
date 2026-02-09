@@ -12,6 +12,7 @@ namespace TsqlRefine.Cli;
 /// <param name="IgnoreListPath">Path to ignore list file.</param>
 /// <param name="DetectEncoding">Whether to detect file encoding automatically.</param>
 /// <param name="Stdin">Whether to read from standard input.</param>
+/// <param name="Utf8">Whether to set console encoding to UTF-8.</param>
 /// <param name="Output">Output format (text, json, etc.).</param>
 /// <param name="MinimumSeverity">Minimum diagnostic severity to report.</param>
 /// <param name="Preset">Preset ruleset name to use.</param>
@@ -35,6 +36,7 @@ public sealed record CliArgs(
     string? IgnoreListPath,
     bool DetectEncoding,
     bool Stdin,
+    bool Utf8,
     string Output,
     DiagnosticSeverity? MinimumSeverity,
     string? Preset,

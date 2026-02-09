@@ -73,6 +73,7 @@ Update help text and documentation in `docs/cli.md`.
 | Option | lint | format | fix | init | print-config | print-format-config | list-rules | list-plugins |
 |--------|:----:|:------:|:---:|:----:|:------------:|:-------------------:|:----------:|:------------:|
 | `-c, --config` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `--utf8` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `-g, --ignorelist` | ✓ | ✓ | ✓ | - | - | - | - | - |
 | `--detect-encoding` | ✓ | ✓ | ✓ | - | - | - | - | - |
 | `--stdin` | ✓ | ✓ | ✓ | - | - | - | - | - |

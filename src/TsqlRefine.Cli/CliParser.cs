@@ -47,6 +47,12 @@ public static class CliParser
             Description = "Read from stdin"
         };
 
+        public static readonly Option<bool> Utf8 = new("--utf8")
+        {
+            Description = "Set console encoding to UTF-8 (stdin and stdout)",
+            Recursive = true
+        };
+
         // Output options
         public static readonly Option<string?> Output = new("--output")
         {
@@ -294,6 +300,7 @@ public static class CliParser
 
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
+        root.Options.Add(Options.Utf8);
 
         // Root command supports lint options for default command behavior
         // (tsqlrefine *.sql == tsqlrefine lint *.sql)
@@ -359,6 +366,7 @@ public static class CliParser
             IgnoreListPath: GetOptionValue<string?>(parseResult, "--ignorelist"),
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
+            Utf8: GetOptionValue<bool>(parseResult, "--utf8"),
             Output: GetOptionValue<string?>(parseResult, "--output") ?? "text",
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
