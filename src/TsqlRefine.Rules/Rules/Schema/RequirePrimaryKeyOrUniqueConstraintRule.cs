@@ -41,6 +41,13 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRule : IRule
     {
         public override void ExplicitVisit(CreateTableStatement node)
         {
+            // Skip temporary tables (#temp, ##temp)
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
             bool hasPrimaryKey = false;
             bool hasUniqueConstraint = false;
 

@@ -45,7 +45,7 @@ public sealed class RequireDropIfExistsRule : IRule
             {
                 // Skip temp tables
                 if (node.Objects is { Count: > 0 } &&
-                    node.Objects.All(o => o.BaseIdentifier?.Value?.StartsWith('#') == true))
+                    node.Objects.All(o => ScriptDomHelpers.IsTemporaryTableName(o.BaseIdentifier?.Value)))
                 {
                     base.ExplicitVisit(node);
                     return;

@@ -9,6 +9,14 @@ namespace TsqlRefine.Rules.Helpers.Diagnostics;
 public static class ScriptDomHelpers
 {
     /// <summary>
+    /// Returns whether the given table name refers to a temporary table (local # or global ##).
+    /// </summary>
+    /// <param name="tableName">The table name to check (typically from BaseIdentifier.Value).</param>
+    /// <returns>True if the name starts with '#', indicating a temporary table.</returns>
+    public static bool IsTemporaryTableName(string? tableName) =>
+        tableName is not null && tableName.StartsWith('#');
+
+    /// <summary>
     /// Converts a TSqlFragment to a Range using its start/end token positions.
     /// Handles 1-based ScriptDom coordinates and converts to 0-based PluginSdk positions.
     /// </summary>

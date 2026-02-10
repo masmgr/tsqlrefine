@@ -53,7 +53,7 @@ public sealed class SchemaQualifyRule : IRule
             var tableName = schemaObject.BaseIdentifier.Value;
 
             // Skip temp tables (#temp, ##global)
-            if (tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(tableName))
             {
                 base.ExplicitVisit(node);
                 return;

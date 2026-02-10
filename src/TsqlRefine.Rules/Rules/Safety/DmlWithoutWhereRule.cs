@@ -109,13 +109,10 @@ public sealed class DmlWithoutWhereRule : IRule
             }
 
             // Temporary tables (#temp, ##global) are NamedTableReference with # prefix
-            if (target is NamedTableReference namedTable)
+            if (target is NamedTableReference namedTable &&
+                ScriptDomHelpers.IsTemporaryTableName(namedTable.SchemaObject?.BaseIdentifier?.Value))
             {
-                var tableName = namedTable.SchemaObject?.BaseIdentifier?.Value;
-                if (tableName != null && tableName.StartsWith('#'))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;

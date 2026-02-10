@@ -61,8 +61,7 @@ public sealed class DangerousDdlRule : IRule
                 {
                     if (obj.BaseIdentifier != null)
                     {
-                        var tableName = obj.BaseIdentifier.Value;
-                        if (tableName.StartsWith('#'))
+                        if (ScriptDomHelpers.IsTemporaryTableName(obj.BaseIdentifier.Value))
                         {
                             // Temp table - skip warning
                             continue;

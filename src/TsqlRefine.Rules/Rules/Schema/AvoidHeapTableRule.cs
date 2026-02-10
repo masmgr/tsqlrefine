@@ -42,8 +42,7 @@ public sealed class AvoidHeapTableRule : IRule
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Skip temporary tables (#temp, ##temp)
-            var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
             {
                 base.ExplicitVisit(node);
                 return;

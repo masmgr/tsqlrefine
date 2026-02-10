@@ -42,8 +42,7 @@ public sealed class NamedConstraintRule : IRule
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Check if table is a temp table (starts with # or ##)
-            var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
             {
                 // Check for named constraints
                 if (node.Definition != null)
