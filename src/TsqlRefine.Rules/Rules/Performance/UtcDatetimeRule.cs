@@ -45,40 +45,6 @@ public sealed class UtcDatetimeRule : IRule
         {
             yield return diagnostic;
         }
-
-        // Also check for CURRENT_TIMESTAMP keyword (not a function call)
-        foreach (var range in FindCurrentTimestampRanges(context.Tokens))
-        {
-            yield return new Diagnostic(
-                Range: range,
-                Message: "Avoid using local datetime function 'CURRENT_TIMESTAMP'. Use GETUTCDATE() instead for timezone-independent datetime handling and better consistency across distributed systems.",
-                Severity: null,
-                Code: Metadata.RuleId,
-                Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, Metadata.Fixable)
-            );
-        }
-    }
-
-    private static List<TsqlRefine.PluginSdk.Range> FindCurrentTimestampRanges(IReadOnlyList<Token> tokens)
-    {
-        var ranges = new List<TsqlRefine.PluginSdk.Range>();
-
-        if (tokens is null || tokens.Count == 0)
-        {
-            return ranges;
-        }
-
-        for (var i = 0; i < tokens.Count; i++)
-        {
-            if (TokenHelpers.IsKeyword(tokens[i], "CURRENT_TIMESTAMP"))
-            {
-                var start = tokens[i].Start;
-                var end = TokenHelpers.GetTokenEnd(tokens[i]);
-                ranges.Add(new TsqlRefine.PluginSdk.Range(start, end));
-            }
-        }
-
-        return ranges;
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
@@ -97,6 +63,22 @@ public sealed class UtcDatetimeRule : IRule
                 AddDiagnostic(
                     fragment: node,
                     message: $"Avoid using local datetime function '{functionName}'. Use {utcAlternative} instead for timezone-independent datetime handling and better consistency across distributed systems.",
+                    code: "utc-datetime",
+                    category: "Performance",
+                    fixable: false
+                );
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(ParameterlessCall node)
+        {
+            if (node.ParameterlessCallType == ParameterlessCallType.CurrentTimestamp)
+            {
+                AddDiagnostic(
+                    fragment: node,
+                    message: "Avoid using local datetime function 'CURRENT_TIMESTAMP'. Use GETUTCDATE() instead for timezone-independent datetime handling and better consistency across distributed systems.",
                     code: "utc-datetime",
                     category: "Performance",
                     fixable: false
