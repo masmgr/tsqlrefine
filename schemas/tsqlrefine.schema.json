@@ -14,12 +14,17 @@
     },
     "ruleset": {
       "type": "string",
-      "description": "Path to a ruleset JSON file. Can be relative to the config file location or absolute. Use preset rulesets: 'rulesets/recommended.json', 'rulesets/strict.json', or 'rulesets/security-only.json'",
+      "description": "Path to a custom ruleset JSON file. Can be relative to the working directory or absolute. For built-in presets, use the 'preset' property instead.",
       "examples": [
-        "rulesets/recommended.json",
         "../rulesets/custom.json",
         "/absolute/path/to/ruleset.json"
       ]
+    },
+    "preset": {
+      "type": "string",
+      "description": "Name of a built-in preset ruleset. Available presets: recommended, strict, strict-logic, pragmatic, security-only. Takes precedence over 'ruleset' if both are specified.",
+      "enum": ["recommended", "strict", "strict-logic", "pragmatic", "security-only"],
+      "examples": ["recommended", "strict"]
     },
     "plugins": {
       "type": "array",

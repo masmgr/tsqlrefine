@@ -36,7 +36,7 @@ public sealed class CommandExecutor
         var preset = args.Preset ?? "recommended";
         var config = new TsqlRefineConfig(
             CompatLevel: args.CompatLevel ?? 150,
-            Ruleset: $"rulesets/{preset}.json",
+            Preset: preset,
             Plugins: Array.Empty<PluginConfig>()
         );
 

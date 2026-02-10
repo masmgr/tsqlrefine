@@ -69,11 +69,13 @@ public sealed record FormattingConfig(
 /// </summary>
 /// <param name="CompatLevel">SQL Server compatibility level (100-160). Default is 150 (SQL Server 2019).</param>
 /// <param name="Ruleset">Path to a ruleset JSON file specifying which rules to enable.</param>
+/// <param name="Preset">Name of a built-in preset ruleset (e.g. "recommended", "strict").</param>
 /// <param name="Plugins">List of plugin configurations to load.</param>
 /// <param name="Formatting">Formatting configuration options.</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,
+    string? Preset = null,
     IReadOnlyList<PluginConfig>? Plugins = null,
     FormattingConfig? Formatting = null
 )

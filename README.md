@@ -145,7 +145,7 @@ Creates the following files:
 ```json
 {
   "compatLevel": 150,
-  "ruleset": "rulesets/recommended.json",
+  "preset": "recommended",
   "plugins": []
 }
 ```

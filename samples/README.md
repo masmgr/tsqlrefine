@@ -85,26 +85,26 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint samples/sql/rules/*.s
 ```json
 {
   "compatLevel": 150,
-  "ruleset": "../../rulesets/recommended.json",
+  "preset": "recommended",
   "plugins": []
 }
 ```
 
-**When to use**: Standard projects targeting SQL Server 2019
+**When to use**: Standard projects targeting SQL Server 2019. Uses the built-in `recommended` preset.
 
 ### Advanced Configuration ([config/advanced.json](config/advanced.json))
 
 ```json
 {
   "compatLevel": 160,
-  "ruleset": "../rulesets/strict.json",
+  "ruleset": "samples/rulesets/strict.json",
   "plugins": [
-    { "path": "../plugins/custom-rule/bin/Release/net10.0/CustomRule.dll", "enabled": true }
+    { "path": "samples/plugins/custom-rule/bin/Release/net10.0/CustomRule.dll", "enabled": true }
   ]
 }
 ```
 
-**When to use**: Projects with custom rules or targeting SQL Server 2022
+**When to use**: Projects with custom ruleset files or plugins targeting SQL Server 2022. Uses the `ruleset` field to reference a custom file path.
 
 ### Minimal Configuration ([config/minimal.json](config/minimal.json))
 
@@ -119,11 +119,11 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- lint samples/sql/rules/*.s
 ```json
 {
   "compatLevel": 110,
-  "ruleset": "../../rulesets/recommended.json"
+  "ruleset": "samples/rulesets/recommended.json"
 }
 ```
 
-**When to use**: Legacy projects targeting SQL Server 2012
+**When to use**: Legacy projects with a custom ruleset file targeting SQL Server 2012
 
 ### Formatting Options ([configs/formatting-options.json](configs/formatting-options.json))
 

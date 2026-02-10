@@ -73,11 +73,11 @@ public sealed class ConfigLoader
             return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
         }
 
-        var path = args.RulesetPath ?? config.Ruleset;
-
-        if (!string.IsNullOrWhiteSpace(args.Preset))
+        // プリセット名の解決: CLI --preset > config preset
+        var presetName = args.Preset ?? config.Preset;
+        if (!string.IsNullOrWhiteSpace(presetName))
         {
-            path = Path.Combine(Directory.GetCurrentDirectory(), "rulesets", $"{args.Preset}.json");
+            var path = Path.Combine(AppContext.BaseDirectory, "rulesets", $"{presetName}.json");
 
             if (!File.Exists(path))
             {
@@ -86,23 +86,28 @@ public sealed class ConfigLoader
                     ? string.Join(", ", available)
                     : "none found";
                 throw new ConfigException(
-                    $"Unknown preset: '{args.Preset}'. Available presets: {list}");
+                    $"Unknown preset: '{presetName}'. Available presets: {list}");
             }
+
+            return Ruleset.Load(path);
         }
 
-        if (string.IsNullOrWhiteSpace(path))
+        // カスタム ruleset パスの解決: CLI --ruleset > config ruleset
+        var rulesetPath = args.RulesetPath ?? config.Ruleset;
+
+        if (string.IsNullOrWhiteSpace(rulesetPath))
         {
             return null;
         }
 
-        if (!File.Exists(path))
+        if (!File.Exists(rulesetPath))
         {
-            throw new ConfigException($"Ruleset file not found: {path}");
+            throw new ConfigException($"Ruleset file not found: {rulesetPath}");
         }
 
         try
         {
-            return Ruleset.Load(path);
+            return Ruleset.Load(rulesetPath);
         }
 
 #pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
@@ -213,7 +218,7 @@ public sealed class ConfigLoader
 
     private static List<string> DiscoverPresetNames()
     {
-        var rulesetsDir = Path.Combine(Directory.GetCurrentDirectory(), "rulesets");
+        var rulesetsDir = Path.Combine(AppContext.BaseDirectory, "rulesets");
         if (!Directory.Exists(rulesetsDir))
         {
             return [];

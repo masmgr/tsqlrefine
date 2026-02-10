@@ -15,15 +15,18 @@ Schemas are available under `schemas/`:
 `tsqlrefine.json` supports these top-level properties:
 
 - `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `150`, `160`).
-- `ruleset` (string): path to a ruleset file. Can be relative to the config file or absolute.
+- `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
+- `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional).
+
+> **Note**: If both `preset` and `ruleset` are specified, `preset` takes precedence. The `--preset` CLI option overrides both.
 
 Example:
 
 ```json
 {
   "compatLevel": 150,
-  "ruleset": "rulesets/recommended.json",
+  "preset": "recommended",
   "plugins": [
     { "path": "plugins/custom-rules.dll", "enabled": true }
   ],
@@ -101,22 +104,32 @@ Example `custom-ruleset.json`:
 
 ## Preset rulesets
 
-The repository includes preset rulesets under `rulesets/`:
+tsqlrefine includes built-in preset rulesets:
 
-| Ruleset | Rules | Description |
-|---------|-------|-------------|
-| `recommended.json` | 58 | Balanced production use with semantic analysis (default) |
-| `strict.json` | 97 | Maximum enforcement including all style/cosmetic rules |
-| `strict-logic.json` | 74 | Comprehensive correctness and semantic analysis without cosmetic style rules |
-| `pragmatic.json` | 34 | Production-ready minimum focusing on safety and critical issues |
-| `security-only.json` | 13 | Security vulnerabilities and critical safety only |
+| Preset | Rules | Description |
+|--------|-------|-------------|
+| `recommended` | 58 | Balanced production use with semantic analysis (default) |
+| `strict` | 97 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic` | 74 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `pragmatic` | 34 | Production-ready minimum focusing on safety and critical issues |
+| `security-only` | 13 | Security vulnerabilities and critical safety only |
 
-You can reference them from `tsqlrefine.json` via `ruleset`, or use the CLI `--preset` option (if supported by your version of the CLI).
+Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:
 
-**Choosing a ruleset:**
-- Start with `recommended.json` for most projects - it provides balanced production-ready linting
-- Use `pragmatic.json` for minimal enforcement in legacy codebases or when first introducing linting
-- Use `strict-logic.json` for comprehensive correctness checking without style/cosmetic noise
-- Use `strict.json` for maximum enforcement when you want both logic and style consistency
-- Use `security-only.json` for security-focused code review or CI gates
+```json
+{
+  "preset": "recommended"
+}
+```
+
+```bash
+tsqlrefine lint --preset strict file.sql
+```
+
+**Choosing a preset:**
+- Start with `recommended` for most projects - it provides balanced production-ready linting
+- Use `pragmatic` for minimal enforcement in legacy codebases or when first introducing linting
+- Use `strict-logic` for comprehensive correctness checking without style/cosmetic noise
+- Use `strict` for maximum enforcement when you want both logic and style consistency
+- Use `security-only` for security-focused code review or CI gates
 

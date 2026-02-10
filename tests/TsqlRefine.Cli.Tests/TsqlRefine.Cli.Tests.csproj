@@ -25,4 +25,12 @@
     <ProjectReference Include="..\..\src\TsqlRefine.Cli\TsqlRefine.Cli.csproj" />
   </ItemGroup>
 
+  <!-- Copy rulesets to test output directory for preset resolution tests -->
+  <ItemGroup>
+    <Content Include="..\..\rulesets\*.json">
+      <Link>rulesets\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
