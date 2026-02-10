@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.
 /// </summary>
-public sealed class RequireXactAbortOnRule : IRule
+public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScript>
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-xact-abort-on",
         Description: "Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.",
         Category: "Transactions",
@@ -16,25 +16,10 @@ public sealed class RequireXactAbortOnRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context, TSqlScript script) =>
+        new RequireXactAbortOnVisitor(script);
 
-        if (context.Ast.Fragment is null || context.Ast.Fragment is not TSqlScript script)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireXactAbortOnVisitor(script);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireXactAbortOnVisitor : DiagnosticVisitorBase

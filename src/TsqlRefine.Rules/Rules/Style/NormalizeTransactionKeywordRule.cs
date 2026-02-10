@@ -9,9 +9,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// - COMMIT (standalone) → COMMIT TRANSACTION
 /// - ROLLBACK (standalone) → ROLLBACK TRANSACTION
 /// </summary>
-public sealed class NormalizeTransactionKeywordRule : IRule
+public sealed class NormalizeTransactionKeywordRule : DiagnosticVisitorRuleBase<TSqlScript>
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "normalize-transaction-keyword",
         Description: "Normalizes 'TRAN' to 'TRANSACTION' and requires explicit 'TRANSACTION' after COMMIT/ROLLBACK.",
         Category: "Style",
@@ -23,25 +23,12 @@ public sealed class NormalizeTransactionKeywordRule : IRule
     private const string CommitMessage = "Use 'COMMIT TRANSACTION' instead of 'COMMIT'.";
     private const string RollbackMessage = "Use 'ROLLBACK TRANSACTION' instead of 'ROLLBACK'.";
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context, TSqlScript script) =>
+        script.ScriptTokenStream is null
+            ? new NoOpDiagnosticVisitor()
+            : new TransactionKeywordVisitor(script.ScriptTokenStream, Metadata);
 
-        if (context.Ast.Fragment is not TSqlScript script || script.ScriptTokenStream is null)
-        {
-            yield break;
-        }
-
-        var visitor = new TransactionKeywordVisitor(script.ScriptTokenStream, Metadata);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {
@@ -66,19 +53,16 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         }
     }
 
-    private sealed class TransactionKeywordVisitor : TSqlFragmentVisitor
+    private sealed class TransactionKeywordVisitor : DiagnosticVisitorBase
     {
         private readonly IList<TSqlParserToken> _tokenStream;
         private readonly RuleMetadata _metadata;
-        private readonly List<Diagnostic> _diagnostics = new();
 
         public TransactionKeywordVisitor(IList<TSqlParserToken> tokenStream, RuleMetadata metadata)
         {
             _tokenStream = tokenStream;
             _metadata = metadata;
         }
-
-        public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
@@ -180,7 +164,7 @@ public sealed class NormalizeTransactionKeywordRule : IRule
         private void AddTokenDiagnostic(TSqlParserToken token, string message)
         {
             var range = GetTokenRange(token);
-            _diagnostics.Add(RuleHelpers.CreateDiagnostic(range, message, _metadata.RuleId, _metadata.Category, _metadata.Fixable));
+            AddDiagnostic(RuleHelpers.CreateDiagnostic(range, message, _metadata.RuleId, _metadata.Category, _metadata.Fixable));
         }
 
         private bool TryGetTokenSpan(TSqlFragment fragment, out int startIndex, out int endIndex)
