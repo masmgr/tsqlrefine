@@ -37,28 +37,7 @@ public static class InlineSpaceNormalizer
             return input;
         }
 
-        // Detect the line ending used in input (after WhitespaceNormalizer processing)
-        // WhitespaceNormalizer already normalizes to consistent line endings,
-        // so we just need to detect and preserve them
-        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
-
-        // Split by the detected line ending
-        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
-        var result = new StringBuilder();
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var processedLine = NormalizeLine(lines[i]);
-            result.Append(processedLine);
-
-            // Add newline back if not the last line
-            if (i < lines.Length - 1)
-            {
-                result.Append(lineEnding);
-            }
-        }
-
-        return result.ToString();
+        return LineEndingHelpers.TransformLines(input, (line, _) => NormalizeLine(line));
     }
 
     private static string NormalizeLine(string line)

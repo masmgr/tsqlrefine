@@ -133,4 +133,31 @@ public class LineEndingHelpersTests
     }
 
     #endregion
+
+    #region TransformLines
+
+    [Fact]
+    public void TransformLines_Lf_PreservesLineEndingAndTransformsEachLine()
+    {
+        var input = "line1\nline2";
+        var result = LineEndingHelpers.TransformLines(input, (line, _) => $"[{line}]");
+        Assert.Equal("[line1]\n[line2]", result);
+    }
+
+    [Fact]
+    public void TransformLines_Crlf_PreservesLineEndingAndPassesLineIndex()
+    {
+        var input = "line1\r\nline2\r\nline3";
+        var result = LineEndingHelpers.TransformLines(input, (line, index) => $"{index}:{line}");
+        Assert.Equal("0:line1\r\n1:line2\r\n2:line3", result);
+    }
+
+    [Fact]
+    public void TransformLines_NullTransformer_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            LineEndingHelpers.TransformLines("line1", transformLine: null!));
+    }
+
+    #endregion
 }

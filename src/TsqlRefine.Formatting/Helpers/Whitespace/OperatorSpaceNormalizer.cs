@@ -62,27 +62,12 @@ public static class OperatorSpaceNormalizer
             return input;
         }
 
-        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
-        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
-        var result = new StringBuilder();
-
         // Create tracker outside the loop to preserve state across lines
         // (e.g., multi-line block comments)
         var tracker = new ProtectedRegionTracker();
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            // Line numbers are 1-based in ScriptDom
-            var processedLine = NormalizeLine(lines[i], tracker, positionMap, lineNumber: i + 1);
-            result.Append(processedLine);
-
-            if (i < lines.Length - 1)
-            {
-                result.Append(lineEnding);
-            }
-        }
-
-        return result.ToString();
+        return LineEndingHelpers.TransformLines(
+            input,
+            (line, lineIndex) => NormalizeLine(line, tracker, positionMap, lineNumber: lineIndex + 1));
     }
 
     private static string NormalizeLine(string line, ProtectedRegionTracker tracker, AstPositionMap? positionMap, int lineNumber)
