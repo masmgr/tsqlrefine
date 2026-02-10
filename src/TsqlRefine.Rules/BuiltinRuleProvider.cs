@@ -42,6 +42,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UnreachableCaseWhenRule(),
         new UnionTypeMismatchRule(),
         new DuplicateSelectColumnRule(),
+        new DuplicateInsertColumnRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),

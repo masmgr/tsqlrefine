@@ -70,6 +70,7 @@
     { "id": "duplicate-table-function-column", "enabled": true },
     { "id": "duplicate-table-variable-column", "enabled": true },
     { "id": "duplicate-select-column", "enabled": true },
+    { "id": "duplicate-insert-column", "enabled": true },
     { "id": "ban-legacy-join-syntax", "enabled": true },
     { "id": "no-top-without-order-by-in-select-into", "enabled": true },
     { "id": "dangerous-ddl", "enabled": true },

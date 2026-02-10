@@ -61,6 +61,7 @@
     { "id": "duplicate-column-definition", "enabled": true },
     { "id": "duplicate-view-column", "enabled": true },
     { "id": "duplicate-table-function-column", "enabled": true },
-    { "id": "duplicate-table-variable-column", "enabled": true }
+    { "id": "duplicate-table-variable-column", "enabled": true },
+    { "id": "duplicate-insert-column", "enabled": true }
   ]
 }

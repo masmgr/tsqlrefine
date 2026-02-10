@@ -13,9 +13,9 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 109
+- **Total Rules**: 110
 - **Fixable Rules**: 10 (9%)
-- **Error Severity**: 16 rules (15%)
+- **Error Severity**: 17 rules (15%)
 - **Warning Severity**: 58 rules (53%)
 - **Information Severity**: 35 rules (32%)
 
@@ -23,7 +23,7 @@
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 31 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 32 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
@@ -34,7 +34,7 @@
 
 ## Rules by Category
 
-### Correctness (31 rules)
+### Correctness (32 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -43,6 +43,7 @@
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
 | [avoid-null-comparison](correctness/avoid-null-comparison.md) | Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN. | Warning | No |
+| [duplicate-insert-column](correctness/duplicate-insert-column.md) | Detects duplicate column names in INSERT column lists; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
@@ -185,12 +186,13 @@
 
 ## Rules by Severity
 
-### Error (16 rules)
+### Error (17 rules)
 
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
 - [duplicate-column-definition](schema/duplicate-column-definition.md)
+- [duplicate-insert-column](correctness/duplicate-insert-column.md)
 - [duplicate-table-function-column](schema/duplicate-table-function-column.md)
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
