@@ -37,32 +37,48 @@ public static class InlineSpaceNormalizer
             return input;
         }
 
-        return LineEndingHelpers.TransformLines(input, (line, _) => NormalizeLine(line));
+        // Create tracker outside the loop to preserve state across lines
+        // (e.g., multi-line block comments)
+        var tracker = new ProtectedRegionTracker();
+        return LineEndingHelpers.TransformLines(input, (line, _) => NormalizeLine(line, tracker));
     }
 
-    private static string NormalizeLine(string line)
+    private static string NormalizeLine(string line, ProtectedRegionTracker tracker)
     {
         if (string.IsNullOrEmpty(line))
         {
             return line;
         }
 
-        var tracker = new ProtectedRegionTracker();
         var output = new StringBuilder();
         var needsSpaceAfterComma = false;
         var index = 0;
 
-        // Preserve leading whitespace - find first non-whitespace character
-        var leadingWhitespaceEnd = 0;
+        // If we're inside a protected region (e.g., multi-line block comment),
+        // consume characters until we exit the region
+        while (index < line.Length && tracker.IsInProtectedRegion())
+        {
+            if (tracker.TryConsume(line, output, ref index))
+            {
+                continue;
+            }
+
+            // Should not happen if TryConsume works correctly, but safeguard
+            output.Append(line[index]);
+            index++;
+        }
+
+        // Preserve leading whitespace (only relevant if we weren't in a protected region)
+        var leadingWhitespaceEnd = index;
         while (leadingWhitespaceEnd < line.Length && (line[leadingWhitespaceEnd] == ' ' || line[leadingWhitespaceEnd] == '\t'))
         {
             leadingWhitespaceEnd++;
         }
 
         // Copy leading whitespace as-is
-        if (leadingWhitespaceEnd > 0)
+        if (leadingWhitespaceEnd > index)
         {
-            output.Append(line.AsSpan(0, leadingWhitespaceEnd));
+            output.Append(line.AsSpan(index, leadingWhitespaceEnd - index));
             index = leadingWhitespaceEnd;
         }
 
