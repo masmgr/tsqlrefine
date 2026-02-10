@@ -41,6 +41,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidFloatForDecimalRule(),
         new UnreachableCaseWhenRule(),
         new UnionTypeMismatchRule(),
+        new DuplicateSelectColumnRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -83,6 +84,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DuplicateIndexColumnRule(),
         new DuplicateIndexDefinitionRule(),
         new DuplicateForeignKeyColumnRule(),
+        new DuplicateViewColumnRule(),
+        new DuplicateTableFunctionColumnRule(),
+        new DuplicateTableVariableColumnRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),

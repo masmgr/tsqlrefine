@@ -58,6 +58,9 @@
     { "id": "unreachable-case-when", "enabled": true },
     { "id": "union-type-mismatch", "enabled": true },
     { "id": "require-save-transaction-in-nested", "enabled": true },
-    { "id": "duplicate-column-definition", "enabled": true }
+    { "id": "duplicate-column-definition", "enabled": true },
+    { "id": "duplicate-view-column", "enabled": true },
+    { "id": "duplicate-table-function-column", "enabled": true },
+    { "id": "duplicate-table-variable-column", "enabled": true }
   ]
 }

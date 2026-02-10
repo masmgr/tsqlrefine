@@ -13,28 +13,28 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 105
-- **Fixable Rules**: 10 (10%)
-- **Error Severity**: 13 rules (12%)
-- **Warning Severity**: 57 rules (54%)
-- **Information Severity**: 35 rules (33%)
+- **Total Rules**: 109
+- **Fixable Rules**: 10 (9%)
+- **Error Severity**: 16 rules (15%)
+- **Warning Severity**: 58 rules (53%)
+- **Information Severity**: 35 rules (32%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 30 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 31 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
 | **Style** | 29 | Maintains code formatting and consistency |
 | **Transactions** | 10 | Ensures proper transaction handling and session settings |
-| **Schema** | 7 | Enforces database schema best practices |
+| **Schema** | 10 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Category
 
-### Correctness (30 rules)
+### Correctness (31 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -43,6 +43,7 @@
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
 | [avoid-null-comparison](correctness/avoid-null-comparison.md) | Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN. | Warning | No |
+| [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
@@ -161,7 +162,7 @@
 | [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
 | [uncommitted-transaction](transactions/uncommitted-transaction.md) | BEGIN TRANSACTION requires corresponding COMMIT TRANSACTION in the same file | Warning | No |
 
-### Schema (7 rules)
+### Schema (10 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -170,6 +171,9 @@
 | [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md) | Detects duplicate columns within a single FOREIGN KEY constraint definition. | Warning | No |
 | [duplicate-index-column](schema/duplicate-index-column.md) | Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition. | Warning | No |
 | [duplicate-index-definition](schema/duplicate-index-definition.md) | Detects multiple indexes or unique constraints within a table that have the exact same column composition. | Warning | No |
+| [duplicate-table-function-column](schema/duplicate-table-function-column.md) | Detects duplicate column names in table-valued function definitions; duplicate columns always cause a runtime error. | Error | No |
+| [duplicate-table-variable-column](schema/duplicate-table-variable-column.md) | Detects duplicate column names in DECLARE @table TABLE variable definitions; duplicate columns always cause a runtime error. | Error | No |
+| [duplicate-view-column](schema/duplicate-view-column.md) | Detects duplicate column names in CREATE VIEW definitions; duplicate columns always cause a runtime error. | Error | No |
 | [require-ms-description-for-table-definition-file](schema/require-ms-description-for-table-definition-file.md) | Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL. | Information | No |
 | [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md) | Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity. | Warning | No |
 
@@ -181,12 +185,15 @@
 
 ## Rules by Severity
 
-### Error (13 rules)
+### Error (16 rules)
 
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
 - [duplicate-column-definition](schema/duplicate-column-definition.md)
+- [duplicate-table-function-column](schema/duplicate-table-function-column.md)
+- [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
+- [duplicate-view-column](schema/duplicate-view-column.md)
 - [named-constraint](correctness/named-constraint.md)
 - [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
@@ -197,7 +204,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (57 rules)
+### Warning (58 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -217,6 +224,7 @@
 - [cross-database-transaction](safety/cross-database-transaction.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
 - [disallow-cursors](performance/disallow-cursors.md)
+- [duplicate-select-column](correctness/duplicate-select-column.md)
 - [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md)
 - [duplicate-index-column](schema/duplicate-index-column.md)
 - [duplicate-index-definition](schema/duplicate-index-definition.md)
