@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.
 /// </summary>
-public sealed class CatchSwallowingRule : IRule
+public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "catch-swallowing",
         Description: "Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.",
         Category: "Transactions",
@@ -16,25 +16,10 @@ public sealed class CatchSwallowingRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CatchSwallowingVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CatchSwallowingVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class CatchSwallowingVisitor : DiagnosticVisitorBase

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes
 /// </summary>
-public sealed class RequireColumnListForInsertValuesRule : IRule
+public sealed class RequireColumnListForInsertValuesRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-column-list-for-insert-values",
         Description: "INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class RequireColumnListForInsertValuesRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireColumnListForInsertValuesVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireColumnListForInsertValuesVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireColumnListForInsertValuesVisitor : DiagnosticVisitorBase

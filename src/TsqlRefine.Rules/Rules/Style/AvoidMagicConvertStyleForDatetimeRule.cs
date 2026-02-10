@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns.
 /// </summary>
-public sealed class AvoidMagicConvertStyleForDatetimeRule : IRule
+public sealed class AvoidMagicConvertStyleForDatetimeRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-magic-convert-style-for-datetime",
         Description: "Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns.",
         Category: "Style",
@@ -16,25 +16,10 @@ public sealed class AvoidMagicConvertStyleForDatetimeRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidMagicConvertStyleForDatetimeVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidMagicConvertStyleForDatetimeVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidMagicConvertStyleForDatetimeVisitor : DiagnosticVisitorBase

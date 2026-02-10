@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.
 /// </summary>
-public sealed class RequireMsDescriptionForTableDefinitionFileRule : IRule
+public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-ms-description-for-table-definition-file",
         Description: "Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireMsDescriptionForTableDefinitionFileVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireMsDescriptionForTableDefinitionFileVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireMsDescriptionForTableDefinitionFileVisitor : DiagnosticVisitorBase

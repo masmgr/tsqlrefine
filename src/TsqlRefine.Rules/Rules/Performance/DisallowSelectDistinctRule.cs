@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.
 /// </summary>
-public sealed class DisallowSelectDistinctRule : IRule
+public sealed class DisallowSelectDistinctRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "disallow-select-distinct",
         Description: "Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class DisallowSelectDistinctRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DisallowSelectDistinctVisitor(Metadata);
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DisallowSelectDistinctVisitor(Metadata);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DisallowSelectDistinctVisitor(RuleMetadata metadata) : DiagnosticVisitorBase

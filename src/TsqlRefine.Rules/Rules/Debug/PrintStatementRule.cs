@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Debug;
 /// <summary>
 /// Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging
 /// </summary>
-public sealed class PrintStatementRule : IRule
+public sealed class PrintStatementRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "print-statement",
         Description: "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
         Category: "Debug",
@@ -16,25 +16,10 @@ public sealed class PrintStatementRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new PrintStatementVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new PrintStatementVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class PrintStatementVisitor : DiagnosticVisitorBase

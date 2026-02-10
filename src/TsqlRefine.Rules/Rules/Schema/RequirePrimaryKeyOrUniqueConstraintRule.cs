@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.
 /// </summary>
-public sealed class RequirePrimaryKeyOrUniqueConstraintRule : IRule
+public sealed class RequirePrimaryKeyOrUniqueConstraintRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-primary-key-or-unique-constraint",
         Description: "Requires PRIMARY KEY or UNIQUE constraints for user tables; helps enforce correctness and supports indexing/relational integrity.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequirePrimaryKeyOrUniqueConstraintVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequirePrimaryKeyOrUniqueConstraintVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequirePrimaryKeyOrUniqueConstraintVisitor : DiagnosticVisitorBase

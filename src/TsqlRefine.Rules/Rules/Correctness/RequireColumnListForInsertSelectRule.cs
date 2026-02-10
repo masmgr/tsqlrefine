@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes
 /// </summary>
-public sealed class RequireColumnListForInsertSelectRule : IRule
+public sealed class RequireColumnListForInsertSelectRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-column-list-for-insert-select",
         Description: "INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class RequireColumnListForInsertSelectRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireColumnListForInsertSelectVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireColumnListForInsertSelectVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireColumnListForInsertSelectVisitor : DiagnosticVisitorBase

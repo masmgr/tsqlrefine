@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.
 /// </summary>
-public sealed class LeftJoinFilteredByWhereRule : IRule
+public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/left-join-filtered-by-where",
         Description: "Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new LeftJoinFilteredByWhereVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new LeftJoinFilteredByWhereVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class LeftJoinFilteredByWhereVisitor : DiagnosticVisitorBase

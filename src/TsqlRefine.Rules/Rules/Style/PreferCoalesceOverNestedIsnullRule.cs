@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior.
 /// </summary>
-public sealed class PreferCoalesceOverNestedIsnullRule : IRule
+public sealed class PreferCoalesceOverNestedIsnullRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "prefer-coalesce-over-nested-isnull",
         Description: "Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior.",
         Category: "Style",
@@ -16,25 +16,10 @@ public sealed class PreferCoalesceOverNestedIsnullRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new PreferCoalesceOverNestedIsnullVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new PreferCoalesceOverNestedIsnullVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class PreferCoalesceOverNestedIsnullVisitor : DiagnosticVisitorBase

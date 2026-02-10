@@ -3,9 +3,9 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
-public sealed class AliasScopeViolationRule : IRule
+public sealed class AliasScopeViolationRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/alias-scope-violation",
         Description: "Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent.",
         Category: "Correctness",
@@ -13,25 +13,10 @@ public sealed class AliasScopeViolationRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AliasScopeViolationVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AliasScopeViolationVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AliasScopeViolationVisitor : DiagnosticVisitorBase

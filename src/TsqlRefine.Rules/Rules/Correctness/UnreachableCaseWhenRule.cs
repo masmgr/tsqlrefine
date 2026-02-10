@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects duplicate WHEN conditions in CASE expressions that make later branches unreachable.
 /// </summary>
-public sealed class UnreachableCaseWhenRule : IRule
+public sealed class UnreachableCaseWhenRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "unreachable-case-when",
         Description: "Detects duplicate WHEN conditions in CASE expressions that make later branches unreachable.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class UnreachableCaseWhenRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new UnreachableCaseWhenVisitor(context.Ast.RawSql);
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new UnreachableCaseWhenVisitor(context.Ast.RawSql);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class UnreachableCaseWhenVisitor(string originalSql) : DiagnosticVisitorBase

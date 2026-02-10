@@ -7,9 +7,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// Detects duplicate column names in CREATE VIEW definitions.
 /// Duplicate columns in a VIEW always cause a runtime error.
 /// </summary>
-public sealed class DuplicateViewColumnRule : IRule
+public sealed class DuplicateViewColumnRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-view-column",
         Description: "Detects duplicate column names in CREATE VIEW definitions; duplicate columns always cause a runtime error.",
         Category: "Schema",
@@ -17,25 +17,10 @@ public sealed class DuplicateViewColumnRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateViewColumnVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateViewColumnVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateViewColumnVisitor : DiagnosticVisitorBase
@@ -62,30 +47,15 @@ public sealed class DuplicateViewColumnRule : IRule
 
         private void CheckExplicitColumnList(IList<Identifier> columns)
         {
-            var seen = new Dictionary<string, Identifier>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var column in columns)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(columns, column => column.Value))
             {
-                var name = column.Value;
-                if (name == null)
-                {
-                    continue;
-                }
-
-                if (seen.ContainsKey(name))
-                {
-                    AddDiagnostic(
-                        fragment: column,
-                        message: $"Column '{name}' appears more than once in the VIEW column list.",
-                        code: "duplicate-view-column",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
-                else
-                {
-                    seen[name] = column;
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item,
+                    message: $"Column '{duplicate.Name}' appears more than once in the VIEW column list.",
+                    code: "duplicate-view-column",
+                    category: "Schema",
+                    fixable: false
+                );
             }
         }
 

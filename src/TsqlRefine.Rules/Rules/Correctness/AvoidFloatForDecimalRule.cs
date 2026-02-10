@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision.
 /// </summary>
-public sealed class AvoidFloatForDecimalRule : IRule
+public sealed class AvoidFloatForDecimalRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-float-for-decimal",
         Description: "Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class AvoidFloatForDecimalRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidFloatVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidFloatVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidFloatVisitor : DiagnosticVisitorBase

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Security;
 /// <summary>
 /// Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection
 /// </summary>
-public sealed class AvoidExecDynamicSqlRule : IRule
+public sealed class AvoidExecDynamicSqlRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-exec-dynamic-sql",
         Description: "Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection",
         Category: "Security",
@@ -16,25 +16,10 @@ public sealed class AvoidExecDynamicSqlRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidExecDynamicSqlVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidExecDynamicSqlVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidExecDynamicSqlVisitor : DiagnosticVisitorBase

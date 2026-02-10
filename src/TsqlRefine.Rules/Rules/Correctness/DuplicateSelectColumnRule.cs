@@ -7,9 +7,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// Detects duplicate output column names in SELECT queries.
 /// This is a warning because some cases (e.g., intermediate queries) may be intentional.
 /// </summary>
-public sealed class DuplicateSelectColumnRule : IRule
+public sealed class DuplicateSelectColumnRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-select-column",
         Description: "Detects duplicate output column names in SELECT queries; may cause ambiguous column references.",
         Category: "Correctness",
@@ -17,25 +17,10 @@ public sealed class DuplicateSelectColumnRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateSelectColumnVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateSelectColumnVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateSelectColumnVisitor : DiagnosticVisitorBase

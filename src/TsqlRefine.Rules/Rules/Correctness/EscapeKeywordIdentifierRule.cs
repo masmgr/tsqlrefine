@@ -7,7 +7,7 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
 /// </summary>
-public sealed class EscapeKeywordIdentifierRule : IRule
+public sealed class EscapeKeywordIdentifierRule : DiagnosticVisitorRuleBase
 {
     private const string RuleId = "escape-keyword-identifier";
     private const string Category = "Correctness";
@@ -29,7 +29,7 @@ public sealed class EscapeKeywordIdentifierRule : IRule
         ],
         StringComparer.OrdinalIgnoreCase);
 
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
         Description: "Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.",
         Category: Category,
@@ -37,25 +37,10 @@ public sealed class EscapeKeywordIdentifierRule : IRule
         Fixable: true
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new KeywordIdentifierVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new KeywordIdentifierVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {

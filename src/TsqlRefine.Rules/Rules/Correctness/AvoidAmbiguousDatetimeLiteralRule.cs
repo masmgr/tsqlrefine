@@ -7,12 +7,12 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601.
 /// </summary>
-public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
+public sealed partial class AvoidAmbiguousDatetimeLiteralRule : DiagnosticVisitorRuleBase
 {
     [GeneratedRegex(@"^\s*\d{1,2}[/]\d{1,2}[/]\d{2,4}\s*$", RegexOptions.Compiled)]
     private static partial Regex SlashDatePattern();
 
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-ambiguous-datetime-literal",
         Description: "Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601.",
         Category: "Correctness",
@@ -20,25 +20,10 @@ public sealed partial class AvoidAmbiguousDatetimeLiteralRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AmbiguousDatetimeLiteralVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AmbiguousDatetimeLiteralVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AmbiguousDatetimeLiteralVisitor : DiagnosticVisitorBase

@@ -7,7 +7,7 @@ namespace TsqlRefine.Rules.Rules.Security;
 /// <summary>
 /// Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks.
 /// </summary>
-public sealed class AvoidDangerousProceduresRule : IRule
+public sealed class AvoidDangerousProceduresRule : DiagnosticVisitorRuleBase
 {
     private static readonly FrozenSet<string> s_dangerousProcedures = new[]
     {
@@ -29,7 +29,7 @@ public sealed class AvoidDangerousProceduresRule : IRule
         "sp_OAGetErrorInfo",
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-dangerous-procedures",
         Description: "Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks.",
         Category: "Security",
@@ -37,25 +37,10 @@ public sealed class AvoidDangerousProceduresRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidDangerousProceduresVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidDangerousProceduresVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidDangerousProceduresVisitor : DiagnosticVisitorBase

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Safety;
 /// <summary>
 /// Requires IF EXISTS on DROP statements for idempotent deployment scripts.
 /// </summary>
-public sealed class RequireDropIfExistsRule : IRule
+public sealed class RequireDropIfExistsRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-drop-if-exists",
         Description: "Requires IF EXISTS on DROP statements for idempotent deployment scripts.",
         Category: "Safety",
@@ -16,25 +16,10 @@ public sealed class RequireDropIfExistsRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireDropIfExistsVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireDropIfExistsVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireDropIfExistsVisitor : DiagnosticVisitorBase

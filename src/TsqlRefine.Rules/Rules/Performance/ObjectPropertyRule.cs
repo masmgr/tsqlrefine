@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead
 /// </summary>
-public sealed class ObjectPropertyRule : IRule
+public sealed class ObjectPropertyRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "object-property",
         Description: "Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class ObjectPropertyRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new ObjectPropertyVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new ObjectPropertyVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class ObjectPropertyVisitor : DiagnosticVisitorBase

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.
 /// </summary>
-public sealed class JoinConditionAlwaysTrueRule : IRule
+public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/join-condition-always-true",
         Description: "Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class JoinConditionAlwaysTrueRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new JoinConditionAlwaysTrueVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new JoinConditionAlwaysTrueVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class JoinConditionAlwaysTrueVisitor : DiagnosticVisitorBase

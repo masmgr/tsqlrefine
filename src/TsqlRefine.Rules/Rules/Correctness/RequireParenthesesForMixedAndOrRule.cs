@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion.
 /// </summary>
-public sealed class RequireParenthesesForMixedAndOrRule : IRule
+public sealed class RequireParenthesesForMixedAndOrRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-parentheses-for-mixed-and-or",
         Description: "Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class RequireParenthesesForMixedAndOrRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new MixedAndOrVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new MixedAndOrVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class MixedAndOrVisitor : DiagnosticVisitorBase

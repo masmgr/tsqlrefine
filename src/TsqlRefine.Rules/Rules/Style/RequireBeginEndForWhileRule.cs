@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited.
 /// </summary>
-public sealed class RequireBeginEndForWhileRule : IRule
+public sealed class RequireBeginEndForWhileRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-begin-end-for-while",
         Description: "Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited.",
         Category: "Style",
@@ -16,25 +16,10 @@ public sealed class RequireBeginEndForWhileRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireBeginEndForWhileVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireBeginEndForWhileVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireBeginEndForWhileVisitor : DiagnosticVisitorBase

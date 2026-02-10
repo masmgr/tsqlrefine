@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results.
 /// </summary>
-public sealed class StuffWithoutOrderByRule : IRule
+public sealed class StuffWithoutOrderByRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "stuff-without-order-by",
         Description: "Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class StuffWithoutOrderByRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new StuffWithoutOrderByVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new StuffWithoutOrderByVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class StuffWithoutOrderByVisitor : DiagnosticVisitorBase

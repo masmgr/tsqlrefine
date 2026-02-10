@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.
 /// </summary>
-public sealed class ForbidTop100PercentOrderByRule : IRule
+public sealed class ForbidTop100PercentOrderByRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "forbid-top-100-percent-order-by",
         Description: "Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class ForbidTop100PercentOrderByRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new ForbidTop100PercentOrderByVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new ForbidTop100PercentOrderByVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class ForbidTop100PercentOrderByVisitor : DiagnosticVisitorBase

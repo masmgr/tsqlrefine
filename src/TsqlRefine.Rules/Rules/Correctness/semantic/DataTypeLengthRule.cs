@@ -7,9 +7,9 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).
 /// </summary>
-public sealed class DataTypeLengthRule : IRule
+public sealed class DataTypeLengthRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/data-type-length",
         Description: "Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).",
         Category: "Correctness",
@@ -17,25 +17,10 @@ public sealed class DataTypeLengthRule : IRule
         Fixable: true
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DataTypeLengthVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DataTypeLengthVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.
 /// </summary>
-public sealed class DisallowSelectIntoRule : IRule
+public sealed class DisallowSelectIntoRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "disallow-select-into",
         Description: "Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class DisallowSelectIntoRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DisallowSelectIntoVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DisallowSelectIntoVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DisallowSelectIntoVisitor : DiagnosticVisitorBase

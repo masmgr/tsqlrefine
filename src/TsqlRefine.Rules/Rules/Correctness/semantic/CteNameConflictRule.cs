@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects CTE name conflicts with other CTEs or table aliases in the same scope.
 /// </summary>
-public sealed class CteNameConflictRule : IRule
+public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/cte-name-conflict",
         Description: "Detects CTE name conflicts with other CTEs or table aliases in the same scope.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class CteNameConflictRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CteNameConflictVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CteNameConflictVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class CteNameConflictVisitor : DiagnosticVisitorBase
@@ -95,31 +80,17 @@ public sealed class CteNameConflictRule : IRule
 
         private void CheckCteDuplicates(IList<CommonTableExpression> ctes)
         {
-            var seenCteNames = new Dictionary<string, CommonTableExpression>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var cte in ctes)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
+                ctes,
+                cte => cte.ExpressionName?.Value))
             {
-                var cteName = cte.ExpressionName?.Value;
-                if (cteName == null)
-                {
-                    continue;
-                }
-
-                if (seenCteNames.ContainsKey(cteName))
-                {
-                    // Found a duplicate CTE name
-                    AddDiagnostic(
-                        fragment: cte,
-                        message: $"Duplicate CTE name '{cteName}'. Each CTE name must be unique within a WITH clause.",
-                        code: "semantic/cte-name-conflict",
-                        category: "Correctness",
-                        fixable: false
-                    );
-                }
-                else
-                {
-                    seenCteNames[cteName] = cte;
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item,
+                    message: $"Duplicate CTE name '{duplicate.Name}'. Each CTE name must be unique within a WITH clause.",
+                    code: "semantic/cte-name-conflict",
+                    category: "Correctness",
+                    fixable: false
+                );
             }
         }
 
@@ -131,11 +102,11 @@ public sealed class CteNameConflictRule : IRule
         {
             // Collect CTE names
             var cteNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var cte in ctes)
+            foreach (var cteName in ctes.Select(static cte => cte.ExpressionName?.Value))
             {
-                if (cte.ExpressionName?.Value != null)
+                if (cteName != null)
                 {
-                    cteNames.Add(cte.ExpressionName.Value);
+                    cteNames.Add(cteName);
                 }
             }
 

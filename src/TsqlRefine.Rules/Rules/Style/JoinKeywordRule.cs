@@ -3,12 +3,12 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
-public sealed class JoinKeywordRule : IRule
+public sealed class JoinKeywordRule : DiagnosticVisitorRuleBase
 {
     private const string RuleId = "join-keyword";
     private const string Category = "Style";
 
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
         Description: "Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability",
         Category: Category,
@@ -16,25 +16,10 @@ public sealed class JoinKeywordRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CommaJoinVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CommaJoinVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     /// <summary>

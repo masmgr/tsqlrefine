@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Detects duplicate columns within a single FOREIGN KEY constraint definition.
 /// </summary>
-public sealed class DuplicateForeignKeyColumnRule : IRule
+public sealed class DuplicateForeignKeyColumnRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-foreign-key-column",
         Description: "Detects duplicate columns within a single FOREIGN KEY constraint definition.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class DuplicateForeignKeyColumnRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateForeignKeyColumnVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateForeignKeyColumnVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateForeignKeyColumnVisitor : DiagnosticVisitorBase
@@ -70,26 +55,15 @@ public sealed class DuplicateForeignKeyColumnRule : IRule
                 return;
             }
 
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var col in columns)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(columns, column => column.Value))
             {
-                var colName = col.Value;
-                if (colName == null)
-                {
-                    continue;
-                }
-
-                if (!seen.Add(colName))
-                {
-                    AddDiagnostic(
-                        fragment: col,
-                        message: $"Column '{colName}' is specified more than once in {constraintLabel}.",
-                        code: "duplicate-foreign-key-column",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item,
+                    message: $"Column '{duplicate.Name}' is specified more than once in {constraintLabel}.",
+                    code: "duplicate-foreign-key-column",
+                    category: "Schema",
+                    fixable: false
+                );
             }
         }
     }

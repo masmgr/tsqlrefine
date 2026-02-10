@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Security;
 /// <summary>
 /// Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access.
 /// </summary>
-public sealed class AvoidOpenrowsetOpendatasourceRule : IRule
+public sealed class AvoidOpenrowsetOpendatasourceRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-openrowset-opendatasource",
         Description: "Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access.",
         Category: "Security",
@@ -16,25 +16,10 @@ public sealed class AvoidOpenrowsetOpendatasourceRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new OpenrowsetOpendatasourceVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new OpenrowsetOpendatasourceVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class OpenrowsetOpendatasourceVisitor : DiagnosticVisitorBase

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently.
 /// </summary>
-public sealed class RequireTryCatchForTransactionRule : IRule
+public sealed class RequireTryCatchForTransactionRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-try-catch-for-transaction",
         Description: "Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently.",
         Category: "Transactions",
@@ -16,25 +16,10 @@ public sealed class RequireTryCatchForTransactionRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireTryCatchForTransactionVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireTryCatchForTransactionVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireTryCatchForTransactionVisitor : DiagnosticVisitorBase

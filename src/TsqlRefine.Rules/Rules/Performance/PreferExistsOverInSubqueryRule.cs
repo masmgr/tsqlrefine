@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Detects WHERE column IN (SELECT ...) patterns and recommends using EXISTS instead for better performance with large datasets.
 /// </summary>
-public sealed class PreferExistsOverInSubqueryRule : IRule
+public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "prefer-exists-over-in-subquery",
         Description: "Detects WHERE column IN (SELECT ...) patterns and recommends using EXISTS instead for better performance with large datasets.",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class PreferExistsOverInSubqueryRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new PreferExistsOverInSubqueryVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new PreferExistsOverInSubqueryVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class PreferExistsOverInSubqueryVisitor : PredicateAwareVisitorBase

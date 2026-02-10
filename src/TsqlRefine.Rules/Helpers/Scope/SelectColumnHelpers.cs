@@ -40,24 +40,11 @@ public static class SelectColumnHelpers
     /// </summary>
     public static IEnumerable<(SelectElement Element, string Name)> FindDuplicateColumns(IList<SelectElement> selectElements)
     {
-        var seen = new Dictionary<string, SelectElement>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(selectElements);
 
-        foreach (var element in selectElements)
+        foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(selectElements, GetOutputColumnName))
         {
-            var name = GetOutputColumnName(element);
-            if (name == null)
-            {
-                continue;
-            }
-
-            if (seen.ContainsKey(name))
-            {
-                yield return (element, name);
-            }
-            else
-            {
-                seen[name] = element;
-            }
+            yield return (duplicate.Item, duplicate.Name);
         }
     }
 

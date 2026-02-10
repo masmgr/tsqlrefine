@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects unreachable statements after a RETURN statement in stored procedures or functions.
 /// </summary>
-public sealed class ReturnAfterStatementsRule : IRule
+public sealed class ReturnAfterStatementsRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "semantic/return-after-statements",
         Description: "Detects unreachable statements after a RETURN statement in stored procedures or functions.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class ReturnAfterStatementsRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new ReturnAfterStatementsVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new ReturnAfterStatementsVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class ReturnAfterStatementsVisitor : DiagnosticVisitorBase

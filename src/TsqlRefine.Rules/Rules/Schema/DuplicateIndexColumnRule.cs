@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition.
 /// </summary>
-public sealed class DuplicateIndexColumnRule : IRule
+public sealed class DuplicateIndexColumnRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-index-column",
         Description: "Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class DuplicateIndexColumnRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateIndexColumnVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateIndexColumnVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateIndexColumnVisitor : DiagnosticVisitorBase
@@ -104,26 +89,15 @@ public sealed class DuplicateIndexColumnRule : IRule
                 return;
             }
 
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var col in columns)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(columns, GetColumnName))
             {
-                var colName = GetColumnName(col);
-                if (colName == null)
-                {
-                    continue;
-                }
-
-                if (!seen.Add(colName))
-                {
-                    AddDiagnostic(
-                        fragment: col,
-                        message: $"Column '{colName}' is specified more than once in {indexLabel}.",
-                        code: "duplicate-index-column",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item,
+                    message: $"Column '{duplicate.Name}' is specified more than once in {indexLabel}.",
+                    code: "duplicate-index-column",
+                    category: "Schema",
+                    fixable: false
+                );
             }
         }
 
