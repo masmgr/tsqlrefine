@@ -7,49 +7,48 @@ public sealed class RuleMetadataDocumentationUriTests
     private const string BaseDocUrl = "https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/";
 
     [Fact]
-    public void DocumentationUri_SimpleRuleId_ReturnsExpectedUri()
+    public void DocumentationUri_WhenNotProvided_IsNull()
     {
         var metadata = new RuleMetadata(
-            RuleId: "avoid-select-star",
-            Description: "Avoid SELECT *",
+            RuleId: "my-rule",
+            Description: "Test rule",
             Category: "Performance",
             DefaultSeverity: RuleSeverity.Warning,
             Fixable: false
         );
 
-        Assert.Equal(
-            new Uri($"{BaseDocUrl}performance/avoid-select-star.md"),
-            metadata.DocumentationUri);
+        Assert.Null(metadata.DocumentationUri);
     }
 
     [Fact]
-    public void DocumentationUri_SemanticRuleId_ReplacesSlashWithHyphen()
+    public void DocumentationUri_WhenExplicitlyNull_IsNull()
     {
         var metadata = new RuleMetadata(
-            RuleId: "semantic/undefined-alias",
-            Description: "Detects undefined aliases",
-            Category: "Correctness",
-            DefaultSeverity: RuleSeverity.Error,
-            Fixable: false
+            RuleId: "my-rule",
+            Description: "Test rule",
+            Category: "Performance",
+            DefaultSeverity: RuleSeverity.Warning,
+            Fixable: false,
+            DocumentationUri: null
         );
 
-        Assert.Equal(
-            new Uri($"{BaseDocUrl}correctness/semantic-undefined-alias.md"),
-            metadata.DocumentationUri);
+        Assert.Null(metadata.DocumentationUri);
     }
 
     [Fact]
-    public void DocumentationUri_CategoryIsCaseInsensitive()
+    public void DocumentationUri_CustomUri_IsPreserved()
     {
+        var customUri = new Uri("https://example.com/docs/my-rule.md");
         var metadata = new RuleMetadata(
-            RuleId: "test-rule",
-            Description: "Test",
-            Category: "Style",
-            DefaultSeverity: RuleSeverity.Information,
-            Fixable: false
+            RuleId: "my-rule",
+            Description: "Custom rule",
+            Category: "Performance",
+            DefaultSeverity: RuleSeverity.Warning,
+            Fixable: false,
+            DocumentationUri: customUri
         );
 
-        Assert.Contains("/style/", metadata.DocumentationUri.ToString());
+        Assert.Equal(customUri, metadata.DocumentationUri);
     }
 
     [Fact]
@@ -76,7 +75,7 @@ public sealed class RuleMetadataDocumentationUriTests
                 + rule.Metadata.Category.ToLowerInvariant() + "/"
                 + rule.Metadata.RuleId.Replace('/', '-') + ".md";
 
-            Assert.Equal(expected, rule.Metadata.DocumentationUri.ToString());
+            Assert.Equal(expected, rule.Metadata.DocumentationUri!.ToString());
         }
     }
 
