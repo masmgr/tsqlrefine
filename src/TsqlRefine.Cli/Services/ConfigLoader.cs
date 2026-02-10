@@ -66,67 +66,74 @@ public sealed class ConfigLoader
 
     public static Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
     {
-        // --rule が指定された場合、単一ルールのホワイトリストを作成
-        // バリデーションは ValidateRuleId で行う
+        // When --rule is specified, use a single-rule whitelist.
+        // Rule ID validation is performed by ValidateRuleIdForFix.
         if (!string.IsNullOrWhiteSpace(args.RuleId))
         {
             return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
         }
 
-        Ruleset? baseRuleset = null;
+        var baseRuleset = ResolveBaseRuleset(args, config);
 
-        // プリセット名の解決: CLI --preset > config preset
-        var presetName = args.Preset ?? config.Preset;
-        if (!string.IsNullOrWhiteSpace(presetName))
-        {
-            var path = Path.Combine(AppContext.BaseDirectory, "rulesets", $"{presetName}.json");
-
-            if (!File.Exists(path))
-            {
-                var available = DiscoverPresetNames();
-                var list = available.Count > 0
-                    ? string.Join(", ", available)
-                    : "none found";
-                throw new ConfigException(
-                    $"Unknown preset: '{presetName}'. Available presets: {list}");
-            }
-
-            baseRuleset = Ruleset.Load(path);
-        }
-        else
-        {
-            // カスタム ruleset パスの解決: CLI --ruleset > config ruleset
-            var rulesetPath = args.RulesetPath ?? config.Ruleset;
-
-            if (!string.IsNullOrWhiteSpace(rulesetPath))
-            {
-                if (!File.Exists(rulesetPath))
-                {
-                    throw new ConfigException($"Ruleset file not found: {rulesetPath}");
-                }
-
-                try
-                {
-                    baseRuleset = Ruleset.Load(rulesetPath);
-                }
-
-#pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
-                catch (Exception ex)
-#pragma warning restore CA1031
-                {
-                    throw new ConfigException($"Failed to parse ruleset: {ex.Message}");
-                }
-            }
-        }
-
-        // config.Rules のオーバーライドをマージ
         if (config.Rules is { Count: > 0 })
         {
-            baseRuleset ??= Ruleset.Empty;
-            baseRuleset = baseRuleset.WithOverrides(config.Rules);
+            return (baseRuleset ?? Ruleset.Empty).WithOverrides(config.Rules);
         }
 
         return baseRuleset;
+    }
+
+    private static Ruleset? ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
+    {
+        // Preset resolution priority: CLI --preset > config preset
+        var presetName = args.Preset ?? config.Preset;
+        if (!string.IsNullOrWhiteSpace(presetName))
+        {
+            return LoadPresetRuleset(presetName);
+        }
+
+        // Custom ruleset path resolution: CLI --ruleset > config ruleset
+        var rulesetPath = args.RulesetPath ?? config.Ruleset;
+        return string.IsNullOrWhiteSpace(rulesetPath)
+            ? null
+            : LoadRulesetFromPath(rulesetPath);
+    }
+
+    private static Ruleset LoadPresetRuleset(string presetName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "rulesets", $"{presetName}.json");
+
+        if (!File.Exists(path))
+        {
+            var available = DiscoverPresetNames();
+            var list = available.Count > 0
+                ? string.Join(", ", available)
+                : "none found";
+            throw new ConfigException(
+                $"Unknown preset: '{presetName}'. Available presets: {list}");
+        }
+
+        return Ruleset.Load(path);
+    }
+
+    private static Ruleset LoadRulesetFromPath(string rulesetPath)
+    {
+        if (!File.Exists(rulesetPath))
+        {
+            throw new ConfigException($"Ruleset file not found: {rulesetPath}");
+        }
+
+        try
+        {
+            return Ruleset.Load(rulesetPath);
+        }
+
+#pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            throw new ConfigException($"Failed to parse ruleset: {ex.Message}");
+        }
     }
 
     public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
@@ -160,8 +167,8 @@ public sealed class ConfigLoader
     }
 
     /// <summary>
-    /// fix コマンドで --rule オプションが指定された場合、ルールIDのバリデーションを行う。
-    /// 存在しないルールID、または Fixable でないルールの場合は ConfigException をスローする。
+    /// Validates --rule for fix command.
+    /// Throws ConfigException when the rule does not exist or is not fixable.
     /// </summary>
     public static void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
     {

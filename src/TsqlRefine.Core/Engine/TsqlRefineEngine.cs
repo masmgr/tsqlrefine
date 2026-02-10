@@ -61,46 +61,15 @@ public sealed class TsqlRefineEngine
 
     private static FileResult AnalyzeFile(SqlInput input, IReadOnlyList<IRule> rules, EngineOptions options)
     {
-        var diagnostics = new List<Diagnostic>();
-        var context = CreateContext(input, options);
-
-        // Parse disable directives from comments
-        var directives = DisableDirectiveParser.ParseDirectives(context.Tokens);
-        var totalLines = DisableDirectiveParser.CountLines(input.Text);
-        var disabledRanges = DisableDirectiveParser.BuildDisabledRanges(directives, totalLines);
-
-        // Convert parse errors to diagnostics
-        AppendParseErrors(context.Ast, diagnostics);
-
-        foreach (var rule in rules)
-        {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups: null, disabledRanges);
-        }
-
-        return new FileResult(input.FilePath, diagnostics);
+        var analysis = AnalyzeInput(input, rules, options, collectFixes: false);
+        return new FileResult(input.FilePath, analysis.Diagnostics);
     }
 
     private static FixedFileResult FixFile(SqlInput input, IReadOnlyList<IRule> rules, EngineOptions options)
     {
-        var context = CreateContext(input, options);
+        var analysis = AnalyzeInput(input, rules, options, collectFixes: true);
 
-        // Parse disable directives from comments
-        var directives = DisableDirectiveParser.ParseDirectives(context.Tokens);
-        var totalLines = DisableDirectiveParser.CountLines(input.Text);
-        var disabledRanges = DisableDirectiveParser.BuildDisabledRanges(directives, totalLines);
-
-        var diagnostics = new List<Diagnostic>();
-        var fixGroups = new List<DiagnosticFixGroup>();
-
-        // Convert parse errors to diagnostics
-        AppendParseErrors(context.Ast, diagnostics);
-
-        foreach (var rule in rules)
-        {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups, disabledRanges);
-        }
-
-        var fixOutcome = FixApplier.ApplyFixes(input.Text, fixGroups);
+        var fixOutcome = FixApplier.ApplyFixes(input.Text, analysis.FixGroups);
         var fixedInput = new SqlInput(input.FilePath, fixOutcome.FixedText);
         var finalDiagnostics = AnalyzeFile(fixedInput, rules, options).Diagnostics;
 
@@ -112,6 +81,38 @@ public sealed class TsqlRefineEngine
             AppliedFixes: fixOutcome.AppliedFixes,
             SkippedFixes: fixOutcome.SkippedFixes
         );
+    }
+
+    private static AnalysisPassResult AnalyzeInput(
+        SqlInput input,
+        IReadOnlyList<IRule> rules,
+        EngineOptions options,
+        bool collectFixes)
+    {
+        var context = CreateContext(input, options);
+        var disabledRanges = BuildDisabledRanges(input.Text, context.Tokens);
+        var diagnostics = new List<Diagnostic>();
+        var fixGroups = collectFixes ? new List<DiagnosticFixGroup>() : null;
+
+        // Convert parse errors to diagnostics.
+        AppendParseErrors(context.Ast, diagnostics);
+
+        foreach (var rule in rules)
+        {
+            AppendDiagnostics(rule, context, options, diagnostics, fixGroups, disabledRanges);
+        }
+
+        IReadOnlyList<DiagnosticFixGroup> collectedFixGroups =
+            fixGroups is null ? Array.Empty<DiagnosticFixGroup>() : fixGroups;
+
+        return new AnalysisPassResult(diagnostics, collectedFixGroups);
+    }
+
+    private static IReadOnlyList<DisabledRange> BuildDisabledRanges(string text, IReadOnlyList<Token> tokens)
+    {
+        var directives = DisableDirectiveParser.ParseDirectives(tokens);
+        var totalLines = DisableDirectiveParser.CountLines(text);
+        return DisableDirectiveParser.BuildDisabledRanges(directives, totalLines);
     }
 
 
@@ -314,5 +315,9 @@ public sealed class TsqlRefineEngine
             Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
         );
     }
+
+    private sealed record AnalysisPassResult(
+        IReadOnlyList<Diagnostic> Diagnostics,
+        IReadOnlyList<DiagnosticFixGroup> FixGroups);
 
 }
