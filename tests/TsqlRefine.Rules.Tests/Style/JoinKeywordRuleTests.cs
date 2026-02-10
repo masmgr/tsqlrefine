@@ -340,4 +340,26 @@ WHERE
         // Assert
         Assert.Empty(diagnostics);
     }
+
+    /// <summary>
+    /// Verifies that commas in EXECUTE procedure calls are not flagged as comma joins.
+    /// EXECUTE parameters use commas but are not part of a FROM clause.
+    /// </summary>
+    [Fact]
+    public void Analyze_ExecuteWithCommaParameters_NoDiagnostic()
+    {
+        // Arrange - EXECUTE with comma-separated parameters should not be flagged
+        var sql = @"
+EXECUTE PROCEDURE1
+    @param1 = 1,
+    @param2 = 2,
+    @param3 = 3;";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToList();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
 }
