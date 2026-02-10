@@ -9,7 +9,11 @@
         "type": "object",
         "properties": {
           "id": { "type": "string" },
-          "enabled": { "type": "boolean", "default": true }
+          "severity": {
+            "type": "string",
+            "enum": ["error", "warning", "info", "inherit", "none"],
+            "description": "Severity level: error, warning, info (enabled with specified severity), inherit (enabled with rule default severity), none (disabled)."
+          }
         },
         "required": ["id"],
         "additionalProperties": false

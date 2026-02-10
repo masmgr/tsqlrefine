@@ -72,12 +72,15 @@ public sealed record FormattingConfig(
 /// <param name="Preset">Name of a built-in preset ruleset (e.g. "recommended", "strict").</param>
 /// <param name="Plugins">List of plugin configurations to load.</param>
 /// <param name="Formatting">Formatting configuration options.</param>
+/// <param name="Rules">Per-rule severity overrides. Keys are rule IDs, values are severity strings
+/// ("error", "warning", "info", "inherit", "none").</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,
     string? Preset = null,
     IReadOnlyList<PluginConfig>? Plugins = null,
-    FormattingConfig? Formatting = null
+    FormattingConfig? Formatting = null,
+    IReadOnlyDictionary<string, string>? Rules = null
 )
 {
     /// <summary>
@@ -179,6 +182,21 @@ public sealed record TsqlRefineConfig(
             if (Formatting.MaxLineLength < 0)
             {
                 return $"Invalid maxLineLength: {Formatting.MaxLineLength}. Must be non-negative.";
+            }
+        }
+
+        if (Rules is not null)
+        {
+            foreach (var (ruleId, severity) in Rules)
+            {
+                try
+                {
+                    Config.Ruleset.ParseSeverityLevel(severity);
+                }
+                catch (ConfigValidationException)
+                {
+                    return $"Invalid severity '{severity}' for rule '{ruleId}'. Valid values: error, warning, info, inherit, none.";
+                }
             }
         }
 

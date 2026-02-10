@@ -1,14 +1,33 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Core.Config;
+
+/// <summary>
+/// Severity level for per-rule configuration.
+/// Combines enablement and severity into a single value.
+/// </summary>
+public enum RuleSeverityLevel
+{
+    /// <summary>Rule is disabled.</summary>
+    None,
+    /// <summary>Rule is enabled with its default severity.</summary>
+    Inherit,
+    /// <summary>Rule is enabled with Error severity.</summary>
+    Error,
+    /// <summary>Rule is enabled with Warning severity.</summary>
+    Warning,
+    /// <summary>Rule is enabled with Information severity.</summary>
+    Info
+}
 
 /// <summary>
 /// Represents a rule configuration within a ruleset.
 /// </summary>
 /// <param name="Id">The unique identifier of the rule.</param>
-/// <param name="Enabled">Whether the rule is enabled. Default is true.</param>
-public sealed record RulesetRule(string Id, bool Enabled = true);
+/// <param name="Severity">Severity level string: "error", "warning", "info", "inherit", or "none".</param>
+public sealed record RulesetRule(string Id, string? Severity = null);
 
 /// <summary>
 /// Represents a collection of rule configurations that determine which rules are enabled during analysis.
@@ -16,7 +35,7 @@ public sealed record RulesetRule(string Id, bool Enabled = true);
 public sealed class Ruleset
 {
     private readonly IReadOnlyList<RulesetRule> _rules;
-    private readonly Dictionary<string, bool>? _ruleCache;
+    private readonly Dictionary<string, RuleSeverityLevel>? _ruleCache;
     private readonly string? _singleRuleWhitelist;
 
     [JsonConstructor]
@@ -32,13 +51,26 @@ public sealed class Ruleset
         // Pre-build cache for O(1) lookup
         if (_rules.Count > 0)
         {
-            _ruleCache = new Dictionary<string, bool>(_rules.Count, StringComparer.OrdinalIgnoreCase);
+            _ruleCache = new Dictionary<string, RuleSeverityLevel>(_rules.Count, StringComparer.OrdinalIgnoreCase);
             foreach (var rule in _rules)
             {
                 // Later entries override earlier ones
-                _ruleCache[rule.Id] = rule.Enabled;
+                _ruleCache[rule.Id] = ResolveLevel(rule);
             }
         }
+    }
+
+    /// <summary>
+    /// Internal constructor for <see cref="WithOverrides"/> — accepts a pre-built cache directly.
+    /// </summary>
+    private Ruleset(
+        IReadOnlyList<RulesetRule> rules,
+        string? singleRuleWhitelist,
+        Dictionary<string, RuleSeverityLevel>? ruleCache)
+    {
+        _rules = rules;
+        _singleRuleWhitelist = singleRuleWhitelist;
+        _ruleCache = ruleCache;
     }
 
     /// <summary>
@@ -113,12 +145,81 @@ public sealed class Ruleset
             return string.Equals(_singleRuleWhitelist, ruleId, StringComparison.OrdinalIgnoreCase);
         }
 
+        return GetRuleSeverityLevel(ruleId) != RuleSeverityLevel.None;
+    }
+
+    /// <summary>
+    /// Gets the configured severity level for the specified rule.
+    /// Returns <see cref="RuleSeverityLevel.Inherit"/> if not configured (default enabled).
+    /// </summary>
+    public RuleSeverityLevel GetRuleSeverityLevel(string ruleId)
+    {
         if (_ruleCache is null)
         {
-            return true; // No rules defined, all rules enabled by default
+            return RuleSeverityLevel.Inherit;
         }
 
-        return _ruleCache.TryGetValue(ruleId, out var enabled) ? enabled : true;
+        return _ruleCache.TryGetValue(ruleId, out var level) ? level : RuleSeverityLevel.Inherit;
     }
-}
 
+    /// <summary>
+    /// Gets the severity override for the specified rule.
+    /// Returns <c>null</c> if no severity override is configured (i.e. Inherit, None, or not present).
+    /// </summary>
+    public DiagnosticSeverity? GetSeverityOverride(string ruleId)
+    {
+        var level = GetRuleSeverityLevel(ruleId);
+        return level switch
+        {
+            RuleSeverityLevel.Error => DiagnosticSeverity.Error,
+            RuleSeverityLevel.Warning => DiagnosticSeverity.Warning,
+            RuleSeverityLevel.Info => DiagnosticSeverity.Information,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Creates a new Ruleset by merging config-level rule overrides on top of this instance.
+    /// </summary>
+    public Ruleset WithOverrides(IReadOnlyDictionary<string, string> overrides)
+    {
+        var merged = _ruleCache is not null
+            ? new Dictionary<string, RuleSeverityLevel>(_ruleCache, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, RuleSeverityLevel>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (ruleId, severityStr) in overrides)
+        {
+            merged[ruleId] = ParseSeverityLevel(severityStr);
+        }
+
+        return new Ruleset(_rules, _singleRuleWhitelist, merged);
+    }
+
+    /// <summary>
+    /// Parses a severity level string into a <see cref="RuleSeverityLevel"/>.
+    /// </summary>
+    /// <param name="value">The severity string. Null or empty defaults to <see cref="RuleSeverityLevel.Inherit"/>.</param>
+    /// <returns>The parsed severity level.</returns>
+    /// <exception cref="ConfigValidationException">Thrown for unrecognized severity values.</exception>
+    internal static RuleSeverityLevel ParseSeverityLevel(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return RuleSeverityLevel.Inherit;
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "none" => RuleSeverityLevel.None,
+            "inherit" => RuleSeverityLevel.Inherit,
+            "error" => RuleSeverityLevel.Error,
+            "warning" => RuleSeverityLevel.Warning,
+            "info" => RuleSeverityLevel.Info,
+            _ => throw new ConfigValidationException(
+                $"Invalid severity '{value}'. Valid values: error, warning, info, inherit, none.")
+        };
+    }
+
+    private static RuleSeverityLevel ResolveLevel(RulesetRule rule) =>
+        ParseSeverityLevel(rule.Severity);
+}

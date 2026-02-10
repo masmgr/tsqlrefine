@@ -73,6 +73,8 @@ public sealed class ConfigLoader
             return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
         }
 
+        Ruleset? baseRuleset = null;
+
         // プリセット名の解決: CLI --preset > config preset
         var presetName = args.Preset ?? config.Preset;
         if (!string.IsNullOrWhiteSpace(presetName))
@@ -89,33 +91,42 @@ public sealed class ConfigLoader
                     $"Unknown preset: '{presetName}'. Available presets: {list}");
             }
 
-            return Ruleset.Load(path);
+            baseRuleset = Ruleset.Load(path);
         }
-
-        // カスタム ruleset パスの解決: CLI --ruleset > config ruleset
-        var rulesetPath = args.RulesetPath ?? config.Ruleset;
-
-        if (string.IsNullOrWhiteSpace(rulesetPath))
+        else
         {
-            return null;
-        }
+            // カスタム ruleset パスの解決: CLI --ruleset > config ruleset
+            var rulesetPath = args.RulesetPath ?? config.Ruleset;
 
-        if (!File.Exists(rulesetPath))
-        {
-            throw new ConfigException($"Ruleset file not found: {rulesetPath}");
-        }
+            if (!string.IsNullOrWhiteSpace(rulesetPath))
+            {
+                if (!File.Exists(rulesetPath))
+                {
+                    throw new ConfigException($"Ruleset file not found: {rulesetPath}");
+                }
 
-        try
-        {
-            return Ruleset.Load(rulesetPath);
-        }
+                try
+                {
+                    baseRuleset = Ruleset.Load(rulesetPath);
+                }
 
 #pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
-        catch (Exception ex)
+                catch (Exception ex)
 #pragma warning restore CA1031
-        {
-            throw new ConfigException($"Failed to parse ruleset: {ex.Message}");
+                {
+                    throw new ConfigException($"Failed to parse ruleset: {ex.Message}");
+                }
+            }
         }
+
+        // config.Rules のオーバーライドをマージ
+        if (config.Rules is { Count: > 0 })
+        {
+            baseRuleset ??= Ruleset.Empty;
+            baseRuleset = baseRuleset.WithOverrides(config.Rules);
+        }
+
+        return baseRuleset;
     }
 
     public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)

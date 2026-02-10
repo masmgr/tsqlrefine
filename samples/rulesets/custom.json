@@ -1,11 +1,11 @@
 {
   "rules": [
-    { "id": "avoid-select-star", "enabled": false },
-    { "id": "dml-without-where", "enabled": true },
-    { "id": "avoid-null-comparison", "enabled": true },
-    { "id": "require-parentheses-for-mixed-and-or", "enabled": false },
-    { "id": "avoid-nolock", "enabled": true },
-    { "id": "require-column-list-for-insert-values", "enabled": false },
-    { "id": "require-column-list-for-insert-select", "enabled": true }
+    { "id": "avoid-select-star", "severity": "none" },
+    { "id": "dml-without-where", "severity": "error" },
+    { "id": "avoid-null-comparison" },
+    { "id": "require-parentheses-for-mixed-and-or", "severity": "none" },
+    { "id": "avoid-nolock", "severity": "warning" },
+    { "id": "require-column-list-for-insert-values", "severity": "none" },
+    { "id": "require-column-list-for-insert-select" }
   ]
 }

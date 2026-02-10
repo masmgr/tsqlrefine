@@ -51,6 +51,15 @@
       },
       "default": []
     },
+    "rules": {
+      "type": "object",
+      "description": "Per-rule severity overrides. Keys are rule IDs, values are severity levels. Applied on top of the preset or ruleset.",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["error", "warning", "info", "inherit", "none"],
+        "description": "Severity level: error, warning, info (enabled with specified severity), inherit (enabled with rule default severity), none (disabled)."
+      }
+    },
     "formatting": {
       "type": "object",
       "description": "Formatting options for the SQL formatter",

@@ -18,6 +18,7 @@ Schemas are available under `schemas/`:
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
 - `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional).
+- `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
 
 > **Note**: If both `preset` and `ruleset` are specified, `preset` takes precedence. The `--preset` CLI option overrides both.
 
@@ -30,6 +31,10 @@ Example:
   "plugins": [
     { "path": "plugins/custom-rules.dll", "enabled": true }
   ],
+  "rules": {
+    "avoid-select-star": "none",
+    "dml-without-where": "error"
+  },
   "formatting": {
     "keywordCasing": "upper",
     "identifierCasing": "preserve",
@@ -89,15 +94,28 @@ The optional `formatting` section allows you to customize SQL formatting behavio
 
 ## Ruleset file
 
-A ruleset file declares a list of rules and whether they are enabled.
+A ruleset file declares a list of rules with their severity levels.
+
+Each rule entry uses a `severity` field to control enablement and severity:
+
+| Value | Enabled | Severity |
+|-------|---------|----------|
+| `"error"` | Yes | Error |
+| `"warning"` | Yes | Warning |
+| `"info"` | Yes | Information |
+| `"inherit"` | Yes | Rule's default severity |
+| `"none"` | No | — |
+
+When `severity` is omitted, it defaults to `"inherit"` (enabled with the rule's default severity).
 
 Example `custom-ruleset.json`:
 
 ```json
 {
   "rules": [
-    { "id": "avoid-null-comparison", "enabled": true },
-    { "id": "order-by-in-subquery", "enabled": false }
+    { "id": "avoid-null-comparison" },
+    { "id": "dml-without-where", "severity": "error" },
+    { "id": "order-by-in-subquery", "severity": "none" }
   ]
 }
 ```
@@ -132,4 +150,37 @@ tsqlrefine lint --preset strict file.sql
 - Use `strict-logic` for comprehensive correctness checking without style/cosmetic noise
 - Use `strict` for maximum enforcement when you want both logic and style consistency
 - Use `security-only` for security-focused code review or CI gates
+
+## Per-Rule Configuration
+
+The `rules` property in `tsqlrefine.json` lets you override individual rule severity on top of the selected preset or ruleset.
+
+```json
+{
+  "preset": "recommended",
+  "rules": {
+    "avoid-select-star": "none",
+    "dml-without-where": "error",
+    "avoid-nolock": "warning"
+  }
+}
+```
+
+Keys are rule IDs. Values are severity levels: `"error"`, `"warning"`, `"info"`, `"inherit"`, or `"none"`.
+
+| Value | Effect |
+|-------|--------|
+| `"error"` | Enable with Error severity |
+| `"warning"` | Enable with Warning severity |
+| `"info"` | Enable with Information severity |
+| `"inherit"` | Enable with the rule's default severity |
+| `"none"` | Disable the rule |
+
+### Resolution order
+
+Severity is resolved in this order (later overrides earlier):
+
+1. **Rule default** — severity defined in the rule code
+2. **Preset / ruleset file** — `severity` field in the ruleset entry
+3. **tsqlrefine.json `rules`** — per-rule overrides (highest priority)
 

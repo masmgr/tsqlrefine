@@ -1,4 +1,5 @@
 using System.Reflection;
+using TsqlRefine.Core.Config;
 using TsqlRefine.Core.Model;
 using TsqlRefine.PluginSdk;
 
@@ -114,7 +115,7 @@ public sealed class TsqlRefineEngine
     }
 
 
-    private static Diagnostic NormalizeDiagnostic(IRule rule, Diagnostic diagnostic)
+    private static Diagnostic NormalizeDiagnostic(IRule rule, Diagnostic diagnostic, Ruleset? ruleset)
     {
         var metadata = rule.Metadata;
         var originalData = diagnostic.Data;
@@ -126,9 +127,12 @@ public sealed class TsqlRefineEngine
             Fixable: originalData?.Fixable ?? metadata.Fixable
         );
 
+        var baseSeverity = diagnostic.Severity ?? Map(metadata.DefaultSeverity);
+        var finalSeverity = ruleset?.GetSeverityOverride(metadata.RuleId) ?? baseSeverity;
+
         return diagnostic with
         {
-            Severity = diagnostic.Severity ?? Map(metadata.DefaultSeverity),
+            Severity = finalSeverity,
             Code = diagnostic.Code ?? metadata.RuleId,
             Data = normalizedData
         };
@@ -247,7 +251,7 @@ public sealed class TsqlRefineEngine
         {
             foreach (var diagnostic in rule.Analyze(context) ?? Array.Empty<Diagnostic>())
             {
-                var normalized = NormalizeDiagnostic(rule, diagnostic);
+                var normalized = NormalizeDiagnostic(rule, diagnostic, options.Ruleset);
                 if (!IsAtOrAbove(normalized.Severity ?? DiagnosticSeverity.Warning, options.MinimumSeverity))
                 {
                     continue;
