@@ -123,6 +123,7 @@ public sealed class CommandExecutor
                 fixable = r.Metadata.Fixable,
                 minCompatLevel = r.Metadata.MinCompatLevel,
                 maxCompatLevel = r.Metadata.MaxCompatLevel,
+                documentationUri = r.Metadata.DocumentationUri.ToString(),
                 enabled = presetRuleset?.IsRuleEnabled(r.Metadata.RuleId)
             });
             await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);

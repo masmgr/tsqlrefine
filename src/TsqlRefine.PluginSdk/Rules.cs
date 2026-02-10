@@ -39,7 +39,22 @@ public sealed record RuleMetadata(
     bool Fixable,
     int? MinCompatLevel = null,
     int? MaxCompatLevel = null
-);
+)
+{
+    private const string BaseDocUrl = "https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/";
+
+    /// <summary>
+    /// Gets the URI pointing to this rule's documentation page on GitHub.
+    /// </summary>
+    public Uri DocumentationUri { get; } = BuildDocumentationUri(RuleId, Category);
+
+    private static Uri BuildDocumentationUri(string ruleId, string category)
+    {
+        var docFileName = ruleId.Replace('/', '-');
+        var categoryDir = category.ToLowerInvariant();
+        return new Uri($"{BaseDocUrl}{categoryDir}/{docFileName}.md");
+    }
+}
 
 /// <summary>
 /// Per-rule configuration settings. Currently empty, reserved for future use.
