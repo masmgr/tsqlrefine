@@ -34,11 +34,7 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(SelectStatement node)
         {
-            // Process CTEs first (they have their own independent scope)
-            if (node.WithCtesAndXmlNamespaces?.CommonTableExpressions != null)
-            {
-                ProcessCteDefinitions(node.WithCtesAndXmlNamespaces.CommonTableExpressions);
-            }
+            ProcessCommonTableExpressions(node.WithCtesAndXmlNamespaces);
 
             // Then process the main query
             ProcessQueryExpression(node.QueryExpression);
@@ -65,6 +61,14 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
             }
         }
 
+        private void ProcessCommonTableExpressions(WithCtesAndXmlNamespaces? withCtesAndXmlNamespaces)
+        {
+            if (withCtesAndXmlNamespaces?.CommonTableExpressions != null)
+            {
+                ProcessCteDefinitions(withCtesAndXmlNamespaces.CommonTableExpressions);
+            }
+        }
+
         private void ProcessQueryExpression(QueryExpression? queryExpression, HashSet<string>? cteNames = null)
         {
             switch (queryExpression)
@@ -85,21 +89,26 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(UpdateStatement node)
         {
+            ProcessCommonTableExpressions(node.WithCtesAndXmlNamespaces);
             ProcessUpdateSpecification(node.UpdateSpecification);
         }
 
         public override void ExplicitVisit(DeleteStatement node)
         {
+            ProcessCommonTableExpressions(node.WithCtesAndXmlNamespaces);
             ProcessDeleteSpecification(node.DeleteSpecification);
         }
 
         public override void ExplicitVisit(InsertStatement node)
         {
-            // Handle INSERT ... SELECT ... pattern
-            if (node.InsertSpecification?.InsertSource is SelectInsertSource selectSource)
-            {
-                ProcessQueryExpression(selectSource.Select);
-            }
+            ProcessCommonTableExpressions(node.WithCtesAndXmlNamespaces);
+            ProcessInsertSpecification(node.InsertSpecification);
+        }
+
+        public override void ExplicitVisit(MergeStatement node)
+        {
+            ProcessCommonTableExpressions(node.WithCtesAndXmlNamespaces);
+            ProcessMergeSpecification(node.MergeSpecification);
         }
 
         public override void ExplicitVisit(ScalarSubquery node)
@@ -140,7 +149,12 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
                 // Check WHERE clause
                 updateSpec.WhereClause?.Accept(_checker);
 
-                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessOutputClauses(
+                    updateSpec.OutputClause,
+                    updateSpec.OutputIntoClause,
+                    ["inserted", "deleted"]);
+
+                // Visit FROM clause including JOIN/APPLY expressions and derived tables
                 ProcessFromClause(updateSpec.FromClause);
             }
         }
@@ -154,9 +168,115 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
                 // Check WHERE clause
                 deleteSpec.WhereClause?.Accept(_checker);
 
-                // Visit FROM clause for JOIN conditions and derived tables
+                ProcessOutputClauses(
+                    deleteSpec.OutputClause,
+                    deleteSpec.OutputIntoClause,
+                    ["deleted"]);
+
+                // Visit FROM clause including JOIN/APPLY expressions and derived tables
                 ProcessFromClause(deleteSpec.FromClause);
             }
+        }
+
+        private void ProcessInsertSpecification(InsertSpecification? insertSpec)
+        {
+            if (insertSpec == null)
+            {
+                return;
+            }
+
+            // Handle INSERT ... SELECT ... pattern
+            if (insertSpec.InsertSource is SelectInsertSource selectSource)
+            {
+                ProcessQueryExpression(selectSource.Select);
+            }
+
+            ProcessOutputClauses(
+                insertSpec.OutputClause,
+                insertSpec.OutputIntoClause,
+                ["inserted"]);
+        }
+
+        private void ProcessMergeSpecification(MergeSpecification? mergeSpec)
+        {
+            if (mergeSpec == null)
+            {
+                return;
+            }
+
+            var declaredAliases = CollectMergeScopeAliases(mergeSpec);
+
+            using (_scopeManager.PushScope(declaredAliases))
+            {
+                // Check ON condition.
+                mergeSpec.SearchCondition?.Accept(_checker);
+
+                // Check action clauses.
+                foreach (var actionClause in mergeSpec.ActionClauses ?? [])
+                {
+                    actionClause.Accept(_checker);
+                }
+
+                // Validate source table reference including APPLY arguments.
+                ProcessTableReference(mergeSpec.TableReference);
+
+                ProcessOutputClauses(
+                    mergeSpec.OutputClause,
+                    mergeSpec.OutputIntoClause,
+                    ["inserted", "deleted"]);
+            }
+        }
+
+        private static HashSet<string> CollectMergeScopeAliases(MergeSpecification mergeSpec)
+        {
+            var declaredAliases = mergeSpec.TableReference != null
+                ? TableReferenceHelpers.CollectTableAliases([mergeSpec.TableReference])
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // MERGE target alias is represented separately from Target table reference.
+            if (!string.IsNullOrWhiteSpace(mergeSpec.TableAlias?.Value))
+            {
+                declaredAliases.Add(mergeSpec.TableAlias.Value);
+            }
+            else if (mergeSpec.Target != null)
+            {
+                var targetAliasOrTableName = TableReferenceHelpers.GetAliasOrTableName(mergeSpec.Target);
+                if (targetAliasOrTableName != null)
+                {
+                    declaredAliases.Add(targetAliasOrTableName);
+                }
+            }
+
+            return declaredAliases;
+        }
+
+        private void ProcessOutputClauses(
+            OutputClause? outputClause,
+            OutputIntoClause? outputIntoClause,
+            string[] pseudoAliases)
+        {
+            if (outputClause == null && outputIntoClause == null)
+            {
+                return;
+            }
+
+            using (_scopeManager.PushScope(CreateAliasSet(pseudoAliases)))
+            {
+                outputClause?.Accept(_checker);
+                outputIntoClause?.Accept(_checker);
+            }
+        }
+
+        private static HashSet<string> CreateAliasSet(string[] aliases)
+        {
+            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var alias in aliases)
+            {
+                result.Add(alias);
+            }
+
+            return result;
         }
 
         private static HashSet<string> CollectScopeAliases(
@@ -214,26 +334,14 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
 
             foreach (var tableRef in fromClause.TableReferences)
             {
-                // Check JOIN conditions using existing helper
-                TableReferenceHelpers.TraverseJoinConditions(tableRef, (_, condition) =>
-                    condition.Accept(_checker));
-
-                // Process derived tables (subqueries in FROM) with their own scope
-                TraverseDerivedTables(tableRef);
+                // Process full table reference tree (JOIN/APPLY arguments, derived tables, etc.)
+                ProcessTableReference(tableRef);
             }
         }
 
-        private void TraverseDerivedTables(TableReference tableRef)
+        private void ProcessTableReference(TableReference? tableRef)
         {
-            if (tableRef is QueryDerivedTable derivedTable)
-            {
-                ProcessQueryExpression(derivedTable.QueryExpression);
-            }
-            else if (tableRef is JoinTableReference join)
-            {
-                TraverseDerivedTables(join.FirstTableReference);
-                TraverseDerivedTables(join.SecondTableReference);
-            }
+            tableRef?.Accept(_checker);
         }
 
         private sealed class ColumnReferenceChecker : ScopeDelegatingVisitor
