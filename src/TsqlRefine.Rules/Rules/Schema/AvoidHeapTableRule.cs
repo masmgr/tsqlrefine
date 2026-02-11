@@ -40,7 +40,7 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
             if (!hasClusteredIndex)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "Table is created as a heap (no clustered index); consider adding a clustered index to improve performance and reduce fragmentation.",
                     code: "avoid-heap-table",
                     category: "Schema",

@@ -17,6 +17,31 @@ public static class ScriptDomHelpers
         tableName is not null && tableName.StartsWith('#');
 
     /// <summary>
+    /// Returns a range covering only the first token of the fragment.
+    /// Useful for narrowing diagnostics to the statement keyword (e.g. UPDATE, DELETE, MERGE).
+    /// </summary>
+    /// <param name="fragment">The TSqlFragment to get the first token range from.</param>
+    /// <returns>A Range covering only the first token, or the full fragment range as fallback.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when fragment is null.</exception>
+    public static TsqlRefine.PluginSdk.Range GetFirstTokenRange(TSqlFragment fragment)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+
+        if (fragment.ScriptTokenStream != null &&
+            fragment.FirstTokenIndex >= 0 &&
+            fragment.FirstTokenIndex < fragment.ScriptTokenStream.Count)
+        {
+            var firstToken = fragment.ScriptTokenStream[fragment.FirstTokenIndex];
+            var tokenText = firstToken.Text ?? string.Empty;
+            var start = new Position(firstToken.Line - 1, firstToken.Column - 1);
+            var end = new Position(firstToken.Line - 1, firstToken.Column - 1 + tokenText.Length);
+            return new TsqlRefine.PluginSdk.Range(start, end);
+        }
+
+        return GetRange(fragment);
+    }
+
+    /// <summary>
     /// Converts a TSqlFragment to a Range using its start/end token positions.
     /// Handles 1-based ScriptDom coordinates and converts to 0-based PluginSdk positions.
     /// </summary>

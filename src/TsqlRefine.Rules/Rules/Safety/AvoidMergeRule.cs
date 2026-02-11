@@ -27,7 +27,7 @@ public sealed class AvoidMergeRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(MergeStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Avoid MERGE statement due to known bugs (see KB 3180087, KB 4519788). MERGE can cause data corruption, race conditions, and non-deterministic behavior. Use explicit INSERT, UPDATE, DELETE statements with proper transaction handling instead.",
                 code: "avoid-merge",
                 category: "Safety",

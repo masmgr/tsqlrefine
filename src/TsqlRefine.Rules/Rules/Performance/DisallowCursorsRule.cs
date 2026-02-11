@@ -27,7 +27,7 @@ public sealed class DisallowCursorsRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(DeclareCursorStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Cursor declaration found. Use set-based operations instead for better performance.",
                 code: "disallow-cursors",
                 category: "Performance",

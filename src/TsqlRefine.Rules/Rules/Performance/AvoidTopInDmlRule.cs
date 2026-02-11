@@ -26,10 +26,10 @@ public sealed class AvoidTopInDmlRule : DiagnosticVisitorRuleBase
     {
         public override void ExplicitVisit(UpdateStatement node)
         {
-            if (node.UpdateSpecification?.TopRowFilter != null)
+            if (node.UpdateSpecification?.TopRowFilter is { } topRowFilter)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetRange(topRowFilter),
                     message: "Avoid TOP in UPDATE statements; results can be non-deterministic and lead to unpredictable modifications.",
                     code: "avoid-top-in-dml",
                     category: "Performance",
@@ -42,10 +42,10 @@ public sealed class AvoidTopInDmlRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(DeleteStatement node)
         {
-            if (node.DeleteSpecification?.TopRowFilter != null)
+            if (node.DeleteSpecification?.TopRowFilter is { } topRowFilter)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetRange(topRowFilter),
                     message: "Avoid TOP in DELETE statements; results can be non-deterministic and lead to unpredictable deletions.",
                     code: "avoid-top-in-dml",
                     category: "Performance",

@@ -27,7 +27,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(DropDatabaseStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "DROP DATABASE is a destructive operation that causes catastrophic data loss. This should be reviewed carefully.",
                 code: "dangerous-ddl",
                 category: "Safety",
@@ -53,7 +53,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
                         }
 
                         AddDiagnostic(
-                            fragment: node,
+                            range: ScriptDomHelpers.GetFirstTokenRange(node),
                             message: "DROP TABLE is a destructive operation that causes irreversible data loss. Ensure this is intentional.",
                             code: "dangerous-ddl",
                             category: "Safety",
@@ -71,7 +71,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(DropProcedureStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "DROP PROCEDURE is a destructive operation. Ensure this is intentional and the procedure is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
@@ -85,7 +85,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(DropViewStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "DROP VIEW is a destructive operation. Ensure this is intentional and the view definition is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
@@ -99,7 +99,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(DropFunctionStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "DROP FUNCTION is a destructive operation. Ensure this is intentional and the function definition is versioned/backed up.",
                 code: "dangerous-ddl",
                 category: "Safety",
@@ -113,7 +113,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(TruncateTableStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "TRUNCATE TABLE is a destructive operation that removes all rows and cannot be rolled back in all scenarios. Ensure this is intentional.",
                 code: "dangerous-ddl",
                 category: "Safety",
@@ -127,7 +127,7 @@ public sealed class DangerousDdlRule : DiagnosticVisitorRuleBase
         {
             // This covers DROP COLUMN and DROP CONSTRAINT
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "ALTER TABLE DROP is a destructive schema change that can cause data loss or break dependent objects. Ensure this is intentional.",
                 code: "dangerous-ddl",
                 category: "Safety",

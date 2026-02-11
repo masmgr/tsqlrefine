@@ -77,7 +77,7 @@ public sealed class DmlWithoutWhereRule : DiagnosticVisitorRuleBase
             }
 
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: $"{statementType} statement without WHERE clause can {actionVerb} all rows. Add a WHERE clause to limit the scope.",
                 code: "dml-without-where",
                 category: "Safety",

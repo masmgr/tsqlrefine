@@ -32,7 +32,7 @@ public sealed class RequireColumnListForInsertSelectRule : DiagnosticVisitorRule
                 if (columns is null || columns.Count == 0)
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        range: ScriptDomHelpers.GetFirstTokenRange(node),
                         message: "INSERT SELECT statement without explicit column list. Specify column names to prevent errors when table schema changes.",
                         code: "require-column-list-for-insert-select",
                         category: "Correctness",

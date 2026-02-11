@@ -39,7 +39,7 @@ public sealed class RequireTryCatchForTransactionRule : DiagnosticVisitorRuleBas
             if (_tryCatchStack.Count == 0 || !_tryCatchStack.Peek())
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "BEGIN TRANSACTION should be wrapped in a TRY/CATCH block to ensure errors trigger rollback and cleanup.",
                     code: "require-try-catch-for-transaction",
                     category: "Transactions",

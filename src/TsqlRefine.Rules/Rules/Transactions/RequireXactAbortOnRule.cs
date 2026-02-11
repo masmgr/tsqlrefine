@@ -52,7 +52,7 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScrip
                 if (!HasXactAbortBeforeStatement(node))
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        range: ScriptDomHelpers.GetFirstTokenRange(node),
                         message: "BEGIN TRANSACTION should be preceded by SET XACT_ABORT ON to ensure runtime errors reliably abort the transaction.",
                         code: "require-xact-abort-on",
                         category: "Transactions",

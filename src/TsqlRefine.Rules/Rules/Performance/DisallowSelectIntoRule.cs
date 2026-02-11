@@ -29,7 +29,7 @@ public sealed class DisallowSelectIntoRule : DiagnosticVisitorRuleBase
             if (node.Into != null)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetRange(node.Into),
                     message: "Avoid SELECT...INTO; it implicitly creates schema and can produce environment-dependent results. Use CREATE TABLE + INSERT instead.",
                     code: "disallow-select-into",
                     category: "Performance",
