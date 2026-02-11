@@ -119,7 +119,10 @@
     { "id": "require-throw-or-raiserror-in-catch" },
     { "id": "disallow-order-by-ordinal" },
     { "id": "require-schema-qualify-exec" },
-    { "id": "normalize-inequality-operator" }
+    { "id": "normalize-inequality-operator" },
+    { "id": "avoid-scalar-udf-in-query" },
+    { "id": "avoid-correlated-scalar-subquery-in-select" },
+    { "id": "avoid-or-on-different-columns" }
   ]
 }
 

@@ -36,7 +36,8 @@
     { "id": "avoid-select-star" },
     { "id": "avoid-not-in-with-null" },
     { "id": "require-parameterized-sp-executesql" },
-    { "id": "avoid-optional-parameter-pattern" }
+    { "id": "avoid-optional-parameter-pattern" },
+    { "id": "avoid-scalar-udf-in-query" }
   ]
 }
 

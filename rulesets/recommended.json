@@ -75,7 +75,9 @@
     { "id": "avoid-optional-parameter-pattern" },
     { "id": "disallow-order-by-ordinal" },
     { "id": "require-schema-qualify-exec" },
-    { "id": "normalize-inequality-operator" }
+    { "id": "normalize-inequality-operator" },
+    { "id": "avoid-scalar-udf-in-query" },
+    { "id": "avoid-correlated-scalar-subquery-in-select" }
   ]
 }
 

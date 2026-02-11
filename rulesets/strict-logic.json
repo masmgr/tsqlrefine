@@ -95,7 +95,10 @@
     { "id": "avoid-optional-parameter-pattern" },
     { "id": "require-throw-or-raiserror-in-catch" },
     { "id": "disallow-order-by-ordinal" },
-    { "id": "require-schema-qualify-exec" }
+    { "id": "require-schema-qualify-exec" },
+    { "id": "avoid-scalar-udf-in-query" },
+    { "id": "avoid-correlated-scalar-subquery-in-select" },
+    { "id": "avoid-or-on-different-columns" }
   ]
 }
 

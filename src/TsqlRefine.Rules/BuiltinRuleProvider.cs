@@ -75,6 +75,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new LikeLeadingWildcardRule(),
         new PreferExistsOverInSubqueryRule(),
         new AvoidOptionalParameterPatternRule(),
+        new AvoidScalarUdfInQueryRule(),
+        new AvoidCorrelatedScalarSubqueryInSelectRule(),
+        new AvoidOrOnDifferentColumnsRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
