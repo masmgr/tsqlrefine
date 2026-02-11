@@ -252,7 +252,7 @@ public sealed class CliInitTests
 
             Assert.Equal(0, code);
             var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
-            Assert.Contains("rulesets/strict.json", configContent);
+            Assert.Contains("\"preset\": \"strict\"", configContent);
         }
         finally
         {

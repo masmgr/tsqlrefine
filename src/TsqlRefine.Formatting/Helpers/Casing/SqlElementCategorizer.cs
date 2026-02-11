@@ -32,7 +32,7 @@ public static class SqlElementCategorizer
 
     private static readonly FrozenSet<string> EndOfTableContextKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "WHERE", "GROUP", "ORDER", "HAVING", "SELECT"
+        "WHERE", "GROUP", "ORDER", "HAVING", "SELECT", "ON", "SET", "VALUES"
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     private static FrozenDictionary<TSqlTokenType, TokenTypeCategory> BuildTokenTypeCategoryCache()
@@ -222,6 +222,7 @@ public static class SqlElementCategorizer
         if (IsTableContextKeyword(text))
         {
             context.InTableContext = true;
+            context.InTableColumnList = false;
             context.AfterAsKeyword = false;
             context.InExecuteContext = false;
             context.ExecuteProcedureProcessed = false;
@@ -231,10 +232,21 @@ public static class SqlElementCategorizer
         else if (IsEndOfTableContextKeyword(text))
         {
             context.InTableContext = false;
+            context.InTableColumnList = false;
             context.AfterAsKeyword = false;
             context.InExecuteContext = false;
             context.ExecuteProcedureProcessed = false;
             context.LastSchemaName = null;
+        }
+        // Track parenthesized column lists while in table context
+        // Examples: CREATE TABLE (...), INSERT INTO t (...)
+        else if (context.InTableContext && text.Equals("(", StringComparison.Ordinal))
+        {
+            context.InTableColumnList = true;
+        }
+        else if (context.InTableContext && text.Equals(")", StringComparison.Ordinal))
+        {
+            context.InTableColumnList = false;
         }
         // Track AS keyword
         else if (text.Equals("AS", StringComparison.OrdinalIgnoreCase))
@@ -260,6 +272,7 @@ public static class SqlElementCategorizer
             context.InExecuteContext = false;
             context.ExecuteProcedureProcessed = false;
             context.LastSchemaName = null;
+            context.InTableColumnList = false;
         }
     }
 
@@ -378,6 +391,12 @@ public static class SqlElementCategorizer
         var prevText = previousToken?.Text ?? "";
         var nextText = nextToken?.Text ?? "";
 
+        // Parenthesized column lists in table context should be treated as columns.
+        if (context.InTableColumnList)
+        {
+            return IdentifierContext.Column;
+        }
+
         // Schema context: identifier followed by dot
         // Example: dbo. | sys. | staging.
         if (nextText == ".")
@@ -391,10 +410,16 @@ public static class SqlElementCategorizer
         // 3. Identifier preceded by dot (after schema)
         // Examples: FROM users, orders | JOIN Orders | FROM dbo.Users
         if (context.InTableContext ||
-            IsTableContextKeyword(prevText) ||
-            prevText == ".")
+            IsTableContextKeyword(prevText))
         {
             return IdentifierContext.Table;
+        }
+
+        // Identifier after dot is typically a column outside table context
+        // (e.g., u.UserId in SELECT/WHERE clauses).
+        if (prevText == ".")
+        {
+            return IdentifierContext.Column;
         }
 
         // Column context: everything else (most common case)

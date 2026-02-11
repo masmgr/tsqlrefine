@@ -71,9 +71,11 @@ public sealed class RequireColumnListForInsertSelectRuleTests
         Assert.Single(diagnostics);
         var diagnostic = diagnostics[0];
 
-        // INSERT keyword starts at position 0,0
+        // INSERT keyword starts at position 0,0 and ends at 0,6 ("INSERT" is 6 characters)
         Assert.Equal(0, diagnostic.Range.Start.Line);
         Assert.Equal(0, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(6, diagnostic.Range.End.Character);
     }
 
     [Fact]

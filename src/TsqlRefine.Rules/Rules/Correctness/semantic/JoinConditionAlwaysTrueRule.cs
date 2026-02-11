@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.
 /// </summary>
-public sealed class JoinConditionAlwaysTrueRule : IRule
+public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/join-condition-always-true",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-join-condition-always-true",
         Description: "Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new JoinConditionAlwaysTrueVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new JoinConditionAlwaysTrueVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class JoinConditionAlwaysTrueVisitor : DiagnosticVisitorBase
@@ -57,9 +42,9 @@ public sealed class JoinConditionAlwaysTrueRule : IRule
                 if (AreLiteralsEqual(comparison.FirstExpression, comparison.SecondExpression))
                 {
                     AddDiagnostic(
-                        fragment: join,
+                        fragment: comparison,
                         message: "JOIN condition is always true (e.g., '1=1'). This likely indicates a missing or incorrect join condition and may result in a Cartesian product.",
-                        code: "semantic/join-condition-always-true",
+                        code: "semantic-join-condition-always-true",
                         category: "Correctness",
                         fixable: false
                     );
@@ -72,9 +57,9 @@ public sealed class JoinConditionAlwaysTrueRule : IRule
                     ColumnReferenceHelpers.AreColumnReferencesEqual(firstCol, secondCol))
                 {
                     AddDiagnostic(
-                        fragment: join,
+                        fragment: comparison,
                         message: "JOIN condition compares a column to itself (e.g., 't1.col = t1.col'). This is always true and likely incorrect.",
-                        code: "semantic/join-condition-always-true",
+                        code: "semantic-join-condition-always-true",
                         category: "Correctness",
                         fixable: false
                     );

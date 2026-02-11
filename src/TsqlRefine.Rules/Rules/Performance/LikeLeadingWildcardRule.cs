@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans.
 /// </summary>
-public sealed class LikeLeadingWildcardRule : IRule
+public sealed class LikeLeadingWildcardRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "like-leading-wildcard",
         Description: "Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans.",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class LikeLeadingWildcardRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new LikeLeadingWildcardVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new LikeLeadingWildcardVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class LikeLeadingWildcardVisitor : PredicateAwareVisitorBase

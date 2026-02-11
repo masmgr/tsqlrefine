@@ -15,6 +15,7 @@ namespace TsqlRefine.Cli.Services;
 /// </summary>
 public sealed class CommandExecutor
 {
+    private const string StdinFilePath = "<stdin>";
     private readonly InputReader _inputReader;
 
     public CommandExecutor(InputReader inputReader)
@@ -36,7 +37,7 @@ public sealed class CommandExecutor
         var preset = args.Preset ?? "recommended";
         var config = new TsqlRefineConfig(
             CompatLevel: args.CompatLevel ?? 150,
-            Ruleset: $"rulesets/{preset}.json",
+            Preset: preset,
             Plugins: Array.Empty<PluginConfig>()
         );
 
@@ -122,6 +123,7 @@ public sealed class CommandExecutor
                 fixable = r.Metadata.Fixable,
                 minCompatLevel = r.Metadata.MinCompatLevel,
                 maxCompatLevel = r.Metadata.MaxCompatLevel,
+                documentationUri = r.Metadata.DocumentationUri?.ToString(),
                 enabled = presetRuleset?.IsRuleEnabled(r.Metadata.RuleId)
             });
             await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
@@ -263,28 +265,22 @@ public sealed class CommandExecutor
             var options = FormattingOptionsResolver.ResolveFormattingOptions(args, input);
             var formatted = SqlFormatter.Format(input.Text, options);
 
-            if (input.FilePath != "<stdin>")
-            {
-                var hasChanges = !string.Equals(input.Text, formatted, StringComparison.Ordinal);
-                if (hasChanges)
-                {
-                    var encoding = read.WriteEncodings.TryGetValue(input.FilePath, out var resolved)
-                        ? resolved
-                        : Encoding.UTF8;
-                    await File.WriteAllTextAsync(input.FilePath, formatted, encoding);
-                    if (!args.Quiet)
-                        await stderr.WriteLineAsync($"Formatted: {input.FilePath}");
-                }
-                else
-                {
-                    if (!args.Quiet)
-                        await stderr.WriteLineAsync($"Unchanged: {input.FilePath}");
-                }
-            }
-            else
+            if (IsStdinInput(input.FilePath))
             {
                 await stdout.WriteAsync(formatted);
+                continue;
             }
+
+            var hasChanges = await TryWriteFileIfChangedAsync(
+                input.FilePath,
+                input.Text,
+                formatted,
+                read.WriteEncodings);
+
+            var message = hasChanges
+                ? $"Formatted: {input.FilePath}"
+                : $"Unchanged: {input.FilePath}";
+            await WriteInfoAsync(stderr, args.Quiet, message);
         }
 
         return 0;
@@ -326,32 +322,27 @@ public sealed class CommandExecutor
         {
             foreach (var file in result.Files)
             {
-                if (file.FilePath != "<stdin>")
-                {
-                    var hasChanges = !string.Equals(file.OriginalText, file.FixedText, StringComparison.Ordinal);
-                    if (hasChanges)
-                    {
-                        var encoding = read.WriteEncodings.TryGetValue(file.FilePath, out var resolved)
-                            ? resolved
-                            : Encoding.UTF8;
-                        await File.WriteAllTextAsync(file.FilePath, file.FixedText, encoding);
-                        if (!args.Quiet)
-                        {
-                            var fixCount = file.AppliedFixes.Count;
-                            var fixLabel = fixCount == 1 ? "fix" : "fixes";
-                            await stderr.WriteLineAsync($"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
-                        }
-                    }
-                    else
-                    {
-                        if (!args.Quiet)
-                            await stderr.WriteLineAsync($"Unchanged: {file.FilePath}");
-                    }
-                }
-                else
+                if (IsStdinInput(file.FilePath))
                 {
                     await stdout.WriteAsync(file.FixedText);
+                    continue;
                 }
+
+                var hasChanges = await TryWriteFileIfChangedAsync(
+                    file.FilePath,
+                    file.OriginalText,
+                    file.FixedText,
+                    read.WriteEncodings);
+
+                if (!hasChanges)
+                {
+                    await WriteInfoAsync(stderr, args.Quiet, $"Unchanged: {file.FilePath}");
+                    continue;
+                }
+
+                var fixCount = file.AppliedFixes.Count;
+                var fixLabel = fixCount == 1 ? "fix" : "fixes";
+                await WriteInfoAsync(stderr, args.Quiet, $"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
             }
         }
 
@@ -469,6 +460,30 @@ public sealed class CommandExecutor
 
         return false;
     }
+
+    private static bool IsStdinInput(string filePath) =>
+        string.Equals(filePath, StdinFilePath, StringComparison.Ordinal);
+
+    private static async Task<bool> TryWriteFileIfChangedAsync(
+        string filePath,
+        string originalText,
+        string updatedText,
+        IReadOnlyDictionary<string, Encoding> writeEncodings)
+    {
+        if (string.Equals(originalText, updatedText, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var encoding = writeEncodings.TryGetValue(filePath, out var resolved)
+            ? resolved
+            : Encoding.UTF8;
+        await File.WriteAllTextAsync(filePath, updatedText, encoding);
+        return true;
+    }
+
+    private static Task WriteInfoAsync(TextWriter stderr, bool quiet, string message) =>
+        quiet ? Task.CompletedTask : stderr.WriteLineAsync(message);
 
     private readonly record struct LintDiagnosticsSummary(
         int TotalDiagnostics,

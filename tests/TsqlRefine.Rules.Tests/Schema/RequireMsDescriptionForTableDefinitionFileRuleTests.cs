@@ -243,6 +243,34 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
     }
 
     [Fact]
+    public void Analyze_TempTableWithoutDescriptions_ReturnsNoDiagnostic()
+    {
+        // Arrange
+        const string sql = "CREATE TABLE #Temp (id INT, name VARCHAR(100));";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GlobalTempTableWithoutDescriptions_ReturnsNoDiagnostic()
+    {
+        // Arrange
+        const string sql = "CREATE TABLE ##GlobalTemp (id INT, name VARCHAR(100));";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Metadata_HasCorrectProperties()
     {
         // Assert

@@ -66,43 +66,66 @@ public sealed class ConfigLoader
 
     public static Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
     {
-        // --rule が指定された場合、単一ルールのホワイトリストを作成
-        // バリデーションは ValidateRuleId で行う
+        // When --rule is specified, use a single-rule whitelist.
+        // Rule ID validation is performed by ValidateRuleIdForFix.
         if (!string.IsNullOrWhiteSpace(args.RuleId))
         {
             return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
         }
 
-        var path = args.RulesetPath ?? config.Ruleset;
+        var baseRuleset = ResolveBaseRuleset(args, config);
 
-        if (!string.IsNullOrWhiteSpace(args.Preset))
+        if (config.Rules is { Count: > 0 })
         {
-            path = Path.Combine(Directory.GetCurrentDirectory(), "rulesets", $"{args.Preset}.json");
-
-            if (!File.Exists(path))
-            {
-                var available = DiscoverPresetNames();
-                var list = available.Count > 0
-                    ? string.Join(", ", available)
-                    : "none found";
-                throw new ConfigException(
-                    $"Unknown preset: '{args.Preset}'. Available presets: {list}");
-            }
+            return (baseRuleset ?? Ruleset.Empty).WithOverrides(config.Rules);
         }
 
-        if (string.IsNullOrWhiteSpace(path))
+        return baseRuleset;
+    }
+
+    private static Ruleset? ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
+    {
+        // Preset resolution priority: CLI --preset > config preset
+        var presetName = args.Preset ?? config.Preset;
+        if (!string.IsNullOrWhiteSpace(presetName))
         {
-            return null;
+            return LoadPresetRuleset(presetName);
         }
+
+        // Custom ruleset path resolution: CLI --ruleset > config ruleset
+        var rulesetPath = args.RulesetPath ?? config.Ruleset;
+        return string.IsNullOrWhiteSpace(rulesetPath)
+            ? null
+            : LoadRulesetFromPath(rulesetPath);
+    }
+
+    private static Ruleset LoadPresetRuleset(string presetName)
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "rulesets", $"{presetName}.json");
 
         if (!File.Exists(path))
         {
-            throw new ConfigException($"Ruleset file not found: {path}");
+            var available = DiscoverPresetNames();
+            var list = available.Count > 0
+                ? string.Join(", ", available)
+                : "none found";
+            throw new ConfigException(
+                $"Unknown preset: '{presetName}'. Available presets: {list}");
+        }
+
+        return Ruleset.Load(path);
+    }
+
+    private static Ruleset LoadRulesetFromPath(string rulesetPath)
+    {
+        if (!File.Exists(rulesetPath))
+        {
+            throw new ConfigException($"Ruleset file not found: {rulesetPath}");
         }
 
         try
         {
-            return Ruleset.Load(path);
+            return Ruleset.Load(rulesetPath);
         }
 
 #pragma warning disable CA1031 // Wrap ruleset parse failures into ConfigException
@@ -144,8 +167,8 @@ public sealed class ConfigLoader
     }
 
     /// <summary>
-    /// fix コマンドで --rule オプションが指定された場合、ルールIDのバリデーションを行う。
-    /// 存在しないルールID、または Fixable でないルールの場合は ConfigException をスローする。
+    /// Validates --rule for fix command.
+    /// Throws ConfigException when the rule does not exist or is not fixable.
     /// </summary>
     public static void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
     {
@@ -213,7 +236,7 @@ public sealed class ConfigLoader
 
     private static List<string> DiscoverPresetNames()
     {
-        var rulesetsDir = Path.Combine(Directory.GetCurrentDirectory(), "rulesets");
+        var rulesetsDir = Path.Combine(AppContext.BaseDirectory, "rulesets");
         if (!Directory.Exists(rulesetsDir))
         {
             return [];

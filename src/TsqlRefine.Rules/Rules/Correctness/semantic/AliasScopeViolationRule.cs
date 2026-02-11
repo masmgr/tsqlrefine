@@ -3,35 +3,20 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
-public sealed class AliasScopeViolationRule : IRule
+public sealed class AliasScopeViolationRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/alias-scope-violation",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-alias-scope-violation",
         Description: "Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AliasScopeViolationVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AliasScopeViolationVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AliasScopeViolationVisitor : DiagnosticVisitorBase
@@ -89,7 +74,7 @@ public sealed class AliasScopeViolationRule : IRule
                             AddDiagnostic(
                                 fragment: node,
                                 message: $"Derived table references alias '{alias}' which is defined later in the outer query's FROM clause. This may cause unexpected behavior or errors. Consider reordering tables or using explicit correlation.",
-                                code: "semantic/alias-scope-violation",
+                                code: "semantic-alias-scope-violation",
                                 category: "Correctness",
                                 fixable: false
                             );

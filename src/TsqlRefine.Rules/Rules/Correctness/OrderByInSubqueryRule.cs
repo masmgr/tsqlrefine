@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it.
 /// </summary>
-public sealed class OrderByInSubqueryRule : IRule
+public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "order-by-in-subquery",
         Description: "Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class OrderByInSubqueryRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new OrderByInSubqueryVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new OrderByInSubqueryVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class OrderByInSubqueryVisitor : DiagnosticVisitorBase

@@ -24,8 +24,8 @@ public sealed class InsertColumnCountMismatchRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/insert-column-count-mismatch");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-insert-column-count-mismatch");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -52,7 +52,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var rule = new InsertColumnCountMismatchRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -65,7 +65,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var sql = "INSERT INTO t (a, b, c) VALUES (1, 2), (3, 4)";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch").ToArray();
 
         Assert.NotEmpty(diagnostics);
     }
@@ -77,7 +77,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var sql = "INSERT INTO t (a, b) VALUES (1, 2), (3, 4), (5, 6)";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -89,7 +89,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var sql = "INSERT INTO t (a, b) SELECT (SELECT x FROM t2), y, z FROM t3";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/insert-column-count-mismatch").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch").ToArray();
 
         // 3 select elements vs 2 columns
         Assert.NotEmpty(diagnostics);
@@ -114,7 +114,7 @@ public sealed class InsertColumnCountMismatchRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/insert-column-count-mismatch"
+            Code: "semantic-insert-column-count-mismatch"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -127,7 +127,7 @@ public sealed class InsertColumnCountMismatchRuleTests
     {
         var rule = new InsertColumnCountMismatchRule();
 
-        Assert.Equal("semantic/insert-column-count-mismatch", rule.Metadata.RuleId);
+        Assert.Equal("semantic-insert-column-count-mismatch", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

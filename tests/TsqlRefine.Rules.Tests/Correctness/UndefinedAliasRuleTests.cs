@@ -19,8 +19,8 @@ public sealed class UndefinedAliasRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/undefined-alias");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/undefined-alias"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-undefined-alias");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-undefined-alias"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -40,7 +40,7 @@ public sealed class UndefinedAliasRuleTests
         var rule = new UndefinedAliasRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -52,7 +52,7 @@ public sealed class UndefinedAliasRuleTests
         var sql = "SELECT x.id FROM users u;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         Assert.Single(diagnostics);
         var diagnostic = diagnostics[0];
@@ -66,7 +66,7 @@ public sealed class UndefinedAliasRuleTests
         var sql = "SELECT a.id, b.name FROM users u WHERE c.active = 1;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         Assert.Equal(3, diagnostics.Length);
         Assert.Contains(diagnostics, d => d.Message.Contains("a"));
@@ -81,7 +81,7 @@ public sealed class UndefinedAliasRuleTests
         var sql = "SELECT MyAlias.id FROM users myalias;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         // Should not report error because MyAlias matches myalias (case-insensitive)
         Assert.Empty(diagnostics);
@@ -94,7 +94,7 @@ public sealed class UndefinedAliasRuleTests
         var sql = "SELECT users.id FROM dbo.users;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         // Should recognize 'users' as the implicit table name
         Assert.Empty(diagnostics);
@@ -107,7 +107,7 @@ public sealed class UndefinedAliasRuleTests
         var sql = "SELECT users.id FROM users u;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         // When alias 'u' is provided, 'users' is not a valid qualifier
         Assert.Single(diagnostics);
@@ -122,7 +122,7 @@ public sealed class UndefinedAliasRuleTests
 SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         // Only the second query should have an error (x is undefined)
         Assert.Single(diagnostics);
@@ -139,7 +139,7 @@ SELECT x.id FROM orders o;";
         var sql = "SELECT u.id FROM (SELECT id FROM users u) AS u;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         // Inner 'u' is a table alias in subquery
         // Outer 'u' is the subquery alias (derived table)
@@ -156,7 +156,7 @@ SELECT x.id FROM orders o;";
         var sql = "SELECT * FROM users u JOIN orders o ON x.id = o.user_id;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         Assert.Single(diagnostics);
         Assert.Contains("x", diagnostics[0].Message);
@@ -169,7 +169,7 @@ SELECT x.id FROM orders o;";
         var sql = "SELECT u.id FROM users u ORDER BY x.created_at;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/undefined-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-undefined-alias").ToArray();
 
         Assert.Single(diagnostics);
         Assert.Contains("x", diagnostics[0].Message);
@@ -194,7 +194,7 @@ SELECT x.id FROM orders o;";
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 7), new Position(0, 11)),
             Message: "test",
-            Code: "semantic/undefined-alias"
+            Code: "semantic-undefined-alias"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -207,7 +207,7 @@ SELECT x.id FROM orders o;";
     {
         var rule = new UndefinedAliasRule();
 
-        Assert.Equal("semantic/undefined-alias", rule.Metadata.RuleId);
+        Assert.Equal("semantic-undefined-alias", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -225,7 +225,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -240,7 +240,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -258,7 +258,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -273,7 +273,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -291,7 +291,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -306,7 +306,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -323,7 +323,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -338,7 +338,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -358,7 +358,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -374,7 +374,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -392,7 +392,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -407,7 +407,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -425,7 +425,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -440,7 +440,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -457,7 +457,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -472,7 +472,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -495,7 +495,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -517,7 +517,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -535,7 +535,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -558,7 +558,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -579,7 +579,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -600,7 +600,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -621,7 +621,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -636,7 +636,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -658,7 +658,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -673,7 +673,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -690,7 +690,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -705,7 +705,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -728,7 +728,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -744,7 +744,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -762,7 +762,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -777,7 +777,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -795,7 +795,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -810,7 +810,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -827,10 +827,123 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
+    }
+
+    #endregion
+
+    #region APPLY Argument Tests
+
+    [Theory]
+    [InlineData("SELECT t.id, s.value FROM table1 t CROSS APPLY STRING_SPLIT(t.csv, ',') AS s;")]
+    [InlineData("SELECT t.id, j.value FROM table1 t OUTER APPLY OPENJSON(t.json_col) AS j;")]
+    [InlineData("SELECT t.id, f.value FROM table1 t CROSS APPLY dbo.f_func(t.id) AS f;")]
+    public void Analyze_WithApplyArguments_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("SELECT t.id, s.value FROM table1 t CROSS APPLY STRING_SPLIT(x.csv, ',') AS s;", "x")]
+    [InlineData("SELECT t.id, j.value FROM table1 t OUTER APPLY OPENJSON(x.json_col) AS j;", "x")]
+    [InlineData("SELECT t.id, f.value FROM table1 t CROSS APPLY dbo.f_func(x.id) AS f;", "x")]
+    public void Analyze_WithApplyArguments_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    #endregion
+
+    #region OUTPUT Clause Tests
+
+    [Theory]
+    [InlineData("UPDATE t SET t.value = t.value + 1 OUTPUT inserted.id, deleted.id FROM target t;")]
+    [InlineData("DELETE t OUTPUT deleted.id FROM target t;")]
+    [InlineData("INSERT INTO target(id) OUTPUT inserted.id VALUES (1);")]
+    [InlineData("UPDATE t SET t.value = 1 OUTPUT inserted.id INTO audit(id) FROM target t;")]
+    public void Analyze_WithOutputClause_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("UPDATE t SET t.value = t.value + 1 OUTPUT x.id FROM target t;", "x")]
+    [InlineData("DELETE t OUTPUT x.id FROM target t;", "x")]
+    [InlineData("INSERT INTO target(id) OUTPUT x.id VALUES (1);", "x")]
+    [InlineData("UPDATE t SET t.value = 1 OUTPUT x.id INTO audit(id) FROM target t;", "x")]
+    public void Analyze_WithOutputClause_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    #endregion
+
+    #region MERGE Statement Tests
+
+    [Theory]
+    [InlineData("MERGE target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.value = s.value;")]
+    [InlineData("MERGE target USING source s ON target.id = s.id WHEN MATCHED THEN UPDATE SET value = s.value;")]
+    [InlineData("MERGE target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.value = s.value OUTPUT inserted.id, deleted.id, s.id;")]
+    public void Analyze_WithMerge_ValidAliases_ReturnsEmpty(string sql)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("MERGE target t USING source s ON x.id = s.id WHEN MATCHED THEN UPDATE SET t.value = s.value;", "x")]
+    [InlineData("MERGE target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.value = x.value;", "x")]
+    [InlineData("MERGE target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.value = s.value OUTPUT x.id;", "x")]
+    public void Analyze_WithMerge_UndefinedAlias_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
     }
 
     #endregion
@@ -848,7 +961,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -864,7 +977,25 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
+            .ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains(expectedAlias, diagnostics[0].Message);
+    }
+
+    [Theory]
+    [InlineData("WITH CTE AS (SELECT x.id FROM users) UPDATE target SET id = 1;", "x")]
+    [InlineData("WITH CTE AS (SELECT x.id FROM users) DELETE FROM target;", "x")]
+    [InlineData("WITH CTE AS (SELECT x.id FROM users) INSERT INTO target(id) SELECT id FROM CTE;", "x")]
+    [InlineData("WITH CTE AS (SELECT x.id FROM users) MERGE target t USING source s ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.id = s.id;", "x")]
+    public void Analyze_WithCteInDml_UndefinedAliasInDefinition_ReturnsDiagnostic(string sql, string expectedAlias)
+    {
+        var rule = new UndefinedAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -881,7 +1012,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -896,7 +1027,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -927,7 +1058,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -949,7 +1080,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Single(diagnostics);
@@ -970,7 +1101,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);
@@ -988,7 +1119,7 @@ SELECT x.id FROM orders o;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = rule.Analyze(context)
-            .Where(d => d.Data?.RuleId == "semantic/undefined-alias")
+            .Where(d => d.Data?.RuleId == "semantic-undefined-alias")
             .ToArray();
 
         Assert.Empty(diagnostics);

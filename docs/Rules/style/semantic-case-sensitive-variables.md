@@ -113,7 +113,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/case-sensitive-variables", "enabled": false }
+    { "id": "semantic-case-sensitive-variables", "enabled": false }
   ]
 }
 ```

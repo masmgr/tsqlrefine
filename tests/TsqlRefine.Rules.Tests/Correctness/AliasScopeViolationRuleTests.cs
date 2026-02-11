@@ -20,8 +20,8 @@ public sealed class AliasScopeViolationRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/alias-scope-violation");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/alias-scope-violation"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-alias-scope-violation");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-alias-scope-violation"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -45,7 +45,7 @@ public sealed class AliasScopeViolationRuleTests
         var rule = new AliasScopeViolationRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/alias-scope-violation").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-alias-scope-violation").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -58,7 +58,7 @@ public sealed class AliasScopeViolationRuleTests
         var sql = "SELECT * FROM orders o WHERE EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = o.id)";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/alias-scope-violation").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-alias-scope-violation").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -82,7 +82,7 @@ public sealed class AliasScopeViolationRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/alias-scope-violation"
+            Code: "semantic-alias-scope-violation"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -95,7 +95,7 @@ public sealed class AliasScopeViolationRuleTests
     {
         var rule = new AliasScopeViolationRule();
 
-        Assert.Equal("semantic/alias-scope-violation", rule.Metadata.RuleId);
+        Assert.Equal("semantic-alias-scope-violation", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

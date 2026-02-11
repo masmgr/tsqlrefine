@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects CTE name conflicts with other CTEs or table aliases in the same scope.
 /// </summary>
-public sealed class CteNameConflictRule : IRule
+public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/cte-name-conflict",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-cte-name-conflict",
         Description: "Detects CTE name conflicts with other CTEs or table aliases in the same scope.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CteNameConflictVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CteNameConflictVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class CteNameConflictVisitor : DiagnosticVisitorBase
@@ -95,31 +80,17 @@ public sealed class CteNameConflictRule : IRule
 
         private void CheckCteDuplicates(IList<CommonTableExpression> ctes)
         {
-            var seenCteNames = new Dictionary<string, CommonTableExpression>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var cte in ctes)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
+                ctes,
+                cte => cte.ExpressionName?.Value))
             {
-                var cteName = cte.ExpressionName?.Value;
-                if (cteName == null)
-                {
-                    continue;
-                }
-
-                if (seenCteNames.ContainsKey(cteName))
-                {
-                    // Found a duplicate CTE name
-                    AddDiagnostic(
-                        fragment: cte,
-                        message: $"Duplicate CTE name '{cteName}'. Each CTE name must be unique within a WITH clause.",
-                        code: "semantic/cte-name-conflict",
-                        category: "Correctness",
-                        fixable: false
-                    );
-                }
-                else
-                {
-                    seenCteNames[cteName] = cte;
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item.ExpressionName ?? (TSqlFragment)duplicate.Item,
+                    message: $"Duplicate CTE name '{duplicate.Name}'. Each CTE name must be unique within a WITH clause.",
+                    code: "semantic-cte-name-conflict",
+                    category: "Correctness",
+                    fixable: false
+                );
             }
         }
 
@@ -131,11 +102,11 @@ public sealed class CteNameConflictRule : IRule
         {
             // Collect CTE names
             var cteNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var cte in ctes)
+            foreach (var cteName in ctes.Select(static cte => cte.ExpressionName?.Value))
             {
-                if (cte.ExpressionName?.Value != null)
+                if (cteName != null)
                 {
-                    cteNames.Add(cte.ExpressionName.Value);
+                    cteNames.Add(cteName);
                 }
             }
 
@@ -157,9 +128,9 @@ public sealed class CteNameConflictRule : IRule
                     if (cteNames.Contains(aliasName))
                     {
                         AddDiagnostic(
-                            fragment: targetReference,
+                            fragment: namedTable.Alias,
                             message: $"Table alias '{aliasName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                            code: "semantic/cte-name-conflict",
+                            code: "semantic-cte-name-conflict",
                             category: "Correctness",
                             fixable: false
                         );
@@ -171,9 +142,9 @@ public sealed class CteNameConflictRule : IRule
                     if (namedTable.SchemaObject.SchemaIdentifier != null && cteNames.Contains(tableName))
                     {
                         AddDiagnostic(
-                            fragment: targetReference,
+                            fragment: namedTable.SchemaObject.BaseIdentifier,
                             message: $"Table alias '{tableName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                            code: "semantic/cte-name-conflict",
+                            code: "semantic-cte-name-conflict",
                             category: "Correctness",
                             fixable: false
                         );
@@ -182,14 +153,14 @@ public sealed class CteNameConflictRule : IRule
             }
         }
 
-        private void ReportConflicts(IEnumerable<(string Alias, TableReference TableRef)> conflicts)
+        private void ReportConflicts(IEnumerable<(string Alias, TSqlFragment Target)> conflicts)
         {
-            foreach (var (alias, tableRef) in conflicts)
+            foreach (var (alias, target) in conflicts)
             {
                 AddDiagnostic(
-                    fragment: tableRef,
+                    fragment: target,
                     message: $"Table alias '{alias}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                    code: "semantic/cte-name-conflict",
+                    code: "semantic-cte-name-conflict",
                     category: "Correctness",
                     fixable: false
                 );
@@ -223,11 +194,11 @@ public sealed class CteNameConflictRule : IRule
             }
         }
 
-        private static List<(string Alias, TableReference TableRef)> CollectConflictingAliases(
+        private static List<(string Alias, TSqlFragment Target)> CollectConflictingAliases(
             IList<TableReference> tableRefs,
             HashSet<string> cteNames)
         {
-            var result = new List<(string, TableReference)>();
+            var result = new List<(string, TSqlFragment)>();
 
             foreach (var tableRef in tableRefs)
             {
@@ -246,7 +217,7 @@ public sealed class CteNameConflictRule : IRule
                         var aliasName = namedTable.Alias.Value;
                         if (cteNames.Contains(aliasName))
                         {
-                            result.Add((aliasName, tableRef));
+                            result.Add((aliasName, namedTable.Alias));
                         }
                     }
                     else
@@ -258,17 +229,16 @@ public sealed class CteNameConflictRule : IRule
                         // Only flag if there's schema qualification (schema.table) that matches a CTE
                         if (namedTable.SchemaObject.SchemaIdentifier != null && cteNames.Contains(tableName))
                         {
-                            result.Add((tableName, tableRef));
+                            result.Add((tableName, namedTable.SchemaObject.BaseIdentifier));
                         }
                     }
                 }
                 else if (tableRef is QueryDerivedTable derivedTable)
                 {
                     // Subquery aliases can conflict with CTEs
-                    var alias = derivedTable.Alias?.Value;
-                    if (alias != null && cteNames.Contains(alias))
+                    if (derivedTable.Alias != null && cteNames.Contains(derivedTable.Alias.Value))
                     {
-                        result.Add((alias, tableRef));
+                        result.Add((derivedTable.Alias.Value, derivedTable.Alias));
                     }
                 }
             }

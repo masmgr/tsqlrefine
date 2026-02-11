@@ -21,8 +21,8 @@ public sealed class ReturnAfterStatementsRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/return-after-statements");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/return-after-statements"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-return-after-statements");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-return-after-statements"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -42,7 +42,7 @@ public sealed class ReturnAfterStatementsRuleTests
         var rule = new ReturnAfterStatementsRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/return-after-statements").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-return-after-statements").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -54,7 +54,7 @@ public sealed class ReturnAfterStatementsRuleTests
         var sql = "BEGIN RETURN; SELECT 1; SELECT 2; UPDATE t SET x=1; END";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/return-after-statements").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-return-after-statements").ToArray();
 
         // Should report the first unreachable statement (others are in the same block)
         Assert.NotEmpty(diagnostics);
@@ -67,7 +67,7 @@ public sealed class ReturnAfterStatementsRuleTests
         var sql = "CREATE PROC p AS BEGIN SELECT 1; RETURN; SELECT 2; END";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/return-after-statements").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-return-after-statements").ToArray();
 
         Assert.NotEmpty(diagnostics);
     }
@@ -91,7 +91,7 @@ public sealed class ReturnAfterStatementsRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/return-after-statements"
+            Code: "semantic-return-after-statements"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -104,7 +104,7 @@ public sealed class ReturnAfterStatementsRuleTests
     {
         var rule = new ReturnAfterStatementsRule();
 
-        Assert.Equal("semantic/return-after-statements", rule.Metadata.RuleId);
+        Assert.Equal("semantic-return-after-statements", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

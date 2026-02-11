@@ -37,6 +37,9 @@ dotnet_diagnostic.CA1724.severity = none
 # CA1848: Use LoggerMessage delegates
 dotnet_diagnostic.CA1848.severity = none
 
+# CA1502: Avoid excessive complexity (cyclomatic complexity > 25)
+dotnet_diagnostic.CA1502.severity = warning
+
 # CA1852: Seal internal types
 dotnet_diagnostic.CA1852.severity = warning
 

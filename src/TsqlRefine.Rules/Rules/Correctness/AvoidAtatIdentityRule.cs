@@ -1,3 +1,4 @@
+using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
@@ -19,23 +20,45 @@ public sealed class AvoidAtatIdentityRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        for (var i = 0; i < context.Tokens.Count; i++)
+        if (context.Ast.Fragment is null)
         {
-            var token = context.Tokens[i];
+            yield break;
+        }
 
-            if (token.Text.Equals("@@IDENTITY", StringComparison.OrdinalIgnoreCase))
-            {
-                var end = TokenHelpers.GetTokenEnd(token);
-                yield return new Diagnostic(
-                    Range: new TsqlRefine.PluginSdk.Range(token.Start, end),
-                    Message: "Avoid @@IDENTITY; it can return values from triggers. Use SCOPE_IDENTITY() or OUTPUT clause instead.",
-                    Code: "avoid-atat-identity",
-                    Data: new DiagnosticData("avoid-atat-identity", "Correctness", false)
-                );
-            }
+        var visitor = new AtatIdentityVisitor();
+        context.Ast.Fragment.Accept(visitor);
+
+        foreach (var diagnostic in visitor.Diagnostics)
+        {
+            yield return diagnostic;
         }
     }
 
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
+
+    private sealed class AtatIdentityVisitor : TSqlFragmentVisitor
+    {
+        private readonly List<Diagnostic> _diagnostics = new();
+
+        public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
+
+        public override void ExplicitVisit(GlobalVariableExpression node)
+        {
+            if (!string.Equals(node.Name, "@@IDENTITY", StringComparison.OrdinalIgnoreCase))
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            _diagnostics.Add(new Diagnostic(
+                Range: ScriptDomHelpers.GetRange(node),
+                Message: "Avoid @@IDENTITY; it can return values from triggers. Use SCOPE_IDENTITY() or OUTPUT clause instead.",
+                Code: "avoid-atat-identity",
+                Data: new DiagnosticData("avoid-atat-identity", "Correctness", false)
+            ));
+
+            base.ExplicitVisit(node);
+        }
+    }
 }

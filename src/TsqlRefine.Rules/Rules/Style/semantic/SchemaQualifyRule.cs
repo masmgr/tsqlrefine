@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 /// <summary>
 /// Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.
 /// </summary>
-public sealed class SchemaQualifyRule : IRule
+public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/schema-qualify",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-schema-qualify",
         Description: "Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new SchemaQualifyVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new SchemaQualifyVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class SchemaQualifyVisitor : DiagnosticVisitorBase
@@ -53,7 +38,7 @@ public sealed class SchemaQualifyRule : IRule
             var tableName = schemaObject.BaseIdentifier.Value;
 
             // Skip temp tables (#temp, ##global)
-            if (tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(tableName))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -70,7 +55,7 @@ public sealed class SchemaQualifyRule : IRule
             AddDiagnostic(
                 fragment: schemaObject,
                 message: $"Table reference '{tableName}' should include schema qualification (e.g., dbo.{tableName}) for clarity and to avoid naming conflicts.",
-                code: "semantic/schema-qualify",
+                code: "semantic-schema-qualify",
                 category: "Style",
                 fixable: false
             );

@@ -61,17 +61,44 @@ For complete rule listings, statistics, and cross-reference tables, see [REFEREN
 
 Rules can be configured in `tsqlrefine.json` or via ruleset files. See [Configuration Documentation](../configuration.md) for details.
 
-### Disabling Rules
+### Configuring Rules
 
-To disable specific rules, use a ruleset file:
+To disable or change the severity of specific rules, use a ruleset file or the `rules` property in `tsqlrefine.json`.
+
+**Ruleset file** (array format):
 
 ```json
 {
   "rules": [
-    { "id": "avoid-select-star", "enabled": false }
+    { "id": "avoid-select-star", "severity": "none" },
+    { "id": "dml-without-where", "severity": "error" }
   ]
 }
 ```
+
+**tsqlrefine.json** (object format, overrides preset/ruleset):
+
+```json
+{
+  "preset": "recommended",
+  "rules": {
+    "avoid-select-star": "none",
+    "dml-without-where": "error"
+  }
+}
+```
+
+Each rule's `severity` controls both enablement and severity level:
+
+| Value | Effect |
+|-------|--------|
+| `"error"` | Enable with Error severity |
+| `"warning"` | Enable with Warning severity |
+| `"info"` | Enable with Information severity |
+| `"inherit"` | Enable with the rule's default severity |
+| `"none"` | Disable the rule |
+
+When `severity` is omitted in a ruleset file, it defaults to `"inherit"`.
 
 ### Preset Rulesets
 

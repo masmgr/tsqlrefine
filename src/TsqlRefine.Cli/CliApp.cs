@@ -10,37 +10,32 @@ public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        EncodingProviderRegistry.EnsureRegistered();
-
-        // Let System.CommandLine handle --help and --version automatically
-        if (CliParser.IsHelpOrVersionRequest(args))
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        if (handledExitCode is not null)
         {
-            return await CliParser.InvokeAsync(args, stdout);
+            return handledExitCode.Value;
         }
 
-        var parsed = CliParser.Parse(args);
-        return await RunParsedAsync(parsed, stdin, stdout, stderr);
+        return await RunParsedAsync(parsed ?? throw new InvalidOperationException("Parsed args were not available."), stdin, stdout, stderr);
     }
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
     {
-        EncodingProviderRegistry.EnsureRegistered();
-
-        // Let System.CommandLine handle --help and --version automatically
-        if (CliParser.IsHelpOrVersionRequest(args))
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        if (handledExitCode is not null)
         {
-            return await CliParser.InvokeAsync(args, stdout);
+            return handledExitCode.Value;
         }
 
-        var parsed = CliParser.Parse(args);
+        var parsedArgs = parsed ?? throw new InvalidOperationException("Parsed args were not available.");
 
-        if (parsed.Stdin || parsed.Paths.Any(p => p == "-"))
+        if (parsedArgs.Stdin || parsedArgs.Paths.Any(p => p == "-"))
         {
-            if (parsed.DetectEncoding)
+            if (parsedArgs.DetectEncoding)
             {
                 var decoded = await CharsetDetection.ReadStreamAsync(stdin);
                 using var decodedReader = new StringReader(decoded.Text);
-                return await RunParsedAsync(parsed, decodedReader, stdout, stderr);
+                return await RunParsedAsync(parsedArgs, decodedReader, stdout, stderr);
             }
 
             using var streamReader = new StreamReader(
@@ -49,10 +44,24 @@ public static class CliApp
                 detectEncodingFromByteOrderMarks: true,
                 leaveOpen: true);
 
-            return await RunParsedAsync(parsed, streamReader, stdout, stderr);
+            return await RunParsedAsync(parsedArgs, streamReader, stdout, stderr);
         }
 
-        return await RunParsedAsync(parsed, TextReader.Null, stdout, stderr);
+        return await RunParsedAsync(parsedArgs, TextReader.Null, stdout, stderr);
+    }
+
+    private static async Task<(CliArgs? Parsed, int? HandledExitCode)> ParseOrHandleBuiltInAsync(
+        string[] args,
+        TextWriter stdout)
+    {
+        EncodingProviderRegistry.EnsureRegistered();
+
+        if (CliParser.IsHelpOrVersionRequest(args))
+        {
+            return (null, await CliParser.InvokeAsync(args, stdout));
+        }
+
+        return (CliParser.Parse(args), null);
     }
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)

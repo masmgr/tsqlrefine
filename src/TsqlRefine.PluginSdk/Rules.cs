@@ -31,6 +31,7 @@ public enum RuleSeverity
 /// <param name="Fixable">Whether the rule provides auto-fix capability via <see cref="IRule.GetFixes"/>.</param>
 /// <param name="MinCompatLevel">Minimum SQL Server compatibility level (100-160) for this rule. Null means no minimum.</param>
 /// <param name="MaxCompatLevel">Maximum SQL Server compatibility level (100-160) for this rule. Null means no maximum.</param>
+/// <param name="DocumentationUri">Optional documentation URI for this rule. Null if no documentation is available.</param>
 public sealed record RuleMetadata(
     string RuleId,
     string Description,
@@ -38,7 +39,8 @@ public sealed record RuleMetadata(
     RuleSeverity DefaultSeverity,
     bool Fixable,
     int? MinCompatLevel = null,
-    int? MaxCompatLevel = null
+    int? MaxCompatLevel = null,
+    Uri? DocumentationUri = null
 );
 
 /// <summary>

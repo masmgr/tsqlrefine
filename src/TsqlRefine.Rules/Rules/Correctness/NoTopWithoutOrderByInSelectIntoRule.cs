@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.
 /// </summary>
-public sealed class NoTopWithoutOrderByInSelectIntoRule : IRule
+public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "no-top-without-order-by-in-select-into",
         Description: "Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new NoTopWithoutOrderByInSelectIntoVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new NoTopWithoutOrderByInSelectIntoVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class NoTopWithoutOrderByInSelectIntoVisitor : DiagnosticVisitorBase

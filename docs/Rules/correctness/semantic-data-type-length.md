@@ -123,7 +123,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/data-type-length", "enabled": false }
+    { "id": "semantic-data-type-length", "enabled": false }
   ]
 }
 ```

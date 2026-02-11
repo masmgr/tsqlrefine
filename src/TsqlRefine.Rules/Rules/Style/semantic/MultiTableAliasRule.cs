@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 /// <summary>
 /// Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.
 /// </summary>
-public sealed class MultiTableAliasRule : IRule
+public sealed class MultiTableAliasRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/multi-table-alias",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-multi-table-alias",
         Description: "Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new MultiTableAliasVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new MultiTableAliasVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class MultiTableAliasVisitor : DiagnosticVisitorBase
@@ -151,7 +136,7 @@ public sealed class MultiTableAliasRule : IRule
                     _parent.AddDiagnostic(
                         fragment: node,
                         message: $"Column reference '{columnName}' in multi-table query should be qualified with table alias (e.g., tablealias.{columnName}) to avoid ambiguity.",
-                        code: "semantic/multi-table-alias",
+                        code: "semantic-multi-table-alias",
                         category: "Style",
                         fixable: false
                     );

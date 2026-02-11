@@ -20,8 +20,8 @@ public sealed class DuplicateAliasRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/duplicate-alias");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/duplicate-alias"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-duplicate-alias");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-duplicate-alias"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -40,7 +40,7 @@ public sealed class DuplicateAliasRuleTests
         var rule = new DuplicateAliasRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -52,7 +52,7 @@ public sealed class DuplicateAliasRuleTests
         var sql = "SELECT * FROM users u JOIN orders u ON u.id = u.user_id;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.NotEmpty(diagnostics);
         // Should report the second occurrence (JOIN orders u)
@@ -68,7 +68,7 @@ public sealed class DuplicateAliasRuleTests
 SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.True(diagnostics.Length >= 2, $"Expected at least 2 diagnostics, got {diagnostics.Length}");
     }
@@ -80,7 +80,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var sql = "SELECT * FROM users t JOIN orders t ON t.id = t.user_id JOIN products t ON t.id = t.product_id;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.True(diagnostics.Length >= 2, $"Expected at least 2 duplicate diagnostics, got {diagnostics.Length}");
     }
@@ -93,7 +93,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var sql = "SELECT * FROM users, users;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.NotEmpty(diagnostics);
         Assert.Contains("users", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
@@ -106,7 +106,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var sql = "SELECT * FROM (SELECT * FROM users u) AS u;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         // The inner 'u' is a table alias in subquery scope
         // The outer 'u' is a derived table (subquery) alias
@@ -121,7 +121,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var sql = "SELECT * FROM users MyAlias JOIN orders myalias ON MyAlias.id = myalias.user_id;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/duplicate-alias").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
 
         Assert.NotEmpty(diagnostics);
         Assert.Contains(diagnostics, d => d.Message.Contains("myalias", StringComparison.OrdinalIgnoreCase));
@@ -146,7 +146,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/duplicate-alias"
+            Code: "semantic-duplicate-alias"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -159,7 +159,7 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
     {
         var rule = new DuplicateAliasRule();
 
-        Assert.Equal("semantic/duplicate-alias", rule.Metadata.RuleId);
+        Assert.Equal("semantic-duplicate-alias", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

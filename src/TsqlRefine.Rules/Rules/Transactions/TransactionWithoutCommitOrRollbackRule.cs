@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.
 /// </summary>
-public sealed class TransactionWithoutCommitOrRollbackRule : IRule
+public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "transaction-without-commit-or-rollback",
         Description: "Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.",
         Category: "Transactions",
@@ -16,25 +16,10 @@ public sealed class TransactionWithoutCommitOrRollbackRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new TransactionWithoutCommitOrRollbackVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new TransactionWithoutCommitOrRollbackVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class TransactionWithoutCommitOrRollbackVisitor : DiagnosticVisitorBase

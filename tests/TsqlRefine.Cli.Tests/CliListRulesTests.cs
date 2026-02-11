@@ -53,6 +53,8 @@ public sealed class CliListRulesTests
         Assert.True(firstRule.TryGetProperty("category", out _));
         Assert.True(firstRule.TryGetProperty("defaultSeverity", out _));
         Assert.True(firstRule.TryGetProperty("fixable", out _));
+        Assert.True(firstRule.TryGetProperty("documentationUri", out var docUri));
+        Assert.StartsWith("https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/", docUri.GetString());
     }
 
     [Fact]

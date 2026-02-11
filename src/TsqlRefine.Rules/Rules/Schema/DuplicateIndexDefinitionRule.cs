@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Detects multiple indexes or unique constraints within a table that have the exact same column composition.
 /// </summary>
-public sealed class DuplicateIndexDefinitionRule : IRule
+public sealed class DuplicateIndexDefinitionRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-index-definition",
         Description: "Detects multiple indexes or unique constraints within a table that have the exact same column composition.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class DuplicateIndexDefinitionRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateIndexDefinitionVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateIndexDefinitionVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateIndexDefinitionVisitor : DiagnosticVisitorBase
@@ -47,76 +32,94 @@ public sealed class DuplicateIndexDefinitionRule : IRule
                 return;
             }
 
-            // Collect all index-like definitions: (signature, label, fragment)
             var indexEntries = new List<(string Signature, string Label, TSqlFragment Fragment)>();
+            CollectIndexDefinitions(node.Definition, indexEntries);
+            CollectTableConstraints(node.Definition, indexEntries);
+            CollectColumnConstraints(node.Definition, indexEntries);
+            ReportDuplicates(indexEntries);
 
-            // Inline index definitions
-            if (node.Definition.Indexes != null)
+            base.ExplicitVisit(node);
+        }
+
+        private static void CollectIndexDefinitions(
+            TableDefinition definition,
+            List<(string Signature, string Label, TSqlFragment Fragment)> entries)
+        {
+            if (definition.Indexes == null)
             {
-                foreach (var index in node.Definition.Indexes)
+                return;
+            }
+
+            foreach (var index in definition.Indexes)
+            {
+                var sig = BuildSignature(index.Columns);
+                if (sig != null)
                 {
-                    var sig = BuildSignature(index.Columns);
+                    var label = index.Name?.Value ?? "(unnamed index)";
+                    entries.Add((sig, label, index));
+                }
+            }
+        }
+
+        private static void CollectTableConstraints(
+            TableDefinition definition,
+            List<(string Signature, string Label, TSqlFragment Fragment)> entries)
+        {
+            if (definition.TableConstraints == null)
+            {
+                return;
+            }
+
+            foreach (var constraint in definition.TableConstraints)
+            {
+                if (constraint is UniqueConstraintDefinition uniqueConstraint)
+                {
+                    var sig = BuildSignature(uniqueConstraint.Columns);
                     if (sig != null)
                     {
-                        var label = index.Name?.Value ?? "(unnamed index)";
-                        indexEntries.Add((sig, label, index));
+                        var label = FormatConstraintLabel(uniqueConstraint);
+                        entries.Add((sig, label, constraint));
                     }
                 }
             }
+        }
 
-            // Table-level constraints (PRIMARY KEY, UNIQUE)
-            if (node.Definition.TableConstraints != null)
+        private static void CollectColumnConstraints(
+            TableDefinition definition,
+            List<(string Signature, string Label, TSqlFragment Fragment)> entries)
+        {
+            if (definition.ColumnDefinitions == null)
             {
-                foreach (var constraint in node.Definition.TableConstraints)
+                return;
+            }
+
+            foreach (var column in definition.ColumnDefinitions)
+            {
+                if (column.Constraints == null)
+                {
+                    continue;
+                }
+
+                foreach (var constraint in column.Constraints)
                 {
                     if (constraint is UniqueConstraintDefinition uniqueConstraint)
                     {
-                        var sig = BuildSignature(uniqueConstraint.Columns);
-                        if (sig != null)
-                        {
-                            var kind = uniqueConstraint.IsPrimaryKey ? "PRIMARY KEY" : "UNIQUE";
-                            var name = uniqueConstraint.ConstraintIdentifier?.Value;
-                            var label = name != null ? $"{kind} '{name}'" : kind;
-                            indexEntries.Add((sig, label, constraint));
-                        }
+                        // Column-level constraint with no explicit column list — implies the column itself
+                        var sig = BuildSignature(uniqueConstraint.Columns)
+                            ?? column.ColumnIdentifier?.Value?.ToUpperInvariant() + ":asc";
+
+                        var label = FormatConstraintLabel(uniqueConstraint);
+                        entries.Add((sig!, label, constraint));
                     }
                 }
             }
+        }
 
-            // Column-level constraints (PRIMARY KEY, UNIQUE)
-            if (node.Definition.ColumnDefinitions != null)
-            {
-                foreach (var column in node.Definition.ColumnDefinitions)
-                {
-                    if (column.Constraints == null)
-                    {
-                        continue;
-                    }
-
-                    foreach (var constraint in column.Constraints)
-                    {
-                        if (constraint is UniqueConstraintDefinition uniqueConstraint)
-                        {
-                            var sig = BuildSignature(uniqueConstraint.Columns);
-                            if (sig == null)
-                            {
-                                // Column-level constraint with no explicit column list — implies the column itself
-                                sig = column.ColumnIdentifier?.Value?.ToUpperInvariant() + ":asc";
-                            }
-
-                            var kind = uniqueConstraint.IsPrimaryKey ? "PRIMARY KEY" : "UNIQUE";
-                            var name = uniqueConstraint.ConstraintIdentifier?.Value;
-                            var label = name != null ? $"{kind} '{name}'" : kind;
-                            indexEntries.Add((sig, label, constraint));
-                        }
-                    }
-                }
-            }
-
-            // Detect duplicates
+        private void ReportDuplicates(List<(string Signature, string Label, TSqlFragment Fragment)> entries)
+        {
             var seen = new Dictionary<string, (string Label, TSqlFragment Fragment)>(StringComparer.Ordinal);
 
-            foreach (var (signature, label, fragment) in indexEntries)
+            foreach (var (signature, label, fragment) in entries)
             {
                 if (seen.TryGetValue(signature, out var first))
                 {
@@ -133,8 +136,13 @@ public sealed class DuplicateIndexDefinitionRule : IRule
                     seen[signature] = (label, fragment);
                 }
             }
+        }
 
-            base.ExplicitVisit(node);
+        private static string FormatConstraintLabel(UniqueConstraintDefinition constraint)
+        {
+            var kind = constraint.IsPrimaryKey ? "PRIMARY KEY" : "UNIQUE";
+            var name = constraint.ConstraintIdentifier?.Value;
+            return name != null ? $"{kind} '{name}'" : kind;
         }
 
         private static string? BuildSignature(IList<ColumnWithSortOrder>? columns)

@@ -110,6 +110,34 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRuleTests
     }
 
     [Fact]
+    public void Analyze_TempTableWithoutConstraints_ReturnsNoDiagnostic()
+    {
+        // Arrange
+        const string sql = "CREATE TABLE #Temp (id INT, name VARCHAR(100));";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GlobalTempTableWithoutConstraints_ReturnsNoDiagnostic()
+    {
+        // Arrange
+        const string sql = "CREATE TABLE ##GlobalTemp (id INT, name VARCHAR(100));";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Metadata_HasCorrectProperties()
     {
         // Assert

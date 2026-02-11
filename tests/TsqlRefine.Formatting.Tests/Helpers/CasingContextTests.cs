@@ -17,6 +17,7 @@ public class CasingContextTests
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);
+        Assert.False(context.InTableColumnList);
     }
 
     #endregion
@@ -58,6 +59,13 @@ public class CasingContextTests
         Assert.True(context.ExecuteProcedureProcessed);
     }
 
+    [Fact]
+    public void InTableColumnList_CanBeSet()
+    {
+        var context = new CasingContext { InTableColumnList = true };
+        Assert.True(context.InTableColumnList);
+    }
+
     #endregion
 
     #region Reset
@@ -71,7 +79,8 @@ public class CasingContextTests
             AfterAsKeyword = true,
             LastSchemaName = "sys",
             InExecuteContext = true,
-            ExecuteProcedureProcessed = true
+            ExecuteProcedureProcessed = true,
+            InTableColumnList = true
         };
 
         context.Reset();
@@ -81,6 +90,7 @@ public class CasingContextTests
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);
+        Assert.False(context.InTableColumnList);
     }
 
     [Fact]
@@ -94,6 +104,7 @@ public class CasingContextTests
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);
+        Assert.False(context.InTableColumnList);
     }
 
     #endregion

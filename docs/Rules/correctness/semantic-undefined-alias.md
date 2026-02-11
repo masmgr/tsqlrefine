@@ -76,6 +76,9 @@ Invalid column name 'x.active'.
 - OPENJSON aliases (e.g., `OPENJSON(@json) AS j`) are correctly recognized
 - PIVOT/UNPIVOT aliases are correctly recognized
 - VALUES clause aliases (e.g., `VALUES (...) AS v(col)`) are correctly recognized
+- APPLY function arguments (e.g., `CROSS APPLY OPENJSON(t.json_col)`) are validated
+- DML OUTPUT/OUTPUT INTO qualifiers (e.g., `inserted.id`, `deleted.id`) are validated
+- MERGE aliases in `USING`, `ON`, `WHEN`, and `OUTPUT` clauses are validated
 
 **Subquery scope handling**:
 
@@ -222,9 +225,26 @@ SELECT t.id, s.value
 FROM table1 t
 CROSS APPLY STRING_SPLIT(t.csv, ',') AS s;  -- OK: both aliases recognized
 
+-- APPLY argument qualifier validation
+SELECT t.id, j.value
+FROM table1 t
+CROSS APPLY OPENJSON(t.payload) AS j;  -- OK: qualifier 't' in argument is recognized
+
 -- OPENJSON with alias
 SELECT j.[key], j.value
 FROM OPENJSON(@json) AS j;  -- OK: alias 'j' is recognized
+
+-- UPDATE OUTPUT pseudo-table qualifiers
+UPDATE t
+SET t.value = t.value + 1
+OUTPUT inserted.id, deleted.id
+FROM target t;  -- OK: inserted/deleted are recognized
+
+-- MERGE source/target/output qualifiers
+MERGE target t
+USING source s ON t.id = s.id
+WHEN MATCHED THEN UPDATE SET t.value = s.value
+OUTPUT inserted.id, deleted.id, s.id;  -- OK: t/s/inserted/deleted are recognized
 
 -- VALUES clause as table
 SELECT v.id, v.name
@@ -250,7 +270,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/undefined-alias", "enabled": false }
+    { "id": "semantic-undefined-alias", "enabled": false }
   ]
 }
 ```

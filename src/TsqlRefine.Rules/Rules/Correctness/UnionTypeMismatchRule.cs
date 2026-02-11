@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation.
 /// </summary>
-public sealed class UnionTypeMismatchRule : IRule
+public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "union-type-mismatch",
         Description: "Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class UnionTypeMismatchRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new UnionTypeMismatchVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new UnionTypeMismatchVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class UnionTypeMismatchVisitor : DiagnosticVisitorBase
@@ -69,7 +54,7 @@ public sealed class UnionTypeMismatchRule : IRule
                 if (leftType is not null && rightType is not null && leftType != rightType)
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        fragment: rightColumns[i],
                         message: $"UNION column {i + 1} has mismatched types: left side is {leftType}, right side is {rightType}. This causes implicit conversion and may lead to data truncation or conversion errors.",
                         code: "union-type-mismatch",
                         category: "Correctness",

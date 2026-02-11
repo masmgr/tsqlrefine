@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
 /// </summary>
-public sealed class RequireExplicitJoinTypeRule : IRule
+public sealed class RequireExplicitJoinTypeRule : DiagnosticVisitorRuleBase<TSqlScript>
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-explicit-join-type",
         Description: "Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.",
         Category: "Style",
@@ -16,25 +16,12 @@ public sealed class RequireExplicitJoinTypeRule : IRule
         Fixable: true
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context, TSqlScript script) =>
+        script.ScriptTokenStream is null
+            ? new NoOpDiagnosticVisitor()
+            : new RequireExplicitJoinTypeVisitor(script.ScriptTokenStream);
 
-        if (context.Ast.Fragment is not TSqlScript script || script.ScriptTokenStream is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireExplicitJoinTypeVisitor(script.ScriptTokenStream);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {

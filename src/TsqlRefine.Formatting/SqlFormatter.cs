@@ -49,6 +49,9 @@ public static class SqlFormatter
                 : string.Empty;
         }
 
+        // Strip standalone CR characters (\r not followed by \n) before any normalizer runs
+        sql = LineEndingHelpers.StripStandaloneCr(sql);
+
         // Build AST position map for operator context detection (if AST provided)
         var positionMap = AstPositionMap.Build(ast);
 

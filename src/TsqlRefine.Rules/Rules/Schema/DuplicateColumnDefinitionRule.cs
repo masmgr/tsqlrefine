@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Detects duplicate column names in CREATE TABLE definitions.
 /// </summary>
-public sealed class DuplicateColumnDefinitionRule : IRule
+public sealed class DuplicateColumnDefinitionRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "duplicate-column-definition",
         Description: "Detects duplicate column names in CREATE TABLE definitions; duplicate columns always cause a runtime error.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class DuplicateColumnDefinitionRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateColumnDefinitionVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateColumnDefinitionVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateColumnDefinitionVisitor : DiagnosticVisitorBase
@@ -43,30 +28,17 @@ public sealed class DuplicateColumnDefinitionRule : IRule
         {
             if (node.Definition?.ColumnDefinitions != null)
             {
-                var seen = new Dictionary<string, ColumnDefinition>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var column in node.Definition.ColumnDefinitions)
+                foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
+                    node.Definition.ColumnDefinitions,
+                    column => column.ColumnIdentifier?.Value))
                 {
-                    var name = column.ColumnIdentifier?.Value;
-                    if (name == null)
-                    {
-                        continue;
-                    }
-
-                    if (seen.ContainsKey(name))
-                    {
-                        AddDiagnostic(
-                            fragment: column,
-                            message: $"Column '{name}' is defined more than once in the same CREATE TABLE statement.",
-                            code: "duplicate-column-definition",
-                            category: "Schema",
-                            fixable: false
-                        );
-                    }
-                    else
-                    {
-                        seen[name] = column;
-                    }
+                    AddDiagnostic(
+                        fragment: duplicate.Item,
+                        message: $"Column '{duplicate.Name}' is defined more than once in the same CREATE TABLE statement.",
+                        code: "duplicate-column-definition",
+                        category: "Schema",
+                        fixable: false
+                    );
                 }
             }
 

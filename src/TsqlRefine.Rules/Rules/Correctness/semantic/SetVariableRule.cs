@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Recommends using SELECT for variable assignment instead of SET for consistency.
 /// </summary>
-public sealed class SetVariableRule : IRule
+public sealed class SetVariableRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/set-variable",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-set-variable",
         Description: "Recommends using SELECT for variable assignment instead of SET for consistency.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new SetVariableVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new SetVariableVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class SetVariableVisitor : DiagnosticVisitorBase
@@ -46,7 +31,7 @@ public sealed class SetVariableRule : IRule
             AddDiagnostic(
                 fragment: node,
                 message: "Use SELECT for variable assignment instead of SET. SELECT is preferred for consistency and can be more performant when assigning multiple variables.",
-                code: "semantic/set-variable",
+                code: "semantic-set-variable",
                 category: "Correctness",
                 fixable: false
             );

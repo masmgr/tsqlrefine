@@ -22,8 +22,8 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/join-condition-always-true");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/join-condition-always-true"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-join-condition-always-true");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-join-condition-always-true"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -43,7 +43,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var rule = new JoinConditionAlwaysTrueRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-join-condition-always-true").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -55,7 +55,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var sql = "SELECT * FROM t1 JOIN t2 ON 1=1 JOIN t3 ON 1=1";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-join-condition-always-true").ToArray();
 
         Assert.True(diagnostics.Length >= 2, $"Expected at least 2 diagnostics, got {diagnostics.Length}");
     }
@@ -67,7 +67,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var sql = "SELECT * FROM t1 JOIN t2 ON 1=1 JOIN t3 ON t1.id = t3.id";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-join-condition-always-true").ToArray();
 
         // Only the first JOIN (1=1) should be reported
         Assert.Single(diagnostics);
@@ -80,7 +80,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var sql = "SELECT * FROM t1 JOIN t2 ON t1.a = t1.b";  // same table, different columns
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/join-condition-always-true").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-join-condition-always-true").ToArray();
 
         // This is unusual but not necessarily "always true" - could be valid business logic
         Assert.Empty(diagnostics);
@@ -105,7 +105,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/join-condition-always-true"
+            Code: "semantic-join-condition-always-true"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -118,7 +118,7 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     {
         var rule = new JoinConditionAlwaysTrueRule();
 
-        Assert.Equal("semantic/join-condition-always-true", rule.Metadata.RuleId);
+        Assert.Equal("semantic-join-condition-always-true", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

@@ -1,17 +1,18 @@
 {
   "rules": [
-    { "id": "avoid-exec-dynamic-sql", "enabled": true },
-    { "id": "avoid-dangerous-procedures", "enabled": true },
-    { "id": "avoid-openrowset-opendatasource", "enabled": true },
-    { "id": "avoid-execute-as", "enabled": true },
-    { "id": "dml-without-where", "enabled": true },
-    { "id": "avoid-merge", "enabled": true },
-    { "id": "cross-database-transaction", "enabled": true },
-    { "id": "semantic/undefined-alias", "enabled": true },
-    { "id": "semantic/duplicate-alias", "enabled": true },
-    { "id": "semantic/insert-column-count-mismatch", "enabled": true },
-    { "id": "require-column-list-for-insert-values", "enabled": true },
-    { "id": "require-column-list-for-insert-select", "enabled": true },
-    { "id": "dangerous-ddl", "enabled": true }
+    { "id": "avoid-exec-dynamic-sql" },
+    { "id": "avoid-dangerous-procedures" },
+    { "id": "avoid-openrowset-opendatasource" },
+    { "id": "avoid-execute-as" },
+    { "id": "dml-without-where" },
+    { "id": "avoid-merge" },
+    { "id": "cross-database-transaction" },
+    { "id": "semantic-undefined-alias" },
+    { "id": "semantic-duplicate-alias" },
+    { "id": "semantic-insert-column-count-mismatch" },
+    { "id": "require-column-list-for-insert-values" },
+    { "id": "require-column-list-for-insert-select" },
+    { "id": "dangerous-ddl" }
   ]
 }
+

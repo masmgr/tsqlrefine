@@ -42,7 +42,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/return-after-statements", "enabled": false }
+    { "id": "semantic-return-after-statements", "enabled": false }
   ]
 }
 ```

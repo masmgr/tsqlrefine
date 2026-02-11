@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Avoid using NOLOCK hint or READ UNCOMMITTED isolation level
 /// </summary>
-public sealed class AvoidNolockRule : IRule
+public sealed class AvoidNolockRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-nolock",
         Description: "Avoid using NOLOCK hint or READ UNCOMMITTED isolation level",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class AvoidNolockRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidNolockVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidNolockVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidNolockVisitor : DiagnosticVisitorBase

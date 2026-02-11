@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Require BEGIN/END blocks in conditional statements for clarity and maintainability
 /// </summary>
-public sealed class ConditionalBeginEndRule : IRule
+public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "conditional-begin-end",
         Description: "Require BEGIN/END blocks in conditional statements for clarity and maintainability",
         Category: "Style",
@@ -16,25 +16,10 @@ public sealed class ConditionalBeginEndRule : IRule
         Fixable: true
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new ConditionalBeginEndVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new ConditionalBeginEndVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(diagnostic);

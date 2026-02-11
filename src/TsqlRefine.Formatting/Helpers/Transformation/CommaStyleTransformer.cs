@@ -57,11 +57,19 @@ public static class CommaStyleTransformer
 
         for (var i = 0; i < lines.Length; i++)
         {
-            if (trailingCommaLines[i] && i + 1 < lines.Length)
+            if (!trailingCommaLines[i])
             {
-                lines[i] = RemoveTrailingComma(lines[i]);
-                lines[i + 1] = PrependLeadingComma(lines[i + 1]);
+                continue;
             }
+
+            var targetIndex = FindLeadingCommaTargetIndex(lines, i + 1);
+            if (targetIndex < 0)
+            {
+                continue;
+            }
+
+            lines[i] = RemoveTrailingComma(lines[i]);
+            lines[targetIndex] = PrependLeadingComma(lines[targetIndex]);
         }
 
         var result = new StringBuilder(input.Length + 16);
@@ -150,6 +158,36 @@ public static class CommaStyleTransformer
         }
 
         return trimmed[..^1].TrimEnd();
+    }
+
+    private static int FindLeadingCommaTargetIndex(string[] lines, int startIndex)
+    {
+        for (var i = startIndex; i < lines.Length; i++)
+        {
+            if (CanReceiveLeadingComma(lines[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool CanReceiveLeadingComma(string line)
+    {
+        var trimmed = line.TrimStart();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        // Avoid inserting before line comments because ", -- comment" comments out the comma.
+        if (trimmed.StartsWith("--", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static string PrependLeadingComma(string line)

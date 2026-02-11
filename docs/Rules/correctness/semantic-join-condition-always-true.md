@@ -80,7 +80,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/join-condition-always-true", "enabled": false }
+    { "id": "semantic-join-condition-always-true", "enabled": false }
   ]
 }
 ```

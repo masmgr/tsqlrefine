@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Prohibit cursor usage; prefer set-based operations for better performance
 /// </summary>
-public sealed class DisallowCursorsRule : IRule
+public sealed class DisallowCursorsRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "disallow-cursors",
         Description: "Prohibit cursor usage; prefer set-based operations for better performance",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class DisallowCursorsRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DisallowCursorsVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DisallowCursorsVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DisallowCursorsVisitor : DiagnosticVisitorBase
@@ -42,7 +27,7 @@ public sealed class DisallowCursorsRule : IRule
         public override void ExplicitVisit(DeclareCursorStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Cursor declaration found. Use set-based operations instead for better performance.",
                 code: "disallow-cursors",
                 category: "Performance",

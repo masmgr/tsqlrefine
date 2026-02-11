@@ -40,7 +40,7 @@ public sealed class SemicolonTerminationRule : IRule
                 // Check if this statement is terminated with a semicolon
                 if (!HasSemicolonTerminator(statement, script.ScriptTokenStream))
                 {
-                    var range = ScriptDomHelpers.GetRange(statement);
+                    var range = GetLastTokenRange(statement, script.ScriptTokenStream);
                     yield return new Diagnostic(
                         Range: range,
                         Message: "Statement should be terminated with a semicolon",
@@ -74,7 +74,7 @@ public sealed class SemicolonTerminationRule : IRule
         {
             foreach (var statement in batch.Statements)
             {
-                var range = ScriptDomHelpers.GetRange(statement);
+                var range = GetLastTokenRange(statement, script.ScriptTokenStream);
                 if (range != diagnostic.Range)
                 {
                     continue;
@@ -103,5 +103,24 @@ public sealed class SemicolonTerminationRule : IRule
 
         var lastToken = tokenStream[statement.LastTokenIndex];
         return lastToken.TokenType == TSqlTokenType.Semicolon;
+    }
+
+    /// <summary>
+    /// Returns a range covering only the last token of the statement,
+    /// so the diagnostic points to where the semicolon should be appended.
+    /// </summary>
+    private static PluginSdk.Range GetLastTokenRange(TSqlStatement statement, IList<TSqlParserToken> tokenStream)
+    {
+        if (statement.LastTokenIndex >= 0 && statement.LastTokenIndex < tokenStream.Count)
+        {
+            var lastToken = tokenStream[statement.LastTokenIndex];
+            var tokenText = lastToken.Text ?? string.Empty;
+            var start = new Position(lastToken.Line - 1, lastToken.Column - 1);
+            var end = new Position(lastToken.Line - 1, lastToken.Column - 1 + tokenText.Length);
+            return new PluginSdk.Range(start, end);
+        }
+
+        // Fallback to full statement range
+        return ScriptDomHelpers.GetRange(statement);
     }
 }

@@ -6,12 +6,12 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects column count mismatches between the target column list and the source in INSERT statements.
 /// </summary>
-public sealed class InsertColumnCountMismatchRule : IRule
+public sealed class InsertColumnCountMismatchRule : DiagnosticVisitorRuleBase
 {
-    private const string RuleId = "semantic/insert-column-count-mismatch";
+    private const string RuleId = "semantic-insert-column-count-mismatch";
     private const string Category = "Correctness";
 
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
         Description: "Detects column count mismatches between the target column list and the source in INSERT statements.",
         Category: Category,
@@ -19,25 +19,10 @@ public sealed class InsertColumnCountMismatchRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new InsertColumnCountMismatchVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new InsertColumnCountMismatchVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class InsertColumnCountMismatchVisitor : DiagnosticVisitorBase

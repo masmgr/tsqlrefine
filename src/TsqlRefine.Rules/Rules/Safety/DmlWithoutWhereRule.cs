@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Safety;
 /// <summary>
 /// Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.
 /// </summary>
-public sealed class DmlWithoutWhereRule : IRule
+public sealed class DmlWithoutWhereRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "dml-without-where",
         Description: "Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications.",
         Category: "Safety",
@@ -16,25 +16,10 @@ public sealed class DmlWithoutWhereRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DmlWithoutWhereVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DmlWithoutWhereVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DmlWithoutWhereVisitor : DiagnosticVisitorBase
@@ -92,7 +77,7 @@ public sealed class DmlWithoutWhereRule : IRule
             }
 
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: $"{statementType} statement without WHERE clause can {actionVerb} all rows. Add a WHERE clause to limit the scope.",
                 code: "dml-without-where",
                 category: "Safety",
@@ -109,13 +94,10 @@ public sealed class DmlWithoutWhereRule : IRule
             }
 
             // Temporary tables (#temp, ##global) are NamedTableReference with # prefix
-            if (target is NamedTableReference namedTable)
+            if (target is NamedTableReference namedTable &&
+                ScriptDomHelpers.IsTemporaryTableName(namedTable.SchemaObject?.BaseIdentifier?.Value))
             {
-                var tableName = namedTable.SchemaObject?.BaseIdentifier?.Value;
-                if (tableName != null && tableName.StartsWith('#'))
-                {
-                    return true;
-                }
+                return true;
             }
 
             return false;

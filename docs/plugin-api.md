@@ -38,6 +38,7 @@ The internal model of `tsqlrefine` depends on the implementation language, but t
 - `defaultSeverity` (Error/Warning/Info/Hint)
 - `fixable` (boolean)
 - `minSqlVersion` / `maxSqlVersion` (optional)
+- `documentationUri` (optional; defaults to built-in GitHub docs URL)
 
 ### 3.2 Execution
 
@@ -66,7 +67,8 @@ public sealed record RuleMetadata(
     RuleSeverity DefaultSeverity,
     bool Fixable,
     int? MinCompatLevel = null,
-    int? MaxCompatLevel = null
+    int? MaxCompatLevel = null,
+    Uri? DocumentationUri = null  // custom docs URL; null if not available
 );
 
 public interface IRule
@@ -115,6 +117,6 @@ At load time:
 
 ## 6. Compatibility
 
-- Core has a `pluginApiVersion` (e.g., `1`)
-- Plugins declare `supportedApiVersions: [1]`
+- Core has a `pluginApiVersion` (e.g., `2`)
+- Plugins declare `supportedApiVersions: [2]`
 - If mismatched, the plugin is not loaded (reason displayed in `list-plugins`)

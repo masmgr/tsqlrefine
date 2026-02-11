@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy.
 /// </summary>
-public sealed class AvoidTopInDmlRule : IRule
+public sealed class AvoidTopInDmlRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-top-in-dml",
         Description: "Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy.",
         Category: "Performance",
@@ -16,35 +16,20 @@ public sealed class AvoidTopInDmlRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidTopInDmlVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidTopInDmlVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidTopInDmlVisitor : DiagnosticVisitorBase
     {
         public override void ExplicitVisit(UpdateStatement node)
         {
-            if (node.UpdateSpecification?.TopRowFilter != null)
+            if (node.UpdateSpecification?.TopRowFilter is { } topRowFilter)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetRange(topRowFilter),
                     message: "Avoid TOP in UPDATE statements; results can be non-deterministic and lead to unpredictable modifications.",
                     code: "avoid-top-in-dml",
                     category: "Performance",
@@ -57,10 +42,10 @@ public sealed class AvoidTopInDmlRule : IRule
 
         public override void ExplicitVisit(DeleteStatement node)
         {
-            if (node.DeleteSpecification?.TopRowFilter != null)
+            if (node.DeleteSpecification?.TopRowFilter is { } topRowFilter)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetRange(topRowFilter),
                     message: "Avoid TOP in DELETE statements; results can be non-deterministic and lead to unpredictable deletions.",
                     code: "avoid-top-in-dml",
                     category: "Performance",

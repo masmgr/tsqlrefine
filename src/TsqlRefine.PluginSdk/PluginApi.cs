@@ -13,6 +13,6 @@ public static class PluginApi
     /// The current Plugin API version.
     /// Plugins must set <see cref="IRuleProvider.PluginApiVersion"/> to this value.
     /// </summary>
-    public const int CurrentVersion = 1;
+    public const int CurrentVersion = 2;
 }
 

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Prohibit linked server queries (4-part identifiers); use alternative data access patterns
 /// </summary>
-public sealed class LinkedServerRule : IRule
+public sealed class LinkedServerRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "linked-server",
         Description: "Prohibit linked server queries (4-part identifiers); use alternative data access patterns",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class LinkedServerRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new LinkedServerVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new LinkedServerVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class LinkedServerVisitor : DiagnosticVisitorBase

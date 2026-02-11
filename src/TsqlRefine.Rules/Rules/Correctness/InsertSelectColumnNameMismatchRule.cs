@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.
 /// </summary>
-public sealed class InsertSelectColumnNameMismatchRule : IRule
+public sealed class InsertSelectColumnNameMismatchRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "insert-select-column-name-mismatch",
         Description: "Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements.",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class InsertSelectColumnNameMismatchRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new InsertSelectColumnNameMismatchVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new InsertSelectColumnNameMismatchVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class InsertSelectColumnNameMismatchVisitor : DiagnosticVisitorBase

@@ -42,7 +42,7 @@ SET @username = 'John';";
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/case-sensitive-variables", diagnostic.Code);
+        Assert.Equal("semantic-case-sensitive-variables", diagnostic.Code);
         Assert.Contains("@username", diagnostic.Message);
         Assert.Contains("@UserName", diagnostic.Message);
     }
@@ -63,7 +63,7 @@ SELECT @USERNAME, @userId;";
 
         // Assert
         Assert.Equal(4, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("semantic/case-sensitive-variables", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("semantic-case-sensitive-variables", d.Code));
     }
 
     [Fact]
@@ -79,7 +79,7 @@ SELECT @username = Name FROM Users;";
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/case-sensitive-variables", diagnostic.Code);
+        Assert.Equal("semantic-case-sensitive-variables", diagnostic.Code);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ SELECT * FROM Users WHERE Age > @minvalue;";
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/case-sensitive-variables", diagnostic.Code);
+        Assert.Equal("semantic-case-sensitive-variables", diagnostic.Code);
     }
 
     [Fact]
@@ -165,6 +165,6 @@ END;";
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/case-sensitive-variables", diagnostic.Code);
+        Assert.Equal("semantic-case-sensitive-variables", diagnostic.Code);
     }
 }

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Prohibit named constraints in temp tables to avoid naming conflicts
 /// </summary>
-public sealed class NamedConstraintRule : IRule
+public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "named-constraint",
         Description: "Prohibit named constraints in temp tables to avoid naming conflicts",
         Category: "Correctness",
@@ -16,25 +16,10 @@ public sealed class NamedConstraintRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new NamedConstraintVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new NamedConstraintVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class NamedConstraintVisitor : DiagnosticVisitorBase
@@ -42,8 +27,7 @@ public sealed class NamedConstraintRule : IRule
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Check if table is a temp table (starts with # or ##)
-            var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
             {
                 // Check for named constraints
                 if (node.Definition != null)

@@ -31,6 +31,12 @@ public sealed class CasingContext
     public bool ExecuteProcedureProcessed { get; set; }
 
     /// <summary>
+    /// Whether we are inside a parenthesized column-definition/list region while in table context.
+    /// Examples: CREATE TABLE (...), INSERT INTO t (...).
+    /// </summary>
+    public bool InTableColumnList { get; set; }
+
+    /// <summary>
     /// Resets all context state.
     /// </summary>
     public void Reset()
@@ -40,5 +46,6 @@ public sealed class CasingContext
         LastSchemaName = null;
         InExecuteContext = false;
         ExecuteProcedureProcessed = false;
+        InTableColumnList = false;
     }
 }

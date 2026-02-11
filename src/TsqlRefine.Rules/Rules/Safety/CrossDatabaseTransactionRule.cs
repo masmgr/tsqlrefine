@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Safety;
 /// <summary>
 /// Discourage cross-database transactions to avoid distributed transaction issues
 /// </summary>
-public sealed class CrossDatabaseTransactionRule : IRule
+public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "cross-database-transaction",
         Description: "Discourage cross-database transactions to avoid distributed transaction issues",
         Category: "Safety",
@@ -16,25 +16,10 @@ public sealed class CrossDatabaseTransactionRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CrossDatabaseTransactionVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CrossDatabaseTransactionVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class CrossDatabaseTransactionVisitor : DiagnosticVisitorBase

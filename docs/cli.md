@@ -160,6 +160,7 @@ tsqlrefine init [options]
 
 Generates `tsqlrefine.json` and `tsqlrefine.ignore` in the current directory.
 
+- The generated `tsqlrefine.json` uses the `preset` field (e.g. `"preset": "recommended"`) to reference a built-in preset
 - The generated `tsqlrefine.json` includes a `$schema` reference for IDE autocompletion
 - If configuration files already exist, returns an error with a hint to use `--force`
 - Success messages are written to stdout
@@ -344,7 +345,7 @@ interface FileResult {
 interface Diagnostic {
   range: Range;
   severity?: DiagnosticSeverity; // defaults to rule's defaultSeverity
-  code?: number | string;        // Rule ID (e.g., "semantic/undefined-alias")
+  code?: number | string;        // Rule ID (e.g., "semantic-undefined-alias")
   source?: string;               // "tsqlrefine"
   message: string;
   tags?: DiagnosticTag[];

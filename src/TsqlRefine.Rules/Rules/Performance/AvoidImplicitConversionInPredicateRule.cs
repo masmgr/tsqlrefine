@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Performance;
 /// <summary>
 /// Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage
 /// </summary>
-public sealed class AvoidImplicitConversionInPredicateRule : IRule
+public sealed class AvoidImplicitConversionInPredicateRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-implicit-conversion-in-predicate",
         Description: "Detects CAST or CONVERT applied to columns in predicates which can cause implicit type conversions and prevent index usage",
         Category: "Performance",
@@ -16,25 +16,10 @@ public sealed class AvoidImplicitConversionInPredicateRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidImplicitConversionInPredicateVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidImplicitConversionInPredicateVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidImplicitConversionInPredicateVisitor : PredicateAwareVisitorBase

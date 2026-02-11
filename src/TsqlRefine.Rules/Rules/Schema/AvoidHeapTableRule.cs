@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Schema;
 /// <summary>
 /// Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.
 /// </summary>
-public sealed class AvoidHeapTableRule : IRule
+public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-heap-table",
         Description: "Warns when tables are created as heaps (no clustered index); heaps can lead to unpredictable performance and maintenance costs.",
         Category: "Schema",
@@ -16,25 +16,10 @@ public sealed class AvoidHeapTableRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new AvoidHeapTableVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new AvoidHeapTableVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class AvoidHeapTableVisitor : DiagnosticVisitorBase
@@ -42,68 +27,20 @@ public sealed class AvoidHeapTableRule : IRule
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Skip temporary tables (#temp, ##temp)
-            var tableName = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableName != null && tableName.StartsWith('#'))
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
             {
                 base.ExplicitVisit(node);
                 return;
             }
 
-            bool hasClusteredIndex = false;
-
-            // Check for clustered primary key constraint
-            if (node.Definition?.TableConstraints != null)
-            {
-                foreach (var constraint in node.Definition.TableConstraints)
-                {
-                    if (constraint is UniqueConstraintDefinition uniqueConstraint)
-                    {
-                        if (uniqueConstraint.IsPrimaryKey && uniqueConstraint.Clustered == true)
-                        {
-                            hasClusteredIndex = true;
-                        }
-                    }
-                }
-            }
-
-            // Check column constraints for clustered primary key
-            if (!hasClusteredIndex && node.Definition?.ColumnDefinitions != null)
-            {
-                foreach (var column in node.Definition.ColumnDefinitions)
-                {
-                    if (column.Constraints != null)
-                    {
-                        foreach (var constraint in column.Constraints)
-                        {
-                            if (constraint is UniqueConstraintDefinition uniqueConstraint)
-                            {
-                                if (uniqueConstraint.IsPrimaryKey && uniqueConstraint.Clustered == true)
-                                {
-                                    hasClusteredIndex = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Check for explicit clustered index definitions
-            if (!hasClusteredIndex && node.Definition?.Indexes != null)
-            {
-                foreach (var index in node.Definition.Indexes)
-                {
-                    if (index.IndexType?.IndexTypeKind == IndexTypeKind.Clustered ||
-                        index.IndexType?.IndexTypeKind == IndexTypeKind.ClusteredColumnStore)
-                    {
-                        hasClusteredIndex = true;
-                    }
-                }
-            }
+            var hasClusteredIndex = HasClusteredTableConstraint(node.Definition)
+                || HasClusteredColumnConstraint(node.Definition)
+                || HasClusteredIndexDefinition(node.Definition);
 
             if (!hasClusteredIndex)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "Table is created as a heap (no clustered index); consider adding a clustered index to improve performance and reduce fragmentation.",
                     code: "avoid-heap-table",
                     category: "Schema",
@@ -112,6 +49,68 @@ public sealed class AvoidHeapTableRule : IRule
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private static bool HasClusteredTableConstraint(TableDefinition? definition)
+        {
+            if (definition?.TableConstraints == null)
+            {
+                return false;
+            }
+
+            foreach (var constraint in definition.TableConstraints)
+            {
+                if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasClusteredColumnConstraint(TableDefinition? definition)
+        {
+            if (definition?.ColumnDefinitions == null)
+            {
+                return false;
+            }
+
+            foreach (var column in definition.ColumnDefinitions)
+            {
+                if (column.Constraints == null)
+                {
+                    continue;
+                }
+
+                foreach (var constraint in column.Constraints)
+                {
+                    if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasClusteredIndexDefinition(TableDefinition? definition)
+        {
+            if (definition?.Indexes == null)
+            {
+                return false;
+            }
+
+            foreach (var index in definition.Indexes)
+            {
+                if (index.IndexType?.IndexTypeKind is IndexTypeKind.Clustered or IndexTypeKind.ClusteredColumnStore)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

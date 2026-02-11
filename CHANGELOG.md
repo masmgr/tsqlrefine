@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-11
+
+### Added
+
+- Duplicate column detection rules: `duplicate-view-column`, `duplicate-table-function-column`, `duplicate-table-variable-column`, `duplicate-select-column`, `duplicate-insert-column`
+- Per-rule severity configuration via `rules` object in `tsqlrefine.json` and ruleset files (`error`, `warning`, `info`, `inherit`, `none`)
+- Extended `semantic-undefined-alias` rule to cover MERGE OUTPUT clauses and APPLY arguments
+- Documentation URI for each rule in `list-rules --output json` and `codeDescriptionHref` in lint/fix JSON output for editor integration
+
+### Changed
+
+- Renamed semantic rule IDs from `semantic/` prefix to `semantic-` hyphen separator for kebab-case consistency
+- Temporary tables excluded from schema-level rules to reduce false positives
+- Internal rule architecture migrated to AST-first detection with unified visitor base classes
+
+### Fixed
+
+- Diagnostic ranges narrowed to precise keyword or sub-fragment locations for 18+ rules instead of spanning entire statements
+- Formatter regressions in operator spacing, comma handling, and keyword casing logic
+- Multi-line protected regions preserved correctly in inline space normalizer
+- Preset rulesets resolved from application base directory for NuGet tool distribution
+- NuGet source mapping configuration for build reliability
+
 ## [0.2.0] - 2026-02-10
 
 ### Added
@@ -45,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/masmgr/tsqlrefine/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/masmgr/tsqlrefine/releases/tag/v0.1.0

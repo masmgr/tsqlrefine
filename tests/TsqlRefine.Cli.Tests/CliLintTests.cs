@@ -221,5 +221,42 @@ public sealed class CliLintTests
         Assert.Equal("tsqlrefine", doc.RootElement.GetProperty("tool").GetString());
         Assert.Equal("lint", doc.RootElement.GetProperty("command").GetString());
     }
+
+    [Fact]
+    public async Task Lint_JsonOutput_IncludesCodeDescriptionHref()
+    {
+        var stdin = new StringReader("SELECT * FROM t;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin", "--output", "json" }, stdin, stdout, stderr);
+
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var diagnostics = doc.RootElement.GetProperty("files")[0].GetProperty("diagnostics");
+        var avoidSelectStar = diagnostics.EnumerateArray()
+            .First(d => d.GetProperty("code").GetString() == "avoid-select-star");
+
+        var data = avoidSelectStar.GetProperty("data");
+        Assert.True(data.TryGetProperty("codeDescriptionHref", out var href));
+        Assert.Contains("avoid-select-star.md", href.GetString());
+    }
+
+    [Fact]
+    public async Task Lint_JsonOutput_ParseErrorOmitsCodeDescriptionHref()
+    {
+        var stdin = new StringReader("SELECT * FROM");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin", "--output", "json" }, stdin, stdout, stderr);
+
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var diagnostics = doc.RootElement.GetProperty("files")[0].GetProperty("diagnostics");
+        var parseError = diagnostics.EnumerateArray()
+            .First(d => d.GetProperty("code").GetString() == "parse-error");
+
+        var data = parseError.GetProperty("data");
+        Assert.False(data.TryGetProperty("codeDescriptionHref", out _));
+    }
 }
 

@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Column aliases should use the AS keyword
 /// </summary>
-public sealed class RequireAsForColumnAliasRule : IRule
+public sealed class RequireAsForColumnAliasRule : DiagnosticVisitorRuleBase<TSqlScript>
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-as-for-column-alias",
         Description: "Column aliases should use the AS keyword",
         Category: "Style",
@@ -16,30 +16,12 @@ public sealed class RequireAsForColumnAliasRule : IRule
         Fixable: true
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context, TSqlScript script) =>
+        script.ScriptTokenStream is null
+            ? new NoOpDiagnosticVisitor()
+            : new RequireAsForColumnAliasVisitor(script.ScriptTokenStream);
 
-        if (context.Ast.Fragment is null || context.Ast.Fragment is not TSqlScript script)
-        {
-            yield break;
-        }
-
-        if (script.ScriptTokenStream is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireAsForColumnAliasVisitor(script.ScriptTokenStream);
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic)
     {
         if (!RuleHelpers.CanProvideFix(context, diagnostic, Metadata.RuleId))
         {

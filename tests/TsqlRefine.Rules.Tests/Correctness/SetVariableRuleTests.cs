@@ -33,7 +33,7 @@ public sealed class SetVariableRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/set-variable", diagnostic.Code);
+        Assert.Equal("semantic-set-variable", diagnostic.Code);
         Assert.Contains("SET", diagnostic.Message);
         Assert.Contains("SELECT", diagnostic.Message);
     }
@@ -49,7 +49,7 @@ public sealed class SetVariableRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/set-variable", diagnostic.Code);
+        Assert.Equal("semantic-set-variable", diagnostic.Code);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ SET @B = 2;";
 
         // Assert
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("semantic/set-variable", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("semantic-set-variable", d.Code));
     }
 
     [Fact]

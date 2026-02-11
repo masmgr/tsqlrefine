@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects duplicate table aliases in the same scope, which causes ambiguous references.
 /// </summary>
-public sealed class DuplicateAliasRule : IRule
+public sealed class DuplicateAliasRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/duplicate-alias",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-duplicate-alias",
         Description: "Detects duplicate table aliases in the same scope, which causes ambiguous references.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new DuplicateAliasVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new DuplicateAliasVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class DuplicateAliasVisitor : DiagnosticVisitorBase
@@ -48,37 +33,22 @@ public sealed class DuplicateAliasRule : IRule
                 return;
             }
 
-            // Track aliases we've seen (case-insensitive for SQL Server)
-            var seenAliases = new Dictionary<string, TableReference>(StringComparer.OrdinalIgnoreCase);
-
             // Collect all table references from the FROM clause
             var tableReferences = new List<TableReference>();
             TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
 
             // Check for duplicates
-            foreach (var tableRef in tableReferences)
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
+                tableReferences,
+                TableReferenceHelpers.GetAliasOrTableName))
             {
-                var alias = TableReferenceHelpers.GetAliasOrTableName(tableRef);
-                if (alias == null)
-                {
-                    continue;
-                }
-
-                if (seenAliases.TryGetValue(alias, out var firstOccurrence))
-                {
-                    // Found a duplicate
-                    AddDiagnostic(
-                        fragment: tableRef,
-                        message: $"Duplicate table alias '{alias}' in same scope. Each alias must be unique within a FROM clause.",
-                        code: "semantic/duplicate-alias",
-                        category: "Correctness",
-                        fixable: false
-                    );
-                }
-                else
-                {
-                    seenAliases[alias] = tableRef;
-                }
+                AddDiagnostic(
+                    fragment: duplicate.Item,
+                    message: $"Duplicate table alias '{duplicate.Name}' in same scope. Each alias must be unique within a FROM clause.",
+                    code: "semantic-duplicate-alias",
+                    category: "Correctness",
+                    fixable: false
+                );
             }
 
             base.ExplicitVisit(node);

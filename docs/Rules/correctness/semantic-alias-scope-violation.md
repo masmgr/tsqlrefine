@@ -67,7 +67,7 @@ This rule can be disabled in your ruleset configuration:
 ```json
 {
   "rules": [
-    { "id": "semantic/alias-scope-violation", "enabled": false }
+    { "id": "semantic-alias-scope-violation", "enabled": false }
   ]
 }
 ```

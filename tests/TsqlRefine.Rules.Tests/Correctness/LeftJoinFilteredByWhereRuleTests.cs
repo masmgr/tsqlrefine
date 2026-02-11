@@ -22,8 +22,8 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/left-join-filtered-by-where");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-left-join-filtered-by-where");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -45,7 +45,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var rule = new LeftJoinFilteredByWhereRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -57,7 +57,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id LEFT JOIN t3 ON t1.id = t3.id WHERE t2.status = 1";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         // Only t2 is filtered, not t3
         Assert.Single(diagnostics);
@@ -71,7 +71,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t1.active = 1 AND t2.status = 'active'";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         Assert.NotEmpty(diagnostics);
     }
@@ -83,7 +83,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.name LIKE '%test%'";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         // LIKE on right-side table negates LEFT JOIN (NULLs will fail LIKE)
         Assert.NotEmpty(diagnostics);
@@ -96,7 +96,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.val BETWEEN 1 AND 10";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         // BETWEEN on right-side table negates LEFT JOIN
         Assert.NotEmpty(diagnostics);
@@ -109,7 +109,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE NOT t2.status = 0";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/left-join-filtered-by-where").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
 
         // NOT on right-side filter still negates LEFT JOIN
         Assert.NotEmpty(diagnostics);
@@ -134,7 +134,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/left-join-filtered-by-where"
+            Code: "semantic-left-join-filtered-by-where"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -147,7 +147,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
     {
         var rule = new LeftJoinFilteredByWhereRule();
 
-        Assert.Equal("semantic/left-join-filtered-by-where", rule.Metadata.RuleId);
+        Assert.Equal("semantic-left-join-filtered-by-where", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

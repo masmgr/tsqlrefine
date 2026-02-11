@@ -155,8 +155,8 @@ public class CommaStyleTransformerTests
     {
         var input = "SELECT id,\n\nname";
         var result = CommaStyleTransformer.ToLeadingCommas(input);
-        // Empty line gets the comma prepended (no space before content since line is empty)
-        Assert.Equal("SELECT id\n,\nname", result);
+        // Empty line is skipped; comma moves to the next content line.
+        Assert.Equal("SELECT id\n\n, name", result);
     }
 
     [Fact]
@@ -218,6 +218,14 @@ public class CommaStyleTransformerTests
         var result = CommaStyleTransformer.ToLeadingCommas(input);
         // Comma is part of comment, so no transformation happens
         Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_SkipsLineCommentOnlyTargetLine()
+    {
+        var input = "SELECT id,\n-- comment\nname";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+        Assert.Equal("SELECT id\n-- comment\n, name", result);
     }
 
     [Fact]

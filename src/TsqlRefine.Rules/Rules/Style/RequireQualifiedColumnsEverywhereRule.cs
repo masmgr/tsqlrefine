@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// <summary>
 /// Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns.
 /// </summary>
-public sealed class RequireQualifiedColumnsEverywhereRule : IRule
+public sealed class RequireQualifiedColumnsEverywhereRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "require-qualified-columns-everywhere",
         Description: "Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns.",
         Category: "Style",
@@ -16,25 +16,10 @@ public sealed class RequireQualifiedColumnsEverywhereRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireQualifiedColumnsEverywhereVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new RequireQualifiedColumnsEverywhereVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireQualifiedColumnsEverywhereVisitor : DiagnosticVisitorBase

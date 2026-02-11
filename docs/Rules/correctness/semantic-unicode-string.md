@@ -209,7 +209,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/unicode-string", "enabled": false }
+    { "id": "semantic-unicode-string", "enabled": false }
   ]
 }
 ```

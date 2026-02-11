@@ -1,6 +1,6 @@
 {
   "compatLevel": 150,
-  "ruleset": "samples/rulesets/recommended.json",
+  "preset": "recommended",
   "plugins": []
 }
 

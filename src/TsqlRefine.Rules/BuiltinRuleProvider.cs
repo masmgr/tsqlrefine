@@ -17,6 +17,8 @@ namespace TsqlRefine.Rules;
 /// </summary>
 public sealed class BuiltinRuleProvider : IRuleProvider
 {
+    private const string BaseDocUrl = "https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/";
+
     private static readonly Lazy<IRule[]> s_rules = new(CreateRules);
 
     public string Name => "tsqlrefine.builtin";
@@ -26,6 +28,18 @@ public sealed class BuiltinRuleProvider : IRuleProvider
     public IReadOnlyList<IRule> GetRules() => s_rules.Value;
 
     private static IRule[] CreateRules() =>
+        CreateRawRules().Select(WithDocumentationUri).ToArray();
+
+    private static IRule WithDocumentationUri(IRule rule)
+    {
+        var m = rule.Metadata;
+        var docFileName = m.RuleId.Replace('/', '-');
+        var categoryDir = m.Category.ToLowerInvariant();
+        var uri = new Uri($"{BaseDocUrl}{categoryDir}/{docFileName}.md");
+        return new RuleWithMetadata(rule, m with { DocumentationUri = uri });
+    }
+
+    private static IRule[] CreateRawRules() =>
     [
         // === Correctness ===
         new AvoidNullComparisonRule(),
@@ -41,6 +55,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidFloatForDecimalRule(),
         new UnreachableCaseWhenRule(),
         new UnionTypeMismatchRule(),
+        new DuplicateSelectColumnRule(),
+        new DuplicateInsertColumnRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -83,6 +99,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DuplicateIndexColumnRule(),
         new DuplicateIndexDefinitionRule(),
         new DuplicateForeignKeyColumnRule(),
+        new DuplicateViewColumnRule(),
+        new DuplicateTableFunctionColumnRule(),
+        new DuplicateTableVariableColumnRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
@@ -158,5 +177,15 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         // === Debug ===
         new PrintStatementRule()
     ];
+
+    private sealed class RuleWithMetadata(IRule inner, RuleMetadata metadata) : IRule
+    {
+        public RuleMetadata Metadata => metadata;
+
+        public IEnumerable<Diagnostic> Analyze(RuleContext context) => inner.Analyze(context);
+
+        public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+            inner.GetFixes(context, diagnostic);
+    }
 }
 

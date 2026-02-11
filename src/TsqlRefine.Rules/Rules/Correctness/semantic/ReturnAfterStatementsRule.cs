@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects unreachable statements after a RETURN statement in stored procedures or functions.
 /// </summary>
-public sealed class ReturnAfterStatementsRule : IRule
+public sealed class ReturnAfterStatementsRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/return-after-statements",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-return-after-statements",
         Description: "Detects unreachable statements after a RETURN statement in stored procedures or functions.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new ReturnAfterStatementsVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new ReturnAfterStatementsVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class ReturnAfterStatementsVisitor : DiagnosticVisitorBase
@@ -89,7 +74,7 @@ public sealed class ReturnAfterStatementsRule : IRule
                 AddDiagnostic(
                     fragment: unreachableStatement,
                     message: "Unreachable code after RETURN statement. This statement will never be executed.",
-                    code: "semantic/return-after-statements",
+                    code: "semantic-return-after-statements",
                     category: "Correctness",
                     fixable: false
                 );

@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 /// <summary>
 /// Ensures variable references match the exact casing used in their declarations for consistency.
 /// </summary>
-public sealed class CaseSensitiveVariablesRule : IRule
+public sealed class CaseSensitiveVariablesRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/case-sensitive-variables",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-case-sensitive-variables",
         Description: "Ensures variable references match the exact casing used in their declarations for consistency.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new CaseSensitiveVariablesVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new CaseSensitiveVariablesVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class CaseSensitiveVariablesVisitor : DiagnosticVisitorBase
@@ -47,14 +32,7 @@ public sealed class CaseSensitiveVariablesRule : IRule
             // Collect all variable declarations
             foreach (var declaration in node.Declarations)
             {
-                var varName = declaration.VariableName.Value;
-                if (!_declaredVariables.ContainsKey(varName))
-                {
-                    _declaredVariables[varName] = new VariableDeclaration(
-                        varName,
-                        declaration.VariableName
-                    );
-                }
+                TrackVariableDeclaration(declaration.VariableName.Value, declaration.VariableName);
             }
 
             base.ExplicitVisit(node);
@@ -63,14 +41,7 @@ public sealed class CaseSensitiveVariablesRule : IRule
         public override void ExplicitVisit(ProcedureParameter node)
         {
             // Track stored procedure parameters
-            var varName = node.VariableName.Value;
-            if (!_declaredVariables.ContainsKey(varName))
-            {
-                _declaredVariables[varName] = new VariableDeclaration(
-                    varName,
-                    node.VariableName
-                );
-            }
+            TrackVariableDeclaration(node.VariableName.Value, node.VariableName);
 
             base.ExplicitVisit(node);
         }
@@ -92,12 +63,19 @@ public sealed class CaseSensitiveVariablesRule : IRule
                     AddDiagnostic(
                         fragment: fragment,
                         message: $"Variable reference '{varName}' does not match declared casing '{declaration.ExactName}'. Use consistent casing for better code readability.",
-                        code: "semantic/case-sensitive-variables",
+                        code: "semantic-case-sensitive-variables",
                         category: "Style",
                         fixable: false
                     );
                 }
             }
+        }
+
+        private void TrackVariableDeclaration(string variableName, Identifier identifier)
+        {
+            _declaredVariables.TryAdd(
+                variableName,
+                new VariableDeclaration(variableName, identifier));
         }
 
         private sealed record VariableDeclaration(

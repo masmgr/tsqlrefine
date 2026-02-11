@@ -6,35 +6,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// <summary>
 /// Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.
 /// </summary>
-public sealed class LeftJoinFilteredByWhereRule : IRule
+public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/left-join-filtered-by-where",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-left-join-filtered-by-where",
         Description: "Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new LeftJoinFilteredByWhereVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new LeftJoinFilteredByWhereVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class LeftJoinFilteredByWhereVisitor : DiagnosticVisitorBase
@@ -89,9 +74,9 @@ public sealed class LeftJoinFilteredByWhereRule : IRule
                     if (rightTableToJoin.TryGetValue(tableName, out var join))
                     {
                         AddDiagnostic(
-                            fragment: join,
+                            fragment: join.SecondTableReference,
                             message: $"LEFT JOIN with table '{tableName}' is negated by WHERE clause filter. This effectively makes it an INNER JOIN. Consider using INNER JOIN instead, or move the filter to the ON clause, or use 'IS NOT NULL' to be explicit.",
-                            code: "semantic/left-join-filtered-by-where",
+                            code: "semantic-left-join-filtered-by-where",
                             category: "Correctness",
                             fixable: false
                         );

@@ -7,35 +7,20 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// Detects JOIN operations where the joined table is not referenced in the ON clause.
 /// This typically indicates a missing join condition that may result in incorrect query behavior.
 /// </summary>
-public sealed class JoinTableNotReferencedInOnRule : IRule
+public sealed class JoinTableNotReferencedInOnRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/join-table-not-referenced-in-on",
+    public override RuleMetadata Metadata { get; } = new(
+        RuleId: "semantic-join-table-not-referenced-in-on",
         Description: "Detects JOIN operations where the joined table is not referenced in the ON clause.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new JoinTableNotReferencedVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new JoinTableNotReferencedVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class JoinTableNotReferencedVisitor : DiagnosticVisitorBase
@@ -78,9 +63,9 @@ public sealed class JoinTableNotReferencedInOnRule : IRule
             if (!referencedTables.Contains(joinedTableName))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: node.SearchCondition,
                     message: $"Table '{joinedTableName}' is joined but not referenced in the ON clause. This may indicate a missing join condition.",
-                    code: "semantic/join-table-not-referenced-in-on",
+                    code: "semantic-join-table-not-referenced-in-on",
                     category: "Correctness",
                     fixable: false
                 );

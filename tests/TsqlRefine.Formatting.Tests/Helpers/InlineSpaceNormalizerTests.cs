@@ -212,6 +212,14 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
     }
 
     [Fact]
+    public void Normalize_MultipleSpacesBeforeComma_RemovesAll()
+    {
+        var input = "SELECT id   ,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT id, name", result);
+    }
+
+    [Fact]
     public void Normalize_CommaInMiddleOfProtectedRegion_NoSpaceAdded()
     {
         var input = "SELECT /* before,after */ id";
@@ -241,5 +249,91 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
         var input = "SELECT id,    name";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
         Assert.Equal("SELECT id,    name", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineBlockComment_PreservesCommaInside()
+    {
+        // Block comment spans multiple lines - commas inside should not be modified
+        var input = "SELECT /* comment\na,b\n*/ id FROM users";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT /* comment\na,b\n*/ id FROM users", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineBlockComment_NormalizesCommaOutside()
+    {
+        // Commas outside the block comment should still be normalized
+        var input = "SELECT /* comment\na,b\n*/ id,name FROM users";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT /* comment\na,b\n*/ id, name FROM users", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineBlockComment_CommaOnContinuationLine()
+    {
+        // Block comment starts on first line, continues on second with commas
+        var input = "SELECT /* start,\nmiddle,end\n*/ id,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT /* start,\nmiddle,end\n*/ id, name", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineString_PreservesCommaInside()
+    {
+        // String literal spans multiple lines - commas inside should not be modified
+        var input = "SELECT 'line1,\nline2,end' AS col,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT 'line1,\nline2,end' AS col, name", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineBlockComment_WithCRLF_PreservesCommaInside()
+    {
+        // Block comment spans multiple lines with CRLF - commas inside should not be modified
+        var input = "SELECT /* comment\r\na,b\r\n*/ id,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT /* comment\r\na,b\r\n*/ id, name", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineString_WithCRLF_PreservesCommaInside()
+    {
+        // String literal spans multiple lines with CRLF - commas inside should not be modified
+        var input = "SELECT 'line1,\r\nline2,end' AS col,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT 'line1,\r\nline2,end' AS col, name", result);
+    }
+
+    [Fact]
+    public void Normalize_CROnly_TreatedAsRegularCharacter()
+    {
+        // CR alone is not recognized as a line ending by DetectLineEnding,
+        // so it is treated as a regular character within a single line.
+        // Note: In the full formatting pipeline (SqlFormatter.Format()),
+        // standalone CRs are stripped before this normalizer runs.
+        var input = "SELECT id,name\rFROM users";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT id, name\rFROM users", result);
+    }
+
+    [Fact]
+    public void Normalize_MixedLineEndings_DetectsCRLFAndSplitsByCRLF()
+    {
+        // CRLF takes precedence when both CRLF and LF are present.
+        // SplitByLineEnding splits by CRLF only, so a lone LF remains inside
+        // the second "line" and is preserved as-is (not normalized to CRLF).
+        var input = "SELECT id,name\r\nFROM users\nWHERE 1=1";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT id, name\r\nFROM users\nWHERE 1=1", result);
+    }
+
+    [Fact]
+    public void Normalize_MultiLineBlockComment_WithCRLF_NormalizesAfterComment()
+    {
+        // Block comment with CRLF - commas after comment end should be normalized
+        var input = "SELECT /* start,\r\nmiddle,end\r\n*/ id,name FROM users";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT /* start,\r\nmiddle,end\r\n*/ id, name FROM users", result);
     }
 }
