@@ -85,5 +85,40 @@ public sealed class EngineTests
             d => d.Code == "avoid-select-star");
         Assert.Equal(DiagnosticSeverity.Error, diag.Severity);
     }
+
+    [Fact]
+    public void Run_BuiltinRuleDiagnostic_IncludesCodeDescriptionHref()
+    {
+        var rules = new BuiltinRuleProvider().GetRules();
+        var engine = new TsqlRefineEngine(rules);
+
+        var result = engine.Run(
+            command: "lint",
+            inputs: [new SqlInput("a.sql", "SELECT * FROM t;")],
+            options: new EngineOptions()
+        );
+
+        var diag = Assert.Single(result.Files[0].Diagnostics,
+            d => d.Code == "avoid-select-star");
+        Assert.NotNull(diag.Data?.CodeDescriptionHref);
+        Assert.Contains("avoid-select-star.md", diag.Data!.CodeDescriptionHref);
+    }
+
+    [Fact]
+    public void Run_ParseError_DoesNotHaveCodeDescriptionHref()
+    {
+        var rules = new BuiltinRuleProvider().GetRules();
+        var engine = new TsqlRefineEngine(rules);
+
+        var result = engine.Run(
+            command: "lint",
+            inputs: [new SqlInput("a.sql", "SELECT * FROM")],
+            options: new EngineOptions()
+        );
+
+        var parseErrorDiag = Assert.Single(result.Files[0].Diagnostics,
+            d => d.Code == TsqlRefineEngine.ParseErrorCode);
+        Assert.Null(parseErrorDiag.Data?.CodeDescriptionHref);
+    }
 }
 

@@ -50,10 +50,12 @@ public enum DiagnosticTag
 /// <param name="RuleId">The rule identifier for grouping and filtering. May duplicate Diagnostic.Code for metadata purposes.</param>
 /// <param name="Category">The category of the rule (e.g., "Performance", "Security", "Style").</param>
 /// <param name="Fixable">Whether this diagnostic can be auto-fixed.</param>
+/// <param name="CodeDescriptionHref">Optional URL linking to documentation for this diagnostic's rule.</param>
 public sealed record DiagnosticData(
     string? RuleId = null,
     string? Category = null,
-    bool? Fixable = null
+    bool? Fixable = null,
+    string? CodeDescriptionHref = null
 );
 
 /// <summary>

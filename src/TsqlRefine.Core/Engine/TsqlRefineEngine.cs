@@ -125,7 +125,8 @@ public sealed class TsqlRefineEngine
         var normalizedData = new DiagnosticData(
             RuleId: originalData?.RuleId ?? metadata.RuleId,
             Category: originalData?.Category ?? metadata.Category,
-            Fixable: originalData?.Fixable ?? metadata.Fixable
+            Fixable: originalData?.Fixable ?? metadata.Fixable,
+            CodeDescriptionHref: originalData?.CodeDescriptionHref ?? metadata.DocumentationUri?.ToString()
         );
 
         var baseSeverity = diagnostic.Severity ?? Map(metadata.DefaultSeverity);
