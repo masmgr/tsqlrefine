@@ -139,7 +139,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/duplicate-alias", "enabled": false }
+    { "id": "semantic-duplicate-alias", "enabled": false }
   ]
 }
 ```

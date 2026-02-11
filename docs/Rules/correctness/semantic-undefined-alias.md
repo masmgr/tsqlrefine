@@ -270,7 +270,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/undefined-alias", "enabled": false }
+    { "id": "semantic-undefined-alias", "enabled": false }
   ]
 }
 ```

@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class SetVariableRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/set-variable",
+        RuleId: "semantic-set-variable",
         Description: "Recommends using SELECT for variable assignment instead of SET for consistency.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
@@ -31,7 +31,7 @@ public sealed class SetVariableRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: node,
                 message: "Use SELECT for variable assignment instead of SET. SELECT is preferred for consistency and can be more performant when assigning multiple variables.",
-                code: "semantic/set-variable",
+                code: "semantic-set-variable",
                 category: "Correctness",
                 fixable: false
             );

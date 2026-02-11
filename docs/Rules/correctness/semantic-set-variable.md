@@ -92,7 +92,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/set-variable", "enabled": false }
+    { "id": "semantic-set-variable", "enabled": false }
   ]
 }
 ```

@@ -10,7 +10,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class JoinTableNotReferencedInOnRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/join-table-not-referenced-in-on",
+        RuleId: "semantic-join-table-not-referenced-in-on",
         Description: "Detects JOIN operations where the joined table is not referenced in the ON clause.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
@@ -65,7 +65,7 @@ public sealed class JoinTableNotReferencedInOnRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: node,
                     message: $"Table '{joinedTableName}' is joined but not referenced in the ON clause. This may indicate a missing join condition.",
-                    code: "semantic/join-table-not-referenced-in-on",
+                    code: "semantic-join-table-not-referenced-in-on",
                     category: "Correctness",
                     fixable: false
                 );

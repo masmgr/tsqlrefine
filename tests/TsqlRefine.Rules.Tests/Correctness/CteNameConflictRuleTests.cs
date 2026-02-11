@@ -25,8 +25,8 @@ public sealed class CteNameConflictRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic/cte-name-conflict");
-        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic/cte-name-conflict"), d =>
+        Assert.Contains(diagnostics, d => d.Data?.RuleId == "semantic-cte-name-conflict");
+        Assert.All(diagnostics.Where(d => d.Data?.RuleId == "semantic-cte-name-conflict"), d =>
         {
             Assert.Equal("Correctness", d.Data?.Category);
             Assert.False(d.Data?.Fixable);
@@ -49,7 +49,7 @@ public sealed class CteNameConflictRuleTests
         var rule = new CteNameConflictRule();
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/cte-name-conflict").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-cte-name-conflict").ToArray();
 
         Assert.Empty(diagnostics);
     }
@@ -62,7 +62,7 @@ public sealed class CteNameConflictRuleTests
 WITH b AS (SELECT 1), b AS (SELECT 2) SELECT * FROM b;";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/cte-name-conflict").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-cte-name-conflict").ToArray();
 
         // Should report at least 2 conflicts (one for each query)
         Assert.True(diagnostics.Length >= 2, $"Expected at least 2 diagnostics, got {diagnostics.Length}");
@@ -76,7 +76,7 @@ WITH b AS (SELECT 1), b AS (SELECT 2) SELECT * FROM b;";
         var sql = "WITH cte AS (SELECT 1) SELECT (SELECT * FROM (WITH cte AS (SELECT 2) SELECT * FROM cte) x) FROM cte";
         var context = RuleTestContext.CreateContext(sql);
 
-        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic/cte-name-conflict").ToArray();
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-cte-name-conflict").ToArray();
 
         // Different scopes, so no conflict
         Assert.Empty(diagnostics);
@@ -101,7 +101,7 @@ WITH b AS (SELECT 1), b AS (SELECT 2) SELECT * FROM b;";
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "semantic/cte-name-conflict"
+            Code: "semantic-cte-name-conflict"
         );
 
         var fixes = rule.GetFixes(context, diagnostic).ToArray();
@@ -114,7 +114,7 @@ WITH b AS (SELECT 1), b AS (SELECT 2) SELECT * FROM b;";
     {
         var rule = new CteNameConflictRule();
 
-        Assert.Equal("semantic/cte-name-conflict", rule.Metadata.RuleId);
+        Assert.Equal("semantic-cte-name-conflict", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);

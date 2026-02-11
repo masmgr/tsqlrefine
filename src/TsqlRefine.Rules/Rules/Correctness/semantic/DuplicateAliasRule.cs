@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class DuplicateAliasRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/duplicate-alias",
+        RuleId: "semantic-duplicate-alias",
         Description: "Detects duplicate table aliases in the same scope, which causes ambiguous references.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -45,7 +45,7 @@ public sealed class DuplicateAliasRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: duplicate.Item,
                     message: $"Duplicate table alias '{duplicate.Name}' in same scope. Each alias must be unique within a FROM clause.",
-                    code: "semantic/duplicate-alias",
+                    code: "semantic-duplicate-alias",
                     category: "Correctness",
                     fixable: false
                 );

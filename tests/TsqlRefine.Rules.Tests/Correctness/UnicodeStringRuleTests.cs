@@ -46,7 +46,7 @@ public sealed class UnicodeStringRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/unicode-string", diagnostic.Code);
+        Assert.Equal("semantic-unicode-string", diagnostic.Code);
         Assert.Contains("Unicode", diagnostic.Message);
     }
 
@@ -62,7 +62,7 @@ public sealed class UnicodeStringRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/unicode-string", diagnostic.Code);
+        Assert.Equal("semantic-unicode-string", diagnostic.Code);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public sealed class UnicodeStringRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/unicode-string", diagnostic.Code);
+        Assert.Equal("semantic-unicode-string", diagnostic.Code);
     }
 
     [Fact]

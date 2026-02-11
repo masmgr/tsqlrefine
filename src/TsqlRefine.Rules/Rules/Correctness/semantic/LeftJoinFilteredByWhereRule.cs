@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/left-join-filtered-by-where",
+        RuleId: "semantic-left-join-filtered-by-where",
         Description: "Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
@@ -76,7 +76,7 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
                         AddDiagnostic(
                             fragment: join,
                             message: $"LEFT JOIN with table '{tableName}' is negated by WHERE clause filter. This effectively makes it an INNER JOIN. Consider using INNER JOIN instead, or move the filter to the ON clause, or use 'IS NOT NULL' to be explicit.",
-                            code: "semantic/left-join-filtered-by-where",
+                            code: "semantic-left-join-filtered-by-where",
                             category: "Correctness",
                             fixable: false
                         );

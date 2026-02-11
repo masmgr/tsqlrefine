@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/schema-qualify",
+        RuleId: "semantic-schema-qualify",
         Description: "Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Warning,
@@ -55,7 +55,7 @@ public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: schemaObject,
                 message: $"Table reference '{tableName}' should include schema qualification (e.g., dbo.{tableName}) for clarity and to avoid naming conflicts.",
-                code: "semantic/schema-qualify",
+                code: "semantic-schema-qualify",
                 category: "Style",
                 fixable: false
             );

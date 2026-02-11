@@ -37,7 +37,7 @@ public sealed class SchemaQualifyRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/schema-qualify", diagnostic.Code);
+        Assert.Equal("semantic-schema-qualify", diagnostic.Code);
         Assert.Contains("schema", diagnostic.Message);
     }
 
@@ -104,7 +104,7 @@ public sealed class SchemaQualifyRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("semantic/schema-qualify", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("semantic-schema-qualify", d.Code));
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public sealed class SchemaQualifyRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/schema-qualify", diagnostic.Code);
+        Assert.Equal("semantic-schema-qualify", diagnostic.Code);
         Assert.Contains("Orders", diagnostic.Message);
     }
 }

@@ -50,7 +50,7 @@ public sealed class MultiTableAliasRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/multi-table-alias", diagnostic.Code);
+        Assert.Equal("semantic-multi-table-alias", diagnostic.Code);
         Assert.Contains("qualified", diagnostic.Message);
     }
 
@@ -65,7 +65,7 @@ public sealed class MultiTableAliasRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/multi-table-alias", diagnostic.Code);
+        Assert.Equal("semantic-multi-table-alias", diagnostic.Code);
         Assert.Contains("Name", diagnostic.Message);
     }
 
@@ -80,7 +80,7 @@ public sealed class MultiTableAliasRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("semantic/multi-table-alias", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("semantic-multi-table-alias", d.Code));
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class MultiTableAliasRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/multi-table-alias", diagnostic.Code);
+        Assert.Equal("semantic-multi-table-alias", diagnostic.Code);
         Assert.Contains("Status", diagnostic.Message);
     }
 }

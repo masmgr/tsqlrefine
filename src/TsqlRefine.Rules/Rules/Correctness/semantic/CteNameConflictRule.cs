@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/cte-name-conflict",
+        RuleId: "semantic-cte-name-conflict",
         Description: "Detects CTE name conflicts with other CTEs or table aliases in the same scope.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -87,7 +87,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: duplicate.Item,
                     message: $"Duplicate CTE name '{duplicate.Name}'. Each CTE name must be unique within a WITH clause.",
-                    code: "semantic/cte-name-conflict",
+                    code: "semantic-cte-name-conflict",
                     category: "Correctness",
                     fixable: false
                 );
@@ -130,7 +130,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                         AddDiagnostic(
                             fragment: targetReference,
                             message: $"Table alias '{aliasName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                            code: "semantic/cte-name-conflict",
+                            code: "semantic-cte-name-conflict",
                             category: "Correctness",
                             fixable: false
                         );
@@ -144,7 +144,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                         AddDiagnostic(
                             fragment: targetReference,
                             message: $"Table alias '{tableName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                            code: "semantic/cte-name-conflict",
+                            code: "semantic-cte-name-conflict",
                             category: "Correctness",
                             fixable: false
                         );
@@ -160,7 +160,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: tableRef,
                     message: $"Table alias '{alias}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
-                    code: "semantic/cte-name-conflict",
+                    code: "semantic-cte-name-conflict",
                     category: "Correctness",
                     fixable: false
                 );

@@ -72,7 +72,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/multi-table-alias", "enabled": false }
+    { "id": "semantic-multi-table-alias", "enabled": false }
   ]
 }
 ```

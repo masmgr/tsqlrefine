@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class ReturnAfterStatementsRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/return-after-statements",
+        RuleId: "semantic-return-after-statements",
         Description: "Detects unreachable statements after a RETURN statement in stored procedures or functions.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Warning,
@@ -74,7 +74,7 @@ public sealed class ReturnAfterStatementsRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: unreachableStatement,
                     message: "Unreachable code after RETURN statement. This statement will never be executed.",
-                    code: "semantic/return-after-statements",
+                    code: "semantic-return-after-statements",
                     category: "Correctness",
                     fixable: false
                 );

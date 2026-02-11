@@ -7,9 +7,9 @@
     { "id": "dml-without-where" },
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
-    { "id": "semantic/undefined-alias" },
-    { "id": "semantic/duplicate-alias" },
-    { "id": "semantic/insert-column-count-mismatch" },
+    { "id": "semantic-undefined-alias" },
+    { "id": "semantic-duplicate-alias" },
+    { "id": "semantic-insert-column-count-mismatch" },
     { "id": "require-column-list-for-insert-values" },
     { "id": "require-column-list-for-insert-select" },
     { "id": "dangerous-ddl" }

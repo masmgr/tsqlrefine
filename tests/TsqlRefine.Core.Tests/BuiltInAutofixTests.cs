@@ -36,7 +36,7 @@ public sealed class BuiltInAutofixTests
         Assert.Single(result.Files);
         Assert.Equal("DECLARE @Name NVARCHAR(50); SET @Name = N'あ';", result.Files[0].FixedText);
         Assert.Empty(result.Files[0].Diagnostics);
-        Assert.Contains(result.Files[0].AppliedFixes, f => f.RuleId == "semantic/unicode-string");
+        Assert.Contains(result.Files[0].AppliedFixes, f => f.RuleId == "semantic-unicode-string");
     }
 }
 

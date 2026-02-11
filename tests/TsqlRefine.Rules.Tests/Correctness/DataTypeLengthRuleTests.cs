@@ -33,7 +33,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("VARCHAR", diagnostic.Message);
     }
 
@@ -48,7 +48,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("NVARCHAR", diagnostic.Message);
     }
 
@@ -63,7 +63,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("CHAR", diagnostic.Message);
     }
 
@@ -78,7 +78,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("NCHAR", diagnostic.Message);
     }
 
@@ -93,7 +93,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("VARBINARY", diagnostic.Message);
     }
 
@@ -108,7 +108,7 @@ public sealed class DataTypeLengthRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
         Assert.Contains("BINARY", diagnostic.Message);
     }
 
@@ -165,7 +165,7 @@ CREATE TABLE Users (
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic/data-type-length", diagnostic.Code);
+        Assert.Equal("semantic-data-type-length", diagnostic.Code);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ DECLARE @Data VARBINARY;";
 
         // Assert
         Assert.Equal(3, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("semantic/data-type-length", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("semantic-data-type-length", d.Code));
     }
 
     [Fact]

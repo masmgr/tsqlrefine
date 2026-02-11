@@ -345,7 +345,7 @@ interface FileResult {
 interface Diagnostic {
   range: Range;
   severity?: DiagnosticSeverity; // defaults to rule's defaultSeverity
-  code?: number | string;        // Rule ID (e.g., "semantic/undefined-alias")
+  code?: number | string;        // Rule ID (e.g., "semantic-undefined-alias")
   source?: string;               // "tsqlrefine"
   message: string;
   tags?: DiagnosticTag[];

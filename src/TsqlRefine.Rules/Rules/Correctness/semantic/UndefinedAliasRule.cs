@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/undefined-alias",
+        RuleId: "semantic-undefined-alias",
         Description: "Detects references to undefined table aliases in column qualifiers.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -404,7 +404,7 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
                     _parent.AddDiagnostic(
                         fragment: qualifierIdentifier,
                         message: $"Undefined table alias '{qualifier}'. Table or alias '{qualifier}' is not declared in the FROM clause.",
-                        code: "semantic/undefined-alias",
+                        code: "semantic-undefined-alias",
                         category: "Correctness",
                         fixable: false
                     );

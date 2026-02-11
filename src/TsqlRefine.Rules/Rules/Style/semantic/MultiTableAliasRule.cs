@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 public sealed class MultiTableAliasRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/multi-table-alias",
+        RuleId: "semantic-multi-table-alias",
         Description: "Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Warning,
@@ -136,7 +136,7 @@ public sealed class MultiTableAliasRule : DiagnosticVisitorRuleBase
                     _parent.AddDiagnostic(
                         fragment: node,
                         message: $"Column reference '{columnName}' in multi-table query should be qualified with table alias (e.g., tablealias.{columnName}) to avoid ambiguity.",
-                        code: "semantic/multi-table-alias",
+                        code: "semantic-multi-table-alias",
                         category: "Style",
                         fixable: false
                     );

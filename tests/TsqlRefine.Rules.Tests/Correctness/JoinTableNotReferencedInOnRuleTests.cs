@@ -6,7 +6,7 @@ namespace TsqlRefine.Rules.Tests.Correctness;
 
 public sealed class JoinTableNotReferencedInOnRuleTests
 {
-    private const string RuleId = "semantic/join-table-not-referenced-in-on";
+    private const string RuleId = "semantic-join-table-not-referenced-in-on";
 
     [Theory]
     [InlineData("SELECT * FROM t1 INNER JOIN t2 ON t1.id = 1")]  // t2 not referenced

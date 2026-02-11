@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style.Semantic;
 public sealed class CaseSensitiveVariablesRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/case-sensitive-variables",
+        RuleId: "semantic-case-sensitive-variables",
         Description: "Ensures variable references match the exact casing used in their declarations for consistency.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
@@ -63,7 +63,7 @@ public sealed class CaseSensitiveVariablesRule : DiagnosticVisitorRuleBase
                     AddDiagnostic(
                         fragment: fragment,
                         message: $"Variable reference '{varName}' does not match declared casing '{declaration.ExactName}'. Use consistent casing for better code readability.",
-                        code: "semantic/case-sensitive-variables",
+                        code: "semantic-case-sensitive-variables",
                         category: "Style",
                         fixable: false
                     );

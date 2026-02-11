@@ -108,7 +108,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "semantic/join-table-not-referenced-in-on", "enabled": false }
+    { "id": "semantic-join-table-not-referenced-in-on", "enabled": false }
   ]
 }
 ```

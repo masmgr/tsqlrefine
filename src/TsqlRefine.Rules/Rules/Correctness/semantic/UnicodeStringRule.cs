@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class UnicodeStringRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/unicode-string",
+        RuleId: "semantic-unicode-string",
         Description: "Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -152,8 +152,8 @@ public sealed class UnicodeStringRule : IRule
                     Diagnostic: new Diagnostic(
                         Range: ScriptDomHelpers.GetRange(literal),
                         Message: "String literal contains Unicode characters but is assigned to a non-Unicode variable (VARCHAR/CHAR). Use NVARCHAR/NCHAR to preserve Unicode data.",
-                        Code: "semantic/unicode-string",
-                        Data: new DiagnosticData("semantic/unicode-string", "Correctness", fixable)
+                        Code: "semantic-unicode-string",
+                        Data: new DiagnosticData("semantic-unicode-string", "Correctness", fixable)
                     ),
                     TypeFragment: dataType,
                     ReplacementKeyword: replacementKeyword

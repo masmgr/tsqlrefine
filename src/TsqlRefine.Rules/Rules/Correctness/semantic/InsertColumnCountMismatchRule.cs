@@ -8,7 +8,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 /// </summary>
 public sealed class InsertColumnCountMismatchRule : DiagnosticVisitorRuleBase
 {
-    private const string RuleId = "semantic/insert-column-count-mismatch";
+    private const string RuleId = "semantic-insert-column-count-mismatch";
     private const string Category = "Correctness";
 
     public override RuleMetadata Metadata { get; } = new(

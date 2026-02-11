@@ -10,7 +10,7 @@ namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 public sealed class DataTypeLengthRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "semantic/data-type-length",
+        RuleId: "semantic-data-type-length",
         Description: "Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -135,7 +135,7 @@ public sealed class DataTypeLengthRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: sqlDataType,
                     message: $"Variable-length data type '{typeName}' must have an explicit length specification. Use {typeName}(n) or {typeName}(MAX).",
-                    code: "semantic/data-type-length",
+                    code: "semantic-data-type-length",
                     category: "Correctness",
                     fixable: true
                 );
