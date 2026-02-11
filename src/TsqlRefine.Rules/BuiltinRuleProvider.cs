@@ -162,6 +162,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new SetNocountRule(),
         new SetQuotedIdentifierRule(),
         new SetTransactionIsolationLevelRule(),
+        new SetAnsiWarningsRule(),
+        new SetAnsiPaddingRule(),
+        new SetConcatNullYieldsNullRule(),
+        new SetArithabortRule(),
         new SetVariableRule(),
 
         // === Feature Usage ===

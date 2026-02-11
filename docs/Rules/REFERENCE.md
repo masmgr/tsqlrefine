@@ -13,11 +13,11 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 110
+- **Total Rules**: 114
 - **Fixable Rules**: 10 (9%)
 - **Error Severity**: 17 rules (15%)
-- **Warning Severity**: 58 rules (53%)
-- **Information Severity**: 35 rules (32%)
+- **Warning Severity**: 62 rules (54%)
+- **Information Severity**: 35 rules (31%)
 
 ## Rule Categories
 
@@ -28,7 +28,7 @@
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
 | **Style** | 29 | Maintains code formatting and consistency |
-| **Transactions** | 10 | Ensures proper transaction handling and session settings |
+| **Transactions** | 14 | Ensures proper transaction handling and session settings |
 | **Schema** | 10 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -148,7 +148,7 @@
 | [semantic/schema-qualify](style/semantic-schema-qualify.md) | Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity. | Warning | No |
 | [semicolon-termination](style/semicolon-termination.md) | SQL statements should be terminated with a semicolon | Information | **Yes** |
 
-### Transactions (10 rules)
+### Transactions (14 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -157,6 +157,10 @@
 | [require-try-catch-for-transaction](transactions/require-try-catch-for-transaction.md) | Requires TRY/CATCH around explicit transactions to ensure errors trigger rollback and cleanup consistently. | Warning | No |
 | [require-xact-abort-on](transactions/require-xact-abort-on.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 | [set-ansi](transactions/set-ansi.md) | Files should start with SET ANSI_NULLS ON within the first 10 statements. | Warning | No |
+| [set-ansi-padding](transactions/set-ansi-padding.md) | Files should start with SET ANSI_PADDING ON within the first 10 statements. | Warning | No |
+| [set-ansi-warnings](transactions/set-ansi-warnings.md) | Files should start with SET ANSI_WARNINGS ON within the first 10 statements. | Warning | No |
+| [set-arithabort](transactions/set-arithabort.md) | Files should start with SET ARITHABORT ON within the first 10 statements. | Warning | No |
+| [set-concat-null-yields-null](transactions/set-concat-null-yields-null.md) | Files should start with SET CONCAT_NULL_YIELDS_NULL ON within the first 10 statements. | Warning | No |
 | [set-nocount](transactions/set-nocount.md) | Files should start with SET NOCOUNT ON within the first 10 statements. | Warning | No |
 | [set-quoted-identifier](transactions/set-quoted-identifier.md) | Files should start with SET QUOTED_IDENTIFIER ON within the first 10 statements. | Warning | No |
 | [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md) | Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements. | Warning | No |
@@ -206,7 +210,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (58 rules)
+### Warning (62 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -257,6 +261,10 @@
 - [semantic/schema-qualify](style/semantic-schema-qualify.md)
 - [semantic/set-variable](correctness/semantic-set-variable.md)
 - [set-ansi](transactions/set-ansi.md)
+- [set-ansi-padding](transactions/set-ansi-padding.md)
+- [set-ansi-warnings](transactions/set-ansi-warnings.md)
+- [set-arithabort](transactions/set-arithabort.md)
+- [set-concat-null-yields-null](transactions/set-concat-null-yields-null.md)
 - [set-quoted-identifier](transactions/set-quoted-identifier.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
