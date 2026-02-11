@@ -57,47 +57,63 @@ public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
             if (querySpec.SelectElements[0] is not SelectScalarExpression { Expression: ColumnReferenceExpression selectColRef })
                 return false;
 
-            var selectColumnName = GetColumnName(selectColRef);
-            if (selectColumnName is null)
-                return false;
-
             if (querySpec.WhereClause?.SearchCondition is null)
                 return false;
 
-            return ContainsIsNotNullForColumn(querySpec.WhereClause.SearchCondition, selectColumnName);
+            return ContainsIsNotNullForColumn(querySpec.WhereClause.SearchCondition, selectColRef);
         }
 
-        private static string? GetColumnName(ColumnReferenceExpression colRef)
-        {
-            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
-            return identifiers is { Count: > 0 } ? identifiers[^1].Value : null;
-        }
-
-        private static bool ContainsIsNotNullForColumn(BooleanExpression condition, string columnName)
+        private static bool ContainsIsNotNullForColumn(BooleanExpression condition, ColumnReferenceExpression selectedColumn)
         {
             switch (condition)
             {
                 case BooleanIsNullExpression { IsNot: true } isNotNull:
                     return isNotNull.Expression is ColumnReferenceExpression colRef
-                        && string.Equals(GetColumnName(colRef), columnName, StringComparison.OrdinalIgnoreCase);
+                        && AreSameColumnReference(colRef, selectedColumn);
 
                 case BooleanBinaryExpression binary:
                     if (binary.BinaryExpressionType == BooleanBinaryExpressionType.And)
                     {
-                        return ContainsIsNotNullForColumn(binary.FirstExpression, columnName)
-                            || ContainsIsNotNullForColumn(binary.SecondExpression, columnName);
+                        return ContainsIsNotNullForColumn(binary.FirstExpression, selectedColumn)
+                            || ContainsIsNotNullForColumn(binary.SecondExpression, selectedColumn);
                     }
 
                     // OR: both branches must contain IS NOT NULL to guarantee filtering
-                    return ContainsIsNotNullForColumn(binary.FirstExpression, columnName)
-                        && ContainsIsNotNullForColumn(binary.SecondExpression, columnName);
+                    return ContainsIsNotNullForColumn(binary.FirstExpression, selectedColumn)
+                        && ContainsIsNotNullForColumn(binary.SecondExpression, selectedColumn);
 
                 case BooleanParenthesisExpression paren:
-                    return ContainsIsNotNullForColumn(paren.Expression, columnName);
+                    return ContainsIsNotNullForColumn(paren.Expression, selectedColumn);
 
                 default:
                     return false;
             }
+        }
+
+        private static bool AreSameColumnReference(ColumnReferenceExpression left, ColumnReferenceExpression right)
+        {
+            var leftIds = left.MultiPartIdentifier?.Identifiers;
+            var rightIds = right.MultiPartIdentifier?.Identifiers;
+
+            if (leftIds is null || rightIds is null)
+            {
+                return false;
+            }
+
+            if (leftIds.Count != rightIds.Count)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < leftIds.Count; i++)
+            {
+                if (!string.Equals(leftIds[i].Value, rightIds[i].Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

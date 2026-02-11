@@ -39,6 +39,12 @@ public sealed class AvoidNullComparisonRule : DiagnosticVisitorRuleBase
 
         var rawSql = context.Ast.RawSql;
         var nonNullExpr = issue.NonNullExpression;
+        if (nonNullExpr is NullLiteral)
+        {
+            // For patterns like "NULL = NULL", any direct rewrite changes semantics.
+            return [];
+        }
+
         var exprText = rawSql.Substring(nonNullExpr.StartOffset, nonNullExpr.FragmentLength);
 
         var replacement = issue.IsEquals

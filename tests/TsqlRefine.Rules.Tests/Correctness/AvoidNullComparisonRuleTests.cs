@@ -209,6 +209,19 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
     }
 
     [Fact]
+    public void GetFixes_BothSidesNull_ReturnsEmpty()
+    {
+        var rule = new AvoidNullComparisonRule();
+        var sql = "SELECT * FROM users WHERE NULL = NULL;";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostic = rule.Analyze(context).Single();
+
+        var fixes = rule.GetFixes(context, diagnostic).ToArray();
+
+        Assert.Empty(fixes);
+    }
+
+    [Fact]
     public void GetFixes_LowercaseNull_ReturnsIsNull()
     {
         var rule = new AvoidNullComparisonRule();

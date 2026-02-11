@@ -1,3 +1,4 @@
+using System.Globalization;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Transactions;
 using TsqlRefine.Rules.Tests.Helpers;
@@ -187,6 +188,38 @@ public sealed class RequireThrowOrRaiserrorInCatchRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("require-throw-or-raiserror-in-catch", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_CatchWithReturnDecimalZero_InFrenchCulture_ReturnsDiagnostic()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            var french = new CultureInfo("fr-FR");
+            CultureInfo.CurrentCulture = french;
+            CultureInfo.CurrentUICulture = french;
+
+            const string sql = @"
+                BEGIN TRY
+                    SELECT 1;
+                END TRY
+                BEGIN CATCH
+                    RETURN 0.0;
+                END CATCH;
+            ";
+            var context = RuleTestContext.CreateContext(sql);
+            var diagnostics = _rule.Analyze(context).ToArray();
+
+            Assert.Single(diagnostics);
+            Assert.Equal("require-throw-or-raiserror-in-catch", diagnostics[0].Code);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
     }
 
     [Fact]

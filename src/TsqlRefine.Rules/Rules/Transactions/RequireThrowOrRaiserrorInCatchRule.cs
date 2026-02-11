@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
@@ -95,7 +96,11 @@ public sealed class RequireThrowOrRaiserrorInCatchRule : DiagnosticVisitorRuleBa
                 return integer.Value != "0";
 
             if (expression is NumericLiteral numeric
-                && decimal.TryParse(numeric.Value, out var value))
+                && decimal.TryParse(
+                    numeric.Value,
+                    NumberStyles.Number,
+                    CultureInfo.InvariantCulture,
+                    out var value))
             {
                 return value != 0m;
             }

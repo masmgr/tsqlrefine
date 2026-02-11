@@ -200,6 +200,25 @@ public sealed class PreferExistsOverInSubqueryRuleTests
     }
 
     [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnDifferentQualifier_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT * FROM Users
+            WHERE Id IN (
+                SELECT o.UserId
+                FROM Orders o
+                INNER JOIN Blacklist b ON b.UserId = o.UserId
+                WHERE b.UserId IS NOT NULL
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
     public void Analyze_InWithSubqueryWhereParenthesizedIsNotNull_NoDiagnostic()
     {
         const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE (UserId IS NOT NULL) AND Status = 1);";
