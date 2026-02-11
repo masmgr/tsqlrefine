@@ -13,11 +13,11 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 114
-- **Fixable Rules**: 10 (9%)
+- **Total Rules**: 117
+- **Fixable Rules**: 11 (9%)
 - **Error Severity**: 17 rules (15%)
-- **Warning Severity**: 62 rules (54%)
-- **Information Severity**: 35 rules (31%)
+- **Warning Severity**: 63 rules (54%)
+- **Information Severity**: 37 rules (32%)
 
 ## Rule Categories
 
@@ -27,7 +27,7 @@
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
-| **Style** | 29 | Maintains code formatting and consistency |
+| **Style** | 32 | Maintains code formatting and consistency |
 | **Transactions** | 14 | Ensures proper transaction handling and session settings |
 | **Schema** | 10 | Enforces database schema best practices |
 | **Debug** | 1 | Controls debug and output statements |
@@ -114,17 +114,19 @@
 | [upper-lower](performance/upper-lower.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
 | [utc-datetime](performance/utc-datetime.md) | Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones | Warning | No |
 
-### Style (29 rules)
+### Style (32 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md) | Warns on datetime CONVERT style numbers (magic numbers); encourages clearer, safer formatting patterns. | Information | No |
 | [conditional-begin-end](style/conditional-begin-end.md) | Require BEGIN/END blocks in conditional statements for clarity and maintainability | Information | No |
+| [disallow-order-by-ordinal](style/disallow-order-by-ordinal.md) | Forbids ORDER BY with ordinal positions (e.g., ORDER BY 1, 2) which break silently when columns are reordered. | Information | No |
 | [duplicate-empty-line](style/duplicate-empty-line.md) | Avoid consecutive empty lines (more than one blank line in a row). | Information | No |
 | [duplicate-go](style/duplicate-go.md) | Avoid consecutive GO batch separators. | Information | No |
 | [join-keyword](style/join-keyword.md) | Detects comma-separated table lists in FROM clause (implicit joins) and suggests using explicit JOIN syntax for better readability | Warning | No |
 | [nested-block-comments](style/nested-block-comments.md) | Avoid nested block comments (/* /* */ */). | Warning | No |
 | [normalize-execute-keyword](style/normalize-execute-keyword.md) | Normalizes 'EXEC' to 'EXECUTE' for consistency. | Information | **Yes** |
+| [normalize-inequality-operator](style/normalize-inequality-operator.md) | Normalizes != to <> (ISO standard inequality operator). | Information | **Yes** |
 | [normalize-procedure-keyword](style/normalize-procedure-keyword.md) | Normalizes 'PROC' to 'PROCEDURE' for consistency. | Information | **Yes** |
 | [normalize-transaction-keyword](style/normalize-transaction-keyword.md) | Normalizes 'TRAN' to 'TRANSACTION' and requires explicit 'TRANSACTION' after COMMIT/ROLLBACK. | Information | **Yes** |
 | [prefer-coalesce-over-nested-isnull](style/prefer-coalesce-over-nested-isnull.md) | Detects nested ISNULL and recommends COALESCE; reduces nesting and aligns with standard SQL behavior. | Information | No |
@@ -143,6 +145,7 @@
 | [require-begin-end-for-while](style/require-begin-end-for-while.md) | Enforces BEGIN/END for every WHILE body to avoid accidental single-statement loops when code is edited. | Warning | No |
 | [require-explicit-join-type](style/require-explicit-join-type.md) | Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase. | Warning | **Yes** |
 | [require-qualified-columns-everywhere](style/require-qualified-columns-everywhere.md) | Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns. | Warning | No |
+| [require-schema-qualify-exec](style/require-schema-qualify-exec.md) | Requires schema qualification on EXEC procedure calls (e.g., EXEC dbo.ProcName instead of EXEC ProcName). | Warning | No |
 | [semantic/case-sensitive-variables](style/semantic-case-sensitive-variables.md) | Ensures variable references match the exact casing used in their declarations for consistency. | Warning | No |
 | [semantic/multi-table-alias](style/semantic-multi-table-alias.md) | Requires column references in multi-table queries (with JOINs) to be qualified with table aliases for clarity. | Warning | No |
 | [semantic/schema-qualify](style/semantic-schema-qualify.md) | Requires all table references to include schema qualification (e.g., dbo.Users) for clarity and to avoid ambiguity. | Warning | No |
@@ -210,7 +213,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (62 rules)
+### Warning (63 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -250,6 +253,7 @@
 - [require-parentheses-for-mixed-and-or](correctness/require-parentheses-for-mixed-and-or.md)
 - [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md)
 - [require-qualified-columns-everywhere](style/require-qualified-columns-everywhere.md)
+- [require-schema-qualify-exec](style/require-schema-qualify-exec.md)
 - [require-try-catch-for-transaction](transactions/require-try-catch-for-transaction.md)
 - [require-xact-abort-on](transactions/require-xact-abort-on.md)
 - [semantic/alias-scope-violation](correctness/semantic-alias-scope-violation.md)
@@ -275,11 +279,12 @@
 - [upper-lower](performance/upper-lower.md)
 - [utc-datetime](performance/utc-datetime.md)
 
-### Information (35 rules)
+### Information (37 rules)
 
 - [avoid-magic-convert-style-for-datetime](style/avoid-magic-convert-style-for-datetime.md)
 - [conditional-begin-end](style/conditional-begin-end.md)
 - [data-compression](performance/data-compression.md)
+- [disallow-order-by-ordinal](style/disallow-order-by-ordinal.md)
 - [disallow-select-distinct](performance/disallow-select-distinct.md)
 - [disallow-select-into](performance/disallow-select-into.md)
 - [duplicate-empty-line](style/duplicate-empty-line.md)
@@ -289,6 +294,7 @@
 - [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md)
 - [linked-server](performance/linked-server.md)
 - [normalize-execute-keyword](style/normalize-execute-keyword.md)
+- [normalize-inequality-operator](style/normalize-inequality-operator.md)
 - [normalize-procedure-keyword](style/normalize-procedure-keyword.md)
 - [normalize-transaction-keyword](style/normalize-transaction-keyword.md)
 - [prefer-coalesce-over-nested-isnull](style/prefer-coalesce-over-nested-isnull.md)
@@ -315,18 +321,19 @@
 
 ## Fixable Rules
 
-The following 10 rules support automatic fixing:
+The following 11 rules support automatic fixing:
 
 1. [escape-keyword-identifier](correctness/escape-keyword-identifier.md) - Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
 2. [normalize-execute-keyword](style/normalize-execute-keyword.md) - Normalizes 'EXEC' to 'EXECUTE' for consistency.
-3. [normalize-procedure-keyword](style/normalize-procedure-keyword.md) - Normalizes 'PROC' to 'PROCEDURE' for consistency.
-4. [normalize-transaction-keyword](style/normalize-transaction-keyword.md) - Normalizes 'TRAN' to 'TRANSACTION' and requires explicit 'TRANSACTION' after COMMIT/ROLLBACK.
-5. [prefer-unicode-string-literals](style/prefer-unicode-string-literals.md) - Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes.
-6. [require-as-for-column-alias](style/require-as-for-column-alias.md) - Column aliases should use the AS keyword
-7. [require-as-for-table-alias](style/require-as-for-table-alias.md) - Table aliases should use the AS keyword
-8. [require-explicit-join-type](style/require-explicit-join-type.md) - Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
-9. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
-10. [semicolon-termination](style/semicolon-termination.md) - SQL statements should be terminated with a semicolon
+3. [normalize-inequality-operator](style/normalize-inequality-operator.md) - Normalizes != to <> (ISO standard inequality operator).
+4. [normalize-procedure-keyword](style/normalize-procedure-keyword.md) - Normalizes 'PROC' to 'PROCEDURE' for consistency.
+5. [normalize-transaction-keyword](style/normalize-transaction-keyword.md) - Normalizes 'TRAN' to 'TRANSACTION' and requires explicit 'TRANSACTION' after COMMIT/ROLLBACK.
+6. [prefer-unicode-string-literals](style/prefer-unicode-string-literals.md) - Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes.
+7. [require-as-for-column-alias](style/require-as-for-column-alias.md) - Column aliases should use the AS keyword
+8. [require-as-for-table-alias](style/require-as-for-table-alias.md) - Table aliases should use the AS keyword
+9. [require-explicit-join-type](style/require-explicit-join-type.md) - Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
+10. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
+11. [semicolon-termination](style/semicolon-termination.md) - SQL statements should be terminated with a semicolon
 
 To apply auto-fixes, use the `fix` command:
 

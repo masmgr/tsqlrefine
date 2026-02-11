@@ -127,6 +127,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new NormalizeExecuteKeywordRule(),
         new NormalizeProcedureKeywordRule(),
         new NormalizeTransactionKeywordRule(),
+        new DisallowOrderByOrdinalRule(),
+        new RequireSchemaQualifyExecRule(),
+        new NormalizeInequalityOperatorRule(),
 
         // === Style (Semantic) ===
         new MultiTableAliasRule(),

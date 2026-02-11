@@ -116,7 +116,10 @@
     { "id": "avoid-between-for-datetime-range" },
     { "id": "require-parameterized-sp-executesql" },
     { "id": "avoid-optional-parameter-pattern" },
-    { "id": "require-throw-or-raiserror-in-catch" }
+    { "id": "require-throw-or-raiserror-in-catch" },
+    { "id": "disallow-order-by-ordinal" },
+    { "id": "require-schema-qualify-exec" },
+    { "id": "normalize-inequality-operator" }
   ]
 }
 

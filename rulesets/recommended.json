@@ -72,7 +72,10 @@
     { "id": "avoid-not-in-with-null" },
     { "id": "avoid-between-for-datetime-range" },
     { "id": "require-parameterized-sp-executesql" },
-    { "id": "avoid-optional-parameter-pattern" }
+    { "id": "avoid-optional-parameter-pattern" },
+    { "id": "disallow-order-by-ordinal" },
+    { "id": "require-schema-qualify-exec" },
+    { "id": "normalize-inequality-operator" }
   ]
 }
 
