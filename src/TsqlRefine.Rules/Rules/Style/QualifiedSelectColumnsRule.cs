@@ -24,9 +24,9 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
 
     private sealed class QualifiedSelectColumnsVisitor : DiagnosticVisitorBase
     {
-        public override void ExplicitVisit(SelectStatement node)
+        public override void ExplicitVisit(QuerySpecification node)
         {
-            if (node.QueryExpression is not QuerySpecification querySpec || querySpec.FromClause is null)
+            if (node.FromClause is null)
             {
                 base.ExplicitVisit(node);
                 return;
@@ -34,7 +34,7 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
 
             // Count the number of tables in FROM/JOIN
             var tableReferences = new List<TableReference>();
-            TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
+            TableReferenceHelpers.CollectTableReferences(node.FromClause.TableReferences, tableReferences);
 
             // Only check if multiple tables are present
             if (tableReferences.Count <= 1)
@@ -44,13 +44,17 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
             }
 
             // Check SELECT list for unqualified column references
-            if (querySpec.SelectElements != null)
+            if (node.SelectElements != null)
             {
-                foreach (var selectElement in querySpec.SelectElements)
+                foreach (var selectElement in node.SelectElements)
                 {
                     if (selectElement is SelectScalarExpression scalarExpr)
                     {
                         CheckExpressionForUnqualifiedColumns(scalarExpr.Expression);
+                    }
+                    else if (selectElement is SelectSetVariable setVar)
+                    {
+                        CheckExpressionForUnqualifiedColumns(setVar.Expression);
                     }
                 }
             }
@@ -60,13 +64,16 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
 
         private void CheckExpressionForUnqualifiedColumns(TSqlFragment? fragment)
         {
-            if (fragment is null)
+            if (fragment is null or ScalarSubquery)
             {
                 return;
             }
 
-            if (fragment is ScalarSubquery)
+            // Handle types that wrap a single child expression
+            var singleChild = GetSingleChildExpression(fragment);
+            if (singleChild != null)
             {
+                CheckExpressionForUnqualifiedColumns(singleChild);
                 return;
             }
 
@@ -125,35 +132,50 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
             }
             else if (fragment is FunctionCall func)
             {
-                if (func.Parameters != null)
+                CheckFunctionCallForUnqualifiedColumns(func);
+            }
+            else if (fragment is CoalesceExpression coalesce)
+            {
+                if (coalesce.Expressions != null)
                 {
-                    for (var i = 0; i < func.Parameters.Count; i++)
+                    foreach (var expr in coalesce.Expressions)
                     {
-                        var param = func.Parameters[i];
-                        if (DatePartHelper.IsDatePartLiteralParameter(func, i, param))
-                        {
-                            continue;
-                        }
-
-                        CheckExpressionForUnqualifiedColumns(param);
+                        CheckExpressionForUnqualifiedColumns(expr);
                     }
                 }
             }
-            else if (fragment is CastCall castCall)
+            else if (fragment is NullIfExpression nullIf)
             {
-                CheckExpressionForUnqualifiedColumns(castCall.Parameter);
+                CheckExpressionForUnqualifiedColumns(nullIf.FirstExpression);
+                CheckExpressionForUnqualifiedColumns(nullIf.SecondExpression);
             }
-            else if (fragment is ConvertCall convertCall)
+        }
+
+        private static ScalarExpression? GetSingleChildExpression(TSqlFragment fragment) => fragment switch
+        {
+            CastCall c => c.Parameter,
+            ConvertCall c => c.Parameter,
+            TryCastCall c => c.Parameter,
+            TryConvertCall c => c.Parameter,
+            ParenthesisExpression p => p.Expression,
+            UnaryExpression u => u.Expression,
+            _ => null
+        };
+
+        private void CheckFunctionCallForUnqualifiedColumns(FunctionCall func)
+        {
+            if (func.Parameters != null)
             {
-                CheckExpressionForUnqualifiedColumns(convertCall.Parameter);
-            }
-            else if (fragment is ParenthesisExpression parenthesis)
-            {
-                CheckExpressionForUnqualifiedColumns(parenthesis.Expression);
-            }
-            else if (fragment is UnaryExpression unary)
-            {
-                CheckExpressionForUnqualifiedColumns(unary.Expression);
+                for (var i = 0; i < func.Parameters.Count; i++)
+                {
+                    var param = func.Parameters[i];
+                    if (DatePartHelper.IsDatePartLiteralParameter(func, i, param))
+                    {
+                        continue;
+                    }
+
+                    CheckExpressionForUnqualifiedColumns(param);
+                }
             }
         }
 
@@ -167,6 +189,14 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
             if (expression is InPredicate inPredicate)
             {
                 CheckExpressionForUnqualifiedColumns(inPredicate.Expression);
+                if (inPredicate.Subquery is null && inPredicate.Values != null)
+                {
+                    foreach (var val in inPredicate.Values)
+                    {
+                        CheckExpressionForUnqualifiedColumns(val);
+                    }
+                }
+
                 return;
             }
 
@@ -206,6 +236,14 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
             {
                 CheckExpressionForUnqualifiedColumns(like.FirstExpression);
                 CheckExpressionForUnqualifiedColumns(like.SecondExpression);
+                return;
+            }
+
+            if (expression is BooleanTernaryExpression ternary)
+            {
+                CheckExpressionForUnqualifiedColumns(ternary.FirstExpression);
+                CheckExpressionForUnqualifiedColumns(ternary.SecondExpression);
+                CheckExpressionForUnqualifiedColumns(ternary.ThirdExpression);
                 return;
             }
 
