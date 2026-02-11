@@ -27,7 +27,7 @@ public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(InPredicate node)
         {
             // Only flag IN with subquery, not IN with value lists
-            if (IsInPredicate && node.Subquery is not null)
+            if (IsInPredicate && node.Subquery is not null && !HasIsNotNullOnSelectColumn(node.Subquery))
             {
                 AddDiagnostic(
                     fragment: node,
@@ -39,6 +39,65 @@ public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
+        }
+
+        /// <summary>
+        /// Checks whether the subquery has an IS NOT NULL check on the same column
+        /// as its single SELECT column. When present, the developer is intentionally
+        /// guarding against NULLs and the IN pattern should not be flagged.
+        /// </summary>
+        private static bool HasIsNotNullOnSelectColumn(ScalarSubquery subquery)
+        {
+            if (subquery.QueryExpression is not QuerySpecification querySpec)
+                return false;
+
+            if (querySpec.SelectElements is not { Count: 1 })
+                return false;
+
+            if (querySpec.SelectElements[0] is not SelectScalarExpression { Expression: ColumnReferenceExpression selectColRef })
+                return false;
+
+            var selectColumnName = GetColumnName(selectColRef);
+            if (selectColumnName is null)
+                return false;
+
+            if (querySpec.WhereClause?.SearchCondition is null)
+                return false;
+
+            return ContainsIsNotNullForColumn(querySpec.WhereClause.SearchCondition, selectColumnName);
+        }
+
+        private static string? GetColumnName(ColumnReferenceExpression colRef)
+        {
+            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
+            return identifiers is { Count: > 0 } ? identifiers[^1].Value : null;
+        }
+
+        private static bool ContainsIsNotNullForColumn(BooleanExpression condition, string columnName)
+        {
+            switch (condition)
+            {
+                case BooleanIsNullExpression { IsNot: true } isNotNull:
+                    return isNotNull.Expression is ColumnReferenceExpression colRef
+                        && string.Equals(GetColumnName(colRef), columnName, StringComparison.OrdinalIgnoreCase);
+
+                case BooleanBinaryExpression binary:
+                    if (binary.BinaryExpressionType == BooleanBinaryExpressionType.And)
+                    {
+                        return ContainsIsNotNullForColumn(binary.FirstExpression, columnName)
+                            || ContainsIsNotNullForColumn(binary.SecondExpression, columnName);
+                    }
+
+                    // OR: both branches must contain IS NOT NULL to guarantee filtering
+                    return ContainsIsNotNullForColumn(binary.FirstExpression, columnName)
+                        && ContainsIsNotNullForColumn(binary.SecondExpression, columnName);
+
+                case BooleanParenthesisExpression paren:
+                    return ContainsIsNotNullForColumn(paren.Expression, columnName);
+
+                default:
+                    return false;
+            }
         }
     }
 }

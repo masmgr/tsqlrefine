@@ -138,6 +138,88 @@ public sealed class PreferExistsOverInSubqueryRuleTests
     }
 
     [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnDifferentColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE SomeOtherCol IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullInAndCondition_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL AND Status = 'Active');";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubqueryWhereIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id NOT IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNullOnSameColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereQualifiedIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT o.UserId FROM Orders o WHERE o.UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereParenthesizedIsNotNull_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE (UserId IS NOT NULL) AND Status = 1);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullCaseInsensitive_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT userid FROM Orders WHERE USERID IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsEmptyCollection()
     {
         const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders);";
