@@ -33,56 +33,9 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
                 return;
             }
 
-            bool hasClusteredIndex = false;
-
-            // Check for clustered primary key constraint
-            if (node.Definition?.TableConstraints != null)
-            {
-                foreach (var constraint in node.Definition.TableConstraints)
-                {
-                    if (constraint is UniqueConstraintDefinition uniqueConstraint)
-                    {
-                        if (uniqueConstraint.IsPrimaryKey && uniqueConstraint.Clustered == true)
-                        {
-                            hasClusteredIndex = true;
-                        }
-                    }
-                }
-            }
-
-            // Check column constraints for clustered primary key
-            if (!hasClusteredIndex && node.Definition?.ColumnDefinitions != null)
-            {
-                foreach (var column in node.Definition.ColumnDefinitions)
-                {
-                    if (column.Constraints != null)
-                    {
-                        foreach (var constraint in column.Constraints)
-                        {
-                            if (constraint is UniqueConstraintDefinition uniqueConstraint)
-                            {
-                                if (uniqueConstraint.IsPrimaryKey && uniqueConstraint.Clustered == true)
-                                {
-                                    hasClusteredIndex = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Check for explicit clustered index definitions
-            if (!hasClusteredIndex && node.Definition?.Indexes != null)
-            {
-                foreach (var index in node.Definition.Indexes)
-                {
-                    if (index.IndexType?.IndexTypeKind == IndexTypeKind.Clustered ||
-                        index.IndexType?.IndexTypeKind == IndexTypeKind.ClusteredColumnStore)
-                    {
-                        hasClusteredIndex = true;
-                    }
-                }
-            }
+            var hasClusteredIndex = HasClusteredTableConstraint(node.Definition)
+                || HasClusteredColumnConstraint(node.Definition)
+                || HasClusteredIndexDefinition(node.Definition);
 
             if (!hasClusteredIndex)
             {
@@ -96,6 +49,68 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private static bool HasClusteredTableConstraint(TableDefinition? definition)
+        {
+            if (definition?.TableConstraints == null)
+            {
+                return false;
+            }
+
+            foreach (var constraint in definition.TableConstraints)
+            {
+                if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasClusteredColumnConstraint(TableDefinition? definition)
+        {
+            if (definition?.ColumnDefinitions == null)
+            {
+                return false;
+            }
+
+            foreach (var column in definition.ColumnDefinitions)
+            {
+                if (column.Constraints == null)
+                {
+                    continue;
+                }
+
+                foreach (var constraint in column.Constraints)
+                {
+                    if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasClusteredIndexDefinition(TableDefinition? definition)
+        {
+            if (definition?.Indexes == null)
+            {
+                return false;
+            }
+
+            foreach (var index in definition.Indexes)
+            {
+                if (index.IndexType?.IndexTypeKind is IndexTypeKind.Clustered or IndexTypeKind.ClusteredColumnStore)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
