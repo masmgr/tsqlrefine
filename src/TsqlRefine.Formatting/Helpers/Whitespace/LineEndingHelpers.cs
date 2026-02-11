@@ -49,6 +49,48 @@ internal static class LineEndingHelpers
     }
 
     /// <summary>
+    /// Removes standalone CR characters (\r not followed by \n) from the input.
+    /// CRLF sequences (\r\n) are preserved intact.
+    /// </summary>
+    /// <param name="input">The input string to process</param>
+    /// <returns>String with standalone CR characters removed</returns>
+    public static string StripStandaloneCr(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        // Fast path: if no CR at all, return unchanged
+        if (!input.Contains('\r'))
+        {
+            return input;
+        }
+
+        var sb = new StringBuilder(input.Length);
+        for (var i = 0; i < input.Length; i++)
+        {
+            var c = input[i];
+            if (c == '\r')
+            {
+                // Keep CR only if followed by LF (CRLF pair)
+                if (i + 1 < input.Length && input[i + 1] == '\n')
+                {
+                    sb.Append('\r');
+                }
+
+                // else: standalone CR, skip it
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Applies a line-by-line transformation while preserving original line ending style.
     /// </summary>
     /// <param name="input">The input text to transform.</param>

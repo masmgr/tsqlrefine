@@ -370,6 +370,26 @@ public class OperatorSpaceNormalizerTests
         Assert.Equal(expected, result);
     }
 
+    // Qualified star should not be treated as multiplication
+    [Theory]
+    [InlineData("SELECT t.* FROM t", "SELECT t.* FROM t")]
+    [InlineData("SELECT schema.table.* FROM schema.table", "SELECT schema.table.* FROM schema.table")]
+    public void Normalize_QualifiedStar_NoSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Binary operators with a single space before operator should still be normalized
+    [Theory]
+    [InlineData("SELECT a -b", "SELECT a - b")]
+    [InlineData("SELECT col +b", "SELECT col + b")]
+    public void Normalize_BinaryWithSpaceBeforeOperator_AddsSpaceAfter(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
     // Multi-line block comment - asterisks should not be split
     [Fact]
     public void Normalize_MultilineBlockComment_AsterisksPreserved()

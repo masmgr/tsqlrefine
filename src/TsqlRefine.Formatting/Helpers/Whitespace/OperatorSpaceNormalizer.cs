@@ -26,6 +26,14 @@ public static class OperatorSpaceNormalizer
     private static readonly FrozenSet<char> SingleCharOperators =
         FrozenSet.ToFrozenSet(['=', '<', '>', '+', '-', '*', '/', '%']);
 
+    private static readonly FrozenSet<string> UnaryPrefixKeywords =
+        FrozenSet.ToFrozenSet(
+        [
+            "SELECT", "WHERE", "AND", "OR", "NOT", "WHEN", "THEN", "ELSE",
+            "BY", "ON", "FROM", "JOIN", "INTO", "VALUES", "RETURN", "CASE", "AS", "TOP"
+        ],
+        StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// Characters that can end an operand (indicate preceding token is a value).
     /// </summary>
@@ -264,6 +272,14 @@ public static class OperatorSpaceNormalizer
             return;
         }
 
+        // Special case: qualified star (t.*) should not be spaced as multiplication
+        if (c == '*' && IsAsteriskAfterDot(output))
+        {
+            output.Append(c);
+            index++;
+            return;
+        }
+
         // Special case: */ is block comment closing - don't treat as operators
         // This handles multi-line block comments where the tracker state is not preserved
         if (c == '*' && index + 1 < line.Length && line[index + 1] == '/')
@@ -302,6 +318,23 @@ public static class OperatorSpaceNormalizer
             }
 
             return c == '(';
+        }
+
+        return false;
+    }
+
+    private static bool IsAsteriskAfterDot(StringBuilder output)
+    {
+        // Check if the last non-whitespace character is .
+        for (var i = output.Length - 1; i >= 0; i--)
+        {
+            var c = output[i];
+            if (c is ' ' or '\t')
+            {
+                continue;
+            }
+
+            return c == '.';
         }
 
         return false;
@@ -352,7 +385,7 @@ public static class OperatorSpaceNormalizer
         /// <returns>True if operator should be treated as binary; false for unary.</returns>
         public static bool IsBinaryContext(StringBuilder output)
         {
-            var (lastNonSpace, hasSpaceBefore) = GetLastNonWhitespaceInfo(output);
+            var (lastNonSpace, hasSpaceBefore, lastIndex) = GetLastNonWhitespaceInfo(output);
 
             if (lastNonSpace is null)
             {
@@ -363,7 +396,7 @@ public static class OperatorSpaceNormalizer
             var lastChar = lastNonSpace.Value;
 
             return hasSpaceBefore
-                ? IsOperandEndAfterSpace(lastChar)
+                ? IsOperandEndAfterSpace(output, lastIndex, lastChar)
                 : IsOperandEndNoSpace(lastChar);
         }
 
@@ -372,7 +405,7 @@ public static class OperatorSpaceNormalizer
         /// Closing delimiters, quotes, and digits indicate binary context.
         /// Letters/underscores are treated as unary (conservative: SELECT -1).
         /// </summary>
-        private static bool IsOperandEndAfterSpace(char c)
+        private static bool IsOperandEndAfterSpace(StringBuilder output, int lastIndex, char c)
         {
             if (OperandEndingChars.Contains(c))
             {
@@ -380,7 +413,19 @@ public static class OperatorSpaceNormalizer
             }
 
             // Digit followed by space then operator is binary: "1 + 2"
-            return char.IsDigit(c);
+            if (char.IsDigit(c) || c == '_')
+            {
+                return true;
+            }
+
+            if (!char.IsLetter(c))
+            {
+                return false;
+            }
+
+            // Distinguish "a - b" (binary) from "SELECT -1" (unary after keyword).
+            var previousWord = GetWordEndingAt(output, lastIndex);
+            return !UnaryPrefixKeywords.Contains(previousWord);
         }
 
         /// <summary>
@@ -394,7 +439,36 @@ public static class OperatorSpaceNormalizer
                    OperandEndingChars.Contains(c);
         }
 
-        private static (char? lastChar, bool hasSpaceBefore) GetLastNonWhitespaceInfo(StringBuilder sb)
+        private static string GetWordEndingAt(StringBuilder sb, int endIndex)
+        {
+            if (endIndex < 0 || endIndex >= sb.Length)
+            {
+                return string.Empty;
+            }
+
+            var start = endIndex;
+            while (start >= 0)
+            {
+                var c = sb[start];
+                if (!char.IsLetterOrDigit(c) && c != '_')
+                {
+                    break;
+                }
+
+                start--;
+            }
+
+            var wordStart = start + 1;
+            if (wordStart > endIndex)
+            {
+                return string.Empty;
+            }
+
+            var length = endIndex - wordStart + 1;
+            return sb.ToString(wordStart, length);
+        }
+
+        private static (char? lastChar, bool hasSpaceBefore, int lastIndex) GetLastNonWhitespaceInfo(StringBuilder sb)
         {
             var hasSpace = false;
             for (var i = sb.Length - 1; i >= 0; i--)
@@ -406,10 +480,10 @@ public static class OperatorSpaceNormalizer
                     continue;
                 }
 
-                return (c, hasSpace);
+                return (c, hasSpace, i);
             }
 
-            return (null, hasSpace);
+            return (null, hasSpace, -1);
         }
     }
 

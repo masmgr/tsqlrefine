@@ -81,6 +81,60 @@ public class SqlFormatterTests
     }
 
     [Fact]
+    public void Format_TableCasing_DoesNotAffectQualifiedColumnsOrSetColumns()
+    {
+        var sql = "UPDATE users u SET status = 1 WHERE u.id = 2";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            TableCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.None,
+            InsertFinalNewline = false
+        };
+
+        var result = SqlFormatter.Format(sql, options);
+
+        Assert.Contains("UPDATE USERS U", result);
+        Assert.Contains("SET status = 1", result);
+        Assert.Contains("u.id = 2", result);
+    }
+
+    [Fact]
+    public void Format_TableCasing_DoesNotAffectInsertColumnList()
+    {
+        var sql = "INSERT INTO users (status, created_at) VALUES (1, GETDATE())";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            TableCasing = ElementCasing.Upper,
+            ColumnCasing = ElementCasing.None,
+            InsertFinalNewline = false
+        };
+
+        var result = SqlFormatter.Format(sql, options);
+
+        Assert.Contains("INSERT INTO USERS", result);
+        Assert.Contains("(status, created_at)", result);
+    }
+
+    [Fact]
+    public void Format_CreateTable_KeywordCasingWinsOverDataTypeCasing()
+    {
+        var sql = "create table dbo.Users (Id INT);";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            DataTypeCasing = ElementCasing.Lower,
+            InsertFinalNewline = false
+        };
+
+        var result = SqlFormatter.Format(sql, options);
+
+        Assert.Contains("CREATE TABLE", result);
+        Assert.Contains("int", result);
+    }
+
+    [Fact]
     public void Format_PreservesStringsAndComments()
     {
         var sql = @"SELECT 'Some String' AS text, -- comment
@@ -333,6 +387,49 @@ WHERE u.status IN (
         Assert.Contains(", name", result);
         Assert.Contains(", email", result);
     }
+
+    #region StandaloneCR
+
+    [Fact]
+    public void Format_StandaloneCr_StrippedFromOutput()
+    {
+        var sql = "SELECT id\rFROM users";
+        var options = new FormattingOptions { InsertFinalNewline = false };
+        var result = SqlFormatter.Format(sql, options);
+
+        // Standalone CR removed; "id" and "FROM" joined
+        Assert.DoesNotContain("\r", result);
+        Assert.DoesNotContain("\n", result);
+        Assert.Contains("SELECT", result);
+        Assert.Contains("FROM", result);
+    }
+
+    [Fact]
+    public void Format_CrlfPreserved_WhenStandaloneCrStripped()
+    {
+        var sql = "SELECT id\r\nFROM users\rWHERE 1=1";
+        var options = new FormattingOptions { InsertFinalNewline = false, LineEnding = LineEnding.CrLf };
+        var result = SqlFormatter.Format(sql, options);
+
+        // CRLF preserved, standalone CR removed
+        Assert.Contains("\r\n", result);
+        // No standalone CR should remain
+        Assert.DoesNotContain("\rW", result);
+    }
+
+    [Fact]
+    public void Format_OnlyStandaloneCr_ProducesSingleLine()
+    {
+        var sql = "select id\rfrom users\rwhere 1=1";
+        var options = new FormattingOptions { InsertFinalNewline = false };
+        var result = SqlFormatter.Format(sql, options);
+
+        // All standalone CRs stripped; becomes single line
+        Assert.DoesNotContain("\r", result);
+        Assert.DoesNotContain("\n", result);
+    }
+
+    #endregion
 
     [Fact]
     public void Format_InlineSpacingDisabled_PreservesOriginalSpacing()

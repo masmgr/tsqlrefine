@@ -212,6 +212,14 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
     }
 
     [Fact]
+    public void Normalize_MultipleSpacesBeforeComma_RemovesAll()
+    {
+        var input = "SELECT id   ,name";
+        var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal("SELECT id, name", result);
+    }
+
+    [Fact]
     public void Normalize_CommaInMiddleOfProtectedRegion_NoSpaceAdded()
     {
         var input = "SELECT /* before,after */ id";
@@ -301,7 +309,9 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
     public void Normalize_CROnly_TreatedAsRegularCharacter()
     {
         // CR alone is not recognized as a line ending by DetectLineEnding,
-        // so it is treated as a regular character within a single line
+        // so it is treated as a regular character within a single line.
+        // Note: In the full formatting pipeline (SqlFormatter.Format()),
+        // standalone CRs are stripped before this normalizer runs.
         var input = "SELECT id,name\rFROM users";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
         Assert.Equal("SELECT id, name\rFROM users", result);

@@ -160,4 +160,87 @@ public class LineEndingHelpersTests
     }
 
     #endregion
+
+    #region StripStandaloneCr
+
+    [Fact]
+    public void StripStandaloneCr_NullInput_ReturnsNull()
+    {
+        var result = LineEndingHelpers.StripStandaloneCr(null!);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_EmptyString_ReturnsEmpty()
+    {
+        var result = LineEndingHelpers.StripStandaloneCr("");
+        Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_NoCr_ReturnsUnchanged()
+    {
+        var input = "SELECT id\nFROM users";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_CrlfOnly_PreservesCrlf()
+    {
+        var input = "SELECT id\r\nFROM users\r\nWHERE 1=1";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_StandaloneCr_Removed()
+    {
+        var input = "SELECT id\rFROM users";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECT idFROM users", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_MultipleStandaloneCr_AllRemoved()
+    {
+        var input = "SELECT\rid\rFROM\rusers";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECTidFROMusers", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_MixedCrlfAndStandaloneCr_OnlyStandaloneRemoved()
+    {
+        var input = "SELECT id\r\nFROM users\rWHERE 1=1";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECT id\r\nFROM usersWHERE 1=1", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_CrAtEndOfString_Removed()
+    {
+        var input = "SELECT id\r";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECT id", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_ConsecutiveCr_AllRemoved()
+    {
+        var input = "SELECT\r\rid";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECTid", result);
+    }
+
+    [Fact]
+    public void StripStandaloneCr_CrBeforeCrlf_StandaloneRemovedCrlfPreserved()
+    {
+        // \r followed by \r\n: first \r is standalone (next char is \r, not \n), remove it
+        var input = "SELECT\r\r\nFROM";
+        var result = LineEndingHelpers.StripStandaloneCr(input);
+        Assert.Equal("SELECT\r\nFROM", result);
+    }
+
+    #endregion
 }

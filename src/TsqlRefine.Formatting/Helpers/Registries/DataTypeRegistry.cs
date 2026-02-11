@@ -31,7 +31,7 @@ internal static class DataTypeRegistry
         "BINARY", "VARBINARY", "IMAGE",
 
         // Other data types
-        "UNIQUEIDENTIFIER", "XML", "SQL_VARIANT", "CURSOR", "TABLE", "HIERARCHYID",
+        "UNIQUEIDENTIFIER", "XML", "SQL_VARIANT", "CURSOR", "HIERARCHYID",
         "GEOMETRY", "GEOGRAPHY", "ROWVERSION", "TIMESTAMP"
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 

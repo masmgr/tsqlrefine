@@ -110,8 +110,10 @@ public static class InlineSpaceNormalizer
             // Handle comma
             if (c == ',')
             {
-                // Remove trailing space before comma if present
-                if (output.Length > leadingWhitespaceEnd && output[^1] == ' ')
+                // Remove trailing inline whitespace before comma.
+                // Keep indentation by not trimming before leadingWhitespaceEnd.
+                while (output.Length > leadingWhitespaceEnd &&
+                       (output[^1] == ' ' || output[^1] == '\t'))
                 {
                     output.Length--;
                 }
