@@ -33,7 +33,10 @@
     { "id": "transaction-without-commit-or-rollback" },
     { "id": "unreachable-case-when" },
     { "id": "union-type-mismatch" },
-    { "id": "avoid-select-star" }
+    { "id": "avoid-select-star" },
+    { "id": "avoid-not-in-with-null" },
+    { "id": "require-parameterized-sp-executesql" },
+    { "id": "avoid-optional-parameter-pattern" }
   ]
 }
 

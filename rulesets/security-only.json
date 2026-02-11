@@ -12,7 +12,8 @@
     { "id": "semantic-insert-column-count-mismatch" },
     { "id": "require-column-list-for-insert-values" },
     { "id": "require-column-list-for-insert-select" },
-    { "id": "dangerous-ddl" }
+    { "id": "dangerous-ddl" },
+    { "id": "require-parameterized-sp-executesql" }
   ]
 }
 

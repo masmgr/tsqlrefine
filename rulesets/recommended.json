@@ -62,7 +62,13 @@
     { "id": "duplicate-view-column" },
     { "id": "duplicate-table-function-column" },
     { "id": "duplicate-table-variable-column" },
-    { "id": "duplicate-insert-column" }
+    { "id": "duplicate-insert-column" },
+    { "id": "avoid-set-rowcount" },
+    { "id": "avoid-deprecated-types" },
+    { "id": "avoid-not-in-with-null" },
+    { "id": "avoid-between-for-datetime-range" },
+    { "id": "require-parameterized-sp-executesql" },
+    { "id": "avoid-optional-parameter-pattern" }
   ]
 }
 

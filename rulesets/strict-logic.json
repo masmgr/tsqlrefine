@@ -82,7 +82,14 @@
     { "id": "prefer-exists-over-in-subquery" },
     { "id": "unreachable-case-when" },
     { "id": "union-type-mismatch" },
-    { "id": "require-save-transaction-in-nested" }
+    { "id": "require-save-transaction-in-nested" },
+    { "id": "avoid-set-rowcount" },
+    { "id": "avoid-deprecated-types" },
+    { "id": "avoid-not-in-with-null" },
+    { "id": "avoid-between-for-datetime-range" },
+    { "id": "require-parameterized-sp-executesql" },
+    { "id": "avoid-optional-parameter-pattern" },
+    { "id": "require-throw-or-raiserror-in-catch" }
   ]
 }
 
