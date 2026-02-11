@@ -63,7 +63,7 @@ public sealed class JoinTableNotReferencedInOnRule : DiagnosticVisitorRuleBase
             if (!referencedTables.Contains(joinedTableName))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: node.SearchCondition,
                     message: $"Table '{joinedTableName}' is joined but not referenced in the ON clause. This may indicate a missing join condition.",
                     code: "semantic-join-table-not-referenced-in-on",
                     category: "Correctness",

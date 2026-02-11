@@ -35,6 +35,17 @@ Implement a new linting rule from scratch using TDD methodology.
 | Rule ID | kebab-case | `avoid-select-star` |
 | Visitor | Private nested + "Visitor" | `AvoidSelectStarVisitor` |
 
+## Diagnostic Range
+
+Diagnostics must point to the **narrowest relevant fragment**, not the entire statement:
+
+- Statement-level: `ScriptDomHelpers.GetFirstTokenRange(node)` for the keyword only
+- Specific keyword: `ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Xxx)`
+- Sub-clause: pass the sub-fragment directly (e.g., `fragment: querySpec.TopRowFilter`)
+- Expression: pass the specific expression (e.g., `fragment: comparison`)
+- Name/alias: pass the identifier node (e.g., `fragment: namedTable.Alias`)
+- **Never** pass an entire `QualifiedJoin`, `QuerySpecification`, `BinaryQueryExpression`, or `CommonTableExpression` as the diagnostic fragment
+
 ## Rules
 
 - Always write tests before implementation (TDD)

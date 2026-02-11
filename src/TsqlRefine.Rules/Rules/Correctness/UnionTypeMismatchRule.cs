@@ -54,7 +54,7 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
                 if (leftType is not null && rightType is not null && leftType != rightType)
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        fragment: rightColumns[i],
                         message: $"UNION column {i + 1} has mismatched types: left side is {leftType}, right side is {rightType}. This causes implicit conversion and may lead to data truncation or conversion errors.",
                         code: "union-type-mismatch",
                         category: "Correctness",

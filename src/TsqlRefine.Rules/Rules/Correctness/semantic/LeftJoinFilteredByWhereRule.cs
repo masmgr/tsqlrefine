@@ -74,7 +74,7 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
                     if (rightTableToJoin.TryGetValue(tableName, out var join))
                     {
                         AddDiagnostic(
-                            fragment: join,
+                            fragment: join.SecondTableReference,
                             message: $"LEFT JOIN with table '{tableName}' is negated by WHERE clause filter. This effectively makes it an INNER JOIN. Consider using INNER JOIN instead, or move the filter to the ON clause, or use 'IS NOT NULL' to be explicit.",
                             code: "semantic-left-join-filtered-by-where",
                             category: "Correctness",

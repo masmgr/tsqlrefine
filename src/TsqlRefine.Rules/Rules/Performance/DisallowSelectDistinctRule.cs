@@ -29,7 +29,7 @@ public sealed class DisallowSelectDistinctRule : DiagnosticVisitorRuleBase
             if (node.UniqueRowFilter == UniqueRowFilter.Distinct)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Distinct),
                     message: "SELECT DISTINCT often masks JOIN bugs or missing GROUP BY, and adds implicit sort/hash operations. Consider using GROUP BY or fixing JOIN logic instead.",
                     code: metadata.RuleId,
                     category: metadata.Category,

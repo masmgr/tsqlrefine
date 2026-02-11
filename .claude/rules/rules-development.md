@@ -215,6 +215,8 @@ Position calculation utilities for token-based rules.
 
 AST fragment utilities:
 - `GetRange(TSqlFragment)`: Converts ScriptDom coordinates (1-based) to PluginSdk Range (0-based)
+- `GetFirstTokenRange(TSqlFragment)`: Returns range for the first token only (e.g., statement keyword)
+- `FindKeywordTokenRange(TSqlFragment, TSqlTokenType)`: Searches for a specific token type within the fragment and returns its range; falls back to `GetFirstTokenRange`
 
 ### Diagnostics/RuleHelpers
 
@@ -254,6 +256,28 @@ Expression analysis:
 ### Analysis/SqlDataTypeHelpers
 
 SQL data type classification and compatibility checks.
+
+## Diagnostic Range Guidelines
+
+Diagnostics must point to the **narrowest relevant fragment**, not the entire statement. Broad ranges make it hard to locate issues in long multi-line SQL.
+
+### Range selection by rule type
+
+| Scenario | Target | Helper / Approach |
+|----------|--------|-------------------|
+| Statement-level violation (e.g., UPDATE without WHERE) | Statement keyword only | `ScriptDomHelpers.GetFirstTokenRange(node)` |
+| Specific keyword violation (e.g., SELECT DISTINCT) | The keyword itself | `ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Distinct)` |
+| Sub-clause violation (e.g., TOP without ORDER BY) | The sub-clause fragment | `AddDiagnostic(fragment: querySpec.TopRowFilter, ...)` |
+| Expression-level violation (e.g., `col = NULL`) | The expression itself | `AddDiagnostic(fragment: comparison, ...)` |
+| Column reference issue (e.g., unqualified column) | The `ColumnReferenceExpression` | `AddDiagnostic(fragment: colRef, ...)` |
+| Name/alias conflict | The identifier or alias node | `AddDiagnostic(fragment: namedTable.Alias, ...)` |
+| JOIN condition issue (e.g., always-true ON clause) | The condition expression | `AddDiagnostic(fragment: comparison, ...)` not the `QualifiedJoin` |
+
+### Anti-patterns to avoid
+
+- **Never** use `fragment: node` where `node` is a full `QualifiedJoin` — narrow to `SearchCondition`, `SecondTableReference`, or the specific problematic expression
+- **Never** use `fragment: node` where `node` is a full `QuerySpecification` or `BinaryQueryExpression` — narrow to the specific keyword, clause, or column
+- **Never** use `fragment: node` where `node` is a full `CommonTableExpression` — narrow to `ExpressionName`
 
 ## Common AST Nodes
 

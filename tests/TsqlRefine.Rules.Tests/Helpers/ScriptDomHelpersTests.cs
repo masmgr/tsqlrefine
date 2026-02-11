@@ -111,6 +111,53 @@ WHERE active = 0;";
         Assert.Throws<ArgumentNullException>(() => ScriptDomHelpers.GetFirstTokenRange(null!));
     }
 
+    [Fact]
+    public void FindKeywordTokenRange_WithDistinctKeyword_ReturnsDistinctOnly()
+    {
+        // Arrange
+        var sql = "SELECT DISTINCT col1, col2 FROM users";
+        var parser = new TSql160Parser(true);
+        var script = (TSqlScript)parser.Parse(new System.IO.StringReader(sql), out _);
+        var selectStatement = script.Batches[0].Statements[0] as SelectStatement;
+        var querySpec = selectStatement!.QueryExpression as QuerySpecification;
+
+        // Act
+        var range = ScriptDomHelpers.FindKeywordTokenRange(querySpec!, TSqlTokenType.Distinct);
+
+        // Assert - "DISTINCT" starts at column 7, length 8
+        Assert.Equal(0, range.Start.Line);
+        Assert.Equal(7, range.Start.Character);
+        Assert.Equal(0, range.End.Line);
+        Assert.Equal(15, range.End.Character);
+    }
+
+    [Fact]
+    public void FindKeywordTokenRange_TokenNotFound_FallsBackToFirstToken()
+    {
+        // Arrange
+        var sql = "SELECT col1, col2 FROM users";
+        var parser = new TSql160Parser(true);
+        var script = (TSqlScript)parser.Parse(new System.IO.StringReader(sql), out _);
+        var selectStatement = script.Batches[0].Statements[0] as SelectStatement;
+        var querySpec = selectStatement!.QueryExpression as QuerySpecification;
+
+        // Act - search for DISTINCT which doesn't exist
+        var range = ScriptDomHelpers.FindKeywordTokenRange(querySpec!, TSqlTokenType.Distinct);
+
+        // Assert - should fall back to first token "SELECT" (6 chars at 0,0)
+        Assert.Equal(0, range.Start.Line);
+        Assert.Equal(0, range.Start.Character);
+        Assert.Equal(0, range.End.Line);
+        Assert.Equal(6, range.End.Character);
+    }
+
+    [Fact]
+    public void FindKeywordTokenRange_WithNullFragment_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            ScriptDomHelpers.FindKeywordTokenRange(null!, TSqlTokenType.Distinct));
+    }
+
     /// <summary>
     /// SQL Server 2022 extended TRIM syntax: TRIM(characters FROM string)
     /// Note: ScriptDom 170.157.0 does not yet support this syntax, even with TSql170Parser.

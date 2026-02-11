@@ -42,6 +42,36 @@ public static class ScriptDomHelpers
     }
 
     /// <summary>
+    /// Searches for a token with the specified type within the fragment's token range.
+    /// Falls back to <see cref="GetFirstTokenRange"/> if the token is not found.
+    /// </summary>
+    /// <param name="fragment">The TSqlFragment to search within.</param>
+    /// <param name="tokenType">The TSqlTokenType to find.</param>
+    /// <returns>A Range covering only the matched token, or the first token range as fallback.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when fragment is null.</exception>
+    public static TsqlRefine.PluginSdk.Range FindKeywordTokenRange(TSqlFragment fragment, TSqlTokenType tokenType)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+
+        if (fragment.ScriptTokenStream != null)
+        {
+            for (var i = fragment.FirstTokenIndex; i <= fragment.LastTokenIndex && i < fragment.ScriptTokenStream.Count; i++)
+            {
+                var token = fragment.ScriptTokenStream[i];
+                if (token.TokenType == tokenType)
+                {
+                    var text = token.Text ?? string.Empty;
+                    var start = new Position(token.Line - 1, token.Column - 1);
+                    var end = new Position(token.Line - 1, token.Column - 1 + text.Length);
+                    return new TsqlRefine.PluginSdk.Range(start, end);
+                }
+            }
+        }
+
+        return GetFirstTokenRange(fragment);
+    }
+
+    /// <summary>
     /// Converts a TSqlFragment to a Range using its start/end token positions.
     /// Handles 1-based ScriptDom coordinates and converts to 0-based PluginSdk positions.
     /// </summary>

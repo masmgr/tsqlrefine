@@ -85,7 +85,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                 cte => cte.ExpressionName?.Value))
             {
                 AddDiagnostic(
-                    fragment: duplicate.Item,
+                    fragment: duplicate.Item.ExpressionName ?? (TSqlFragment)duplicate.Item,
                     message: $"Duplicate CTE name '{duplicate.Name}'. Each CTE name must be unique within a WITH clause.",
                     code: "semantic-cte-name-conflict",
                     category: "Correctness",
@@ -128,7 +128,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                     if (cteNames.Contains(aliasName))
                     {
                         AddDiagnostic(
-                            fragment: targetReference,
+                            fragment: namedTable.Alias,
                             message: $"Table alias '{aliasName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
                             code: "semantic-cte-name-conflict",
                             category: "Correctness",
@@ -142,7 +142,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                     if (namedTable.SchemaObject.SchemaIdentifier != null && cteNames.Contains(tableName))
                     {
                         AddDiagnostic(
-                            fragment: targetReference,
+                            fragment: namedTable.SchemaObject.BaseIdentifier,
                             message: $"Table alias '{tableName}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
                             code: "semantic-cte-name-conflict",
                             category: "Correctness",
@@ -153,12 +153,12 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
             }
         }
 
-        private void ReportConflicts(IEnumerable<(string Alias, TableReference TableRef)> conflicts)
+        private void ReportConflicts(IEnumerable<(string Alias, TSqlFragment Target)> conflicts)
         {
-            foreach (var (alias, tableRef) in conflicts)
+            foreach (var (alias, target) in conflicts)
             {
                 AddDiagnostic(
-                    fragment: tableRef,
+                    fragment: target,
                     message: $"Table alias '{alias}' conflicts with a CTE name in the same query. Each name must be unique within the query scope.",
                     code: "semantic-cte-name-conflict",
                     category: "Correctness",
@@ -194,11 +194,11 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
             }
         }
 
-        private static List<(string Alias, TableReference TableRef)> CollectConflictingAliases(
+        private static List<(string Alias, TSqlFragment Target)> CollectConflictingAliases(
             IList<TableReference> tableRefs,
             HashSet<string> cteNames)
         {
-            var result = new List<(string, TableReference)>();
+            var result = new List<(string, TSqlFragment)>();
 
             foreach (var tableRef in tableRefs)
             {
@@ -217,7 +217,7 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                         var aliasName = namedTable.Alias.Value;
                         if (cteNames.Contains(aliasName))
                         {
-                            result.Add((aliasName, tableRef));
+                            result.Add((aliasName, namedTable.Alias));
                         }
                     }
                     else
@@ -229,17 +229,16 @@ public sealed class CteNameConflictRule : DiagnosticVisitorRuleBase
                         // Only flag if there's schema qualification (schema.table) that matches a CTE
                         if (namedTable.SchemaObject.SchemaIdentifier != null && cteNames.Contains(tableName))
                         {
-                            result.Add((tableName, tableRef));
+                            result.Add((tableName, namedTable.SchemaObject.BaseIdentifier));
                         }
                     }
                 }
                 else if (tableRef is QueryDerivedTable derivedTable)
                 {
                     // Subquery aliases can conflict with CTEs
-                    var alias = derivedTable.Alias?.Value;
-                    if (alias != null && cteNames.Contains(alias))
+                    if (derivedTable.Alias != null && cteNames.Contains(derivedTable.Alias.Value))
                     {
-                        result.Add((alias, tableRef));
+                        result.Add((derivedTable.Alias.Value, derivedTable.Alias));
                     }
                 }
             }

@@ -42,7 +42,7 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
                 if (AreLiteralsEqual(comparison.FirstExpression, comparison.SecondExpression))
                 {
                     AddDiagnostic(
-                        fragment: join,
+                        fragment: comparison,
                         message: "JOIN condition is always true (e.g., '1=1'). This likely indicates a missing or incorrect join condition and may result in a Cartesian product.",
                         code: "semantic-join-condition-always-true",
                         category: "Correctness",
@@ -57,7 +57,7 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
                     ColumnReferenceHelpers.AreColumnReferencesEqual(firstCol, secondCol))
                 {
                     AddDiagnostic(
-                        fragment: join,
+                        fragment: comparison,
                         message: "JOIN condition compares a column to itself (e.g., 't1.col = t1.col'). This is always true and likely incorrect.",
                         code: "semantic-join-condition-always-true",
                         category: "Correctness",
