@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
@@ -211,6 +212,13 @@ public sealed class CommandExecutor
         }
         else
         {
+            // Build source lookup for parse-error context display
+            var sourceByPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var input in read.Inputs)
+            {
+                sourceByPath[input.FilePath] = input.Text;
+            }
+
             // Sort by file path, then by line, then by character
             var sortedFiles = result.Files.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
             foreach (var file in sortedFiles)
@@ -224,6 +232,12 @@ public sealed class CommandExecutor
                     var ruleId = d.Data?.RuleId ?? d.Code;
                     var fixableIndicator = d.Data?.Fixable == true ? ",Fixable" : "";
                     await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator})");
+
+                    if (d.Code == TsqlRefineEngine.ParseErrorCode &&
+                        sourceByPath.TryGetValue(file.FilePath, out var sourceText))
+                    {
+                        await WriteSourceContextAsync(stdout, sourceText, d.Range.Start);
+                    }
                 }
             }
         }
@@ -459,6 +473,28 @@ public sealed class CommandExecutor
         }
 
         return false;
+    }
+
+    private static async Task WriteSourceContextAsync(TextWriter writer, string sourceText, Position position)
+    {
+        var lines = sourceText.Split('\n');
+        var lineIndex = position.Line;
+        if (lineIndex < 0 || lineIndex >= lines.Length)
+        {
+            return;
+        }
+
+        var sourceLine = lines[lineIndex].TrimEnd('\r');
+        var lineNumber = lineIndex + 1;
+        var gutterWidth = Math.Max(lineNumber.ToString(CultureInfo.InvariantCulture).Length, 1);
+        var gutter = lineNumber.ToString(CultureInfo.InvariantCulture).PadLeft(gutterWidth);
+        var emptyGutter = new string(' ', gutterWidth);
+
+        await writer.WriteLineAsync($"  {gutter} | {sourceLine}");
+
+        var caretCol = Math.Min(position.Character, sourceLine.Length);
+        var padding = new string(' ', caretCol);
+        await writer.WriteLineAsync($"  {emptyGutter} | {padding}^");
     }
 
     private static bool IsStdinInput(string filePath) =>
