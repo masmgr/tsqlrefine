@@ -128,7 +128,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                 if (!_tablesWithDescription.Contains(tableName))
                 {
                     AddDiagnostic(
-                        fragment: tableStmt,
+                        fragment: tableStmt.SchemaObjectName.BaseIdentifier,
                         message: $"Table '{tableName}' should have an MS_Description extended property to document its purpose.",
                         code: "require-ms-description-for-table-definition-file",
                         category: "Schema",
@@ -145,7 +145,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                             !_columnsWithDescription.Contains($"{tableName}.{columnName}"))
                         {
                             AddDiagnostic(
-                                fragment: column,
+                                fragment: column.ColumnIdentifier!,
                                 message: $"Column '{columnName}' in table '{tableName}' should have an MS_Description extended property.",
                                 code: "require-ms-description-for-table-definition-file",
                                 category: "Schema",
