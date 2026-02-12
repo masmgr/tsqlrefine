@@ -23,6 +23,11 @@ public sealed class AvoidExecDynamicSqlRuleTests
         var diagnostic = diagnostics[0];
         Assert.Equal("avoid-exec-dynamic-sql", diagnostic.Code);
         Assert.Contains("dynamic SQL", diagnostic.Message);
+        // Diagnostic should highlight only the EXEC keyword
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(0, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(4, diagnostic.Range.End.Character);
     }
 
     [Fact]
@@ -38,6 +43,11 @@ public sealed class AvoidExecDynamicSqlRuleTests
         // Assert
         Assert.Single(diagnostics);
         Assert.Equal("avoid-exec-dynamic-sql", diagnostics[0].Code);
+        // Diagnostic should highlight only the EXECUTE keyword
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(0, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(7, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

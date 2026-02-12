@@ -29,6 +29,11 @@ public sealed class RequireParameterizedSpExecutesqlRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("require-parameterized-sp-executesql", diagnostics[0].Code);
         Assert.Contains("parameter", diagnostics[0].Message.ToLowerInvariant());
+        // Diagnostic should highlight only the "sp_executesql" procedure name
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(18, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -40,6 +45,11 @@ public sealed class RequireParameterizedSpExecutesqlRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("require-parameterized-sp-executesql", diagnostics[0].Code);
+        // Diagnostic should highlight only the "sp_executesql" procedure name
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(18, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

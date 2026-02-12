@@ -18,16 +18,21 @@ public sealed class AvoidExecuteAsRuleTests
     }
 
     [Theory]
-    [InlineData("EXECUTE AS USER = 'dbo';")]
-    [InlineData("EXECUTE AS LOGIN = 'sa';")]
-    [InlineData("EXEC AS USER = 'dbo';")]
-    public void Analyze_ExecuteAsStatement_ReturnsDiagnostic(string sql)
+    [InlineData("EXECUTE AS USER = 'dbo';", 0, 7)]
+    [InlineData("EXECUTE AS LOGIN = 'sa';", 0, 7)]
+    [InlineData("EXEC AS USER = 'dbo';", 0, 4)]
+    public void Analyze_ExecuteAsStatement_ReturnsDiagnostic(string sql, int expectedStart, int expectedEnd)
     {
         var context = RuleTestContext.CreateContext(sql);
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-execute-as", diagnostics[0].Code);
+        // Diagnostic should highlight only the EXECUTE/EXEC keyword
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(expectedStart, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(expectedEnd, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

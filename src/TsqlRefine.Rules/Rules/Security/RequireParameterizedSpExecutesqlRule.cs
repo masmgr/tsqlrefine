@@ -38,13 +38,14 @@ public sealed class RequireParameterizedSpExecutesqlRule : DiagnosticVisitorRule
                 return;
             }
 
+            var procNameIdentifier = procRef.ProcedureReference!.ProcedureReference!.Name.BaseIdentifier!;
             var parameters = procRef.Parameters;
 
             // Check if first parameter uses string concatenation
             if (parameters is { Count: > 0 } && ContainsBinaryExpression(parameters[0].ParameterValue))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: procNameIdentifier,
                     message: "sp_executesql with string concatenation is vulnerable to SQL injection. Use parameterized form: sp_executesql @sql, N'@p type', @p = @value.",
                     code: "require-parameterized-sp-executesql",
                     category: "Security",
@@ -55,7 +56,7 @@ public sealed class RequireParameterizedSpExecutesqlRule : DiagnosticVisitorRule
             else if (parameters is null or { Count: <= 1 })
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: procNameIdentifier,
                     message: "sp_executesql without parameter definitions. Add parameter specification to prevent SQL injection.",
                     code: "require-parameterized-sp-executesql",
                     category: "Security",

@@ -27,7 +27,7 @@ public sealed class AvoidOpenrowsetOpendatasourceRule : DiagnosticVisitorRuleBas
         public override void ExplicitVisit(OpenRowsetTableReference node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Avoid OPENROWSET for remote data access. It can expand the attack surface for SQL injection and enable unauthorized data exfiltration. Consider using linked servers with proper security configuration or ETL processes.",
                 code: "avoid-openrowset-opendatasource",
                 category: "Security",
@@ -40,7 +40,7 @@ public sealed class AvoidOpenrowsetOpendatasourceRule : DiagnosticVisitorRuleBas
         public override void ExplicitVisit(BulkOpenRowset node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Avoid OPENROWSET(BULK ...) for file-based data access. It can enable unauthorized file access and data exfiltration. Consider using BULK INSERT with proper permissions or ETL processes.",
                 code: "avoid-openrowset-opendatasource",
                 category: "Security",
@@ -53,7 +53,7 @@ public sealed class AvoidOpenrowsetOpendatasourceRule : DiagnosticVisitorRuleBas
         public override void ExplicitVisit(AdHocTableReference node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Avoid OPENDATASOURCE for ad-hoc remote connections. It can expand the attack surface for SQL injection and enable unauthorized data exfiltration. Consider using linked servers with proper security configuration or ETL processes.",
                 code: "avoid-openrowset-opendatasource",
                 category: "Security",

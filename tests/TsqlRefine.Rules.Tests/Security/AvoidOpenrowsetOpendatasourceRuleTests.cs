@@ -31,6 +31,11 @@ public sealed class AvoidOpenrowsetOpendatasourceRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("avoid-openrowset-opendatasource", diagnostics[0].Code);
         Assert.Contains("OPENROWSET", diagnostics[0].Message);
+        // Diagnostic should highlight only the OPENROWSET keyword
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(15, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -46,6 +51,11 @@ public sealed class AvoidOpenrowsetOpendatasourceRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-openrowset-opendatasource", diagnostics[0].Code);
+        // Diagnostic should highlight only the OPENROWSET keyword
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(15, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -61,6 +71,11 @@ public sealed class AvoidOpenrowsetOpendatasourceRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("avoid-openrowset-opendatasource", diagnostics[0].Code);
         Assert.Contains("OPENDATASOURCE", diagnostics[0].Message);
+        // Diagnostic should highlight only the OPENDATASOURCE keyword
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(19, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
