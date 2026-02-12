@@ -26,6 +26,11 @@ public sealed class PreferExistsOverInSubqueryRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+        // "IN" starts at column 29, length 2
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(31, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -37,6 +42,11 @@ public sealed class PreferExistsOverInSubqueryRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+        // "NOT IN" starts at column 29, ends at column 35
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(35, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

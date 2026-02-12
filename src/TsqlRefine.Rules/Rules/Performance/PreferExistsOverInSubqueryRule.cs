@@ -30,7 +30,7 @@ public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
             if (IsInPredicate && node.Subquery is not null && !HasIsNotNullOnSelectColumn(node.Subquery))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetInKeywordRange(node),
                     message: "Consider using EXISTS instead of IN with a subquery. EXISTS can be more efficient for large datasets as it short-circuits once a match is found.",
                     code: "prefer-exists-over-in-subquery",
                     category: "Performance",

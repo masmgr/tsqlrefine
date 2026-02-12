@@ -72,6 +72,72 @@ public static class ScriptDomHelpers
     }
 
     /// <summary>
+    /// Returns a range covering the IN keyword of an InPredicate node.
+    /// For NOT IN, returns the range spanning from NOT to IN (inclusive).
+    /// For IN alone, returns the range of only the IN token.
+    /// </summary>
+    /// <param name="node">The InPredicate node.</param>
+    /// <returns>A Range covering "IN" or "NOT IN".</returns>
+    /// <exception cref="ArgumentNullException">Thrown when node is null.</exception>
+    public static TsqlRefine.PluginSdk.Range GetInKeywordRange(InPredicate node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var tokens = node.ScriptTokenStream;
+        if (tokens is null)
+        {
+            return GetRange(node);
+        }
+
+        // Find the IN token within the node's token range
+        var inIndex = -1;
+        for (var i = node.FirstTokenIndex; i <= node.LastTokenIndex && i < tokens.Count; i++)
+        {
+            if (tokens[i].Text.Equals("IN", StringComparison.OrdinalIgnoreCase))
+            {
+                inIndex = i;
+                break;
+            }
+        }
+
+        if (inIndex < 0)
+        {
+            return GetFirstTokenRange(node);
+        }
+
+        var startIndex = inIndex;
+
+        // For NOT IN, find the preceding NOT token
+        if (node.NotDefined)
+        {
+            for (var i = inIndex - 1; i >= node.FirstTokenIndex; i--)
+            {
+                var tokenText = tokens[i].Text;
+                if (string.IsNullOrWhiteSpace(tokenText) ||
+                    tokenText.StartsWith("--", StringComparison.Ordinal) ||
+                    tokenText.StartsWith("/*", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (tokenText.Equals("NOT", StringComparison.OrdinalIgnoreCase))
+                {
+                    startIndex = i;
+                }
+
+                break;
+            }
+        }
+
+        var startToken = tokens[startIndex];
+        var endToken = tokens[inIndex];
+        var endText = endToken.Text ?? string.Empty;
+        var start = new Position(startToken.Line - 1, startToken.Column - 1);
+        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        return new TsqlRefine.PluginSdk.Range(start, end);
+    }
+
+    /// <summary>
     /// Converts a TSqlFragment to a Range using its start/end token positions.
     /// Handles 1-based ScriptDom coordinates and converts to 0-based PluginSdk positions.
     /// </summary>
