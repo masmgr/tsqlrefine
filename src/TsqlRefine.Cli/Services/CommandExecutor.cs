@@ -24,16 +24,26 @@ public sealed class CommandExecutor
         _inputReader = inputReader;
     }
 
+    private const string ConfigDirName = ".tsqlrefine";
+
     public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-        var ignorePath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
+        var baseDir = args.Global
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ConfigDirName)
+            : Path.Combine(Directory.GetCurrentDirectory(), ConfigDirName);
+
+        var configPath = Path.Combine(baseDir, "tsqlrefine.json");
+        var ignorePath = Path.Combine(baseDir, "tsqlrefine.ignore");
 
         if (!args.Force && (File.Exists(configPath) || File.Exists(ignorePath)))
         {
             await stderr.WriteLineAsync("Config files already exist. Use --force to overwrite.");
             return ExitCodes.Fatal;
         }
+
+        Directory.CreateDirectory(baseDir);
 
         var preset = args.Preset ?? "recommended";
         var config = new TsqlRefineConfig(
@@ -45,7 +55,7 @@ public sealed class CommandExecutor
         // Serialize with $schema reference for IDE support
         var jsonNode = System.Text.Json.JsonSerializer.SerializeToNode(config, JsonDefaults.Options)!;
         var jsonObj = jsonNode.AsObject();
-        jsonObj.Insert(0, "$schema", "schemas/tsqlrefine.schema.json");
+        jsonObj.Insert(0, "$schema", "../schemas/tsqlrefine.schema.json");
         var json = System.Text.Json.JsonSerializer.Serialize(jsonObj, JsonDefaults.Options);
 
         await File.WriteAllTextAsync(configPath, json, Encoding.UTF8);

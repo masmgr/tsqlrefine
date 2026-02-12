@@ -117,6 +117,11 @@ public static class CliParser
             Description = "Overwrite existing configuration files"
         };
 
+        public static readonly Option<bool> Global = new("--global")
+        {
+            Description = "Create configuration in home directory (~/.tsqlrefine/)"
+        };
+
         // List-rules filter options
         public static readonly Option<string?> Category = new("--category")
         {
@@ -251,6 +256,7 @@ public static class CliParser
     {
         var command = new Command("init", "Initialize configuration files");
         command.Options.Add(Options.Force);
+        command.Options.Add(Options.Global);
         command.Options.Add(Options.Preset);
         command.Options.Add(Options.CompatLevel);
         return command;
@@ -379,6 +385,7 @@ public static class CliParser
             Quiet: GetOptionValue<bool>(parseResult, "--quiet"),
             ShowSources: GetOptionValue<bool>(parseResult, "--show-sources"),
             Force: GetOptionValue<bool>(parseResult, "--force"),
+            Global: GetOptionValue<bool>(parseResult, "--global"),
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             Paths: GetPaths(parseResult),

@@ -3,12 +3,29 @@
 This document describes how to configure `tsqlrefine` using:
 
 - `tsqlrefine.json` (main config file)
+- `tsqlrefine.ignore` (ignore patterns file)
 - A ruleset JSON file (enables/disables rules)
 
 Schemas are available under `schemas/`:
 
 - `schemas/tsqlrefine.schema.json`
 - `schemas/ruleset.schema.json`
+
+## Configuration File Discovery
+
+tsqlrefine searches for configuration files (`tsqlrefine.json` and `tsqlrefine.ignore`) in the following order:
+
+| Priority | Location | Description |
+|----------|----------|-------------|
+| 1 (highest) | CLI argument | `--config` / `--ignorelist` explicit path |
+| 2 | `{CWD}/tsqlrefine.json` | Current directory (legacy, backward-compatible) |
+| 3 | `{CWD}/.tsqlrefine/` | Current directory `.tsqlrefine/` subdirectory |
+| 4 | `~/.tsqlrefine/` | Home directory `.tsqlrefine/` subdirectory |
+| 5 (lowest) | Default | Built-in defaults (no file) |
+
+The first file found wins. Configuration files are **not** merged across locations.
+
+Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configuration files, or `tsqlrefine init --global` to create them in your home directory.
 
 ## tsqlrefine.json
 

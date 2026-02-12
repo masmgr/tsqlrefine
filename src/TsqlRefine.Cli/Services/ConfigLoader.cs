@@ -11,15 +11,60 @@ namespace TsqlRefine.Cli.Services;
 /// </summary>
 public sealed class ConfigLoader
 {
-    private static string? ResolveConfigPath(CliArgs args)
+    private const string ConfigDirName = ".tsqlrefine";
+
+    /// <summary>
+    /// Returns the ordered list of candidate paths for a settings file.
+    /// Pure function for testability.
+    /// </summary>
+    internal static IReadOnlyList<string> GetCandidatePaths(
+        string? explicitPath, string fileName, string cwd, string? homePath)
     {
-        if (args.ConfigPath is not null)
+        if (explicitPath is not null)
         {
-            return args.ConfigPath;
+            return [explicitPath];
         }
 
-        var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-        return File.Exists(defaultPath) ? defaultPath : null;
+        var candidates = new List<string>(3)
+        {
+            Path.Combine(cwd, fileName),
+            Path.Combine(cwd, ConfigDirName, fileName)
+        };
+
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            candidates.Add(Path.Combine(homePath, ConfigDirName, fileName));
+        }
+
+        return candidates;
+    }
+
+    private static string? ResolveSettingsFilePath(string? explicitPath, string fileName)
+    {
+        // Explicit path is returned as-is (existence check is done downstream)
+        if (explicitPath is not null)
+        {
+            return explicitPath;
+        }
+
+        var cwd = Directory.GetCurrentDirectory();
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var candidates = GetCandidatePaths(null, fileName, cwd, home);
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ResolveConfigPath(CliArgs args)
+    {
+        return ResolveSettingsFilePath(args.ConfigPath, "tsqlrefine.json");
     }
 
     /// <summary>
@@ -194,14 +239,7 @@ public sealed class ConfigLoader
 
     public static List<string> LoadIgnorePatterns(string? ignoreListPath)
     {
-        // Check explicit path first, then default tsqlrefine.ignore
-        var path = ignoreListPath;
-        if (path is null)
-        {
-            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
-            if (File.Exists(defaultPath))
-                path = defaultPath;
-        }
+        var path = ResolveSettingsFilePath(ignoreListPath, "tsqlrefine.ignore");
 
         if (path is null)
             return new List<string>();

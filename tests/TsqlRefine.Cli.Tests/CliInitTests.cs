@@ -8,7 +8,7 @@ namespace TsqlRefine.Cli.Tests;
 public sealed class CliInitTests
 {
     [Fact]
-    public async Task Init_WhenNoConfigExists_CreatesFiles()
+    public async Task Init_WhenNoConfigExists_CreatesFilesInDotTsqlrefineDir()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var originalDir = Directory.GetCurrentDirectory();
@@ -25,13 +25,12 @@ public sealed class CliInitTests
             var code = await CliApp.RunAsync(new[] { "init" }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
-            Assert.True(File.Exists(Path.Combine(tempDir, "tsqlrefine.json")));
-            Assert.True(File.Exists(Path.Combine(tempDir, "tsqlrefine.ignore")));
+            Assert.True(File.Exists(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.json")));
+            Assert.True(File.Exists(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.ignore")));
         }
         finally
         {
             Directory.SetCurrentDirectory(originalDir);
-            // Wait a bit for file handles to be released
             await Task.Delay(100);
             try
             {
@@ -53,10 +52,11 @@ public sealed class CliInitTests
 
         try
         {
-            Directory.CreateDirectory(tempDir);
+            var configDir = Path.Combine(tempDir, ".tsqlrefine");
+            Directory.CreateDirectory(configDir);
             Directory.SetCurrentDirectory(tempDir);
 
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"), "{}");
+            await File.WriteAllTextAsync(Path.Combine(configDir, "tsqlrefine.json"), "{}");
 
             using var stdin = new MemoryStream();
             var stdout = new StringWriter();
@@ -97,7 +97,7 @@ public sealed class CliInitTests
             using var stdin = new MemoryStream();
             await CliApp.RunAsync(new[] { "init" }, stdin, new StringWriter(), new StringWriter());
 
-            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
+            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.json"));
             var doc = System.Text.Json.JsonDocument.Parse(configContent);
 
             Assert.True(doc.RootElement.TryGetProperty("compatLevel", out _));
@@ -132,11 +132,11 @@ public sealed class CliInitTests
             using var stdin = new MemoryStream();
             await CliApp.RunAsync(new[] { "init" }, stdin, new StringWriter(), new StringWriter());
 
-            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
+            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.json"));
             var doc = System.Text.Json.JsonDocument.Parse(configContent);
 
             Assert.True(doc.RootElement.TryGetProperty("$schema", out var schema));
-            Assert.Equal("schemas/tsqlrefine.schema.json", schema.GetString());
+            Assert.Equal("../schemas/tsqlrefine.schema.json", schema.GetString());
         }
         finally
         {
@@ -201,11 +201,12 @@ public sealed class CliInitTests
 
         try
         {
-            Directory.CreateDirectory(tempDir);
+            var configDir = Path.Combine(tempDir, ".tsqlrefine");
+            Directory.CreateDirectory(configDir);
             Directory.SetCurrentDirectory(tempDir);
 
             // Create existing config
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"), "{}");
+            await File.WriteAllTextAsync(Path.Combine(configDir, "tsqlrefine.json"), "{}");
 
             using var stdin = new MemoryStream();
             var stdout = new StringWriter();
@@ -214,7 +215,7 @@ public sealed class CliInitTests
             var code = await CliApp.RunAsync(new[] { "init", "--force" }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
-            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
+            var configContent = await File.ReadAllTextAsync(Path.Combine(configDir, "tsqlrefine.json"));
             Assert.Contains("compatLevel", configContent);
         }
         finally
@@ -251,7 +252,7 @@ public sealed class CliInitTests
             var code = await CliApp.RunAsync(new[] { "init", "--preset", "strict" }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
-            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
+            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.json"));
             Assert.Contains("\"preset\": \"strict\"", configContent);
         }
         finally
@@ -288,7 +289,7 @@ public sealed class CliInitTests
             var code = await CliApp.RunAsync(new[] { "init", "--compat-level", "160" }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
-            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"));
+            var configContent = await File.ReadAllTextAsync(Path.Combine(tempDir, ".tsqlrefine", "tsqlrefine.json"));
             var doc = System.Text.Json.JsonDocument.Parse(configContent);
             Assert.Equal(160, doc.RootElement.GetProperty("compatLevel").GetInt32());
         }
@@ -316,10 +317,11 @@ public sealed class CliInitTests
 
         try
         {
-            Directory.CreateDirectory(tempDir);
+            var configDir = Path.Combine(tempDir, ".tsqlrefine");
+            Directory.CreateDirectory(configDir);
             Directory.SetCurrentDirectory(tempDir);
 
-            await File.WriteAllTextAsync(Path.Combine(tempDir, "tsqlrefine.json"), "{}");
+            await File.WriteAllTextAsync(Path.Combine(configDir, "tsqlrefine.json"), "{}");
 
             using var stdin = new MemoryStream();
             var stdout = new StringWriter();
@@ -329,6 +331,42 @@ public sealed class CliInitTests
 
             Assert.Equal(ExitCodes.Fatal, code);
             Assert.Contains("--force", stderr.ToString());
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(originalDir);
+            await Task.Delay(100);
+            try
+            {
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
+            catch (IOException)
+            {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Init_CreatesDotTsqlrefineDirectory()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var originalDir = Directory.GetCurrentDirectory();
+
+        try
+        {
+            Directory.CreateDirectory(tempDir);
+            Directory.SetCurrentDirectory(tempDir);
+
+            using var stdin = new MemoryStream();
+            var stdout = new StringWriter();
+            var stderr = new StringWriter();
+
+            var code = await CliApp.RunAsync(new[] { "init" }, stdin, stdout, stderr);
+
+            Assert.Equal(0, code);
+            Assert.True(Directory.Exists(Path.Combine(tempDir, ".tsqlrefine")));
         }
         finally
         {
