@@ -31,13 +31,16 @@ public sealed record PluginConfig(string Path, bool Enabled = true);
 /// </summary>
 /// <param name="IndentStyle">Indentation style: "spaces" or "tabs". Default is "spaces".</param>
 /// <param name="IndentSize">Number of spaces per indent level. Default is 4.</param>
-/// <param name="KeywordCasing">Casing for SQL keywords: "upper", "lower", or "none". Default is "upper".</param>
-/// <param name="FunctionCasing">Casing for built-in functions: "upper", "lower", or "none". Default is "upper".</param>
-/// <param name="DataTypeCasing">Casing for data types: "upper", "lower", or "none". Default is "lower".</param>
-/// <param name="SchemaCasing">Casing for schema names: "upper", "lower", or "none". Default is "lower".</param>
-/// <param name="TableCasing">Casing for table names: "upper", "lower", or "none". Default is "upper".</param>
-/// <param name="ColumnCasing">Casing for column names: "upper", "lower", or "none". Default is "upper".</param>
-/// <param name="VariableCasing">Casing for variables: "upper", "lower", or "none". Default is "lower".</param>
+/// <param name="KeywordCasing">Casing for SQL keywords: "upper", "lower", "pascal", or "none". Default is "upper".</param>
+/// <param name="FunctionCasing">Casing for built-in functions: "upper", "lower", "pascal", or "none". Default is "upper".</param>
+/// <param name="DataTypeCasing">Casing for data types: "upper", "lower", "pascal", or "none". Default is "lower".</param>
+/// <param name="SchemaCasing">Casing for schema names: "upper", "lower", "pascal", or "none". Default is "lower".</param>
+/// <param name="TableCasing">Casing for table names: "upper", "lower", "pascal", or "none". Default is "upper".</param>
+/// <param name="ColumnCasing">Casing for column names: "upper", "lower", "pascal", or "none". Default is "upper".</param>
+/// <param name="VariableCasing">Casing for variables: "upper", "lower", "pascal", or "none". Default is "lower".</param>
+/// <param name="SystemTableCasing">Casing for system tables (sys.*, information_schema.*): "upper", "lower", "pascal", or "none". Default is "lower".</param>
+/// <param name="StoredProcedureCasing">Casing for stored procedures: "upper", "lower", "pascal", or "none". Default is "none".</param>
+/// <param name="UserDefinedFunctionCasing">Casing for user-defined functions: "upper", "lower", "pascal", or "none". Default is "none".</param>
 /// <param name="CommaStyle">Comma placement: "trailing" or "leading". Default is "trailing".</param>
 /// <param name="MaxLineLength">Maximum line length (0 for no limit). Default is 0.</param>
 /// <param name="InsertFinalNewline">Whether to insert a final newline. Default is true.</param>
@@ -45,6 +48,10 @@ public sealed record PluginConfig(string Path, bool Enabled = true);
 /// <param name="NormalizeInlineSpacing">Whether to normalize inline spacing (space after commas). Default is true.</param>
 /// <param name="NormalizeOperatorSpacing">Whether to normalize operator spacing. Default is true.</param>
 /// <param name="NormalizeKeywordSpacing">Whether to normalize compound keyword spacing. Default is true.</param>
+/// <param name="NormalizeFunctionSpacing">Whether to remove space between function name and opening parenthesis. Default is true.</param>
+/// <param name="LineEnding">Line ending style: "auto", "lf", or "crlf". Default is "auto".</param>
+/// <param name="MaxConsecutiveBlankLines">Maximum consecutive blank lines allowed (0 for no limit). Default is 0.</param>
+/// <param name="TrimLeadingBlankLines">Whether to remove leading blank lines at the start of file. Default is true.</param>
 public sealed record FormattingConfig(
     string IndentStyle = "spaces",
     int IndentSize = 4,
@@ -55,13 +62,20 @@ public sealed record FormattingConfig(
     string TableCasing = "upper",
     string ColumnCasing = "upper",
     string VariableCasing = "lower",
+    string SystemTableCasing = "lower",
+    string StoredProcedureCasing = "none",
+    string UserDefinedFunctionCasing = "none",
     string CommaStyle = "trailing",
     int MaxLineLength = 0,
     bool InsertFinalNewline = true,
     bool TrimTrailingWhitespace = true,
     bool NormalizeInlineSpacing = true,
     bool NormalizeOperatorSpacing = true,
-    bool NormalizeKeywordSpacing = true
+    bool NormalizeKeywordSpacing = true,
+    bool NormalizeFunctionSpacing = true,
+    string LineEnding = "auto",
+    int MaxConsecutiveBlankLines = 0,
+    bool TrimLeadingBlankLines = true
 );
 
 /// <summary>

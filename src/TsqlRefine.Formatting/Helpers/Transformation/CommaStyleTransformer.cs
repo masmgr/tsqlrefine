@@ -89,16 +89,78 @@ public static class CommaStyleTransformer
     /// <summary>
     /// Transforms leading commas to trailing commas.
     ///
-    /// TODO: Implement for future use.
-    /// This would provide symmetry with ToLeadingCommas and allow round-trip transformations.
+    /// Example:
+    /// Input:
+    ///   SELECT id
+    ///        , name
+    ///        , email
+    ///
+    /// Output:
+    ///   SELECT id,
+    ///          name,
+    ///          email
+    ///
+    /// Known limitations:
+    /// - Line-by-line processing cannot handle multiline expressions properly
+    /// - Complex nested structures (subqueries, CTEs) may not transform correctly
     /// </summary>
     /// <param name="input">SQL text with leading commas</param>
     /// <returns>SQL text with trailing commas</returns>
-    /// <exception cref="NotImplementedException">This transformation is not yet implemented</exception>
     public static string ToTrailingCommas(string input)
     {
-        // Not currently used, but provides symmetry
-        throw new NotImplementedException("Trailing comma transformation not yet implemented");
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        var lineEnding = LineEndingHelpers.DetectLineEnding(input);
+        var lines = LineEndingHelpers.SplitByLineEnding(input, lineEnding);
+        var tracker = new ProtectedRegionTracker();
+        var leadingCommaLines = new bool[lines.Length];
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+
+            // Check if this line starts with a comma outside protected regions.
+            // This also advances protected-region state for the current line.
+            var hasLeadingComma = FindLeadingComma(line, tracker);
+
+            if (hasLeadingComma)
+            {
+                leadingCommaLines[i] = true;
+            }
+        }
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (!leadingCommaLines[i])
+            {
+                continue;
+            }
+
+            var targetIndex = FindTrailingCommaTargetIndex(lines, i - 1);
+            if (targetIndex < 0)
+            {
+                continue;
+            }
+
+            lines[i] = RemoveLeadingComma(lines[i]);
+            lines[targetIndex] = AppendTrailingComma(lines[targetIndex]);
+        }
+
+        var result = new StringBuilder(input.Length + 16);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            result.Append(lines[i]);
+
+            if (i < lines.Length - 1)
+            {
+                result.Append(lineEnding);
+            }
+        }
+
+        return result.ToString();
     }
 
     /// <summary>
@@ -206,5 +268,116 @@ public static class CommaStyleTransformer
         }
 
         return leadingWhitespace + ", " + nextTrimStart;
+    }
+
+    /// <summary>
+    /// Finds a leading comma on a line, skipping commas inside protected regions.
+    /// Returns true if the first non-whitespace content on the line is a comma
+    /// outside protected regions.
+    /// </summary>
+    private static bool FindLeadingComma(string line, ProtectedRegionTracker tracker)
+    {
+        var trimmed = line.TrimStart();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return false;
+        }
+
+        // If already in a protected region, advance through the line to update state
+        if (tracker.IsInProtectedRegion())
+        {
+            for (var i = 0; i < trimmed.Length;)
+            {
+                if (tracker.TryAdvance(trimmed, ref i))
+                {
+                    continue;
+                }
+
+                i++;
+            }
+
+            return false;
+        }
+
+        // Check if line starts with comma (outside protected regions)
+        var hasLeadingComma = trimmed[0] == ',';
+
+        // Advance tracker state through the entire line regardless
+        for (var i = 0; i < trimmed.Length;)
+        {
+            if (ProtectedRegionTracker.IsLineCommentStart(trimmed, i))
+            {
+                break;
+            }
+
+            if (tracker.TryAdvance(trimmed, ref i))
+            {
+                continue;
+            }
+
+            i++;
+        }
+
+        return hasLeadingComma;
+    }
+
+    private static int FindTrailingCommaTargetIndex(string[] lines, int startIndex)
+    {
+        for (var i = startIndex; i >= 0; i--)
+        {
+            if (CanReceiveTrailingComma(lines[i]))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool CanReceiveTrailingComma(string line)
+    {
+        var trimmed = line.TrimEnd();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string RemoveLeadingComma(string line)
+    {
+        var trimmed = line.TrimStart();
+        if (trimmed.Length == 0 || trimmed[0] != ',')
+        {
+            return line;
+        }
+
+        var leadingWhitespace = line[..^trimmed.Length];
+
+        // Remove the comma and any space immediately following it
+        var afterComma = trimmed[1..];
+        if (afterComma.Length > 0 && afterComma[0] == ' ')
+        {
+            afterComma = afterComma[1..];
+        }
+
+        return leadingWhitespace + afterComma;
+    }
+
+    private static string AppendTrailingComma(string line)
+    {
+        var trimmed = line.TrimEnd();
+        if (trimmed.Length == 0)
+        {
+            return line + ",";
+        }
+
+        if (trimmed[^1] == ',')
+        {
+            return line;
+        }
+
+        return trimmed + ",";
     }
 }

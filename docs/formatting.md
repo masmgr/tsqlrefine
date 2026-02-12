@@ -33,7 +33,7 @@ SQL Input
 2. Element-wise Casing (ScriptDomElementCaser)
     - Uses ScriptDom token stream
     - Categorizes keywords, functions, data types, identifiers
-    - Applies upper/lower case per category
+    - Applies upper/lower/pascal case per category
     ↓
 3. Whitespace Normalization (WhitespaceNormalizer)
     - Line ending normalization (CRLF → LF)
@@ -41,18 +41,31 @@ SQL Input
     - Trailing whitespace removal (optional)
     - Final newline insertion (optional)
     ↓
-4. Inline Space Normalization (InlineSpaceNormalizer)
+4. Blank Line Normalization (BlankLineNormalizer)
+    - Limit consecutive blank lines (MaxConsecutiveBlankLines)
+    - Remove leading blank lines at start of file (TrimLeadingBlankLines)
+    - Preserves blank lines inside protected regions (block comments, strings)
+    ↓
+5. Inline Space Normalization (InlineSpaceNormalizer)
     - Add space after comma (a,b → a, b)
     - Remove trailing space before comma
     - Protected regions unchanged
     ↓
-5. Operator Space Normalization (OperatorSpaceNormalizer)
+6. Function-Parenthesis Space Normalization (FunctionParenSpaceNormalizer)
+    - Remove space between function name and opening parenthesis
+      (e.g., COUNT (*) → COUNT(*))
+    - Applies to built-in and user-defined functions
+    - CASE expressions excluded (not a function call)
+    ↓
+7. Operator Space Normalization (OperatorSpaceNormalizer)
     - Add space around binary operators (a=b → a = b)
+    - Includes arithmetic, comparison, and bitwise operators (&, |, ^)
+    - Compound assignment operators (+=, -=, &=, |=, ^=, etc.)
     - Preserve existing alignment (multi-space preserved)
     - Unary operators, scientific notation preserved
     ↓
-6. Comma Style Transformation (CommaStyleTransformer, optional)
-    - Convert trailing commas to leading commas
+8. Comma Style Transformation (CommaStyleTransformer, optional)
+    - Convert trailing commas to leading commas (or vice versa)
     ↓
 Formatted SQL Output
 ```
@@ -75,6 +88,9 @@ Formatted SQL Output
 | `TableCasing` | `ElementCasing` | `None` | Table name casing (*caution for CS environments) |
 | `ColumnCasing` | `ElementCasing` | `None` | Column name casing (*caution for CS environments) |
 | `VariableCasing` | `ElementCasing` | `Lower` | Variable casing |
+| `SystemTableCasing` | `ElementCasing` | `Lower` | System table casing (sys.*, information_schema.*) |
+| `StoredProcedureCasing` | `ElementCasing` | `None` | Stored procedure casing |
+| `UserDefinedFunctionCasing` | `ElementCasing` | `None` | User-defined function casing |
 | `CommaStyle` | `CommaStyle` | `Trailing` | Comma style (Trailing/Leading) |
 | `MaxLineLength` | `int` | `0` | Maximum line length (0 = unlimited) |
 | `InsertFinalNewline` | `bool` | `true` | Insert newline at end of file |
@@ -82,6 +98,10 @@ Formatted SQL Output
 | `NormalizeInlineSpacing` | `bool` | `true` | Normalize inline spacing (space after commas) |
 | `NormalizeOperatorSpacing` | `bool` | `true` | Normalize operator spacing (space around binary operators) |
 | `NormalizeKeywordSpacing` | `bool` | `true` | Normalize compound keyword spacing (e.g., LEFT  OUTER  JOIN → LEFT OUTER JOIN) |
+| `NormalizeFunctionSpacing` | `bool` | `true` | Remove space between function name and `(` (e.g., COUNT (*) → COUNT(*)) |
+| `LineEnding` | `LineEnding` | `Auto` | Line ending style (Auto/Lf/CrLf) |
+| `MaxConsecutiveBlankLines` | `int` | `0` | Maximum consecutive blank lines (0 = unlimited) |
+| `TrimLeadingBlankLines` | `bool` | `true` | Remove leading blank lines at start of file |
 
 ### 3.2 Enumerations
 
@@ -98,9 +118,20 @@ public enum IndentStyle
 ```csharp
 public enum ElementCasing
 {
-    None,   // No change (preserve original)
-    Upper,  // Uppercase
-    Lower   // Lowercase
+    None,    // No change (preserve original)
+    Upper,   // UPPERCASE
+    Lower,   // lowercase
+    Pascal   // PascalCase (e.g., select → Select, user_name → UserName)
+}
+```
+
+**LineEnding**:
+```csharp
+public enum LineEnding
+{
+    Auto,  // Auto-detect from input, fallback to CRLF
+    Lf,    // Unix style (LF)
+    CrLf   // Windows style (CRLF)
 }
 ```
 
@@ -277,20 +308,53 @@ var normalized = InlineSpaceNormalizer.Normalize(sql, options);
 
 ### 6.7 CommaStyleTransformer
 
-Transforms comma style.
+Transforms comma style (trailing to leading, or leading to trailing).
 
 ```csharp
 using TsqlRefine.Formatting.Helpers;
 
 var leading = CommaStyleTransformer.ToLeadingCommas(sql);
+var trailing = CommaStyleTransformer.ToTrailingCommas(sql);
 ```
 
-**Limitations**:
-- Line-based simple implementation
-- Does not detect commas inside strings/comments
-- Does not handle complex nested structures
+**Features**:
+- Bidirectional: trailing → leading and leading → trailing
+- Uses `ProtectedRegionTracker` to skip commas inside strings, comments, brackets
 
-### 6.8 CasingHelpers
+### 6.8 FunctionParenSpaceNormalizer
+
+Removes whitespace between function names and opening parentheses.
+
+```csharp
+using TsqlRefine.Formatting.Helpers.Whitespace;
+
+var normalized = FunctionParenSpaceNormalizer.Normalize(sql, options);
+// COUNT (*) → COUNT(*)
+// dbo.MyFunc (1, 2) → dbo.MyFunc(1, 2)
+```
+
+**Processing**:
+- Uses ScriptDom token stream for accurate function detection
+- Applies to built-in functions and user-defined functions
+- Excludes CASE expressions (control flow, not a function)
+- Only removes inline whitespace (not line breaks)
+
+### 6.9 BlankLineNormalizer
+
+Controls consecutive blank lines and leading blank lines.
+
+```csharp
+using TsqlRefine.Formatting.Helpers.Whitespace;
+
+var normalized = BlankLineNormalizer.Normalize(sql, options);
+```
+
+**Processing**:
+- Limits consecutive blank lines to `MaxConsecutiveBlankLines` (0 = no limit)
+- Removes leading blank lines at start of file when `TrimLeadingBlankLines` is true
+- Preserves blank lines inside protected regions (block comments, strings)
+
+### 6.10 CasingHelpers
 
 Casing conversion utilities.
 
@@ -301,7 +365,7 @@ var upper = CasingHelpers.ApplyCasing("select", ElementCasing.Upper);
 // Result: "SELECT"
 ```
 
-### 6.9 ProtectedRegionTracker
+### 6.11 ProtectedRegionTracker
 
 Internal class that tracks state inside strings, comments, and brackets.
 
@@ -372,29 +436,29 @@ indent_size = 4        # number of spaces
 ### 9.1 Formatting Scope
 
 **Supported**:
-- Keyword casing
-- Identifier casing
+- Keyword casing (upper, lower, pascal)
+- Identifier casing per element type (schema, table, column, variable, etc.)
+- PascalCase conversion (e.g., `user_name` → `UserName`, `select` → `Select`)
 - Indentation (spaces/tabs)
-- Line ending normalization
+- Line ending normalization (auto-detect, LF, CRLF)
 - Trailing whitespace removal
-- Comma placement (basic cases)
+- Leading blank line removal
+- Consecutive blank line limiting
+- Comma placement (trailing ↔ leading, bidirectional)
+- Function-parenthesis spacing (COUNT (*) → COUNT(*))
+- Operator spacing (including bitwise operators &, |, ^)
+- Compound keyword spacing (LEFT  OUTER  JOIN → LEFT OUTER JOIN)
 
 **Not Supported**:
 - Query layout reformatting
 - Clause reordering
 - Expression structure changes
 - Adding/removing line breaks (except normalization)
-- Adding/removing spaces within expressions
+- Semicolon auto-insertion
 
 ### 9.2 MaxLineLength
 
 Not currently implemented. Requires token-aware line splitting, planned for future implementation.
-
-### 9.3 CommaStyleTransformer
-
-- Line-based simple implementation
-- Does not handle complex cases like subqueries, CTEs
-- AST-based implementation needed in the future
 
 ---
 
@@ -413,18 +477,25 @@ Not currently implemented. Requires token-aware line splitting, planned for futu
 
 ```
 src/TsqlRefine.Formatting/
-├── SqlFormatter.cs              # Orchestrator (26 lines)
+├── SqlFormatter.cs              # Orchestrator (8-stage pipeline)
 ├── FormattingOptions.cs         # Options definition
 ├── TsqlRefine.Formatting.csproj
 ├── README.md
 └── Helpers/
-    ├── CasingHelpers.cs         # Casing utilities
-    ├── ScriptDomElementCaser.cs # Element-wise casing
-    ├── SqlElementCategorizer.cs # Token classification
-    ├── WhitespaceNormalizer.cs  # Whitespace normalization
-    ├── InlineSpaceNormalizer.cs # Inline space normalization
-    ├── CommaStyleTransformer.cs # Comma style transformation
-    └── ProtectedRegionTracker.cs # Protected region tracking (internal)
+    ├── Casing/
+    │   ├── CasingHelpers.cs             # Casing utilities (upper/lower/pascal)
+    │   ├── ScriptDomElementCaser.cs     # Element-wise casing
+    │   └── SqlElementCategorizer.cs     # Token classification
+    ├── Transformation/
+    │   └── CommaStyleTransformer.cs     # Comma style (trailing ↔ leading)
+    ├── Whitespace/
+    │   ├── WhitespaceNormalizer.cs      # Whitespace normalization
+    │   ├── InlineSpaceNormalizer.cs     # Inline space normalization
+    │   ├── KeywordSpaceNormalizer.cs    # Compound keyword spacing
+    │   ├── OperatorSpaceNormalizer.cs   # Operator spacing
+    │   ├── FunctionParenSpaceNormalizer.cs # Function-paren spacing
+    │   └── BlankLineNormalizer.cs       # Blank line normalization
+    └── ProtectedRegionTracker.cs        # Protected region tracking (internal)
 ```
 
 ### 11.2 Dependencies

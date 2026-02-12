@@ -15,16 +15,17 @@ namespace TsqlRefine.Formatting.Helpers.Whitespace;
 /// - Preserves scientific notation: 1e-3 (not 1e - 3)
 /// - Preserves operators inside strings, comments, brackets
 ///
-/// Supported operators: =, &lt;&gt;, !=, &lt;, &gt;, &lt;=, &gt;=, +, -, *, /, %
+/// Supported operators: =, &lt;&gt;, !=, &lt;, &gt;, &lt;=, &gt;=, +, -, *, /, %, &amp;, |, ^
+/// Supported compound operators: &lt;&gt;, !=, &lt;=, &gt;=, &amp;=, |=, ^=
 ///
 /// Known limitations:
 /// - Cannot distinguish all edge cases without full parsing
-/// - Bitwise operators (~, &amp;, |, ^) not normalized
+/// - Bitwise NOT (~) is unary and not normalized
 /// </summary>
 public static class OperatorSpaceNormalizer
 {
     private static readonly FrozenSet<char> SingleCharOperators =
-        FrozenSet.ToFrozenSet(['=', '<', '>', '+', '-', '*', '/', '%']);
+        FrozenSet.ToFrozenSet(['=', '<', '>', '+', '-', '*', '/', '%', '&', '|', '^']);
 
     private static readonly FrozenSet<string> UnaryPrefixKeywords =
         FrozenSet.ToFrozenSet(
@@ -138,14 +139,14 @@ public static class OperatorSpaceNormalizer
 
             var c = line[index];
 
-            // Try compound operators first (<>, !=, <=, >=)
+            // Try compound operators first (<>, !=, <=, >=, &=, |=, ^=)
             // Column is 1-based in ScriptDom
             if (TryProcessCompoundOperator(line, output, ref index, positionMap, lineNumber))
             {
                 continue;
             }
 
-            // Try single-char operators (=, <, >, +, -, *, /, %)
+            // Try single-char operators (=, <, >, +, -, *, /, %, &, |, ^)
             if (SingleCharOperators.Contains(c))
             {
                 ProcessSingleOperator(line, output, ref index, positionMap, lineNumber);
@@ -170,11 +171,14 @@ public static class OperatorSpaceNormalizer
         var c1 = line[index];
         var c2 = line[index + 1];
 
-        // Check for compound operators: <>, !=, <=, >=
+        // Check for compound operators: <>, !=, <=, >=, &=, |=, ^=
         var isCompound = (c1 == '<' && c2 == '>') ||
                          (c1 == '!' && c2 == '=') ||
                          (c1 == '<' && c2 == '=') ||
-                         (c1 == '>' && c2 == '=');
+                         (c1 == '>' && c2 == '=') ||
+                         (c1 == '&' && c2 == '=') ||
+                         (c1 == '|' && c2 == '=') ||
+                         (c1 == '^' && c2 == '=');
 
         if (!isCompound)
         {

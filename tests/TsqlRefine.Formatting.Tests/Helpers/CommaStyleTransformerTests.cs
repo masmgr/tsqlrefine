@@ -252,19 +252,196 @@ public class CommaStyleTransformerTests
 
     #endregion
 
-    #region ToTrailingCommas - Not Implemented
+    #region ToTrailingCommas - Basic Cases
 
     [Fact]
-    public void ToTrailingCommas_ThrowsNotImplementedException()
+    public void ToTrailingCommas_EmptyString_ReturnsEmpty()
     {
-        Assert.Throws<NotImplementedException>(() => CommaStyleTransformer.ToTrailingCommas("SELECT id"));
+        var result = CommaStyleTransformer.ToTrailingCommas("");
+        Assert.Equal("", result);
     }
 
     [Fact]
-    public void ToTrailingCommas_AnyInput_ThrowsNotImplementedException()
+    public void ToTrailingCommas_NullInput_ReturnsNull()
     {
-        var input = ", id\n, name\n, email";
-        Assert.Throws<NotImplementedException>(() => CommaStyleTransformer.ToTrailingCommas(input));
+        var result = CommaStyleTransformer.ToTrailingCommas(null!);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_NoCommas_ReturnsUnchanged()
+    {
+        var input = "SELECT id FROM Users";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_SingleLine_ReturnsUnchanged()
+    {
+        var input = "SELECT id, name, email FROM Users";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_AlreadyTrailing_ReturnsUnchanged()
+    {
+        var input = "SELECT id,\n    name,\n    email";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal(input, result);
+    }
+
+    #endregion
+
+    #region ToTrailingCommas - Leading to Trailing Conversion
+
+    [Fact]
+    public void ToTrailingCommas_BasicConversion_MovesCommaToPreiousLine()
+    {
+        var input = "SELECT id\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\n    name", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_MultipleColumns_ConvertsLeadingCommas()
+    {
+        var input = "SELECT id\n    , name\n    , email";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\n    name,\n    email", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_PreservesIndentation()
+    {
+        var input = "SELECT id\n        , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        // Preserves the 8-space indentation
+        Assert.Equal("SELECT id,\n        name", result);
+    }
+
+    #endregion
+
+    #region ToTrailingCommas - First Line Handling
+
+    [Fact]
+    public void ToTrailingCommas_FirstLineWithLeadingComma_NoPreviousLine_KeepsComma()
+    {
+        // First line starts with comma - no previous line to move to
+        var input = ", id\nFROM Users";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        // No previous line, so comma stays
+        Assert.Equal(", id\nFROM Users", result);
+    }
+
+    #endregion
+
+    #region ToTrailingCommas - Whitespace Handling
+
+    [Fact]
+    public void ToTrailingCommas_TabIndentation_Preserves()
+    {
+        var input = "SELECT id\n\t, name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\n\tname", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_MixedIndentation_Preserves()
+    {
+        var input = "SELECT id\n  , name\n  , email";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\n  name,\n  email", result);
+    }
+
+    #endregion
+
+    #region ToTrailingCommas - Complex Cases
+
+    [Fact]
+    public void ToTrailingCommas_MultiClause_ConvertsLeadingCommas()
+    {
+        var input = "SELECT id\n    , name\n    , email\nFROM Users\nWHERE active = 1";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Contains("id,", result);
+        Assert.Contains("name,", result);
+        Assert.DoesNotContain(", name", result);
+        Assert.DoesNotContain(", email", result);
+        // FROM and WHERE should remain unchanged
+        Assert.Contains("FROM Users", result);
+        Assert.Contains("WHERE active = 1", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_EmptyLineBetween_SkipsEmptyLine()
+    {
+        var input = "SELECT id\n\n, name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        // Empty line is skipped; comma moves to the previous content line.
+        Assert.Equal("SELECT id,\n\nname", result);
+    }
+
+    #endregion
+
+    #region ToTrailingCommas - Protected Regions
+
+    [Fact]
+    public void ToTrailingCommas_CommaInsideString_PreservesString()
+    {
+        // Leading comma after a string on the previous line
+        var input = "SELECT 'a,b'\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT 'a,b',\n    name", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_StringStartsWithComma_PreservesStringContent()
+    {
+        // Line starts with a string beginning with comma - not a leading comma
+        var input = "SELECT id\n',abc'\nFROM Users";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        // No leading commas outside strings, so no transformation
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_CommaInsideBlockComment_NotTransformed()
+    {
+        // Leading comma is outside the block comment
+        var input = "SELECT id /* comma here, */\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Contains("id /* comma here, */,", result);
+        Assert.Contains("name", result);
+        Assert.DoesNotContain(", name", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_CrlfInput_PreservesCrlf()
+    {
+        var input = "SELECT id\r\n    , name\r\n    , email";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\r\n    name,\r\n    email", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_CommaInsideBracketIdentifier_PreservesIdentifier()
+    {
+        // Leading comma after bracket identifier line
+        var input = "SELECT [Column,Name]\n    , id";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT [Column,Name],\n    id", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_MultilineBlockComment_TracksStateCorrectly()
+    {
+        // Block comment spanning multiple lines - comma on next line after comment closes
+        var input = "SELECT id /* comment\nspanning lines */\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        // The comma should move to the previous non-empty line (the comment-closing line)
+        Assert.Contains("spanning lines */,", result);
+        Assert.Contains("name", result);
     }
 
     #endregion

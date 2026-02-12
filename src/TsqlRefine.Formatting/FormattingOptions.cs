@@ -21,7 +21,9 @@ public enum ElementCasing
     /// <summary>Convert to UPPERCASE</summary>
     Upper,
     /// <summary>Convert to lowercase</summary>
-    Lower
+    Lower,
+    /// <summary>Convert to PascalCase (e.g., user_name -> UserName, select -> Select)</summary>
+    Pascal
 }
 
 /// <summary>
@@ -130,7 +132,16 @@ public sealed record FormattingOptions
     /// <summary>Normalize spacing around operators (space before and after binary operators)</summary>
     public bool NormalizeOperatorSpacing { get; init; } = true;
 
+    /// <summary>Remove space between function name and opening parenthesis (COUNT (*) -> COUNT(*))</summary>
+    public bool NormalizeFunctionSpacing { get; init; } = true;
+
     /// <summary>Line ending style for output (Auto = detect from input, fallback to CRLF)</summary>
     public LineEnding LineEnding { get; init; } = LineEnding.Auto;
+
+    /// <summary>Maximum consecutive blank lines allowed (0 = no limit)</summary>
+    public int MaxConsecutiveBlankLines { get; init; }
+
+    /// <summary>Remove leading blank lines at the start of file</summary>
+    public bool TrimLeadingBlankLines { get; init; } = true;
 }
 

@@ -53,10 +53,15 @@ Example:
     "dml-without-where": "error"
   },
   "formatting": {
-    "keywordCasing": "upper",
-    "identifierCasing": "preserve",
     "indentStyle": "spaces",
-    "indentSize": 4
+    "indentSize": 4,
+    "keywordCasing": "upper",
+    "functionCasing": "upper",
+    "dataTypeCasing": "lower",
+    "schemaCasing": "none",
+    "tableCasing": "none",
+    "columnCasing": "none",
+    "variableCasing": "lower"
   }
 }
 ```
@@ -71,36 +76,66 @@ The optional `formatting` section allows you to customize SQL formatting behavio
     "indentStyle": "spaces",
     "indentSize": 4,
     "keywordCasing": "upper",
-    "identifierCasing": "preserve",
+    "functionCasing": "upper",
+    "dataTypeCasing": "lower",
+    "schemaCasing": "none",
+    "tableCasing": "none",
+    "columnCasing": "none",
+    "variableCasing": "lower",
+    "systemTableCasing": "lower",
+    "storedProcedureCasing": "none",
+    "userDefinedFunctionCasing": "none",
     "commaStyle": "trailing",
     "maxLineLength": 0,
     "insertFinalNewline": true,
-    "trimTrailingWhitespace": true
+    "trimTrailingWhitespace": true,
+    "normalizeInlineSpacing": true,
+    "normalizeOperatorSpacing": true,
+    "normalizeKeywordSpacing": true,
+    "normalizeFunctionSpacing": true,
+    "lineEnding": "auto",
+    "maxConsecutiveBlankLines": 0,
+    "trimLeadingBlankLines": true
   }
 }
 ```
 
 **Available options:**
 
+**Indentation:**
 - `indentStyle` (string): `"spaces"` or `"tabs"`. Default: `"spaces"`
 - `indentSize` (integer): Number of spaces per indent level (for spaces) or tab width (for tabs). Default: `4`
-- `keywordCasing` (string): Keyword casing style
-  - `"preserve"`: Keep original casing
-  - `"upper"`: UPPERCASE (default)
-  - `"lower"`: lowercase
-  - `"pascal"`: PascalCase
-- `identifierCasing` (string): Identifier casing style
-  - `"preserve"`: Keep original casing (default)
-  - `"upper"`: UPPERCASE
-  - `"lower"`: lowercase
-  - `"pascal"`: PascalCase
-  - `"camel"`: camelCase
-- `commaStyle` (string): Comma placement
-  - `"trailing"`: `SELECT a, b, c` (default)
-  - `"leading"`: `SELECT a ,b ,c`
+
+**Casing** (values: `"none"`, `"upper"`, `"lower"`, `"pascal"`):
+- `keywordCasing`: SQL keywords (SELECT, FROM, etc.). Default: `"upper"`
+- `functionCasing`: Built-in functions (COUNT, SUM, etc.). Default: `"upper"`
+- `dataTypeCasing`: Data types (INT, VARCHAR, etc.). Default: `"lower"`
+- `schemaCasing`: Schema names (dbo, sys, etc.). Default: `"none"`
+- `tableCasing`: Table names and aliases. Default: `"none"`
+- `columnCasing`: Column names and aliases. Default: `"none"`
+- `variableCasing`: Variables (@var, @@rowcount). Default: `"lower"`
+- `systemTableCasing`: System tables (sys.*, information_schema.*). Default: `"lower"`
+- `storedProcedureCasing`: Stored procedure names. Default: `"none"`
+- `userDefinedFunctionCasing`: User-defined function names. Default: `"none"`
+
+> **Warning**: Changing casing for schema/table/column may break queries in case-sensitive collation environments.
+
+**Comma and Line:**
+- `commaStyle` (string): `"trailing"` or `"leading"`. Default: `"trailing"`
 - `maxLineLength` (integer): Maximum line length (0 = no limit). Default: `0`
+- `lineEnding` (string): `"auto"`, `"lf"`, or `"crlf"`. Default: `"auto"`
+
+**Whitespace:**
 - `insertFinalNewline` (boolean): Insert final newline at end of file. Default: `true`
 - `trimTrailingWhitespace` (boolean): Trim trailing whitespace on lines. Default: `true`
+- `normalizeInlineSpacing` (boolean): Normalize inline spacing (space after commas). Default: `true`
+- `normalizeOperatorSpacing` (boolean): Normalize operator spacing (space around binary operators). Default: `true`
+- `normalizeKeywordSpacing` (boolean): Normalize compound keyword spacing. Default: `true`
+- `normalizeFunctionSpacing` (boolean): Remove space between function name and `(`. Default: `true`
+
+**Blank Lines:**
+- `maxConsecutiveBlankLines` (integer): Maximum consecutive blank lines (0 = no limit). Default: `0`
+- `trimLeadingBlankLines` (boolean): Remove leading blank lines at start of file. Default: `true`
 
 **Priority order:**
 

@@ -79,15 +79,63 @@
         },
         "keywordCasing": {
           "type": "string",
-          "description": "Keyword casing style. Default: upper",
-          "enum": ["preserve", "upper", "lower", "pascal"],
+          "description": "Casing for SQL keywords (SELECT, FROM, WHERE, etc.). Default: upper",
+          "enum": ["none", "upper", "lower", "pascal"],
           "default": "upper"
         },
-        "identifierCasing": {
+        "functionCasing": {
           "type": "string",
-          "description": "Identifier casing style. Default: preserve",
-          "enum": ["preserve", "upper", "lower", "pascal", "camel"],
-          "default": "preserve"
+          "description": "Casing for built-in functions (COUNT, SUM, GETDATE, etc.). Default: upper",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "upper"
+        },
+        "dataTypeCasing": {
+          "type": "string",
+          "description": "Casing for data types (INT, VARCHAR, DATETIME, etc.). Default: lower",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "lower"
+        },
+        "schemaCasing": {
+          "type": "string",
+          "description": "Casing for schema names (dbo, sys, etc.). WARNING: Changing casing may break queries in case-sensitive collation environments. Default: lower",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "lower"
+        },
+        "tableCasing": {
+          "type": "string",
+          "description": "Casing for table names and aliases. WARNING: Changing casing may break queries in case-sensitive collation environments. Default: upper",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "upper"
+        },
+        "columnCasing": {
+          "type": "string",
+          "description": "Casing for column names and aliases. WARNING: Changing casing may break queries in case-sensitive collation environments. Default: upper",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "upper"
+        },
+        "variableCasing": {
+          "type": "string",
+          "description": "Casing for variables (@var, @@rowcount, etc.). Default: lower",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "lower"
+        },
+        "systemTableCasing": {
+          "type": "string",
+          "description": "Casing for system tables (sys.*, information_schema.*). Default: lower",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "lower"
+        },
+        "storedProcedureCasing": {
+          "type": "string",
+          "description": "Casing for stored procedure names. Default: none (preserve original)",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "none"
+        },
+        "userDefinedFunctionCasing": {
+          "type": "string",
+          "description": "Casing for user-defined function names. Default: none (preserve original)",
+          "enum": ["none", "upper", "lower", "pascal"],
+          "default": "none"
         },
         "commaStyle": {
           "type": "string",
@@ -110,6 +158,43 @@
         "trimTrailingWhitespace": {
           "type": "boolean",
           "description": "Trim trailing whitespace on lines. Default: true",
+          "default": true
+        },
+        "normalizeInlineSpacing": {
+          "type": "boolean",
+          "description": "Normalize inline spacing (add space after commas, remove trailing space before commas). Default: true",
+          "default": true
+        },
+        "normalizeOperatorSpacing": {
+          "type": "boolean",
+          "description": "Normalize spacing around binary operators (a=b -> a = b). Default: true",
+          "default": true
+        },
+        "normalizeKeywordSpacing": {
+          "type": "boolean",
+          "description": "Normalize compound keyword spacing (LEFT  OUTER  JOIN -> LEFT OUTER JOIN). Default: true",
+          "default": true
+        },
+        "normalizeFunctionSpacing": {
+          "type": "boolean",
+          "description": "Remove space between function name and opening parenthesis (COUNT (*) -> COUNT(*)). Default: true",
+          "default": true
+        },
+        "lineEnding": {
+          "type": "string",
+          "description": "Line ending style. 'auto' detects from input, fallback to CRLF. Default: auto",
+          "enum": ["auto", "lf", "crlf"],
+          "default": "auto"
+        },
+        "maxConsecutiveBlankLines": {
+          "type": "integer",
+          "description": "Maximum consecutive blank lines allowed (0 = no limit). Default: 0",
+          "minimum": 0,
+          "default": 0
+        },
+        "trimLeadingBlankLines": {
+          "type": "boolean",
+          "description": "Remove leading blank lines at the start of file. Default: true",
           "default": true
         }
       },

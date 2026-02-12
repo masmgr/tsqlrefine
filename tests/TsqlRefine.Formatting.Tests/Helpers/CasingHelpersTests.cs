@@ -114,6 +114,52 @@ public class CasingHelpersTests
 
     #endregion
 
+    #region ElementCasing.Pascal
+
+    [Fact]
+    public void ApplyCasing_Pascal_SingleWordUppercase_ConvertsToSelect()
+    {
+        var result = CasingHelpers.ApplyCasing("SELECT", ElementCasing.Pascal);
+        Assert.Equal("Select", result);
+    }
+
+    [Fact]
+    public void ApplyCasing_Pascal_SingleWordLowercase_ConvertsToSelect()
+    {
+        var result = CasingHelpers.ApplyCasing("select", ElementCasing.Pascal);
+        Assert.Equal("Select", result);
+    }
+
+    [Fact]
+    public void ApplyCasing_Pascal_UnderscoreSeparated_ConvertsToUserName()
+    {
+        var result = CasingHelpers.ApplyCasing("user_name", ElementCasing.Pascal);
+        Assert.Equal("UserName", result);
+    }
+
+    [Fact]
+    public void ApplyCasing_Pascal_MultipleUnderscores_ConvertsToFirstMiddleLast()
+    {
+        var result = CasingHelpers.ApplyCasing("first_middle_last", ElementCasing.Pascal);
+        Assert.Equal("FirstMiddleLast", result);
+    }
+
+    [Fact]
+    public void ApplyCasing_Pascal_AlreadyPascalCase_ConvertsRestToLowercase()
+    {
+        var result = CasingHelpers.ApplyCasing("UserName", ElementCasing.Pascal);
+        Assert.Equal("Username", result);
+    }
+
+    [Fact]
+    public void ApplyCasing_Pascal_SingleChar_ConvertsToUppercase()
+    {
+        var result = CasingHelpers.ApplyCasing("a", ElementCasing.Pascal);
+        Assert.Equal("A", result);
+    }
+
+    #endregion
+
     #region Empty and Special Characters
 
     [Fact]

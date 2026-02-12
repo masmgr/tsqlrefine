@@ -417,4 +417,107 @@ public class OperatorSpaceNormalizerTests
         var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
         Assert.Equal(expected, result);
     }
+
+    // Bitwise AND operator
+    [Theory]
+    [InlineData("WHERE flags&1=1", "WHERE flags & 1 = 1")]
+    [InlineData("WHERE flags& 1=1", "WHERE flags & 1 = 1")]
+    [InlineData("WHERE flags &1=1", "WHERE flags & 1 = 1")]
+    [InlineData("WHERE flags & 1 = 1", "WHERE flags & 1 = 1")]
+    public void Normalize_BitwiseAnd_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Bitwise OR operator
+    [Theory]
+    [InlineData("SET flags=flags|2", "SET flags = flags | 2")]
+    [InlineData("SET flags=flags| 2", "SET flags = flags | 2")]
+    [InlineData("SET flags=flags |2", "SET flags = flags | 2")]
+    [InlineData("SET flags = flags | 2", "SET flags = flags | 2")]
+    public void Normalize_BitwiseOr_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Bitwise XOR operator
+    [Theory]
+    [InlineData("SET val=val^mask", "SET val = val ^ mask")]
+    [InlineData("SET val=val^ mask", "SET val = val ^ mask")]
+    [InlineData("SET val=val ^mask", "SET val = val ^ mask")]
+    [InlineData("SET val = val ^ mask", "SET val = val ^ mask")]
+    public void Normalize_BitwiseXor_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Bitwise compound assignment operators
+    [Theory]
+    [InlineData("SET @x&=3", "SET @x &= 3")]
+    [InlineData("SET @x&= 3", "SET @x &= 3")]
+    [InlineData("SET @x &=3", "SET @x &= 3")]
+    [InlineData("SET @x &= 3", "SET @x &= 3")]
+    public void Normalize_BitwiseAndAssignment_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("SET @x|=3", "SET @x |= 3")]
+    [InlineData("SET @x|= 3", "SET @x |= 3")]
+    [InlineData("SET @x |=3", "SET @x |= 3")]
+    [InlineData("SET @x |= 3", "SET @x |= 3")]
+    public void Normalize_BitwiseOrAssignment_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("SET @x^=3", "SET @x ^= 3")]
+    [InlineData("SET @x^= 3", "SET @x ^= 3")]
+    [InlineData("SET @x ^=3", "SET @x ^= 3")]
+    [InlineData("SET @x ^= 3", "SET @x ^= 3")]
+    public void Normalize_BitwiseXorAssignment_AddsSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Bitwise NOT (~) is unary - should NOT be affected
+    [Theory]
+    [InlineData("SELECT ~flags", "SELECT ~flags")]
+    [InlineData("SELECT ~ flags", "SELECT ~ flags")]
+    [InlineData("WHERE ~flags=0", "WHERE ~flags = 0")]
+    public void Normalize_BitwiseNot_NotAffected(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Bitwise operators inside strings should not be changed
+    [Theory]
+    [InlineData("SELECT 'a&b'", "SELECT 'a&b'")]
+    [InlineData("SELECT 'a|b'", "SELECT 'a|b'")]
+    [InlineData("SELECT 'a^b'", "SELECT 'a^b'")]
+    [InlineData("SELECT 'a&=b'", "SELECT 'a&=b'")]
+    public void Normalize_BitwiseOperatorsInStrings_Preserved(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
+
+    // Complex bitwise expressions
+    [Theory]
+    [InlineData("SELECT (flags&1)|(flags&2)", "SELECT (flags & 1) | (flags & 2)")]
+    [InlineData("WHERE a&b=c^d", "WHERE a & b = c ^ d")]
+    public void Normalize_ComplexBitwiseExpressions_CorrectSpacing(string input, string expected)
+    {
+        var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);
+        Assert.Equal(expected, result);
+    }
 }
