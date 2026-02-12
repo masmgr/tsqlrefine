@@ -123,6 +123,29 @@ public sealed class GroupByColumnMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_GroupByExpression_SelectsSameExpression_ReturnsEmpty()
+    {
+        const string sql = "SELECT a + b FROM t GROUP BY a + b;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupByExpression_WithUngroupedColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT a + b, c FROM t GROUP BY a + b;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("c", diagnostics[0].Message);
+    }
+
+    [Fact]
     public void Analyze_ColumnInAggregateFunction_ReturnsEmpty()
     {
         const string sql = "SELECT a, COUNT(b) FROM t GROUP BY a;";
