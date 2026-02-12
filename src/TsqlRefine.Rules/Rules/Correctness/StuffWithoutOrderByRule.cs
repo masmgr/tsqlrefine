@@ -39,7 +39,7 @@ public sealed class StuffWithoutOrderByRule : DiagnosticVisitorRuleBase
                             : $"STUFF with FOR XML PATH lacks ORDER BY for '{columnHint}'; results may be non-deterministic.";
 
                         AddDiagnostic(
-                            fragment: node,
+                            fragment: node.FunctionName,
                             message: message,
                             code: "stuff-without-order-by",
                             category: "Correctness",
