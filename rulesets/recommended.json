@@ -77,7 +77,8 @@
     { "id": "require-schema-qualify-exec" },
     { "id": "normalize-inequality-operator" },
     { "id": "avoid-scalar-udf-in-query" },
-    { "id": "avoid-correlated-scalar-subquery-in-select" }
+    { "id": "avoid-correlated-scalar-subquery-in-select" },
+    { "id": "group-by-column-mismatch" }
   ]
 }
 

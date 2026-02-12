@@ -60,6 +60,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidSetRowcountRule(),
         new AvoidNotInWithNullRule(),
         new AvoidBetweenForDatetimeRangeRule(),
+        new GroupByColumnMismatchRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),

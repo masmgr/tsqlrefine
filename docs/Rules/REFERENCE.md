@@ -13,17 +13,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 117
+- **Total Rules**: 118
 - **Fixable Rules**: 11 (9%)
-- **Error Severity**: 17 rules (15%)
-- **Warning Severity**: 63 rules (54%)
-- **Information Severity**: 37 rules (32%)
+- **Error Severity**: 17 rules (14%)
+- **Warning Severity**: 64 rules (54%)
+- **Information Severity**: 37 rules (31%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 32 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 33 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
@@ -34,7 +34,7 @@
 
 ## Rules by Category
 
-### Correctness (32 rules)
+### Correctness (33 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -47,6 +47,7 @@
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
+| [group-by-column-mismatch](correctness/group-by-column-mismatch.md) | Detects SELECT columns not contained in GROUP BY or an aggregate function. | Warning | No |
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
 | [named-constraint](correctness/named-constraint.md) | Prohibit named constraints in temp tables to avoid naming conflicts | Error | No |
 | [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data. | Error | No |
@@ -213,7 +214,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (63 rules)
+### Warning (64 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -238,6 +239,7 @@
 - [duplicate-index-column](schema/duplicate-index-column.md)
 - [duplicate-index-definition](schema/duplicate-index-definition.md)
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
+- [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
 - [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md)
 - [join-keyword](style/join-keyword.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
