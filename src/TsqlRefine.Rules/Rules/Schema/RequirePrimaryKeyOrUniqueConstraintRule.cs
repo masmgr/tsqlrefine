@@ -27,7 +27,8 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRule : DiagnosticVisitorR
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Skip temporary tables (#temp, ##temp)
-            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
+            if (node.SchemaObjectName?.BaseIdentifier is not { } tableIdentifier ||
+                ScriptDomHelpers.IsTemporaryTableName(tableIdentifier.Value))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -83,7 +84,7 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRule : DiagnosticVisitorR
             if (!hasPrimaryKey && !hasUniqueConstraint)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: tableIdentifier,
                     message: "Table should have a PRIMARY KEY or UNIQUE constraint to enforce entity integrity and support relational operations.",
                     code: "require-primary-key-or-unique-constraint",
                     category: "Schema",

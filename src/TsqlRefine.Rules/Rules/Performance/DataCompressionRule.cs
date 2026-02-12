@@ -45,7 +45,7 @@ public sealed class DataCompressionRule : DiagnosticVisitorRuleBase
             if (!hasDataCompression)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    fragment: node.SchemaObjectName.BaseIdentifier,
                     message: "CREATE TABLE statement missing DATA_COMPRESSION option. Consider specifying ROW, PAGE, or NONE for optimal storage.",
                     code: "data-compression",
                     category: "Performance",
