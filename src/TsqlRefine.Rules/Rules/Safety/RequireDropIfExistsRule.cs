@@ -75,7 +75,7 @@ public sealed class RequireDropIfExistsRule : DiagnosticVisitorRuleBase
         private void AddDropDiagnostic(TSqlFragment node, string objectType)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetLeadingKeywordPairRange(node),
                 message: $"DROP {objectType} should use IF EXISTS for idempotent deployment scripts. Use 'DROP {objectType} IF EXISTS' to avoid errors when the object does not exist.",
                 code: "require-drop-if-exists",
                 category: "Safety",

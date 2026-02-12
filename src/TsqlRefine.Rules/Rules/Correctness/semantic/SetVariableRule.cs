@@ -29,7 +29,7 @@ public sealed class SetVariableRule : DiagnosticVisitorRuleBase
             // SET @variable = value
             // This should be SELECT @variable = value instead
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Use SELECT for variable assignment instead of SET. SELECT is preferred for consistency and can be more performant when assigning multiple variables.",
                 code: "semantic-set-variable",
                 category: "Correctness",
