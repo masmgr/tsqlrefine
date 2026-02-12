@@ -158,6 +158,69 @@ WHERE active = 0;";
             ScriptDomHelpers.FindKeywordTokenRange(null!, TSqlTokenType.Distinct));
     }
 
+    [Fact]
+    public void GetLeadingKeywordPairRange_WithBeginTransaction_ReturnsBeginTransactionSpan()
+    {
+        // Arrange
+        var sql = "BEGIN TRANSACTION; COMMIT;";
+        var parser = new TSql160Parser(true);
+        var script = (TSqlScript)parser.Parse(new System.IO.StringReader(sql), out _);
+        var statement = script.Batches[0].Statements[0];
+
+        // Act
+        var range = ScriptDomHelpers.GetLeadingKeywordPairRange(statement);
+
+        // Assert - should cover "BEGIN TRANSACTION" (0:0 to 0:17)
+        Assert.Equal(0, range.Start.Line);
+        Assert.Equal(0, range.Start.Character);
+        Assert.Equal(0, range.End.Line);
+        Assert.Equal(17, range.End.Character);
+    }
+
+    [Fact]
+    public void GetLeadingKeywordPairRange_WithBeginTran_ReturnsBeginTranSpan()
+    {
+        // Arrange
+        var sql = "BEGIN TRAN; COMMIT;";
+        var parser = new TSql160Parser(true);
+        var script = (TSqlScript)parser.Parse(new System.IO.StringReader(sql), out _);
+        var statement = script.Batches[0].Statements[0];
+
+        // Act
+        var range = ScriptDomHelpers.GetLeadingKeywordPairRange(statement);
+
+        // Assert - should cover "BEGIN TRAN" (0:0 to 0:10)
+        Assert.Equal(0, range.Start.Line);
+        Assert.Equal(0, range.Start.Character);
+        Assert.Equal(0, range.End.Line);
+        Assert.Equal(10, range.End.Character);
+    }
+
+    [Fact]
+    public void GetLeadingKeywordPairRange_WithTryCatch_ReturnsBeginTrySpan()
+    {
+        // Arrange
+        var sql = "BEGIN TRY SELECT 1; END TRY BEGIN CATCH END CATCH;";
+        var parser = new TSql160Parser(true);
+        var script = (TSqlScript)parser.Parse(new System.IO.StringReader(sql), out _);
+        var statement = script.Batches[0].Statements[0];
+
+        // Act
+        var range = ScriptDomHelpers.GetLeadingKeywordPairRange(statement);
+
+        // Assert - should cover "BEGIN TRY" (0:0 to 0:9)
+        Assert.Equal(0, range.Start.Line);
+        Assert.Equal(0, range.Start.Character);
+        Assert.Equal(0, range.End.Line);
+        Assert.Equal(9, range.End.Character);
+    }
+
+    [Fact]
+    public void GetLeadingKeywordPairRange_WithNullFragment_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => ScriptDomHelpers.GetLeadingKeywordPairRange(null!));
+    }
+
     /// <summary>
     /// SQL Server 2022 extended TRIM syntax: TRIM(characters FROM string)
     /// Note: ScriptDom 170.157.0 does not yet support this syntax, even with TSql170Parser.

@@ -41,7 +41,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                 if (!_hasCommitOrRollback)
                 {
                     AddDiagnostic(
-                        fragment: beginTran,
+                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION without corresponding COMMIT or ROLLBACK in the same batch. Orphaned transactions hold locks indefinitely and cause blocking issues. Ensure all transaction paths have proper termination.",
                         code: "transaction-without-commit-or-rollback",
                         category: "Transactions",
@@ -88,7 +88,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                 if (!_hasCommitOrRollback)
                 {
                     AddDiagnostic(
-                        fragment: beginTran,
+                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION in stored procedure without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
                         code: "transaction-without-commit-or-rollback",
                         category: "Transactions",
@@ -119,7 +119,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                 if (!_hasCommitOrRollback)
                 {
                     AddDiagnostic(
-                        fragment: beginTran,
+                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION in function without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
                         code: "transaction-without-commit-or-rollback",
                         category: "Transactions",

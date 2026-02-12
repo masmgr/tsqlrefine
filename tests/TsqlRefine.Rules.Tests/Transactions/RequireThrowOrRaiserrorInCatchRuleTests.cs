@@ -36,6 +36,11 @@ public sealed class RequireThrowOrRaiserrorInCatchRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("require-throw-or-raiserror-in-catch", diagnostics[0].Code);
+        // Diagnostic should highlight only "BEGIN TRY" keywords
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(12, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(21, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

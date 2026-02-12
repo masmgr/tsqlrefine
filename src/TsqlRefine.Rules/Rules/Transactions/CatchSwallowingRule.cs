@@ -52,7 +52,7 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
             if (!_catchHasErrorPropagation && !wasInside)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(node),
                     message: "CATCH block suppresses errors without THROW or RAISERROR. This creates silent failures that are difficult to debug. Consider rethrowing the error or logging to a persistent store.",
                     code: "catch-swallowing",
                     category: "Transactions",

@@ -64,7 +64,7 @@ public sealed class UncommittedTransactionRule : IRule
             if (!hasMatch)
             {
                 yield return RuleHelpers.CreateDiagnostic(
-                    range: ScriptDomHelpers.GetRange(beginTran),
+                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                     message: "BEGIN TRANSACTION without corresponding COMMIT TRANSACTION in the same file",
                     code: Metadata.RuleId,
                     category: Metadata.Category,

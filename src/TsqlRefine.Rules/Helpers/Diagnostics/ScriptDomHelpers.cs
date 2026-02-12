@@ -138,6 +138,61 @@ public static class ScriptDomHelpers
     }
 
     /// <summary>
+    /// Returns a range covering the first two non-trivia tokens of the fragment.
+    /// Useful for compound keywords like "BEGIN TRANSACTION", "BEGIN TRY", "BEGIN CATCH".
+    /// Skips whitespace and comments between the tokens.
+    /// </summary>
+    /// <param name="fragment">The TSqlFragment to get the keyword pair range from.</param>
+    /// <returns>A Range covering the first two significant tokens, or the first token range as fallback.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when fragment is null.</exception>
+    public static TsqlRefine.PluginSdk.Range GetLeadingKeywordPairRange(TSqlFragment fragment)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+
+        var tokens = fragment.ScriptTokenStream;
+        if (tokens is null)
+        {
+            return GetRange(fragment);
+        }
+
+        var firstIndex = -1;
+        var secondIndex = -1;
+
+        for (var i = fragment.FirstTokenIndex; i <= fragment.LastTokenIndex && i < tokens.Count; i++)
+        {
+            var tokenType = tokens[i].TokenType;
+            if (tokenType is TSqlTokenType.WhiteSpace
+                or TSqlTokenType.SingleLineComment
+                or TSqlTokenType.MultilineComment)
+            {
+                continue;
+            }
+
+            if (firstIndex < 0)
+            {
+                firstIndex = i;
+            }
+            else
+            {
+                secondIndex = i;
+                break;
+            }
+        }
+
+        if (firstIndex < 0 || secondIndex < 0)
+        {
+            return GetFirstTokenRange(fragment);
+        }
+
+        var startToken = tokens[firstIndex];
+        var endToken = tokens[secondIndex];
+        var endText = endToken.Text ?? string.Empty;
+        var start = new Position(startToken.Line - 1, startToken.Column - 1);
+        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        return new TsqlRefine.PluginSdk.Range(start, end);
+    }
+
+    /// <summary>
     /// Converts a TSqlFragment to a Range using its start/end token positions.
     /// Handles 1-based ScriptDom coordinates and converts to 0-based PluginSdk positions.
     /// </summary>

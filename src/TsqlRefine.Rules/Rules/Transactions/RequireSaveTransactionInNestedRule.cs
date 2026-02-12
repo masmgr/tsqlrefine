@@ -41,7 +41,7 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
             if (_transactionDepth > 1 && !_hasSaveTransaction)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(node),
                     message: "Nested BEGIN TRANSACTION without SAVE TRANSACTION. Use SAVE TRANSACTION with a savepoint name before nesting transactions, otherwise ROLLBACK will roll back the entire outer transaction.",
                     code: "require-save-transaction-in-nested",
                     category: "Transactions",

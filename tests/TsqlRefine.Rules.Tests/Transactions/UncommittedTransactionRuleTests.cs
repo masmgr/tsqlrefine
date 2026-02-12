@@ -21,6 +21,11 @@ UPDATE Users SET Name = 'test' WHERE Id = 1;
         Assert.Single(diagnostics);
         Assert.Equal("uncommitted-transaction", diagnostics[0].Data?.RuleId);
         Assert.Contains("BEGIN TRANSACTION without corresponding COMMIT TRANSACTION", diagnostics[0].Message);
+        // Diagnostic should highlight only "BEGIN TRANSACTION" keywords
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(0, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(17, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
