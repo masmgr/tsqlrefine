@@ -109,7 +109,7 @@ TsqlRefine provides five preset rulesets:
 | **recommended** | 58 | Balanced production use with semantic analysis (default) |
 | **strict** | 97 | Maximum enforcement including all style/cosmetic rules |
 | **strict-logic** | 74 | Comprehensive correctness without cosmetic style rules |
-| **pragmatic** | 34 | Production-ready minimum for legacy codebases |
+| **pragmatic** | 39 | Production-ready minimum for legacy codebases |
 | **security-only** | 13 | Security vulnerabilities and critical safety only |
 
 ```powershell

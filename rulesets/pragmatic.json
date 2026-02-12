@@ -19,11 +19,7 @@
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },
     { "id": "like-leading-wildcard" },
-    { "id": "require-try-catch-for-transaction" },
-    { "id": "require-xact-abort-on" },
-    { "id": "set-ansi" },
-    { "id": "set-nocount" },
-    { "id": "set-quoted-identifier" },
+    { "id": "avoid-select-star" },
     { "id": "avoid-implicit-conversion-in-predicate" },
     { "id": "non-sargable" },
     { "id": "disallow-cursors" },
@@ -33,11 +29,15 @@
     { "id": "transaction-without-commit-or-rollback" },
     { "id": "unreachable-case-when" },
     { "id": "union-type-mismatch" },
-    { "id": "avoid-select-star" },
+    { "id": "duplicate-column-definition" },
+    { "id": "duplicate-view-column" },
+    { "id": "duplicate-table-function-column" },
+    { "id": "duplicate-table-variable-column" },
+    { "id": "duplicate-insert-column" },
     { "id": "avoid-not-in-with-null" },
     { "id": "require-parameterized-sp-executesql" },
     { "id": "avoid-optional-parameter-pattern" },
-    { "id": "avoid-scalar-udf-in-query" }
+    { "id": "aggregate-in-where-clause" },
+    { "id": "having-column-mismatch" }
   ]
 }
-

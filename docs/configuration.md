@@ -181,7 +181,7 @@ tsqlrefine includes built-in preset rulesets:
 | `recommended` | 58 | Balanced production use with semantic analysis (default) |
 | `strict` | 97 | Maximum enforcement including all style/cosmetic rules |
 | `strict-logic` | 74 | Comprehensive correctness and semantic analysis without cosmetic style rules |
-| `pragmatic` | 34 | Production-ready minimum focusing on safety and critical issues |
+| `pragmatic` | 39 | Production-ready minimum focusing on safety and critical issues |
 | `security-only` | 13 | Security vulnerabilities and critical safety only |
 
 Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:

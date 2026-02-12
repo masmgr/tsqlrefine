@@ -83,7 +83,7 @@ src/
 - `recommended`: Balanced production use (58 rules)
 - `strict`: Maximum enforcement including style (97 rules)
 - `strict-logic`: Comprehensive correctness without cosmetic rules (74 rules)
-- `pragmatic`: Production-ready minimum (34 rules)
+- `pragmatic`: Production-ready minimum (39 rules)
 - `security-only`: Security and critical safety (13 rules)
 
 For custom rulesets, use the `"ruleset"` field with a path to a custom JSON file instead.
