@@ -132,6 +132,18 @@ public sealed class HavingColumnMismatchRuleTests
         Assert.Contains("b", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_GroupByExpression_HavingUngroupedColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT a + b FROM t GROUP BY a + b HAVING c > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("c", diagnostics[0].Message);
+    }
+
     // === Valid cases (no violations) ===
 
     [Fact]
@@ -160,6 +172,17 @@ public sealed class HavingColumnMismatchRuleTests
     public void Analyze_HavingWithGroupByColumnComparison_ReturnsEmpty()
     {
         const string sql = "SELECT a FROM t GROUP BY a HAVING a > 5;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupByExpression_HavingSameExpression_ReturnsEmpty()
+    {
+        const string sql = "SELECT a + b FROM t GROUP BY a + b HAVING a + b > 0;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToArray();
