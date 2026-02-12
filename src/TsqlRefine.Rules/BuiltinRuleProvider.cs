@@ -61,6 +61,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidNotInWithNullRule(),
         new AvoidBetweenForDatetimeRangeRule(),
         new GroupByColumnMismatchRule(),
+        new AggregateInWhereClauseRule(),
+        new HavingColumnMismatchRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),

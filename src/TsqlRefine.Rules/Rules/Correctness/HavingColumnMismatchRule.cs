@@ -4,33 +4,34 @@ using TsqlRefine.PluginSdk;
 namespace TsqlRefine.Rules.Rules.Correctness;
 
 /// <summary>
-/// Detects SELECT columns that are neither in the GROUP BY clause nor wrapped in an aggregate function.
-/// SQL Server raises an error for such columns at runtime.
+/// Detects columns in HAVING clause that are neither in the GROUP BY clause nor wrapped in an aggregate function.
+/// SQL Server raises error 8120 for such columns at runtime.
 /// </summary>
-public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
+public sealed class HavingColumnMismatchRule : DiagnosticVisitorRuleBase
 {
-    private const string RuleId = "group-by-column-mismatch";
+    private const string RuleId = "having-column-mismatch";
     private const string Category = "Correctness";
 
     public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
-        Description: "Detects SELECT columns not contained in GROUP BY or an aggregate function.",
+        Description: "Detects columns in HAVING clause not in GROUP BY and not wrapped in an aggregate function.",
         Category: Category,
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
-        new GroupByColumnMismatchVisitor();
+        new HavingColumnMismatchVisitor();
 
-    private sealed class GroupByColumnMismatchVisitor : DiagnosticVisitorBase
+    private sealed class HavingColumnMismatchVisitor : DiagnosticVisitorBase
     {
         public override void ExplicitVisit(QuerySpecification node)
         {
-            if (node.GroupByClause?.GroupingSpecifications is { Count: > 0 })
+            if (node.HavingClause?.SearchCondition != null &&
+                node.GroupByClause?.GroupingSpecifications is { Count: > 0 })
             {
                 var groupByColumns = CollectGroupByColumns(node.GroupByClause);
-                CheckSelectElements(node.SelectElements, groupByColumns);
+                CheckHavingClause(node.HavingClause.SearchCondition, groupByColumns);
             }
 
             base.ExplicitVisit(node);
@@ -52,32 +53,12 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             return columns;
         }
 
-        private void CheckSelectElements(
-            IList<SelectElement> selectElements,
+        private void CheckHavingClause(
+            BooleanExpression searchCondition,
             List<ColumnReferenceExpression> groupByColumns)
         {
-            foreach (var element in selectElements)
-            {
-                if (element is not SelectScalarExpression scalar)
-                {
-                    continue;
-                }
-
-                CheckExpression(scalar.Expression, groupByColumns);
-            }
-        }
-
-        private void CheckExpression(
-            ScalarExpression expression,
-            List<ColumnReferenceExpression> groupByColumns)
-        {
-            if (IsWrappedInAggregate(expression))
-            {
-                return;
-            }
-
             var columnRefs = new List<ColumnReferenceExpression>();
-            CollectColumnReferences(expression, columnRefs);
+            CollectColumnReferencesFromBooleanExpression(searchCondition, columnRefs);
 
             foreach (var colRef in columnRefs)
             {
@@ -86,7 +67,7 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
                     var columnName = GetColumnDisplayName(colRef);
                     AddDiagnostic(
                         fragment: colRef,
-                        message: $"Column '{columnName}' is not contained in GROUP BY or an aggregate function.",
+                        message: $"Column '{columnName}' in HAVING clause is not contained in GROUP BY or an aggregate function.",
                         code: RuleId,
                         category: Category,
                         fixable: false
@@ -95,17 +76,63 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             }
         }
 
-        private static bool IsWrappedInAggregate(ScalarExpression expression)
+        private static void CollectColumnReferencesFromBooleanExpression(
+            BooleanExpression? boolExpr,
+            List<ColumnReferenceExpression> result)
         {
-            if (expression is FunctionCall func)
+            switch (boolExpr)
             {
-                if (AggregateFunctionHelpers.IsAggregateFunction(func))
-                {
-                    return true;
-                }
-            }
+                case null:
+                    return;
 
-            return false;
+                case BooleanComparisonExpression comparison:
+                    CollectColumnReferences(comparison.FirstExpression, result);
+                    CollectColumnReferences(comparison.SecondExpression, result);
+                    return;
+
+                case BooleanBinaryExpression binary:
+                    CollectColumnReferencesFromBooleanExpression(binary.FirstExpression, result);
+                    CollectColumnReferencesFromBooleanExpression(binary.SecondExpression, result);
+                    return;
+
+                case BooleanIsNullExpression isNull:
+                    CollectColumnReferences(isNull.Expression, result);
+                    return;
+
+                case BooleanNotExpression not:
+                    CollectColumnReferencesFromBooleanExpression(not.Expression, result);
+                    return;
+
+                case BooleanParenthesisExpression paren:
+                    CollectColumnReferencesFromBooleanExpression(paren.Expression, result);
+                    return;
+
+                case InPredicate inPred:
+                    CollectColumnReferences(inPred.Expression, result);
+                    if (inPred.Values != null)
+                    {
+                        foreach (var val in inPred.Values)
+                        {
+                            CollectColumnReferences(val, result);
+                        }
+                    }
+                    return;
+
+                case LikePredicate like:
+                    CollectColumnReferences(like.FirstExpression, result);
+                    CollectColumnReferences(like.SecondExpression, result);
+                    return;
+
+                case BooleanTernaryExpression ternary:
+                    CollectColumnReferences(ternary.FirstExpression, result);
+                    CollectColumnReferences(ternary.SecondExpression, result);
+                    CollectColumnReferences(ternary.ThirdExpression, result);
+                    return;
+
+                case ExistsPredicate:
+                    // Subquery scope — don't descend
+                    return;
+            }
         }
 
         private static void CollectColumnReferences(
@@ -200,65 +227,6 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             }
 
             // For literals and other leaf expressions, no column references to collect
-        }
-
-        private static void CollectColumnReferencesFromBooleanExpression(
-            BooleanExpression? boolExpr,
-            List<ColumnReferenceExpression> result)
-        {
-            switch (boolExpr)
-            {
-                case null:
-                    return;
-
-                case BooleanComparisonExpression comparison:
-                    CollectColumnReferences(comparison.FirstExpression, result);
-                    CollectColumnReferences(comparison.SecondExpression, result);
-                    return;
-
-                case BooleanBinaryExpression binary:
-                    CollectColumnReferencesFromBooleanExpression(binary.FirstExpression, result);
-                    CollectColumnReferencesFromBooleanExpression(binary.SecondExpression, result);
-                    return;
-
-                case BooleanIsNullExpression isNull:
-                    CollectColumnReferences(isNull.Expression, result);
-                    return;
-
-                case BooleanNotExpression not:
-                    CollectColumnReferencesFromBooleanExpression(not.Expression, result);
-                    return;
-
-                case BooleanParenthesisExpression paren:
-                    CollectColumnReferencesFromBooleanExpression(paren.Expression, result);
-                    return;
-
-                case InPredicate inPred:
-                    CollectColumnReferences(inPred.Expression, result);
-                    if (inPred.Values != null)
-                    {
-                        foreach (var val in inPred.Values)
-                        {
-                            CollectColumnReferences(val, result);
-                        }
-                    }
-                    return;
-
-                case LikePredicate like:
-                    CollectColumnReferences(like.FirstExpression, result);
-                    CollectColumnReferences(like.SecondExpression, result);
-                    return;
-
-                case BooleanTernaryExpression ternary:
-                    CollectColumnReferences(ternary.FirstExpression, result);
-                    CollectColumnReferences(ternary.SecondExpression, result);
-                    CollectColumnReferences(ternary.ThirdExpression, result);
-                    return;
-
-                case ExistsPredicate:
-                    // Subquery scope — don't descend
-                    return;
-            }
         }
 
         private static bool IsInGroupBy(

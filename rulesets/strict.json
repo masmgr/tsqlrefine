@@ -123,7 +123,9 @@
     { "id": "avoid-scalar-udf-in-query" },
     { "id": "avoid-correlated-scalar-subquery-in-select" },
     { "id": "avoid-or-on-different-columns" },
-    { "id": "group-by-column-mismatch" }
+    { "id": "group-by-column-mismatch" },
+    { "id": "aggregate-in-where-clause" },
+    { "id": "having-column-mismatch" }
   ]
 }
 

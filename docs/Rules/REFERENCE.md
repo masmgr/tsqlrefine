@@ -13,17 +13,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 118
+- **Total Rules**: 120
 - **Fixable Rules**: 11 (9%)
-- **Error Severity**: 17 rules (14%)
-- **Warning Severity**: 64 rules (54%)
+- **Error Severity**: 18 rules (15%)
+- **Warning Severity**: 65 rules (54%)
 - **Information Severity**: 37 rules (31%)
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Correctness** | 33 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 35 | Detects code that may produce incorrect results or runtime errors |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Security** | 4 | Identifies security vulnerabilities like SQL injection |
 | **Performance** | 19 | Flags patterns that can cause performance issues |
@@ -34,10 +34,11 @@
 
 ## Rules by Category
 
-### Correctness (33 rules)
+### Correctness (35 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md) | Detects aggregate functions used directly in WHERE clauses. | Error | No |
 | [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md) | Disallows slash-delimited date literals; they depend on language/locale and can silently change meaning - prefer ISO 8601. | Warning | No |
 | [avoid-atat-identity](correctness/avoid-atat-identity.md) | Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT. | Warning | No |
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
@@ -48,6 +49,7 @@
 | [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a Transact-SQL keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
 | [group-by-column-mismatch](correctness/group-by-column-mismatch.md) | Detects SELECT columns not contained in GROUP BY or an aggregate function. | Warning | No |
+| [having-column-mismatch](correctness/having-column-mismatch.md) | Detects columns in HAVING clause not in GROUP BY and not wrapped in an aggregate function. | Warning | No |
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
 | [named-constraint](correctness/named-constraint.md) | Prohibit named constraints in temp tables to avoid naming conflicts | Error | No |
 | [no-top-without-order-by-in-select-into](correctness/no-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data. | Error | No |
@@ -194,8 +196,9 @@
 
 ## Rules by Severity
 
-### Error (17 rules)
+### Error (18 rules)
 
+- [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [ban-legacy-join-syntax](correctness/ban-legacy-join-syntax.md)
 - [dml-without-where](safety/dml-without-where.md)
@@ -214,7 +217,7 @@
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [transaction-without-commit-or-rollback](transactions/transaction-without-commit-or-rollback.md)
 
-### Warning (64 rules)
+### Warning (65 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -240,6 +243,7 @@
 - [duplicate-index-definition](schema/duplicate-index-definition.md)
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
 - [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
+- [having-column-mismatch](correctness/having-column-mismatch.md)
 - [forbid-top-100-percent-order-by](performance/forbid-top-100-percent-order-by.md)
 - [join-keyword](style/join-keyword.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
