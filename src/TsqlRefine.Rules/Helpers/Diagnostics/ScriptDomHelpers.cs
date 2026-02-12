@@ -138,6 +138,72 @@ public static class ScriptDomHelpers
     }
 
     /// <summary>
+    /// Returns a range covering the "BEGIN CATCH" keyword pair of a TryCatchStatement.
+    /// Searches for the CATCH token and the preceding BEGIN token, skipping trivia.
+    /// </summary>
+    /// <param name="node">The TryCatchStatement to get the CATCH keyword pair range from.</param>
+    /// <returns>A Range covering "BEGIN CATCH", or the first token range as fallback.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when node is null.</exception>
+    public static TsqlRefine.PluginSdk.Range GetCatchKeywordPairRange(TryCatchStatement node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+
+        var tokens = node.ScriptTokenStream;
+        if (tokens is null)
+        {
+            return GetRange(node);
+        }
+
+        // Find the CATCH token within the node's token range
+        var catchIndex = -1;
+        for (var i = node.FirstTokenIndex; i <= node.LastTokenIndex && i < tokens.Count; i++)
+        {
+            if (tokens[i].Text.Equals("CATCH", StringComparison.OrdinalIgnoreCase))
+            {
+                catchIndex = i;
+                break;
+            }
+        }
+
+        if (catchIndex < 0)
+        {
+            return GetFirstTokenRange(node);
+        }
+
+        // Find the preceding BEGIN token, skipping trivia
+        var beginIndex = -1;
+        for (var i = catchIndex - 1; i >= node.FirstTokenIndex; i--)
+        {
+            var tokenText = tokens[i].Text;
+            if (string.IsNullOrWhiteSpace(tokenText) ||
+                tokenText.StartsWith("--", StringComparison.Ordinal) ||
+                tokenText.StartsWith("/*", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (tokenText.Equals("BEGIN", StringComparison.OrdinalIgnoreCase))
+            {
+                beginIndex = i;
+            }
+
+            break;
+        }
+
+        if (beginIndex < 0)
+        {
+            return GetFirstTokenRange(node);
+        }
+
+        var startToken = tokens[beginIndex];
+        var endToken = tokens[catchIndex];
+        var endText = endToken.Text ?? string.Empty;
+        var start = new Position(startToken.Line - 1, startToken.Column - 1);
+        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        return new TsqlRefine.PluginSdk.Range(start, end);
+    }
+
+    /// <summary>
     /// Returns a range covering the first two non-trivia tokens of the fragment.
     /// Useful for compound keywords like "BEGIN TRANSACTION", "BEGIN TRY", "BEGIN CATCH".
     /// Skips whitespace and comments between the tokens.

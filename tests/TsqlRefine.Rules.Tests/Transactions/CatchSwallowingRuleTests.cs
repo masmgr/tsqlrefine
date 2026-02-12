@@ -32,11 +32,11 @@ END CATCH;";
 
         Assert.Single(diagnostics);
         Assert.Equal("catch-swallowing", diagnostics[0].Code);
-        // Diagnostic should highlight only "BEGIN TRY" keywords
-        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        // Diagnostic should highlight only "BEGIN CATCH" keywords
+        Assert.Equal(4, diagnostics[0].Range.Start.Line);
         Assert.Equal(0, diagnostics[0].Range.Start.Character);
-        Assert.Equal(1, diagnostics[0].Range.End.Line);
-        Assert.Equal(9, diagnostics[0].Range.End.Character);
+        Assert.Equal(4, diagnostics[0].Range.End.Line);
+        Assert.Equal(11, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

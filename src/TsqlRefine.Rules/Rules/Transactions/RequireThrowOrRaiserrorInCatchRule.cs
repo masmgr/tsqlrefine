@@ -45,7 +45,7 @@ public sealed class RequireThrowOrRaiserrorInCatchRule : DiagnosticVisitorRuleBa
             if (!_catchHasErrorPropagation)
             {
                 AddDiagnostic(
-                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(node),
+                    range: ScriptDomHelpers.GetCatchKeywordPairRange(node),
                     message: "CATCH block does not propagate the error. Add THROW, RAISERROR, or RETURN with error code to prevent silent failures.",
                     code: "require-throw-or-raiserror-in-catch",
                     category: "Transactions",
