@@ -382,6 +382,22 @@ public class CommaStyleTransformerTests
         Assert.Equal("SELECT id,\n\nname", result);
     }
 
+    [Fact]
+    public void ToTrailingCommas_InlineCommentOnTargetLine_PlacesCommaBeforeComment()
+    {
+        var input = "SELECT id -- pk\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id, -- pk\n    name", result);
+    }
+
+    [Fact]
+    public void ToTrailingCommas_CommentOnlyLineAsImmediateTarget_SkipsToPreviousCodeLine()
+    {
+        var input = "SELECT id\n-- keep comment\n    , name";
+        var result = CommaStyleTransformer.ToTrailingCommas(input);
+        Assert.Equal("SELECT id,\n-- keep comment\n    name", result);
+    }
+
     #endregion
 
     #region ToTrailingCommas - Protected Regions

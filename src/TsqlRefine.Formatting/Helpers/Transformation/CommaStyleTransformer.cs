@@ -336,8 +336,16 @@ public static class CommaStyleTransformer
 
     private static bool CanReceiveTrailingComma(string line)
     {
-        var trimmed = line.TrimEnd();
-        if (trimmed.Length == 0)
+        var trimmedEnd = line.TrimEnd();
+        if (trimmedEnd.Length == 0)
+        {
+            return false;
+        }
+
+        var trimmedStart = trimmedEnd.TrimStart();
+
+        // Avoid appending to pure line comments; move comma to prior code line instead.
+        if (trimmedStart.StartsWith("--", StringComparison.Ordinal))
         {
             return false;
         }
@@ -378,6 +386,41 @@ public static class CommaStyleTransformer
             return line;
         }
 
+        var lineCommentStart = FindLineCommentStart(trimmed);
+        if (lineCommentStart >= 0)
+        {
+            var beforeComment = trimmed[..lineCommentStart].TrimEnd();
+            if (beforeComment.Length == 0)
+            {
+                return line;
+            }
+
+            var commentPart = trimmed[lineCommentStart..];
+            return $"{beforeComment}, {commentPart}";
+        }
+
         return trimmed + ",";
+    }
+
+    private static int FindLineCommentStart(string line)
+    {
+        var tracker = new ProtectedRegionTracker();
+
+        for (var i = 0; i < line.Length;)
+        {
+            if (ProtectedRegionTracker.IsLineCommentStart(line, i) && !tracker.IsInProtectedRegion())
+            {
+                return i;
+            }
+
+            if (tracker.TryAdvance(line, ref i))
+            {
+                continue;
+            }
+
+            i++;
+        }
+
+        return -1;
     }
 }
