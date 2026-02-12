@@ -30,7 +30,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : Diagnosti
             if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement, allowControlFlowWithoutBlock: true))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "IF statement should use BEGIN/END block unless it contains a single control-flow statement (RETURN, BREAK, CONTINUE, THROW).",
                     code: "require-begin-end-for-if-with-controlflow-exception",
                     category: "Style",
@@ -44,7 +44,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : Diagnosti
                 BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement, allowControlFlowWithoutBlock: true))
             {
                 AddDiagnostic(
-                    fragment: node.ElseStatement,
+                    range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Else),
                     message: "ELSE statement should use BEGIN/END block unless it contains a single control-flow statement (RETURN, BREAK, CONTINUE, THROW).",
                     code: "require-begin-end-for-if-with-controlflow-exception",
                     category: "Style",

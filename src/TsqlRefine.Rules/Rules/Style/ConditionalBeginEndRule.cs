@@ -103,7 +103,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
             if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement))
             {
                 AddDiagnostic(
-                    fragment: node.ThenStatement,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "IF statement should use BEGIN/END block for clarity and maintainability.",
                     code: "conditional-begin-end",
                     category: "Style",
@@ -117,7 +117,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
                 BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement))
             {
                 AddDiagnostic(
-                    fragment: node.ElseStatement,
+                    range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Else),
                     message: "ELSE statement should use BEGIN/END block for clarity and maintainability.",
                     code: "conditional-begin-end",
                     category: "Style",
@@ -144,7 +144,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
             // Check THEN clause
             if (BeginEndHelpers.NeedsBeginEndBlock(node.ThenStatement))
             {
-                var range = ScriptDomHelpers.GetRange(node.ThenStatement);
+                var range = ScriptDomHelpers.GetFirstTokenRange(node);
                 if (RangesMatch(range, _targetRange))
                 {
                     TargetStatement = node.ThenStatement;
@@ -159,7 +159,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
                 !BeginEndHelpers.IsElseIfPattern(node.ElseStatement) &&
                 BeginEndHelpers.NeedsBeginEndBlock(node.ElseStatement))
             {
-                var range = ScriptDomHelpers.GetRange(node.ElseStatement);
+                var range = ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Else);
                 if (RangesMatch(range, _targetRange))
                 {
                     TargetStatement = node.ElseStatement;

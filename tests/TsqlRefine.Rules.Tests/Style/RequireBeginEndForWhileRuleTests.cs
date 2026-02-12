@@ -26,6 +26,12 @@ public sealed class RequireBeginEndForWhileRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("require-begin-end-for-while", diagnostics[0].Code);
         Assert.Contains("BEGIN/END", diagnostics[0].Message);
+
+        // Diagnostic should highlight only the WHILE keyword
+        Assert.Equal(2, diagnostics[0].Range.Start.Line);
+        Assert.Equal(12, diagnostics[0].Range.Start.Character);
+        Assert.Equal(2, diagnostics[0].Range.End.Line);
+        Assert.Equal(17, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
