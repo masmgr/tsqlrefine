@@ -26,12 +26,21 @@ public sealed class RulesetTests
     }
 
     [Fact]
-    public void DefaultRuleset_EnablesAllRules()
+    public void EmptyRuleset_EnablesAllRules()
     {
-        var ruleset = new Ruleset(null);
+        var ruleset = Ruleset.Empty;
 
         Assert.True(ruleset.IsRuleEnabled("any-rule"));
         Assert.True(ruleset.IsRuleEnabled("another-rule"));
+    }
+
+    [Fact]
+    public void EmptyWhitelistRuleset_DisablesAllRules()
+    {
+        var ruleset = new Ruleset([]);
+
+        Assert.False(ruleset.IsRuleEnabled("any-rule"));
+        Assert.False(ruleset.IsRuleEnabled("another-rule"));
     }
 
     [Fact]
@@ -45,7 +54,7 @@ public sealed class RulesetTests
 
         Assert.True(ruleset.IsRuleEnabled("rule-a"));
         Assert.False(ruleset.IsRuleEnabled("rule-b"));
-        Assert.True(ruleset.IsRuleEnabled("rule-c")); // Not in ruleset, default is true
+        Assert.False(ruleset.IsRuleEnabled("rule-c")); // Not in ruleset, disabled in whitelist mode
     }
 
     // --- ParseSeverityLevel tests ---
@@ -138,11 +147,12 @@ public sealed class RulesetTests
     }
 
     [Fact]
-    public void GetRuleSeverityLevel_UnknownRule_ReturnsInherit()
+    public void GetRuleSeverityLevel_UnknownRule_ReturnsNoneInWhitelistMode()
     {
         var ruleset = new Ruleset([new RulesetRule("rule-a", Severity: "error")]);
 
-        Assert.Equal(RuleSeverityLevel.Inherit, ruleset.GetRuleSeverityLevel("unknown-rule"));
+        // Whitelist mode: unlisted rules are disabled
+        Assert.Equal(RuleSeverityLevel.None, ruleset.GetRuleSeverityLevel("unknown-rule"));
     }
 
     // --- GetSeverityOverride tests ---

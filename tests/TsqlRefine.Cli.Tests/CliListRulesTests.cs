@@ -30,6 +30,7 @@ public sealed class CliListRulesTests
         Assert.Contains("Category", output);
         Assert.Contains("Severity", output);
         Assert.Contains("Fixable", output);
+        Assert.Contains("Enabled", output);
         Assert.Contains("Total:", output);
     }
 
@@ -52,7 +53,9 @@ public sealed class CliListRulesTests
         Assert.True(firstRule.TryGetProperty("description", out _));
         Assert.True(firstRule.TryGetProperty("category", out _));
         Assert.True(firstRule.TryGetProperty("defaultSeverity", out _));
+        Assert.True(firstRule.TryGetProperty("effectiveSeverity", out _));
         Assert.True(firstRule.TryGetProperty("fixable", out _));
+        Assert.True(firstRule.TryGetProperty("enabled", out _));
         Assert.True(firstRule.TryGetProperty("documentationUri", out var docUri));
         Assert.StartsWith("https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/", docUri.GetString());
     }
@@ -109,5 +112,77 @@ public sealed class CliListRulesTests
         {
             Assert.Contains("Yes", line);
         }
+    }
+
+    [Fact]
+    public async Task ListRules_WithoutConfig_AppliesRecommendedPreset()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(new[] { "list-rules", "--output", "json" }, TextReader.Null, stdout, stderr);
+
+        Assert.Equal(0, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var rules = doc.RootElement.EnumerateArray().ToList();
+
+        // Default applies recommended preset — some rules enabled, some disabled
+        var enabledCount = rules.Count(r => r.GetProperty("enabled").GetBoolean());
+        var disabledCount = rules.Count(r => !r.GetProperty("enabled").GetBoolean());
+        Assert.True(enabledCount > 0, "recommended preset should enable some rules");
+        Assert.True(disabledCount > 0, "recommended preset should disable some rules");
+    }
+
+    [Fact]
+    public async Task ListRules_WithoutConfig_EnabledRulesHaveValidSeverity()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "list-rules", "--output", "json" }, TextReader.Null, stdout, stderr);
+
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var rules = doc.RootElement.EnumerateArray().ToList();
+
+        // Enabled rules: effective severity should match default severity (recommended preset uses inherit)
+        Assert.All(
+            rules.Where(r => r.GetProperty("enabled").GetBoolean()),
+            r => Assert.Equal(
+                r.GetProperty("defaultSeverity").GetString(),
+                r.GetProperty("effectiveSeverity").GetString()));
+
+        // Disabled rules: effective severity should be "none"
+        Assert.All(
+            rules.Where(r => !r.GetProperty("enabled").GetBoolean()),
+            r => Assert.Equal("none", r.GetProperty("effectiveSeverity").GetString()));
+    }
+
+    [Fact]
+    public async Task ListRules_WithPreset_ShowsDisabledRules()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        // security-only preset enables very few rules; unlisted rules are disabled (whitelist mode)
+        var code = await CliApp.RunAsync(
+            new[] { "list-rules", "--preset", "security-only", "--output", "json" },
+            TextReader.Null, stdout, stderr);
+
+        Assert.Equal(0, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var rules = doc.RootElement.EnumerateArray().ToList();
+
+        // Should have some disabled rules (majority are not in security-only)
+        var disabledCount = rules.Count(r => !r.GetProperty("enabled").GetBoolean());
+        Assert.True(disabledCount > 0, "security-only preset should disable rules not in its list");
+
+        // Should have some enabled rules
+        var enabledCount = rules.Count(r => r.GetProperty("enabled").GetBoolean());
+        Assert.True(enabledCount > 0, "security-only preset should enable some rules");
+
+        // Disabled rules should report effectiveSeverity as none.
+        Assert.All(
+            rules.Where(r => !r.GetProperty("enabled").GetBoolean()),
+            r => Assert.Equal("none", r.GetProperty("effectiveSeverity").GetString()));
     }
 }

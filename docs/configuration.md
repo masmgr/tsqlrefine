@@ -146,9 +146,9 @@ The optional `formatting` section allows you to customize SQL formatting behavio
 
 ## Ruleset file
 
-A ruleset file declares a list of rules with their severity levels.
+A ruleset file declares a **whitelist** of rules to enable. Only rules listed in the file are active; all other rules are disabled.
 
-Each rule entry uses a `severity` field to control enablement and severity:
+Each rule entry uses a `severity` field to control severity:
 
 | Value | Enabled | Severity |
 |-------|---------|----------|
@@ -166,11 +166,12 @@ Example `custom-ruleset.json`:
 {
   "rules": [
     { "id": "avoid-null-comparison" },
-    { "id": "dml-without-where", "severity": "error" },
-    { "id": "order-by-in-subquery", "severity": "none" }
+    { "id": "dml-without-where", "severity": "error" }
   ]
 }
 ```
+
+In this example, only `avoid-null-comparison` and `dml-without-where` are enabled. All other rules are disabled.
 
 ## Preset rulesets
 

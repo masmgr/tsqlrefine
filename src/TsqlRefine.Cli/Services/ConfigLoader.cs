@@ -12,6 +12,7 @@ namespace TsqlRefine.Cli.Services;
 public sealed class ConfigLoader
 {
     private const string ConfigDirName = ".tsqlrefine";
+    internal const string DefaultPresetName = "recommended";
 
     /// <summary>
     /// Returns the ordered list of candidate paths for a settings file.
@@ -109,7 +110,7 @@ public sealed class ConfigLoader
         }
     }
 
-    public static Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
+    public static Ruleset LoadRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // When --rule is specified, use a single-rule whitelist.
         // Rule ID validation is performed by ValidateRuleIdForFix.
@@ -122,13 +123,13 @@ public sealed class ConfigLoader
 
         if (config.Rules is { Count: > 0 })
         {
-            return (baseRuleset ?? Ruleset.Empty).WithOverrides(config.Rules);
+            return baseRuleset.WithOverrides(config.Rules);
         }
 
         return baseRuleset;
     }
 
-    private static Ruleset? ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
+    private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // Preset resolution priority: CLI --preset > config preset
         var presetName = args.Preset ?? config.Preset;
@@ -139,9 +140,13 @@ public sealed class ConfigLoader
 
         // Custom ruleset path resolution: CLI --ruleset > config ruleset
         var rulesetPath = args.RulesetPath ?? config.Ruleset;
-        return string.IsNullOrWhiteSpace(rulesetPath)
-            ? null
-            : LoadRulesetFromPath(rulesetPath);
+        if (!string.IsNullOrWhiteSpace(rulesetPath))
+        {
+            return LoadRulesetFromPath(rulesetPath);
+        }
+
+        // Default: apply recommended preset
+        return LoadPresetRuleset(DefaultPresetName);
     }
 
     private static Ruleset LoadPresetRuleset(string presetName)

@@ -114,12 +114,7 @@ public sealed class CommandExecutor
             filtered = filtered.Where(r => r.Metadata.Fixable);
         }
 
-        // Apply preset filter if specified
-        Ruleset? presetRuleset = null;
-        if (!string.IsNullOrWhiteSpace(args.Preset))
-        {
-            presetRuleset = ConfigLoader.LoadRuleset(args, config);
-        }
+        var ruleset = ConfigLoader.LoadRuleset(args, config);
 
         var rules = filtered.ToArray();
 
@@ -131,54 +126,73 @@ public sealed class CommandExecutor
                 description = r.Metadata.Description,
                 category = r.Metadata.Category,
                 defaultSeverity = r.Metadata.DefaultSeverity.ToString().ToLowerInvariant(),
+                effectiveSeverity = GetEffectiveSeverity(r, ruleset),
                 fixable = r.Metadata.Fixable,
+                enabled = ruleset.IsRuleEnabled(r.Metadata.RuleId),
                 minCompatLevel = r.Metadata.MinCompatLevel,
                 maxCompatLevel = r.Metadata.MaxCompatLevel,
                 documentationUri = r.Metadata.DocumentationUri?.ToString(),
-                enabled = presetRuleset?.IsRuleEnabled(r.Metadata.RuleId)
             });
             await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
         }
         else
         {
-            await WriteRulesTableAsync(stdout, rules, presetRuleset);
+            await WriteRulesTableAsync(stdout, rules, ruleset);
         }
 
         return 0;
     }
 
-    private static async Task WriteRulesTableAsync(TextWriter stdout, IRule[] rules, Ruleset? preset)
+    private static async Task WriteRulesTableAsync(TextWriter stdout, IRule[] rules, Ruleset ruleset)
     {
         const int idWidth = 38;
         const int categoryWidth = 16;
         const int severityWidth = 13;
         const int fixableWidth = 7;
+        const int enabledWidth = 7;
 
-        var showEnabled = preset is not null;
-        var header = $"{"Rule ID",-idWidth} {"Category",-categoryWidth} {"Severity",-severityWidth} {"Fixable",-fixableWidth}";
-        if (showEnabled)
-            header += " Enabled";
+        var header = $"{"Rule ID",-idWidth} {"Category",-categoryWidth} {"Severity",-severityWidth} {"Fixable",-fixableWidth} {"Enabled",-enabledWidth}";
 
         await stdout.WriteLineAsync(header);
-        var separatorLength = header.Length;
-        await stdout.WriteLineAsync(new string('\u2500', separatorLength));
+        await stdout.WriteLineAsync(new string('\u2500', header.Length));
 
         foreach (var rule in rules)
         {
             var m = rule.Metadata;
             var fixable = m.Fixable ? "Yes" : "No";
-            var line = $"{m.RuleId,-idWidth} {m.Category,-categoryWidth} {m.DefaultSeverity,-severityWidth} {fixable,-fixableWidth}";
-            if (showEnabled)
-            {
-                var enabled = preset!.IsRuleEnabled(m.RuleId) ? "Yes" : "No";
-                line += $" {enabled}";
-            }
+            var severity = GetEffectiveSeverity(rule, ruleset);
+            var capitalizedSeverity = char.ToUpperInvariant(severity[0]) + severity[1..];
+            var enabled = ruleset.IsRuleEnabled(m.RuleId) ? "Yes" : "No";
+            var line = $"{m.RuleId,-idWidth} {m.Category,-categoryWidth} {capitalizedSeverity,-severityWidth} {fixable,-fixableWidth} {enabled,-enabledWidth}";
 
             await stdout.WriteLineAsync(line);
         }
 
         await stdout.WriteLineAsync();
         await stdout.WriteLineAsync($"Total: {rules.Length} rules");
+    }
+
+    /// <summary>
+    /// Computes the effective severity for a rule, considering ruleset overrides.
+    /// </summary>
+    private static string GetEffectiveSeverity(IRule rule, Ruleset ruleset)
+    {
+        var defaultSeverity = rule.Metadata.DefaultSeverity.ToString().ToLowerInvariant();
+
+        if (!ruleset.IsRuleEnabled(rule.Metadata.RuleId))
+        {
+            return "none";
+        }
+
+        var overrideSeverity = ruleset.GetSeverityOverride(rule.Metadata.RuleId);
+        return overrideSeverity switch
+        {
+            DiagnosticSeverity.Error => "error",
+            DiagnosticSeverity.Warning => "warning",
+            DiagnosticSeverity.Information => "information",
+            DiagnosticSeverity.Hint => "hint",
+            _ => defaultSeverity
+        };
     }
 
     public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)

@@ -219,15 +219,18 @@ tsqlrefine list-rules [options]
 | `--output <text\|json>` | Output format (default: `text`) |
 | `--category <name>` | Filter rules by category |
 | `--fixable` | Show only fixable rules |
-| `--preset <name>` | Show enabled status for the specified preset |
+| `--preset <name>` | Override preset (overrides config file preset) |
+| `--ruleset <path>` | Override ruleset file (overrides config file ruleset) |
+
+The output always shows effective configuration: which rules are enabled/disabled and their effective severity after applying the preset, ruleset, and per-rule overrides from `tsqlrefine.json`.
 
 Text output displays a formatted table:
 
 ```
-Rule ID                                Category         Severity      Fixable
-──────────────────────────────────────────────────────────────────────────────
-avoid-select-star                      Performance      Warning       No
-semantic/undefined-alias               Correctness      Error         No
+Rule ID                                Category         Severity      Fixable Enabled
+─────────────────────────────────────────────────────────────────────────────────────
+avoid-select-star                      Performance      Warning       No      Yes
+semantic/undefined-alias               Correctness      Error         No      Yes
 
 Total: 101 rules
 ```
@@ -241,7 +244,9 @@ JSON output returns an array of rule objects:
     "description": "Avoid SELECT *; explicitly list required columns.",
     "category": "Performance",
     "defaultSeverity": "warning",
+    "effectiveSeverity": "warning",
     "fixable": false,
+    "enabled": true,
     "minCompatLevel": 100,
     "maxCompatLevel": 160
   }

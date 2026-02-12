@@ -273,6 +273,7 @@ public static class CliParser
         command.Options.Add(Options.Category);
         command.Options.Add(Options.Fixable);
         command.Options.Add(Options.Preset);
+        command.Options.Add(Options.Ruleset);
         return command;
     }
 
