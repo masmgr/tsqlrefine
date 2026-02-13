@@ -24,6 +24,9 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
 
     private sealed class RequireMsDescriptionForTableDefinitionFileVisitor : DiagnosticVisitorBase
     {
+        private const string DefaultSchemaName = "dbo";
+        private const char KeySeparator = '\u001F';
+
         private readonly List<CreateTableStatement> _tableStatements = new();
         private readonly HashSet<string> _tablesWithDescription = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _columnsWithDescription = new(StringComparer.OrdinalIgnoreCase);
@@ -71,25 +74,52 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                 return;
             }
 
-            var tableName = GetStringParameterValue(parameters, "@level1name", 5);
-            if (tableName is null)
+            var level1Type = GetStringParameterValue(parameters, "@level1type", 4);
+            if (!string.Equals(level1Type, "TABLE", StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
 
+            var tableName = GetStringParameterValue(parameters, "@level1name", 5);
+            var schemaName = ResolveSchemaName(parameters);
+            if (tableName is null || schemaName is null)
+            {
+                return;
+            }
+
+            var tableKey = BuildTableKey(schemaName, tableName);
             var level2Type = GetStringParameterValue(parameters, "@level2type", 6);
             if (level2Type is null)
             {
-                _tablesWithDescription.Add(tableName);
+                _tablesWithDescription.Add(tableKey);
             }
-            else
+            else if (string.Equals(level2Type, "COLUMN", StringComparison.OrdinalIgnoreCase))
             {
                 var columnName = GetStringParameterValue(parameters, "@level2name", 7);
                 if (columnName != null)
                 {
-                    _columnsWithDescription.Add($"{tableName}.{columnName}");
+                    _columnsWithDescription.Add(BuildColumnKey(schemaName, tableName, columnName));
                 }
             }
+        }
+
+        private static string? ResolveSchemaName(IList<ExecuteParameter> parameters)
+        {
+            var level0Type = GetStringParameterValue(parameters, "@level0type", 2);
+            var level0Name = GetStringParameterValue(parameters, "@level0name", 3);
+
+            if (level0Type is null && level0Name is null)
+            {
+                return DefaultSchemaName;
+            }
+
+            if (!string.Equals(level0Type, "SCHEMA", StringComparison.OrdinalIgnoreCase) ||
+                string.IsNullOrWhiteSpace(level0Name))
+            {
+                return null;
+            }
+
+            return level0Name;
         }
 
         private static string? GetStringParameterValue(
@@ -124,8 +154,10 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
 
             foreach (var tableStmt in _tableStatements)
             {
+                var schemaName = tableStmt.SchemaObjectName.SchemaIdentifier?.Value ?? DefaultSchemaName;
                 var tableName = tableStmt.SchemaObjectName.BaseIdentifier.Value;
-                if (!_tablesWithDescription.Contains(tableName))
+                var tableKey = BuildTableKey(schemaName, tableName);
+                if (!_tablesWithDescription.Contains(tableKey))
                 {
                     AddDiagnostic(
                         fragment: tableStmt.SchemaObjectName.BaseIdentifier,
@@ -142,7 +174,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                     {
                         var columnName = column.ColumnIdentifier?.Value;
                         if (columnName != null &&
-                            !_columnsWithDescription.Contains($"{tableName}.{columnName}"))
+                            !_columnsWithDescription.Contains(BuildColumnKey(schemaName, tableName, columnName)))
                         {
                             AddDiagnostic(
                                 fragment: column.ColumnIdentifier!,
@@ -156,5 +188,11 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                 }
             }
         }
+
+        private static string BuildTableKey(string schemaName, string tableName) =>
+            string.Concat(schemaName, KeySeparator, tableName);
+
+        private static string BuildColumnKey(string schemaName, string tableName, string columnName) =>
+            string.Concat(schemaName, KeySeparator, tableName, KeySeparator, columnName);
     }
 }

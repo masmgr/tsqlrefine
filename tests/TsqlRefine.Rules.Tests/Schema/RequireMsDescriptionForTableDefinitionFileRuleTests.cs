@@ -182,6 +182,65 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
     }
 
     [Fact]
+    public void Analyze_SameTableNameDifferentSchemas_RequiresDescriptionsPerSchema()
+    {
+        // Arrange
+        const string sql = @"
+            CREATE TABLE dbo.users (id INT);
+            CREATE TABLE sales.users (id INT);
+
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description',
+                @value = N'DBO users table',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'users';
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description', @value = N'ID',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'users',
+                @level2type = N'COLUMN', @level2name = N'id';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - sales.users should still be reported.
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Table 'users'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'id' in table 'users'", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Analyze_NonTableOrNonColumnExtendedProperty_DoesNotCountAsTableOrColumnDescription()
+    {
+        // Arrange
+        const string sql = @"
+            CREATE TABLE dbo.logs (id INT);
+
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description',
+                @value = N'View description',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'VIEW', @level1name = N'logs';
+
+            EXEC sp_addextendedproperty
+                @name = N'MS_Description',
+                @value = N'Index description',
+                @level0type = N'SCHEMA', @level0name = N'dbo',
+                @level1type = N'TABLE', @level1name = N'logs',
+                @level2type = N'INDEX', @level2name = N'IX_Logs';";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert - table and column description are both still missing.
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Contains(diagnostics, d => d.Message.Contains("Table 'logs'", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, d => d.Message.Contains("Column 'id' in table 'logs'", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Analyze_ExtendedPropertyForDifferentPropertyName_MayDetect()
     {
         // Arrange - Using different property name, not MS_Description

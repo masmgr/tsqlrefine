@@ -113,6 +113,24 @@ public sealed class AvoidHeapTableRuleTests
     }
 
     [Fact]
+    public void Analyze_TableWithImplicitClusteredPrimaryKey_ReturnsEmpty()
+    {
+        // Arrange
+        const string sql = @"
+            CREATE TABLE users (
+                id INT PRIMARY KEY,
+                name VARCHAR(50)
+            );";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_TableWithPrimaryKeyButNotClustered_ReturnsDiagnostic()
     {
         // Arrange
