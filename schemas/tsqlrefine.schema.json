@@ -28,7 +28,7 @@
     },
     "plugins": {
       "type": "array",
-      "description": "List of external plugin DLLs to load for custom rules. Each plugin must implement IRuleProvider interface from TsqlRefine.PluginSdk",
+      "description": "List of external plugin DLLs to load for custom rules. Each plugin must implement IRuleProvider interface from TsqlRefine.PluginSdk. Plugin rules are enabled by default regardless of preset/ruleset selection; use the 'rules' property to disable specific plugin rules with 'none'.",
       "items": {
         "type": "object",
         "properties": {
@@ -53,7 +53,7 @@
     },
     "rules": {
       "type": "object",
-      "description": "Per-rule severity overrides. Keys are rule IDs, values are severity levels. Applied on top of the preset or ruleset.",
+      "description": "Per-rule severity overrides. Keys are rule IDs (both built-in and plugin), values are severity levels. Applied on top of the preset or ruleset. Use 'none' to disable plugin rules that are enabled by default.",
       "additionalProperties": {
         "type": "string",
         "enum": ["error", "warning", "info", "inherit", "none"],

@@ -34,7 +34,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 - `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `150`, `160`).
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
 - `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
-- `plugins` (array): plugin DLLs to load (optional).
+- `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection.
 - `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
 
 > **Note**: If both `preset` and `ruleset` are specified, `preset` takes precedence. The `--preset` CLI option overrides both.
@@ -227,7 +227,7 @@ The `rules` property in `tsqlrefine.json` lets you override individual rule seve
 }
 ```
 
-Keys are rule IDs. Values are severity levels: `"error"`, `"warning"`, `"info"`, `"inherit"`, or `"none"`.
+Keys are rule IDs (both built-in and plugin). Values are severity levels: `"error"`, `"warning"`, `"info"`, `"inherit"`, or `"none"`.
 
 | Value | Effect |
 |-------|--------|
@@ -237,11 +237,30 @@ Keys are rule IDs. Values are severity levels: `"error"`, `"warning"`, `"info"`,
 | `"inherit"` | Enable with the rule's default severity |
 | `"none"` | Disable the rule |
 
+### Plugin rules
+
+Plugin rules are **enabled by default** with their default severity, regardless of which preset or ruleset is active. This means simply adding a plugin to `plugins` is enough to activate its rules — no additional configuration is needed.
+
+To disable a specific plugin rule, set it to `"none"` in the `rules` section:
+
+```json
+{
+  "preset": "recommended",
+  "plugins": [
+    { "path": "plugins/custom-rules.dll" }
+  ],
+  "rules": {
+    "myteam/noisy-rule": "none"
+  }
+}
+```
+
 ### Resolution order
 
 Severity is resolved in this order (later overrides earlier):
 
 1. **Rule default** — severity defined in the rule code
-2. **Preset / ruleset file** — `severity` field in the ruleset entry
-3. **tsqlrefine.json `rules`** — per-rule overrides (highest priority)
+2. **Preset / ruleset file** — `severity` field in the ruleset entry (built-in rules only)
+3. **Plugin defaults** — plugin rules are added with their default severity
+4. **tsqlrefine.json `rules`** — per-rule overrides (highest priority)
 

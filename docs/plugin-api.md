@@ -113,6 +113,16 @@ At load time:
 2. Enumerate `IRule` implementations (or `IRuleProvider`)
 3. Check for `ruleId` duplicates (duplicates are treated as errors, and that plugin is disabled)
 
+Plugin rules are **enabled by default** regardless of which preset or ruleset is active. Users can disable individual plugin rules via the `rules` section in `tsqlrefine.json`:
+
+```json
+{
+  "rules": {
+    "myteam/noisy-rule": "none"
+  }
+}
+```
+
 ---
 
 ## 6. Compatibility
