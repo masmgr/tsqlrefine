@@ -27,39 +27,47 @@ public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
         private int _transactionDepth;
         private readonly HashSet<string> _databasesInTransaction = new(StringComparer.OrdinalIgnoreCase);
         private readonly List<TSqlFragment> _problemFragments = new();
+        private const string DiagnosticMessage =
+            "Cross-database transaction detected. This may cause distributed transaction issues and reduced reliability.";
+
+        public override void ExplicitVisit(TSqlScript node)
+        {
+            base.ExplicitVisit(node);
+
+            // Report cross-database usage even when an explicit transaction is left open.
+            if (_transactionDepth > 0)
+            {
+                ReportIfCrossDatabaseTransaction();
+                ResetTransactionTracking();
+                _transactionDepth = 0;
+            }
+        }
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
+            if (_transactionDepth == 0)
+            {
+                // Start a fresh scope when entering a new explicit transaction chain.
+                ResetTransactionTracking();
+            }
+
             _transactionDepth++;
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(CommitTransactionStatement node)
         {
-            if (_transactionDepth > 0)
+            if (_transactionDepth <= 0)
             {
-                _transactionDepth--;
-                if (_transactionDepth == 0)
-                {
-                    // End of transaction scope - report if cross-database
-                    if (_databasesInTransaction.Count > 1)
-                    {
-                        foreach (var fragment in _problemFragments)
-                        {
-                            AddDiagnostic(
-                                fragment: fragment,
-                                message: "Cross-database transaction detected. This may cause distributed transaction issues and reduced reliability.",
-                                code: "cross-database-transaction",
-                                category: "Safety",
-                                fixable: false
-                            );
-                        }
-                    }
+                base.ExplicitVisit(node);
+                return;
+            }
 
-                    // Reset tracking
-                    _databasesInTransaction.Clear();
-                    _problemFragments.Clear();
-                }
+            _transactionDepth--;
+            if (_transactionDepth == 0)
+            {
+                ReportIfCrossDatabaseTransaction();
+                ResetTransactionTracking();
             }
 
             base.ExplicitVisit(node);
@@ -67,30 +75,17 @@ public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            if (_transactionDepth > 0)
+            if (_transactionDepth <= 0)
             {
-                _transactionDepth--;
-                if (_transactionDepth == 0)
-                {
-                    // End of transaction scope - report if cross-database
-                    if (_databasesInTransaction.Count > 1)
-                    {
-                        foreach (var fragment in _problemFragments)
-                        {
-                            AddDiagnostic(
-                                fragment: fragment,
-                                message: "Cross-database transaction detected. This may cause distributed transaction issues and reduced reliability.",
-                                code: "cross-database-transaction",
-                                category: "Safety",
-                                fixable: false
-                            );
-                        }
-                    }
+                base.ExplicitVisit(node);
+                return;
+            }
 
-                    // Reset tracking
-                    _databasesInTransaction.Clear();
-                    _problemFragments.Clear();
-                }
+            _transactionDepth--;
+            if (_transactionDepth == 0)
+            {
+                ReportIfCrossDatabaseTransaction();
+                ResetTransactionTracking();
             }
 
             base.ExplicitVisit(node);
@@ -100,7 +95,7 @@ public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
         {
             if (_transactionDepth > 0)
             {
-                TrackTableReference(node.InsertSpecification?.Target as NamedTableReference, node);
+                TrackStatementDatabaseReferences(node);
             }
 
             base.ExplicitVisit(node);
@@ -110,7 +105,7 @@ public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
         {
             if (_transactionDepth > 0)
             {
-                TrackTableReference(node.UpdateSpecification?.Target as NamedTableReference, node);
+                TrackStatementDatabaseReferences(node);
             }
 
             base.ExplicitVisit(node);
@@ -120,34 +115,96 @@ public sealed class CrossDatabaseTransactionRule : DiagnosticVisitorRuleBase
         {
             if (_transactionDepth > 0)
             {
-                TrackTableReference(node.DeleteSpecification?.Target as NamedTableReference, node);
+                TrackStatementDatabaseReferences(node);
             }
 
             base.ExplicitVisit(node);
         }
 
-        private void TrackTableReference(NamedTableReference? tableRef, TSqlFragment statementFragment)
+        private void TrackStatementDatabaseReferences(TSqlFragment statementFragment)
         {
-            if (tableRef?.SchemaObject != null)
+            var databaseNamesInStatement = NamedTableReferenceCollector.CollectDatabaseNames(statementFragment);
+            if (databaseNamesInStatement.Count == 0)
             {
-                // Extract database name (3-part name: database.schema.table or 4-part for linked server)
-                var identifiers = tableRef.SchemaObject.Identifiers;
-                if (identifiers.Count >= 3)
-                {
-                    // 3-part or 4-part identifier - has explicit database
-                    var databaseName = identifiers.Count == 3
-                        ? identifiers[0].Value
-                        : identifiers[1].Value; // 4-part: skip server name
+                return;
+            }
 
-                    if (!string.IsNullOrEmpty(databaseName))
-                    {
-                        _databasesInTransaction.Add(databaseName);
-                        if (_databasesInTransaction.Count > 1)
-                        {
-                            _problemFragments.Add(statementFragment);
-                        }
-                    }
+            foreach (var databaseName in databaseNamesInStatement)
+            {
+                _databasesInTransaction.Add(databaseName);
+            }
+
+            if (_databasesInTransaction.Count > 1 && !_problemFragments.Contains(statementFragment))
+            {
+                _problemFragments.Add(statementFragment);
+            }
+        }
+
+        private void ReportIfCrossDatabaseTransaction()
+        {
+            if (_databasesInTransaction.Count <= 1)
+            {
+                return;
+            }
+
+            foreach (var fragment in _problemFragments)
+            {
+                AddDiagnostic(
+                    fragment: fragment,
+                    message: DiagnosticMessage,
+                    code: "cross-database-transaction",
+                    category: "Safety",
+                    fixable: false
+                );
+            }
+        }
+
+        private void ResetTransactionTracking()
+        {
+            _databasesInTransaction.Clear();
+            _problemFragments.Clear();
+        }
+
+        private sealed class NamedTableReferenceCollector : TSqlFragmentVisitor
+        {
+            private readonly HashSet<string> _databaseNames = new(StringComparer.OrdinalIgnoreCase);
+
+            public static HashSet<string> CollectDatabaseNames(TSqlFragment fragment)
+            {
+                var collector = new NamedTableReferenceCollector();
+                fragment.Accept(collector);
+                return collector._databaseNames;
+            }
+
+            public override void ExplicitVisit(NamedTableReference node)
+            {
+                var databaseName = TryGetDatabaseName(node.SchemaObject);
+                if (!string.IsNullOrEmpty(databaseName))
+                {
+                    _databaseNames.Add(databaseName);
                 }
+
+                base.ExplicitVisit(node);
+            }
+
+            private static string? TryGetDatabaseName(SchemaObjectName? schemaObject)
+            {
+                if (schemaObject is null)
+                {
+                    return null;
+                }
+
+                // 3-part: database.schema.object
+                // 4-part: server.database.schema.object
+                var identifiers = schemaObject.Identifiers;
+                if (identifiers.Count < 3)
+                {
+                    return null;
+                }
+
+                return identifiers.Count == 3
+                    ? identifiers[0].Value
+                    : identifiers[1].Value;
             }
         }
     }

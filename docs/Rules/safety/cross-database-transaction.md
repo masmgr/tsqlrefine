@@ -24,8 +24,10 @@ Cross-database transactions introduce significant risks that are difficult to di
 **When does this occur?**
 
 - Explicit BEGIN TRANSACTION with operations on multiple databases
+- Explicit BEGIN TRANSACTION that is not terminated in the current script, when it already touches multiple databases
 - Triggers that modify other databases within transactions
 - Linked server queries within transactions
+- DML where cross-database references appear in `FROM`/`JOIN` sources (not only DML target table)
 
 **Alternatives**:
 
