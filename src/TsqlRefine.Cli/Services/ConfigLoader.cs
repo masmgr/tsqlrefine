@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
@@ -110,7 +111,7 @@ public sealed class ConfigLoader
         }
     }
 
-    public static Ruleset LoadRuleset(CliArgs args, TsqlRefineConfig config)
+    public static Ruleset LoadRuleset(CliArgs args, TsqlRefineConfig config, IReadOnlyList<IRule> allRules)
     {
         // When --rule is specified, use a single-rule whitelist.
         // Rule ID validation is performed by ValidateRuleIdForFix.
@@ -121,12 +122,16 @@ public sealed class ConfigLoader
 
         var baseRuleset = ResolveBaseRuleset(args, config);
 
+        // Enable plugin rules by default (bypass preset/ruleset whitelist)
+        var pluginRuleIds = GetPluginRuleIds(allRules);
+        var withPlugins = baseRuleset.WithPluginDefaults(pluginRuleIds);
+
         if (config.Rules is { Count: > 0 })
         {
-            return baseRuleset.WithOverrides(config.Rules);
+            return withPlugins.WithOverrides(config.Rules);
         }
 
-        return baseRuleset;
+        return withPlugins;
     }
 
     private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
@@ -289,5 +294,22 @@ public sealed class ConfigLoader
             .Select(f => Path.GetFileNameWithoutExtension(f))
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static readonly Lazy<FrozenSet<string>> BuiltinRuleIds = new(() =>
+        new BuiltinRuleProvider().GetRules()
+            .Select(r => r.Metadata.RuleId)
+            .ToFrozenSet(StringComparer.OrdinalIgnoreCase));
+
+    private static IEnumerable<string> GetPluginRuleIds(IReadOnlyList<IRule> allRules)
+    {
+        var builtinIds = BuiltinRuleIds.Value;
+        foreach (var rule in allRules)
+        {
+            if (!builtinIds.Contains(rule.Metadata.RuleId))
+            {
+                yield return rule.Metadata.RuleId;
+            }
+        }
     }
 }

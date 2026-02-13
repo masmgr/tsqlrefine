@@ -114,7 +114,7 @@ public sealed class CommandExecutor
             filtered = filtered.Where(r => r.Metadata.Fixable);
         }
 
-        var ruleset = ConfigLoader.LoadRuleset(args, config);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, allRules);
 
         var rules = filtered.ToArray();
 
@@ -220,8 +220,8 @@ public sealed class CommandExecutor
         }
 
         var config = ConfigLoader.LoadConfig(args);
-        var ruleset = ConfigLoader.LoadRuleset(args, config);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -340,7 +340,7 @@ public sealed class CommandExecutor
         // --rule オプションのバリデーション（存在確認 + Fixable 確認）
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
-        var ruleset = ConfigLoader.LoadRuleset(args, config);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);

@@ -202,6 +202,42 @@ public sealed class Ruleset
     }
 
     /// <summary>
+    /// Creates a new Ruleset with plugin rule IDs added as defaults.
+    /// In whitelist mode, plugin rules are added with <see cref="RuleSeverityLevel.Inherit"/>
+    /// (enabled with default severity) unless already present in the cache.
+    /// In non-whitelist mode, this is a no-op since all rules are enabled by default.
+    /// </summary>
+    public Ruleset WithPluginDefaults(IEnumerable<string> pluginRuleIds)
+    {
+        if (_singleRuleWhitelist is not null)
+        {
+            return this;
+        }
+
+        if (!_whitelistMode)
+        {
+            return this;
+        }
+
+        var merged = _ruleCache is not null
+            ? new Dictionary<string, RuleSeverityLevel>(_ruleCache, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, RuleSeverityLevel>(StringComparer.OrdinalIgnoreCase);
+
+        var changed = false;
+        foreach (var ruleId in pluginRuleIds)
+        {
+            if (merged.TryAdd(ruleId, RuleSeverityLevel.Inherit))
+            {
+                changed = true;
+            }
+        }
+
+        return changed
+            ? new Ruleset(_rules, _singleRuleWhitelist, merged, _whitelistMode)
+            : this;
+    }
+
+    /// <summary>
     /// Creates a new Ruleset by merging config-level rule overrides on top of this instance.
     /// </summary>
     public Ruleset WithOverrides(IReadOnlyDictionary<string, string> overrides)
