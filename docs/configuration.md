@@ -179,11 +179,11 @@ tsqlrefine includes built-in preset rulesets:
 
 | Preset | Rules | Description |
 |--------|-------|-------------|
-| `recommended` | 58 | Balanced production use with semantic analysis (default) |
-| `strict` | 97 | Maximum enforcement including all style/cosmetic rules |
-| `strict-logic` | 74 | Comprehensive correctness and semantic analysis without cosmetic style rules |
-| `pragmatic` | 39 | Production-ready minimum focusing on safety and critical issues |
-| `security-only` | 13 | Security vulnerabilities and critical safety only |
+| `recommended` | 87 | Balanced production use with semantic analysis (default) |
+| `strict` | 130 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic` | 107 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `pragmatic` | 49 | Production-ready minimum focusing on safety and critical issues |
+| `security-only` | 14 | Security vulnerabilities and critical safety only |
 
 Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:
 
@@ -197,8 +197,16 @@ Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:
 tsqlrefine lint --preset strict file.sql
 ```
 
+Presets form a strict inclusion hierarchy — each higher preset is a superset of the one below:
+
+```
+security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
+```
+
+This means upgrading from one preset to the next only **adds** rules; it never removes rules you were already checking.
+
 **Choosing a preset:**
-- Start with `recommended` for most projects - it provides balanced production-ready linting
+- Start with `recommended` for most projects — it provides balanced production-ready linting
 - Use `pragmatic` for minimal enforcement in legacy codebases or when first introducing linting
 - Use `strict-logic` for comprehensive correctness checking without style/cosmetic noise
 - Use `strict` for maximum enforcement when you want both logic and style consistency
