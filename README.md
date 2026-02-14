@@ -150,7 +150,7 @@ dotnet tsqlrefine --help
 ### From Source
 
 ```bash
-git clone https://github.com/user/tsqlrefine.git
+git clone https://github.com/masmgr/tsqlrefine.git
 cd tsqlrefine
 dotnet build src/TsqlRefine.sln -c Release
 ```
