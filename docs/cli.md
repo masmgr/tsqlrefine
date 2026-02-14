@@ -143,11 +143,14 @@ tsqlrefine fix [options] [paths...]
 | `--ruleset <path>` | Custom ruleset file |
 | `--rule <id>` | Rule ID to apply |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
+| `--verbose` | Show detailed information (execution time) |
 | `-q, --quiet` | Suppress informational stderr output |
 
 > **Note**: When files are specified, fixed results are automatically written to the files. When using standard input (`--stdin`), results are output to stdout.
 
 Progress messages (`Fixed: file.sql (N fixes applied)` / `Unchanged: file.sql`) are written to stderr by default. Use `--quiet` to suppress them.
+
+With `--verbose`, execution time is displayed after fix execution.
 
 #### init
 

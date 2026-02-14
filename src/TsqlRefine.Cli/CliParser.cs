@@ -265,6 +265,7 @@ public static class CliParser
             .WithRuleOptions()
             .WithRuleIdOption()
             .WithPathsArgument();
+        command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
         return command;
     }

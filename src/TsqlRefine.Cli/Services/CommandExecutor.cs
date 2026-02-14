@@ -355,6 +355,8 @@ public sealed class CommandExecutor
 
     public async Task<int> ExecuteFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
         if (read is null)
         {
@@ -411,6 +413,17 @@ public sealed class CommandExecutor
                 var fixLabel = fixCount == 1 ? "fix" : "fixes";
                 await WriteInfoAsync(stderr, args.Quiet, $"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
             }
+        }
+
+        stopwatch.Stop();
+
+        if (!args.Quiet && args.Verbose)
+        {
+            var elapsed = stopwatch.Elapsed;
+            var elapsedText = elapsed.TotalSeconds >= 1
+                ? $"{elapsed.TotalSeconds:F2}s"
+                : $"{elapsed.TotalMilliseconds:F0}ms";
+            await stderr.WriteLineAsync($"Time: {elapsedText}");
         }
 
         // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）
