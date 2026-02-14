@@ -6,6 +6,14 @@ This directory contains sample files demonstrating how to configure and use tsql
 
 ```
 samples/
+├── ci/                  CI/CD workflow examples
+│   ├── github-actions-basic.yml       Minimal GitHub Actions workflow
+│   ├── github-actions-advanced.yml    Diff-only linting with JSON artifacts
+│   └── README.md
+├── editor/              Editor integration examples
+│   ├── vscode-tasks.json              VS Code tasks with problem matcher
+│   ├── pre-commit-hook.sh             Git pre-commit hook
+│   └── README.md
 ├── configs/             Configuration file examples
 │   ├── basic.json              Basic configuration
 │   ├── advanced.json           Advanced configuration with plugins
@@ -41,10 +49,13 @@ samples/
 
 ### Basic Linting
 
-Lint a SQL file using default configuration:
+Lint a SQL file:
 
-```powershell
-# From repository root
+```bash
+# If installed as a global tool
+tsqlrefine lint samples/sql/select-star.sql
+
+# Or from the repository source
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint samples/sql/select-star.sql
 ```
 
@@ -322,11 +333,13 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- format samples/sql/select-
 
 ## Further Reading
 
-- [Main Documentation](../CLAUDE.md) - Project overview and architecture
 - [CLI Documentation](../docs/cli.md) - Complete CLI reference
-- [Rules Documentation](../docs/rules.md) - Detailed rule descriptions
+- [CI Integration Guide](../docs/ci-integration.md) - Pipeline setup for GitHub Actions, Azure, GitLab
+- [Editor Integration](../docs/editor-integration.md) - VS Code tasks, pre-commit hooks
+- [Configuration](../docs/configuration.md) - Configuration format and options
+- [Rules Overview](../docs/Rules/README.md) - Rule categories and presets
+- [Rule Reference](../docs/Rules/REFERENCE.md) - All 130 rules with details
 - [Plugin API](../docs/plugin-api.md) - Plugin development guide
-- [Project Structure](../docs/project-structure.md) - Codebase organization
 
 ## Contributing
 
