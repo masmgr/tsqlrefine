@@ -144,6 +144,18 @@ public sealed class HavingColumnMismatchRuleTests
         Assert.Contains("c", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_RepeatedUngroupedColumnInHavingExpression_ReportsOnce()
+    {
+        const string sql = "SELECT a FROM t GROUP BY a HAVING CASE WHEN b > 0 THEN b ELSE b END > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("b", diagnostics[0].Message);
+    }
+
     // === Valid cases (no violations) ===
 
     [Fact]
@@ -221,6 +233,51 @@ public sealed class HavingColumnMismatchRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_HavingWithRollupGroupByColumn_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, COUNT(*) FROM t GROUP BY ROLLUP(a) HAVING a IS NOT NULL;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_HavingWithCubeGroupByColumns_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, b, COUNT(*) FROM t GROUP BY CUBE(a, b) HAVING a IS NOT NULL OR b IS NOT NULL;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_HavingWithGroupingSetsGroupByColumns_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, b, COUNT(*) FROM t GROUP BY GROUPING SETS ((a, b), (a), ()) HAVING a IS NOT NULL OR b IS NOT NULL;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_HavingWithRollupAndUngroupedColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT a, COUNT(*) FROM t GROUP BY ROLLUP(a) HAVING c > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("c", diagnostics[0].Message);
     }
 
     [Fact]
