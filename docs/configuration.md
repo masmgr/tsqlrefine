@@ -31,7 +31,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 
 `tsqlrefine.json` supports these top-level properties:
 
-- `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `150`, `160`).
+- `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `130`, `140`, `150`, `160`).
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
 - `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection.
