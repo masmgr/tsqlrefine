@@ -66,6 +66,20 @@ public sealed class TableReferenceHelpersTests
     }
 
     [Fact]
+    public void CollectTableReferences_WithJoinParenthesis_CollectsBothTables()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM (users u INNER JOIN orders o ON u.id = o.user_id)");
+        var collected = new List<TableReference>();
+
+        // Act
+        TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, collected);
+
+        // Assert
+        Assert.Equal(2, collected.Count);
+    }
+
+    [Fact]
     public void CollectTableReferences_WithNullList_ThrowsArgumentNullException()
     {
         // Arrange
@@ -120,6 +134,21 @@ public sealed class TableReferenceHelpersTests
     {
         // Arrange
         var querySpec = GetQuerySpec("SELECT * FROM users u INNER JOIN orders o ON u.id = o.user_id");
+
+        // Act
+        var aliases = TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences);
+
+        // Assert
+        Assert.Equal(2, aliases.Count);
+        Assert.Contains("u", aliases);
+        Assert.Contains("o", aliases);
+    }
+
+    [Fact]
+    public void CollectTableAliases_WithJoinParenthesis_CollectsAliases()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM (users u INNER JOIN orders o ON u.id = o.user_id)");
 
         // Act
         var aliases = TableReferenceHelpers.CollectTableAliases(querySpec.FromClause.TableReferences);
@@ -262,6 +291,21 @@ public sealed class TableReferenceHelpersTests
     }
 
     [Fact]
+    public void TraverseJoinConditions_WithJoinParenthesis_InvokesAction()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM (users u INNER JOIN orders o ON u.id = o.user_id)");
+        var tableRef = querySpec.FromClause.TableReferences[0];
+        var invokeCount = 0;
+
+        // Act
+        TableReferenceHelpers.TraverseJoinConditions(tableRef, (_, _) => invokeCount++);
+
+        // Assert
+        Assert.Equal(1, invokeCount);
+    }
+
+    [Fact]
     public void TraverseJoinConditions_WithNoJoin_DoesNotInvokeAction()
     {
         // Arrange
@@ -348,6 +392,21 @@ public sealed class TableReferenceHelpersTests
 
         // Assert
         Assert.Empty(leftJoins);
+    }
+
+    [Fact]
+    public void CollectJoinsOfType_WithJoinParenthesis_CollectsInnerJoin()
+    {
+        // Arrange
+        var querySpec = GetQuerySpec("SELECT * FROM (users u INNER JOIN orders o ON u.id = o.user_id)");
+
+        // Act
+        var innerJoins = TableReferenceHelpers.CollectJoinsOfType(
+            querySpec.FromClause.TableReferences,
+            QualifiedJoinType.Inner).ToList();
+
+        // Assert
+        Assert.Single(innerJoins);
     }
 
     [Fact]

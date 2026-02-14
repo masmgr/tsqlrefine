@@ -148,6 +148,23 @@ public sealed class QualifiedSelectColumnsRuleTests
     }
 
     [Fact]
+    public void Analyze_DateDiffBigDatePartLiteral_DoesNotReport()
+    {
+        // Arrange
+        const string sql = @"
+            SELECT DATEDIFF_BIG(day, u.created_at, GETDATE()) AS elapsed_days
+            FROM users u
+            INNER JOIN orders o ON u.id = o.user_id;";
+        var context = CreateContext(sql);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_InPredicateWithUnqualifiedValueList_ReturnsDiagnostic()
     {
         // Arrange

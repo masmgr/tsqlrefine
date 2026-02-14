@@ -137,4 +137,22 @@ public sealed class PredicateAwareVisitorBaseTests
         Assert.Contains(visitor.Visits, v => v.Context == "user_id" && v.IsInPredicate);
         Assert.Contains(visitor.Visits, v => v.Context == "status" && v.IsInPredicate);
     }
+
+    [Fact]
+    public void IsInPredicate_AfterNestedSubqueryInWhere_RemainsTrue()
+    {
+        // Arrange
+        var fragment = ParseSql(@"
+            SELECT 1
+            FROM users u
+            WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id)
+              AND u.outer_flag IN (SELECT a.inner_flag FROM active_statuses a)");
+        var visitor = new TestPredicateVisitor();
+
+        // Act
+        fragment.Accept(visitor);
+
+        // Assert
+        Assert.Contains(visitor.Visits, v => v.Context == "outer_flag" && v.IsInPredicate);
+    }
 }

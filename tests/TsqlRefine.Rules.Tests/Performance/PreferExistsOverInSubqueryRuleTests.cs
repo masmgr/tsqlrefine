@@ -96,6 +96,22 @@ public sealed class PreferExistsOverInSubqueryRuleTests
         Assert.All(diagnostics, d => Assert.Equal("prefer-exists-over-in-subquery", d.Code));
     }
 
+    [Fact]
+    public void Analyze_InAfterNestedExistsSubquery_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT * FROM Users
+            WHERE EXISTS (SELECT 1 FROM Orders o WHERE o.UserId = Users.Id)
+              AND Id IN (SELECT UserId FROM ActiveUsers);
+            """;
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM Users WHERE Id IN (1, 2, 3);")]
     [InlineData("SELECT * FROM Users WHERE Status IN ('Active', 'Pending');")]

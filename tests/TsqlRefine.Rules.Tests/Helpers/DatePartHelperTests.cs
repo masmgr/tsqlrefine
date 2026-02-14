@@ -9,8 +9,11 @@ public sealed class DatePartHelperTests
     [Theory]
     [InlineData("DATEADD")]
     [InlineData("DATEDIFF")]
+    [InlineData("DATEDIFF_BIG")]
     [InlineData("DATEPART")]
     [InlineData("DATENAME")]
+    [InlineData("DATETRUNC")]
+    [InlineData("DATE_BUCKET")]
     public void IsDatePartFunction_WithDatePartFunction_ReturnsTrue(string functionName)
     {
         // Arrange
@@ -150,8 +153,11 @@ public sealed class DatePartHelperTests
     [Theory]
     [InlineData("DATEADD")]
     [InlineData("DATEDIFF")]
+    [InlineData("DATEDIFF_BIG")]
     [InlineData("DATEPART")]
     [InlineData("DATENAME")]
+    [InlineData("DATETRUNC")]
+    [InlineData("DATE_BUCKET")]
     public void IsDatePartLiteralParameter_WorksForAllDatePartFunctions(string functionName)
     {
         // Arrange

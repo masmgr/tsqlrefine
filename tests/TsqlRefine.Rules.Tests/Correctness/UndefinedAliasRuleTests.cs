@@ -33,6 +33,7 @@ public sealed class UndefinedAliasRuleTests
     [InlineData("SELECT users.id FROM users;")]  // implicit table name
     [InlineData("SELECT * FROM users;")]  // no qualified references
     [InlineData("SELECT u.id, o.order_id FROM users u JOIN orders o ON u.id = o.user_id;")]
+    [InlineData("SELECT u.id, o.order_id FROM (users u JOIN orders o ON u.id = o.user_id);")]  // parenthesized join
     [InlineData("SELECT u.id FROM users u;")]
     [InlineData("SELECT id FROM users;")]  // unqualified column
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)

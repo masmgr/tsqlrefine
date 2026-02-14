@@ -20,17 +20,27 @@ public static class TableReferenceHelpers
 
         foreach (var tableRef in tableRefs)
         {
-            if (tableRef is JoinTableReference join)
-            {
+            CollectTableReferencesCore(tableRef, collected);
+        }
+    }
+
+    private static void CollectTableReferencesCore(TableReference tableRef, ICollection<TableReference> collected)
+    {
+        switch (tableRef)
+        {
+            case JoinTableReference join:
                 // Recursively collect from both sides of the JOIN
-                CollectTableReferences(new[] { join.FirstTableReference }, collected);
-                CollectTableReferences(new[] { join.SecondTableReference }, collected);
-            }
-            else
-            {
+                CollectTableReferencesCore(join.FirstTableReference, collected);
+                CollectTableReferencesCore(join.SecondTableReference, collected);
+                break;
+            case JoinParenthesisTableReference joinParenthesis when joinParenthesis.Join is not null:
+                // Parenthesized join groups still represent multiple table references.
+                CollectTableReferencesCore(joinParenthesis.Join, collected);
+                break;
+            default:
                 // This is a leaf table reference (NamedTableReference, QueryDerivedTable, etc.)
                 collected.Add(tableRef);
-            }
+                break;
         }
     }
 
@@ -52,20 +62,31 @@ public static class TableReferenceHelpers
     {
         foreach (var tableRef in tableRefs)
         {
-            if (tableRef is JoinTableReference join)
-            {
+            CollectTableAliasesCore(tableRef, aliases);
+        }
+    }
+
+    private static void CollectTableAliasesCore(TableReference tableRef, HashSet<string> aliases)
+    {
+        switch (tableRef)
+        {
+            case JoinTableReference join:
                 // Recursively collect from both sides of the JOIN
-                CollectTableAliasesCore(new[] { join.FirstTableReference }, aliases);
-                CollectTableAliasesCore(new[] { join.SecondTableReference }, aliases);
-            }
-            else
-            {
+                CollectTableAliasesCore(join.FirstTableReference, aliases);
+                CollectTableAliasesCore(join.SecondTableReference, aliases);
+                break;
+            case JoinParenthesisTableReference joinParenthesis when joinParenthesis.Join is not null:
+                // Parenthesized join groups still contain JOIN branches.
+                CollectTableAliasesCore(joinParenthesis.Join, aliases);
+                break;
+            default:
                 var alias = GetAliasOrTableName(tableRef);
                 if (alias != null)
                 {
                     aliases.Add(alias);
                 }
-            }
+
+                break;
         }
     }
 
@@ -161,6 +182,11 @@ public static class TableReferenceHelpers
             TraverseJoinConditions(join.FirstTableReference, conditionAction);
             TraverseJoinConditions(join.SecondTableReference, conditionAction);
         }
+        else if (tableRef is JoinParenthesisTableReference joinParenthesis &&
+            joinParenthesis.Join is not null)
+        {
+            TraverseJoinConditions(joinParenthesis.Join, conditionAction);
+        }
     }
 
     /// <summary>
@@ -215,6 +241,14 @@ public static class TableReferenceHelpers
             foreach (var j in CollectJoinsOfTypeRecursive(join.SecondTableReference, joinType))
             {
                 yield return j;
+            }
+        }
+        else if (tableRef is JoinParenthesisTableReference joinParenthesis &&
+            joinParenthesis.Join is not null)
+        {
+            foreach (var nestedJoin in CollectJoinsOfTypeRecursive(joinParenthesis.Join, joinType))
+            {
+                yield return nestedJoin;
             }
         }
     }

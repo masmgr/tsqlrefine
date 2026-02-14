@@ -31,6 +31,31 @@ public sealed class SetQuotedIdentifierRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenSetQuotedIdentifierMissingWithCreateOrAlter_ReturnsDiagnostic()
+    {
+        var rule = new SetQuotedIdentifierRule();
+        var sql = "CREATE OR ALTER PROCEDURE dbo.Test AS BEGIN SELECT 1; END;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.All(diagnostics, d => Assert.Equal("set-quoted-identifier", d.Data?.RuleId));
+    }
+
+    [Fact]
+    public void Analyze_WhenSetQuotedIdentifierOnPresentBeforeCreateOrAlter_ReturnsEmpty()
+    {
+        var rule = new SetQuotedIdentifierRule();
+        var sql = "SET QUOTED_IDENTIFIER ON;\nGO\nCREATE OR ALTER PROCEDURE dbo.Test AS BEGIN SELECT 1; END;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_WhenSetQuotedIdentifierOff_ReturnsDiagnostic()
     {
         var rule = new SetQuotedIdentifierRule();
