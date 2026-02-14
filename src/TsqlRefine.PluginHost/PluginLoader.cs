@@ -368,6 +368,14 @@ public sealed class PluginLoader
 
     private static (IReadOnlyList<IRuleProvider> Compatible, IReadOnlyList<IRuleProvider> Incompatible) DiscoverProviders(Assembly assembly)
     {
+        // Check assembly-level PluginApiVersion attribute first (no instantiation needed).
+        // This prevents constructor side effects from running for incompatible plugins.
+        var assemblyVersionAttr = assembly.GetCustomAttribute<PluginApiVersionAttribute>();
+        if (assemblyVersionAttr is not null && assemblyVersionAttr.Version != PluginApi.CurrentVersion)
+        {
+            return (Array.Empty<IRuleProvider>(), [new IncompatibleProviderStub(assemblyVersionAttr.Version)]);
+        }
+
         var compatible = new List<IRuleProvider>();
         var incompatible = new List<IRuleProvider>();
 
@@ -448,5 +456,16 @@ public sealed class PluginLoader
 
         var match = DllNamePattern.Match(exceptionMessage);
         return match.Success ? match.Groups[1].Value : null;
+    }
+
+    /// <summary>
+    /// Stub used to carry version information from an assembly-level attribute check
+    /// without instantiating any actual provider types.
+    /// </summary>
+    private sealed class IncompatibleProviderStub(int version) : IRuleProvider
+    {
+        public string Name => "<incompatible>";
+        public int PluginApiVersion => version;
+        public IReadOnlyList<IRule> GetRules() => [];
     }
 }
