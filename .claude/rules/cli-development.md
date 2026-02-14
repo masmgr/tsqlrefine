@@ -70,24 +70,44 @@ Update help text and documentation in `docs/cli.md`.
 
 ## Options by Command
 
+G = global (recursive, available on all commands)
+
 | Option | lint | format | fix | init | print-config | print-format-config | list-rules | list-plugins |
 |--------|:----:|:------:|:---:|:----:|:------------:|:-------------------:|:----------:|:------------:|
-| `-c, --config` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `--utf8` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `-g, --ignorelist` | ✓ | ✓ | ✓ | - | - | - | - | - |
-| `--detect-encoding` | ✓ | ✓ | ✓ | - | - | - | - | - |
-| `--stdin` | ✓ | ✓ | ✓ | - | - | - | - | - |
-| `--output` | ✓ | ✓ | ✓ | - | ✓ | ✓ | ✓ | ✓ |
-| `--severity` | ✓ | - | ✓ | - | - | - | - | - |
-| `--preset` | ✓ | - | ✓ | - | - | - | - | - |
-| `--compat-level` | ✓ | ✓ | ✓ | - | - | - | - | - |
-| `--ruleset` | ✓ | - | ✓ | - | - | - | - | - |
-| `--rule` | - | - | ✓ | - | - | - | - | - |
-| `--indent-style` | - | ✓ | - | - | - | ✓ | - | - |
-| `--indent-size` | - | ✓ | - | - | - | ✓ | - | - |
-| `--show-sources` | - | - | - | - | - | ✓ | - | - |
-| `--verbose` | - | - | - | - | - | - | ✓ | - |
-| `paths...` | ✓ | ✓ | ✓ | - | - | - | - | - |
+| `-c, --config` | G | G | G | G | G | G | G | G |
+| `--utf8` | G | G | G | G | G | G | G | G |
+| `--allow-plugins` | G | G | G | G | G | G | G | G |
+| `--ignorelist` | ✓ | ✓ | ✓ | | | | | |
+| `--detect-encoding` | ✓ | ✓ | ✓ | | | | | |
+| `--stdin` | ✓ | ✓ | ✓ | | | | | |
+| `--max-file-size` | ✓ | ✓ | ✓ | | | | | |
+| `--output` | ✓ | | ✓ | | | ✓ | ✓ | ✓ |
+| `--compat-level` | ✓ | ✓ | ✓ | ✓ | | | | |
+| `--severity` | ✓ | | ✓ | | | | | |
+| `--preset` | ✓ | | ✓ | ✓ | | | ✓ | |
+| `--ruleset` | ✓ | | ✓ | | | | ✓ | |
+| `--rule` | | | ✓ | | | | | |
+| `--indent-style` | | ✓ | | | | ✓ | | |
+| `--indent-size` | | ✓ | | | | ✓ | | |
+| `--line-ending` | | ✓ | | | | ✓ | | |
+| `--verbose` | ✓ | | ✓ | | | | | ✓ |
+| `-q, --quiet` | ✓ | ✓ | ✓ | | | | | |
+| `--force` | | | | ✓ | | | | |
+| `--global` | | | | ✓ | | | | |
+| `--category` | | | | | | | ✓ | |
+| `--fixable` | | | | | | | ✓ | |
+| `--enabled-only` | | | | | | | ✓ | |
+| `--show-sources` | | | | | | ✓ | | |
+| `paths...` | ✓ | ✓ | ✓ | | | ✓ | | |
+
+### Validation Rules
+
+| Condition | Behavior |
+|-----------|----------|
+| `--preset` + `--ruleset` | ConfigException (exit 3) — mutually exclusive |
+| `--verbose` + `--quiet` | ConfigException (exit 3) — mutually exclusive |
+| `--max-file-size` invalid | ConfigException (exit 3) — must be positive integer |
+| `--rule` + `--preset`/`--ruleset` | Warning to stderr — `--rule` overrides others |
 
 ## Output Formatting
 
