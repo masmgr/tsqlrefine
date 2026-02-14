@@ -34,7 +34,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 - `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `130`, `140`, `150`, `160`).
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
 - `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
-- `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection.
+- `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection. Paths can be relative (resolved from config file directory) or filename-only (searched in config dir, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`).
 - `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
 
 > **Note**: If both `preset` and `ruleset` are specified, `preset` takes precedence. The `--preset` CLI option overrides both.
@@ -242,6 +242,18 @@ Keys are rule IDs (both built-in and plugin). Values are severity levels: `"erro
 ### Plugin rules
 
 Plugin rules are **enabled by default** with their default severity, regardless of which preset or ruleset is active. This means simply adding a plugin to `plugins` is enough to activate its rules — no additional configuration is needed.
+
+#### Plugin path resolution
+
+Plugin paths are resolved differently depending on whether they contain a directory separator:
+
+- **Relative path** (e.g. `"plugins/custom-rules.dll"`) — resolved relative to the config file directory.
+- **Filename only** (e.g. `"custom-rules.dll"`) — searched in the following locations in order:
+  1. Config file directory (or CWD if no config file)
+  2. `CWD/.tsqlrefine/plugins/`
+  3. `HOME/.tsqlrefine/plugins/`
+
+This allows sharing plugins across projects by placing them in `~/.tsqlrefine/plugins/`.
 
 To disable a specific plugin rule, set it to `"none"` in the `rules` section:
 

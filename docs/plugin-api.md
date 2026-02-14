@@ -105,6 +105,20 @@ Example:
 }
 ```
 
+### Path resolution
+
+Plugin paths can be specified in two forms:
+
+- **Relative path with directory** (e.g. `"plugins/MyPlugin.dll"`) — resolved relative to the config file directory (or CWD if no config file).
+- **Filename only** (e.g. `"MyPlugin.dll"`) — searched in the following directories in order:
+  1. Config file directory (or CWD)
+  2. `CWD/.tsqlrefine/plugins/`
+  3. `HOME/.tsqlrefine/plugins/`
+
+The filename-only form is useful for sharing plugins across projects — place the DLL in `~/.tsqlrefine/plugins/` and reference it by name alone.
+
+### Load process
+
 At load time:
 
 1. Load the assembly

@@ -34,9 +34,10 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "Path to the plugin DLL file. Can be relative to the config file location or absolute",
+            "description": "Path to the plugin DLL file. Relative paths are resolved from the config file directory. Filename-only paths (no directory separator) are searched in: config dir, CWD/.tsqlrefine/plugins/, HOME/.tsqlrefine/plugins/",
             "examples": [
               "plugins/custom-rules.dll",
+              "MyPlugin.dll",
               "../shared/plugins/security-rules.dll"
             ]
           },
