@@ -78,7 +78,7 @@ Formatted SQL Output
 
 | Property | Type | Default | Description |
 |-----------|------|--------|------|
-| `CompatLevel` | `int` | `150` | SQL Server compatibility level (100-170) *170 requires package update |
+| `CompatLevel` | `int` | `150` | SQL Server compatibility level (100-160) |
 | `IndentStyle` | `IndentStyle` | `Spaces` | Indentation style (Tabs/Spaces) |
 | `IndentSize` | `int` | `4` | Indentation size (number of spaces or tab width) |
 | `KeywordElementCasing` | `ElementCasing` | `Upper` | Keyword casing |
