@@ -4,21 +4,49 @@ T-SQL linter, auto-fixer, and formatter for SQL Server.
 
 > Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
 
-## Why T-SQL Refine?
+## Quickstart
 
-Managing T-SQL queries in a Git repository without a live database connection introduces unique risks:
+```bash
+# Install
+dotnet tool install --global TsqlRefine
 
-- Queries can silently break during merges or refactoring, with errors surfacing only at execution time
-- Stored procedures and views may reference dropped columns or mismatched types that go unnoticed until deployment
-- Inconsistent formatting creates noisy diffs and slows code review
+# Lint SQL files (warnings and errors are displayed immediately)
+tsqlrefine lint path/to/your-sql-files/
+```
 
-T-SQL Refine catches these problems **before execution** using static analysis on the SQL script alone — no database connection required. It is designed for CI/CD pipelines and offline validation, so your team can enforce quality gates on every pull request.
+Generate a configuration file for your project:
+
+```bash
+tsqlrefine init
+```
+
+This creates `tsqlrefine.json` with sensible defaults:
+
+```json
+{
+  "compatLevel": 150,
+  "preset": "recommended"
+}
+```
+
+The `recommended` preset enables 87 rules (out of 130 total). See [Preset Rulesets](#preset-rulesets) for other options.
+
+For CI pipelines, use JSON output and exit codes:
+
+```bash
+tsqlrefine lint --output json src/**/*.sql
+# Exit code 1 = violations found (fails the build)
+```
+
+See [CI Integration Guide](docs/ci-integration.md) for full GitHub Actions / Azure Pipelines / GitLab CI examples.
 
 ## Features
 
+T-SQL Refine catches problems **before execution** using static analysis on the SQL script alone — no database connection required. Designed for CI/CD pipelines and offline validation.
+
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 89 built-in rules covering security, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 130 built-in rules covering security, correctness, performance, and coding conventions.
 
 Each rule is classified by severity:
 
@@ -154,11 +182,13 @@ Creates the following files:
 
 | Preset | Rules | Use Case |
 |--------|-------|----------|
-| `recommended` | 58 | Balanced for production (default) |
-| `strict` | 97 | Maximum enforcement including style |
-| `strict-logic` | 74 | Comprehensive correctness without cosmetic rules |
-| `pragmatic` | 34 | Production-ready minimum for legacy codebases |
-| `security-only` | 13 | Security vulnerabilities and critical safety |
+| `security-only` | 14 | Security vulnerabilities and critical safety |
+| `pragmatic` | 43 | Production-ready minimum for legacy codebases |
+| `recommended` | 87 | Balanced for production (default) |
+| `strict-logic` | 107 | Comprehensive correctness without cosmetic rules |
+| `strict` | 130 | Maximum enforcement including style |
+
+Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
 ```bash
 tsqlrefine lint --preset strict path/to/file.sql
@@ -173,6 +203,44 @@ The `format` command respects indentation settings:
 indent_style = space
 indent_size = 4
 ```
+
+## Team Adoption Guide
+
+Gradually introduce tsqlrefine to your team by starting strict on critical issues and expanding over time.
+
+### Step 1: Security & Safety (Block PRs)
+
+Start with the `security-only` preset. These 14 rules catch SQL injection, dangerous procedures, and accidental mass UPDATE/DELETE — issues that should never reach production.
+
+```bash
+tsqlrefine lint --preset security-only src/**/*.sql
+```
+
+### Step 2: Correctness (Expand Coverage)
+
+Move to `pragmatic` to add 29 correctness rules: duplicate aliases, column count mismatches, undefined references, and other bugs that cause runtime failures.
+
+```bash
+tsqlrefine lint --preset pragmatic src/**/*.sql
+```
+
+### Step 3: Best Practices (Default)
+
+Adopt `recommended` (the default preset) for full semantic analysis, performance warnings, and transaction handling best practices.
+
+```bash
+tsqlrefine lint --preset recommended src/**/*.sql
+```
+
+### Step 4: Full Enforcement (Optional)
+
+For teams wanting maximum consistency, `strict` adds naming conventions, formatting rules, and cosmetic checks.
+
+```bash
+tsqlrefine lint --preset strict src/**/*.sql
+```
+
+**Suggested timeline**: Start at `security-only` for 1-2 sprints, then advance one level per sprint. Use per-rule severity overrides to promote specific rules to `error` as needed.
 
 ## Exit Codes
 
@@ -200,6 +268,8 @@ See [docs/Rules/README.md](docs/Rules/README.md) for a rules overview, or [docs/
 
 - [CLI Specification](docs/cli.md)
 - [Configuration](docs/configuration.md)
+- [CI Integration Guide](docs/ci-integration.md)
+- [Editor Integration](docs/editor-integration.md)
 - [Formatting Options](docs/formatting.md)
 - [Plugin API](docs/plugin-api.md)
 - [Rules Overview](docs/Rules/README.md)
