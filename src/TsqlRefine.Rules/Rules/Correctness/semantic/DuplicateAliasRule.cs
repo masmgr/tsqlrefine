@@ -24,34 +24,99 @@ public sealed class DuplicateAliasRule : DiagnosticVisitorRuleBase
 
     private sealed class DuplicateAliasVisitor : DiagnosticVisitorBase
     {
-        public override void ExplicitVisit(SelectStatement node)
+        public override void ExplicitVisit(QuerySpecification node)
         {
-            var querySpec = node.QueryExpression as QuerySpecification;
-            if (querySpec?.FromClause == null)
+            ReportDuplicateAliases(node.FromClause?.TableReferences);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(UpdateSpecification node)
+        {
+            ReportDuplicateAliases(node.FromClause?.TableReferences);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(DeleteSpecification node)
+        {
+            ReportDuplicateAliases(node.FromClause?.TableReferences);
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(MergeSpecification node)
+        {
+            ReportDuplicateAliasesInMergeScope(node);
+            base.ExplicitVisit(node);
+        }
+
+        private void ReportDuplicateAliases(IList<TableReference>? tableReferences)
+        {
+            if (tableReferences == null || tableReferences.Count == 0)
             {
-                base.ExplicitVisit(node);
                 return;
             }
 
-            // Collect all table references from the FROM clause
-            var tableReferences = new List<TableReference>();
-            TableReferenceHelpers.CollectTableReferences(querySpec.FromClause.TableReferences, tableReferences);
+            var flattenedReferences = new List<TableReference>();
+            TableReferenceHelpers.CollectTableReferences(tableReferences, flattenedReferences);
 
-            // Check for duplicates
             foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
-                tableReferences,
+                flattenedReferences,
                 TableReferenceHelpers.GetAliasOrTableName))
             {
-                AddDiagnostic(
-                    fragment: duplicate.Item,
-                    message: $"Duplicate table alias '{duplicate.Name}' in same scope. Each alias must be unique within a FROM clause.",
-                    code: "semantic-duplicate-alias",
-                    category: "Correctness",
-                    fixable: false
-                );
+                AddDuplicateAliasDiagnostic(duplicate.Item, duplicate.Name);
+            }
+        }
+
+        private void ReportDuplicateAliasesInMergeScope(MergeSpecification mergeSpecification)
+        {
+            var scopeEntries = new List<(TSqlFragment Fragment, string? Name)>();
+            var targetName = GetMergeTargetAliasOrName(mergeSpecification);
+            var targetFragment = (TSqlFragment?)mergeSpecification.TableAlias ?? mergeSpecification.Target;
+
+            if (targetFragment != null)
+            {
+                scopeEntries.Add((targetFragment, targetName));
             }
 
-            base.ExplicitVisit(node);
+            if (mergeSpecification.TableReference != null)
+            {
+                var sourceReferences = new List<TableReference>();
+                TableReferenceHelpers.CollectTableReferences([mergeSpecification.TableReference], sourceReferences);
+
+                foreach (var sourceReference in sourceReferences)
+                {
+                    scopeEntries.Add((sourceReference, TableReferenceHelpers.GetAliasOrTableName(sourceReference)));
+                }
+            }
+
+            foreach (var duplicate in DuplicateNameAnalysisHelpers.FindDuplicateNames(
+                scopeEntries,
+                entry => entry.Name))
+            {
+                AddDuplicateAliasDiagnostic(duplicate.Item.Fragment, duplicate.Name);
+            }
+        }
+
+        private static string? GetMergeTargetAliasOrName(MergeSpecification mergeSpecification)
+        {
+            if (!string.IsNullOrWhiteSpace(mergeSpecification.TableAlias?.Value))
+            {
+                return mergeSpecification.TableAlias.Value;
+            }
+
+            return mergeSpecification.Target == null
+                ? null
+                : TableReferenceHelpers.GetAliasOrTableName(mergeSpecification.Target);
+        }
+
+        private void AddDuplicateAliasDiagnostic(TSqlFragment fragment, string aliasName)
+        {
+            AddDiagnostic(
+                fragment: fragment,
+                message: $"Duplicate table alias '{aliasName}' in same scope. Each alias must be unique within a FROM clause.",
+                code: "semantic-duplicate-alias",
+                category: "Correctness",
+                fixable: false
+            );
         }
     }
 }
