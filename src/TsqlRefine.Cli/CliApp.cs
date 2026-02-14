@@ -72,6 +72,7 @@ public static class CliApp
         try
         {
             ValidateOptions(parsed);
+            WarnConflictingOptions(parsed, stderr);
 
             // Initialize services
             var inputReader = new InputReader();
@@ -117,6 +118,24 @@ public static class CliApp
         {
             throw new ConfigException(
                 "--verbose and --quiet are mutually exclusive. Use one or the other.");
+        }
+    }
+
+    private static void WarnConflictingOptions(CliArgs args, TextWriter stderr)
+    {
+        if (args.RuleId is null)
+        {
+            return;
+        }
+
+        if (args.Preset is not null)
+        {
+            stderr.WriteLine("Warning: --rule overrides --preset; preset will be ignored.");
+        }
+
+        if (args.RulesetPath is not null)
+        {
+            stderr.WriteLine("Warning: --rule overrides --ruleset; ruleset will be ignored.");
         }
     }
 
