@@ -21,7 +21,9 @@ public enum PluginLoadStatus
     /// <summary>Plugin API version does not match host version.</summary>
     VersionMismatch,
     /// <summary>Plugin has no IRuleProvider implementations.</summary>
-    NoProviders
+    NoProviders,
+    /// <summary>Plugin path was rejected by security validation.</summary>
+    PathRejected
 }
 
 /// <summary>
@@ -153,11 +155,51 @@ public sealed record PluginLoadSummary(
 public sealed class PluginLoader
 {
     /// <summary>
+    /// Validates that a plugin path is safe to load.
+    /// Rejects UNC paths, absolute paths, and paths that escape the base directory.
+    /// </summary>
+    /// <param name="pluginPath">The plugin path from configuration.</param>
+    /// <param name="baseDirectory">The base directory for resolving relative paths.</param>
+    /// <returns>Null if valid; an error message if rejected.</returns>
+    public static string? ValidatePluginPath(string pluginPath, string baseDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(pluginPath);
+        ArgumentNullException.ThrowIfNull(baseDirectory);
+
+        if (pluginPath.StartsWith(@"\\", StringComparison.Ordinal) ||
+            pluginPath.StartsWith("//", StringComparison.Ordinal))
+        {
+            return $"UNC paths are not allowed for plugins: {pluginPath}";
+        }
+
+        if (Path.IsPathRooted(pluginPath))
+        {
+            return $"Absolute paths are not allowed for plugins: {pluginPath}";
+        }
+
+        var fullPath = Path.GetFullPath(Path.Combine(baseDirectory, pluginPath));
+        var fullBaseDir = Path.GetFullPath(baseDirectory);
+        if (!fullBaseDir.EndsWith(Path.DirectorySeparatorChar))
+        {
+            fullBaseDir += Path.DirectorySeparatorChar;
+        }
+
+        if (!fullPath.StartsWith(fullBaseDir, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Plugin path escapes the project directory: {pluginPath}";
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Loads plugins and returns both the loaded plugins and a summary of the load operation.
     /// </summary>
-    public static (IReadOnlyList<LoadedPlugin> Plugins, PluginLoadSummary Summary) LoadWithSummary(IEnumerable<PluginDescriptor> plugins)
+    public static (IReadOnlyList<LoadedPlugin> Plugins, PluginLoadSummary Summary) LoadWithSummary(
+        IEnumerable<PluginDescriptor> plugins,
+        string? baseDirectory = null)
     {
-        var loadedPlugins = Load(plugins);
+        var loadedPlugins = Load(plugins, baseDirectory);
         var summary = PluginLoadSummary.Create(loadedPlugins);
         return (loadedPlugins, summary);
     }
@@ -165,7 +207,9 @@ public sealed class PluginLoader
     /// <summary>
     /// Loads plugins from the specified descriptors and returns a list of loaded plugins.
     /// </summary>
-    public static IReadOnlyList<LoadedPlugin> Load(IEnumerable<PluginDescriptor> plugins)
+    /// <param name="plugins">Plugin descriptors to load.</param>
+    /// <param name="baseDirectory">Base directory for plugin path validation. When provided, paths are validated before loading.</param>
+    public static IReadOnlyList<LoadedPlugin> Load(IEnumerable<PluginDescriptor> plugins, string? baseDirectory = null)
     {
         var results = new List<LoadedPlugin>();
 
@@ -183,11 +227,29 @@ public sealed class PluginLoader
                 continue;
             }
 
+            if (baseDirectory is not null)
+            {
+                var validationError = ValidatePluginPath(plugin.Path, baseDirectory);
+                if (validationError is not null)
+                {
+                    results.Add(new LoadedPlugin(
+                        plugin.Path,
+                        true,
+                        Array.Empty<IRuleProvider>(),
+                        new PluginLoadDiagnostic(
+                            PluginLoadStatus.PathRejected,
+                            validationError)));
+                    continue;
+                }
+            }
+
             PluginLoadContext? loadContext = null;
 
             try
             {
-                var fullPath = Path.GetFullPath(plugin.Path);
+                var fullPath = baseDirectory is not null
+                    ? Path.GetFullPath(Path.Combine(baseDirectory, plugin.Path))
+                    : Path.GetFullPath(plugin.Path);
                 if (!File.Exists(fullPath))
                 {
                     results.Add(new LoadedPlugin(

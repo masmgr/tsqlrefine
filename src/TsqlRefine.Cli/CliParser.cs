@@ -156,6 +156,12 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<bool> AllowPlugins = new("--allow-plugins")
+        {
+            Description = "Enable loading of plugin DLLs from configuration",
+            Recursive = true
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -315,6 +321,7 @@ public static class CliParser
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
         root.Options.Add(Options.Utf8);
+        root.Options.Add(Options.AllowPlugins);
 
         // Root command supports lint options for default command behavior
         // (tsqlrefine *.sql == tsqlrefine lint *.sql)
@@ -398,7 +405,8 @@ public static class CliParser
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             Paths: GetPaths(parseResult),
             RuleId: GetOptionValue<string?>(parseResult, "--rule"),
-            MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size"))
+            MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
+            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins")
         );
     }
 

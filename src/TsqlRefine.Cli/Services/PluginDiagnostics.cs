@@ -26,6 +26,9 @@ public sealed class PluginDiagnostics
             PluginLoadStatus.NoProviders =>
                 "Ensure the plugin assembly contains a public class implementing IRuleProvider.",
 
+            PluginLoadStatus.PathRejected =>
+                "Use relative paths within the project directory for plugins.",
+
             _ => string.Empty
         };
     }
@@ -96,6 +99,11 @@ public sealed class PluginDiagnostics
                 stderr.WriteLine("No rule providers found");
                 break;
 
+            case PluginLoadStatus.PathRejected:
+                stderr.WriteLine($"Path rejected: {plugin.Diagnostic.Message}");
+                stderr.WriteLine($"    Hint: Use relative paths within the project directory.");
+                break;
+
             default:
                 stderr.WriteLine(plugin.Diagnostic.Message ?? "Unknown error");
                 break;
@@ -129,8 +137,9 @@ public sealed class PluginDiagnostics
                 PluginLoadStatus.LoadError => 2,
                 PluginLoadStatus.FileNotFound => 3,
                 PluginLoadStatus.NoProviders => 4,
-                PluginLoadStatus.Disabled => 5,
-                _ => 6
+                PluginLoadStatus.PathRejected => 5,
+                PluginLoadStatus.Disabled => 6,
+                _ => 7
             })
             .ToList();
 
@@ -148,6 +157,7 @@ public sealed class PluginDiagnostics
             PluginLoadStatus.Disabled => "○",
             PluginLoadStatus.FileNotFound => "✗",
             PluginLoadStatus.LoadError => "✗",
+            PluginLoadStatus.PathRejected => "✗",
             PluginLoadStatus.VersionMismatch => "⚠",
             PluginLoadStatus.NoProviders => "⚠",
             _ => "?"
