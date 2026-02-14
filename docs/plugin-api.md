@@ -34,7 +34,7 @@ The internal model of `tsqlrefine` depends on the implementation language, but t
 
 - `ruleId` (unique)
 - `description` / `messageTemplate`
-- `category` (categories from `docs/rules.md`)
+- `category` (categories from `docs/Rules/README.md`)
 - `defaultSeverity` (Error/Warning/Info/Hint)
 - `fixable` (boolean)
 - `minSqlVersion` / `maxSqlVersion` (optional)
@@ -47,9 +47,7 @@ The internal model of `tsqlrefine` depends on the implementation language, but t
 
 ---
 
-## 4. C# Interface Proposal (Assuming .NET)
-
-> Even before the implementation language is finalized, you can define the expected interface shape upfront.
+## 4. C# Interface
 
 ```csharp
 public enum RuleSeverity
