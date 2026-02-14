@@ -281,8 +281,7 @@ public static class CliParser
     }
 
     private static Command BuildPrintConfigCommand() =>
-        new Command("print-config", "Print effective configuration")
-            .WithOutputOption();
+        new Command("print-config", "Print effective configuration");
 
     private static Command BuildListRulesCommand()
     {

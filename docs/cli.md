@@ -193,12 +193,10 @@ tsqlrefine init --force
 #### print-config
 
 ```
-tsqlrefine print-config [options]
+tsqlrefine print-config
 ```
 
-| Option | Description |
-|------------|------|
-| `--output <text\|json>` | Output format (default: `text`) |
+Outputs the effective configuration as JSON. No command-specific options.
 
 #### print-format-config
 
