@@ -26,22 +26,56 @@ To fully regenerate `docs/Rules/REFERENCE.md` from scratch:
 
 1. **Collect all rule metadata**: Read every `*Rule.cs` file under `src/TsqlRefine.Rules/Rules/` (recursively across all category and semantic subdirectories)
    - Extract: RuleId, Description, Category, DefaultSeverity, Fixable from each `RuleMetadata` constructor
-2. **Compute statistics**:
+2. **Parse preset JSON files**: Read all preset files in `rulesets/` directory:
+   - `security-only.json`, `pragmatic.json`, `recommended.json`, `strict-logic.json`, `strict.json`
+   - Each contains a `rules` array with `id` fields
+3. **Assign importance tiers**: For each rule, determine its first-appearance tier:
+   - If in security-only → **Critical**
+   - Else if in pragmatic → **Essential**
+   - Else if in recommended → **Recommended**
+   - Else if in strict-logic → **Thorough**
+   - Else if in strict → **Cosmetic**
+4. **Compute statistics**:
    - Total rule count
    - Fixable rule count and percentage
+   - Count per importance tier
    - Count per severity level (Error, Warning, Information)
-3. **Build category table**: Count rules per category, add a short description for each
-4. **Generate "Rules by Category" sections**: For each category, create a markdown table sorted alphabetically by Rule ID, linking to `{category}/{rule-id}.md`
-5. **Generate "Rules by Severity" sections**: Group rules by severity, list as bullet points
-6. **Generate "Fixable Rules" section**: List all fixable rules as numbered items
-7. **Write the file** following the exact structure in the existing `docs/Rules/REFERENCE.md`:
+   - Count per category
+5. **Generate the file** following this structure:
    - Header with auto-generated notice
    - Table of Contents
-   - Rule Statistics
-   - Rule Categories (summary table)
-   - Rules by Category (detailed tables per category)
-   - Rules by Severity (grouped bullet lists)
-   - Fixable Rules (numbered list with fix command example)
+   - **Rule Statistics** (total, fixable, by tier, by severity)
+   - **Importance Tiers** (summary table with tier name, preset, count, cumulative, description)
+   - **Rule Categories** (summary table with category name, count, description)
+   - **Rules by Importance Tier** (primary grouping):
+     - For each tier (Critical → Essential → Recommended → Thorough → Cosmetic):
+       - Tier heading with count and description
+       - Sub-grouped by category within the tier
+       - Each category sub-group has a markdown table with: Rule ID, Description, Severity, Fixable
+       - Rules sorted alphabetically by Rule ID within each category
+       - Category order: Security, Safety, Correctness, Performance, Transactions, Schema, Style, Debug
+   - **Rules by Severity** (Error, Warning, Information grouped bullet lists)
+   - **Fixable Rules** (numbered list with fix command example)
+
+### Semantic rule display names
+
+Rules with IDs starting with `semantic-` should display as `semantic/xxx` (replacing the first hyphen after "semantic" with a slash). For example:
+- Rule ID `semantic-duplicate-alias` → displays as `semantic/duplicate-alias`
+- Doc link: `correctness/semantic-duplicate-alias.md` (uses hyphen in filename)
+
+### Plural/singular rule counts
+
+Use "1 rule" (singular) when a category subsection has exactly 1 rule, and "N rules" (plural) otherwise.
+
+### Generator script
+
+A Node.js generator script is available at `.claude/plans/generate-reference.js`. Run it with:
+
+```bash
+node .claude/plans/generate-reference.js
+```
+
+This reads all rule source files and preset JSONs, and writes the complete REFERENCE.md.
 
 ## Template
 

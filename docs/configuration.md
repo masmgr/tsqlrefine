@@ -205,6 +205,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 This means upgrading from one preset to the next only **adds** rules; it never removes rules you were already checking.
 
+Rules are organized into five importance tiers (Critical, Essential, Recommended, Thorough, Cosmetic) based on which preset first includes them. See [Rules Reference](Rules/REFERENCE.md#importance-tiers) for the complete tier breakdown.
+
 **Choosing a preset:**
 - Start with `recommended` for most projects — it provides balanced production-ready linting
 - Use `pragmatic` for minimal enforcement in legacy codebases or when first introducing linting
