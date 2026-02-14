@@ -24,8 +24,23 @@ public sealed class AvoidScalarUdfInQueryRule : DiagnosticVisitorRuleBase
 
     private sealed class AvoidScalarUdfInQueryVisitor : DiagnosticVisitorBase
     {
+        private int _queryDepth;
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            _queryDepth++;
+            base.ExplicitVisit(node);
+            _queryDepth--;
+        }
+
         public override void ExplicitVisit(FunctionCall node)
         {
+            if (_queryDepth <= 0)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
             // Schema-qualified function calls (e.g., dbo.MyFunc()) have a non-null CallTarget.
             // Built-in functions (GETDATE, UPPER, ISNULL, etc.) have CallTarget == null.
             // Table-valued functions in FROM clause are SchemaObjectFunctionTableReference, not FunctionCall.

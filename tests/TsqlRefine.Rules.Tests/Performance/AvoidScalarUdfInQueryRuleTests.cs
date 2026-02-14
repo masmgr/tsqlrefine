@@ -117,6 +117,26 @@ public sealed class AvoidScalarUdfInQueryRuleTests
     }
 
     [Fact]
+    public void Analyze_ScalarUdfInDeclareAssignment_NoDiagnostic()
+    {
+        const string sql = "DECLARE @x INT = dbo.MyFunc(1);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_ScalarUdfInSetAssignment_NoDiagnostic()
+    {
+        const string sql = "DECLARE @x INT; SET @x = dbo.MyFunc(1);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsEmptyCollection()
     {
         const string sql = "SELECT dbo.MyFunc(col) FROM t;";
