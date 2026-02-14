@@ -114,7 +114,6 @@ tsqlrefine format [options] [paths...]
 | `-g, --ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
-| `--output <text\|json>` | Output format (default: `text`) |
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--indent-style <tabs\|spaces>` | Indentation type |
 | `--indent-size <n>` | Indentation width |
@@ -122,7 +121,7 @@ tsqlrefine format [options] [paths...]
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output |
 
-> **Note**: When files are specified, formatted results are automatically written to the files. When using standard input (`--stdin`), results are output to stdout.
+> **Note**: When files are specified, formatted results are automatically written to the files. When using standard input (`--stdin`), results are output to stdout. The `format` command does not support `--output` as it always outputs formatted SQL text.
 
 Progress messages (`Formatted: file.sql` / `Unchanged: file.sql`) are written to stderr by default. Use `--quiet` to suppress them.
 

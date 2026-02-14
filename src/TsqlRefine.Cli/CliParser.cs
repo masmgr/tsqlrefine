@@ -249,7 +249,6 @@ public static class CliParser
     {
         var command = new Command("format", "Format SQL files (keyword casing, whitespace)")
             .WithInputOptions()
-            .WithOutputOption()
             .WithCompatLevelOption()
             .WithFormatOptions()
             .WithPathsArgument();
