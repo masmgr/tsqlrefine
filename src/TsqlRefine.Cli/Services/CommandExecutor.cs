@@ -116,6 +116,11 @@ public sealed class CommandExecutor
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, allRules);
 
+        if (args.EnabledOnly)
+        {
+            filtered = filtered.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId));
+        }
+
         var rules = filtered.ToArray();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))

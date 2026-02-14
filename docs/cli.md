@@ -223,6 +223,7 @@ tsqlrefine list-rules [options]
 | `--output <text\|json>` | Output format (default: `text`) |
 | `--category <name>` | Filter rules by category |
 | `--fixable` | Show only fixable rules |
+| `--enabled-only` | Show only enabled rules |
 | `--preset <name>` | Override preset (overrides config file preset) |
 | `--ruleset <path>` | Override ruleset file (overrides config file ruleset) |
 

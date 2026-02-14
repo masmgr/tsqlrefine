@@ -158,6 +158,52 @@ public sealed class CliListRulesTests
     }
 
     [Fact]
+    public async Task ListRules_WithEnabledOnly_ExcludesDisabledRules()
+    {
+        var stdoutAll = new StringWriter();
+        var stdoutEnabled = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "list-rules" }, TextReader.Null, stdoutAll, new StringWriter());
+        await CliApp.RunAsync(new[] { "list-rules", "--enabled-only" }, TextReader.Null, stdoutEnabled, new StringWriter());
+
+        // Enabled-only list should be shorter than full list
+        var allLines = stdoutAll.ToString().Split('\n').Length;
+        var enabledLines = stdoutEnabled.ToString().Split('\n').Length;
+        Assert.True(enabledLines < allLines);
+
+        // No data row should show "No" in the Enabled column (last column)
+        var lines = stdoutEnabled.ToString().Split('\n')
+            .Select(l => l.TrimEnd())
+            .Where(l => l.Length > 0 && !l.StartsWith("Rule ID") && !l.StartsWith("\u2500") && !l.StartsWith("Total:"))
+            .ToArray();
+        Assert.True(lines.Length > 0);
+        foreach (var line in lines)
+        {
+            // Enabled column is the last column; should end with "Yes" (after trimming)
+            Assert.EndsWith("Yes", line.TrimEnd());
+        }
+    }
+
+    [Fact]
+    public async Task ListRules_WithEnabledOnlyJson_AllRulesAreEnabled()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            new[] { "list-rules", "--enabled-only", "--output", "json" },
+            TextReader.Null, stdout, stderr);
+
+        Assert.Equal(0, code);
+        using var doc = JsonDocument.Parse(stdout.ToString());
+        var rules = doc.RootElement.EnumerateArray().ToList();
+
+        Assert.True(rules.Count > 0);
+        Assert.All(rules, r => Assert.True(r.GetProperty("enabled").GetBoolean()));
+        Assert.All(rules, r => Assert.NotEqual("none", r.GetProperty("effectiveSeverity").GetString()));
+    }
+
+    [Fact]
     public async Task ListRules_WithPreset_ShowsDisabledRules()
     {
         var stdout = new StringWriter();

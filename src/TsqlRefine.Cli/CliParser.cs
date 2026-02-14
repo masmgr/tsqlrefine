@@ -134,6 +134,11 @@ public static class CliParser
             Description = "Show only fixable rules"
         };
 
+        public static readonly Option<bool> EnabledOnly = new("--enabled-only")
+        {
+            Description = "Show only enabled rules"
+        };
+
         // Misc options
         public static readonly Option<bool> Verbose = new("--verbose")
         {
@@ -285,6 +290,7 @@ public static class CliParser
             .WithOutputOption();
         command.Options.Add(Options.Category);
         command.Options.Add(Options.Fixable);
+        command.Options.Add(Options.EnabledOnly);
         command.Options.Add(Options.Preset);
         command.Options.Add(Options.Ruleset);
         return command;
@@ -403,6 +409,7 @@ public static class CliParser
             Global: GetOptionValue<bool>(parseResult, "--global"),
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
+            EnabledOnly: GetOptionValue<bool>(parseResult, "--enabled-only"),
             Paths: GetPaths(parseResult),
             RuleId: GetOptionValue<string?>(parseResult, "--rule"),
             MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
