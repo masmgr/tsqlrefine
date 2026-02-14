@@ -154,6 +154,42 @@ public sealed class AggregateInWhereClauseRuleTests
         Assert.Contains("COUNT", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_AggregateInTryCastInWhere_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM t WHERE TRY_CAST(COUNT(*) AS int) > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("COUNT", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_AggregateInSubqueryComparisonExpression_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM t WHERE COUNT(*) > ALL (SELECT 1);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("COUNT", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_AggregateWindowFunctionInWhere_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM t WHERE SUM(x) OVER (PARTITION BY y) > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("SUM", diagnostics[0].Message);
+    }
+
     // === Valid cases (no violations) ===
 
     [Fact]

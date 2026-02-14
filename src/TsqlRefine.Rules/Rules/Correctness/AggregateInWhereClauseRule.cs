@@ -90,19 +90,28 @@ public sealed class AggregateInWhereClauseRule : DiagnosticVisitorRuleBase
                 case ExistsPredicate:
                     // Subquery scope — don't descend
                     return;
+
+                case SubqueryComparisonPredicate subqueryComparison:
+                    CheckScalarExpressionForAggregate(subqueryComparison.Expression);
+                    // Subquery scope — don't descend
+                    return;
             }
         }
 
         private void CheckScalarExpressionForAggregate(ScalarExpression? expression)
         {
+            if (TryCheckAggregateInConversionLikeCall(expression))
+            {
+                return;
+            }
+
             switch (expression)
             {
                 case null:
                     return;
 
                 case FunctionCall func:
-                    if (func.OverClause == null &&
-                        func.FunctionName?.Value is { } name &&
+                    if (func.FunctionName?.Value is { } name &&
                         AggregateFunctionHelpers.AggregateFunctions.Contains(name))
                     {
                         AddDiagnostic(
@@ -131,14 +140,6 @@ public sealed class AggregateInWhereClauseRule : DiagnosticVisitorRuleBase
 
                 case ParenthesisExpression paren:
                     CheckScalarExpressionForAggregate(paren.Expression);
-                    return;
-
-                case CastCall cast:
-                    CheckScalarExpressionForAggregate(cast.Parameter);
-                    return;
-
-                case ConvertCall convert:
-                    CheckScalarExpressionForAggregate(convert.Parameter);
                     return;
 
                 case SearchedCaseExpression searchedCase:
@@ -188,6 +189,41 @@ public sealed class AggregateInWhereClauseRule : DiagnosticVisitorRuleBase
             }
 
             // For column references, literals, and other leaf expressions — no aggregates
+        }
+
+        private bool TryCheckAggregateInConversionLikeCall(ScalarExpression? expression)
+        {
+            switch (expression)
+            {
+                case CastCall cast:
+                    CheckScalarExpressionForAggregate(cast.Parameter);
+                    return true;
+
+                case ConvertCall convert:
+                    CheckScalarExpressionForAggregate(convert.Parameter);
+                    return true;
+
+                case TryCastCall tryCast:
+                    CheckScalarExpressionForAggregate(tryCast.Parameter);
+                    return true;
+
+                case TryConvertCall tryConvert:
+                    CheckScalarExpressionForAggregate(tryConvert.Parameter);
+                    CheckScalarExpressionForAggregate(tryConvert.Style);
+                    return true;
+
+                case ParseCall parse:
+                    CheckScalarExpressionForAggregate(parse.StringValue);
+                    CheckScalarExpressionForAggregate(parse.Culture);
+                    return true;
+
+                case TryParseCall tryParse:
+                    CheckScalarExpressionForAggregate(tryParse.StringValue);
+                    CheckScalarExpressionForAggregate(tryParse.Culture);
+                    return true;
+            }
+
+            return false;
         }
     }
 }
