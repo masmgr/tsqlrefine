@@ -1,0 +1,57 @@
+# Advanced GitHub Actions workflow for tsqlrefine
+# - Lints only changed SQL files (efficient for large repositories)
+# - Saves JSON results as a downloadable artifact
+#
+# Copy this to .github/workflows/sql-lint.yml in your repository.
+# See docs/ci-integration.md for more examples.
+
+name: SQL Lint (Advanced)
+
+on:
+  pull_request:
+    paths:
+      - '**.sql'
+
+jobs:
+  lint-changed-sql:
+    name: Lint Changed SQL Files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Install TsqlRefine
+        run: dotnet tool install --global TsqlRefine
+
+      - name: Get changed SQL files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- '*.sql' | tr '\n' ' ')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          if [ -z "$FILES" ]; then
+            echo "No SQL files changed"
+          else
+            echo "Changed files: $FILES"
+          fi
+
+      - name: Lint with JSON output
+        if: steps.changed.outputs.files != ''
+        run: tsqlrefine lint --output json ${{ steps.changed.outputs.files }} > lint-results.json
+        continue-on-error: true
+
+      - name: Upload results
+        if: steps.changed.outputs.files != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsqlrefine-results
+          path: lint-results.json
+
+      - name: Check for violations
+        if: steps.changed.outputs.files != ''
+        run: tsqlrefine lint --quiet ${{ steps.changed.outputs.files }}

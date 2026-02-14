@@ -1,0 +1,30 @@
+# Basic GitHub Actions workflow for tsqlrefine
+# Copy this to .github/workflows/sql-lint.yml in your repository
+#
+# See docs/ci-integration.md for advanced examples (JSON output, diff-only, multi-preset).
+
+name: SQL Lint
+
+on:
+  pull_request:
+    paths:
+      - '**.sql'
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint-sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Install TsqlRefine
+        run: dotnet tool install --global TsqlRefine
+
+      - name: Lint SQL files
+        run: tsqlrefine lint src/**/*.sql
