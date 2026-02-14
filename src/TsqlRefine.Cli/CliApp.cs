@@ -71,6 +71,8 @@ public static class CliApp
 
         try
         {
+            ValidateOptions(parsed);
+
             // Initialize services
             var inputReader = new InputReader();
             var commandExecutor = new CommandExecutor(inputReader);
@@ -100,6 +102,15 @@ public static class CliApp
         {
             await stderr.WriteLineAsync(ex.ToString());
             return ExitCodes.Fatal;
+        }
+    }
+
+    private static void ValidateOptions(CliArgs args)
+    {
+        if (args.Preset is not null && args.RulesetPath is not null)
+        {
+            throw new ConfigException(
+                "--preset and --ruleset are mutually exclusive. Use one or the other.");
         }
     }
 
