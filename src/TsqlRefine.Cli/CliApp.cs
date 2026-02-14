@@ -112,6 +112,12 @@ public static class CliApp
             throw new ConfigException(
                 "--preset and --ruleset are mutually exclusive. Use one or the other.");
         }
+
+        if (args.Verbose && args.Quiet)
+        {
+            throw new ConfigException(
+                "--verbose and --quiet are mutually exclusive. Use one or the other.");
+        }
     }
 
     private static async Task<int> UnknownCommandAsync(string command, TextWriter stderr)
