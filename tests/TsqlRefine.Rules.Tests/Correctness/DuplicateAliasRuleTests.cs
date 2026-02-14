@@ -127,6 +127,48 @@ SELECT * FROM products b JOIN categories b ON b.cat_id = b.id;";
         Assert.Contains(diagnostics, d => d.Message.Contains("myalias", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("SELECT 1 FROM users u JOIN orders u ON u.id = u.user_id UNION ALL SELECT 1 FROM products p;")]
+    [InlineData("SELECT 1 WHERE EXISTS (SELECT 1 FROM users u JOIN orders u ON u.id = u.user_id);")]
+    [InlineData("WITH cte AS (SELECT 1 FROM users u JOIN orders u ON u.id = u.user_id) SELECT 1 FROM cte;")]
+    public void Analyze_DuplicateAlias_InNestedQueryExpression_ReturnsDiagnostic(string sql)
+    {
+        var rule = new DuplicateAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
+
+        Assert.NotEmpty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("UPDATE u SET id = u.id FROM users u JOIN orders u ON u.id = u.user_id;")]
+    [InlineData("DELETE u FROM users u JOIN orders u ON u.id = u.user_id;")]
+    [InlineData("MERGE users AS u USING orders AS u ON u.id = u.user_id WHEN MATCHED THEN UPDATE SET id = u.id;")]
+    public void Analyze_DuplicateAlias_InDmlScope_ReturnsDiagnostic(string sql)
+    {
+        var rule = new DuplicateAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
+
+        Assert.NotEmpty(diagnostics);
+    }
+
+    [Theory]
+    [InlineData("UPDATE u SET id = u.id FROM users u JOIN orders o ON u.id = o.user_id;")]
+    [InlineData("DELETE u FROM users u JOIN orders o ON u.id = o.user_id;")]
+    [InlineData("MERGE users AS targetUser USING orders AS sourceOrder ON targetUser.id = sourceOrder.user_id WHEN MATCHED THEN UPDATE SET id = sourceOrder.user_id;")]
+    public void Analyze_NoDuplicateAlias_InDmlScope_ReturnsEmpty(string sql)
+    {
+        var rule = new DuplicateAliasRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-duplicate-alias").ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Fact]
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
