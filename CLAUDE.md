@@ -103,7 +103,7 @@ indent_size = 4
 |------|---------|
 | 0 | Success (no violations) |
 | 1 | Rule violations found |
-| 2 | Analysis error |
+| 2 | Parse error |
 | 3 | Config error |
 | 4 | Fatal error |
 
