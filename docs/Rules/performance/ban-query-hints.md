@@ -7,7 +7,8 @@
 
 ## Description
 
-Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues.
+Detects optimizer-forcing query/table hints that bypass the optimizer, causing long-term maintenance issues.
+For practical operations, this rule excludes common operational hints (for example `RECOMPILE`, `OPTIMIZE FOR`, `MAXRECURSION`, `LABEL`, and lock/isolation-oriented table hints).
 
 ## Rationale
 
@@ -201,6 +202,14 @@ In `custom-ruleset.json`:
   ]
 }
 ```
+
+## Scope
+
+- Flags optimizer-forcing table hints such as `INDEX`, `FORCESEEK`, `FORCESCAN`, `NOEXPAND`
+- Flags query hints that force optimizer behavior (for example `FORCE ORDER`, join strategy hints, `MAXDOP`, `USE PLAN`)
+- Excludes operational hints often needed in production:
+  - Query hints: `RECOMPILE`, `OPTIMIZE FOR`, `MAXRECURSION`, `LABEL`
+  - Table hints: lock/isolation-oriented hints such as `UPDLOCK`, `TABLOCK`, `ROWLOCK`, `HOLDLOCK`, `READPAST`, `READCOMMITTEDLOCK`
 
 ## Coordination with Other Rules
 
