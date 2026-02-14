@@ -72,6 +72,18 @@ public sealed class GroupByColumnMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_RepeatedUngroupedColumnInSingleExpression_ReportsOnce()
+    {
+        const string sql = "SELECT a, CASE WHEN b > 0 THEN b ELSE b END FROM t GROUP BY a;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("b", diagnostics[0].Message);
+    }
+
+    [Fact]
     public void Analyze_ColumnInCastNotInGroupBy_ReturnsDiagnostic()
     {
         const string sql = "SELECT a, CAST(b AS varchar(10)) FROM t GROUP BY a;";
@@ -257,6 +269,51 @@ public sealed class GroupByColumnMismatchRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_RollupGroupByColumn_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, COUNT(*) FROM t GROUP BY ROLLUP(a);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CubeGroupByColumns_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, b, COUNT(*) FROM t GROUP BY CUBE(a, b);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupingSetsGroupByColumns_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, b, COUNT(*) FROM t GROUP BY GROUPING SETS ((a, b), (a), ());";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_RollupWithUngroupedColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT a, b FROM t GROUP BY ROLLUP(a);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("b", diagnostics[0].Message);
     }
 
     [Fact]

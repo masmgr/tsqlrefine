@@ -43,14 +43,57 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
 
             foreach (var spec in groupBy.GroupingSpecifications)
             {
-                if (spec is ExpressionGroupingSpecification exprSpec &&
-                    exprSpec.Expression is not null)
-                {
-                    expressions.Add(exprSpec.Expression);
-                }
+                CollectGroupByExpressionsFromSpecification(spec, expressions);
             }
 
             return expressions;
+        }
+
+        private static void CollectGroupByExpressionsFromSpecification(
+            GroupingSpecification? specification,
+            List<ScalarExpression> expressions)
+        {
+            switch (specification)
+            {
+                case null:
+                    return;
+
+                case ExpressionGroupingSpecification exprSpec when exprSpec.Expression is not null:
+                    expressions.Add(exprSpec.Expression);
+                    return;
+
+                case CompositeGroupingSpecification composite:
+                    foreach (var item in composite.Items)
+                    {
+                        CollectGroupByExpressionsFromSpecification(item, expressions);
+                    }
+                    return;
+
+                case CubeGroupingSpecification cube:
+                    foreach (var argument in cube.Arguments)
+                    {
+                        CollectGroupByExpressionsFromSpecification(argument, expressions);
+                    }
+                    return;
+
+                case RollupGroupingSpecification rollup:
+                    foreach (var argument in rollup.Arguments)
+                    {
+                        CollectGroupByExpressionsFromSpecification(argument, expressions);
+                    }
+                    return;
+
+                case GroupingSetsGroupingSpecification groupingSets:
+                    foreach (var groupingSet in groupingSets.Sets)
+                    {
+                        CollectGroupByExpressionsFromSpecification(groupingSet, expressions);
+                    }
+                    return;
+
+                case GrandTotalGroupingSpecification:
+                    // GROUPING SETS(()) has no expressions to collect.
+                    return;
+            }
         }
 
         private void CheckSelectElements(
@@ -84,11 +127,18 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
 
             var columnRefs = new List<ColumnReferenceExpression>();
             CollectColumnReferences(expression, columnRefs, groupByExpressions);
+            var reportedColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var colRef in columnRefs)
             {
                 if (!IsInGroupBy(colRef, groupByExpressions))
                 {
+                    var dedupKey = GetColumnDedupKey(colRef);
+                    if (!reportedColumns.Add(dedupKey))
+                    {
+                        continue;
+                    }
+
                     var columnName = GetColumnDisplayName(colRef);
                     AddDiagnostic(
                         fragment: colRef,
@@ -399,6 +449,17 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             }
 
             return string.Join(".", ids.Select(id => id.Value));
+        }
+
+        private static string GetColumnDedupKey(ColumnReferenceExpression colRef)
+        {
+            var ids = colRef.MultiPartIdentifier?.Identifiers;
+            if (ids is { Count: > 0 })
+            {
+                return string.Join(".", ids.Select(id => id.Value));
+            }
+
+            return $"{colRef.FirstTokenIndex}:{colRef.LastTokenIndex}";
         }
     }
 }
