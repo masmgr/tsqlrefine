@@ -27,6 +27,10 @@ public sealed class AvoidNotInWithNullRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
         Assert.Contains("NOT IN", diagnostics[0].Message);
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(42, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(48, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -44,6 +48,10 @@ public sealed class AvoidNotInWithNullRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+        Assert.Equal(3, diagnostics[0].Range.Start.Line);
+        Assert.Equal(31, diagnostics[0].Range.Start.Character);
+        Assert.Equal(3, diagnostics[0].Range.End.Line);
+        Assert.Equal(37, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -60,6 +68,14 @@ public sealed class AvoidNotInWithNullRuleTests
 
         Assert.Equal(2, diagnostics.Length);
         Assert.All(diagnostics, d => Assert.Equal("avoid-not-in-with-null", d.Code));
+        Assert.Equal(3, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(3, diagnostics[0].Range.End.Line);
+        Assert.Equal(35, diagnostics[0].Range.End.Character);
+        Assert.Equal(4, diagnostics[1].Range.Start.Line);
+        Assert.Equal(29, diagnostics[1].Range.Start.Character);
+        Assert.Equal(4, diagnostics[1].Range.End.Line);
+        Assert.Equal(35, diagnostics[1].Range.End.Character);
     }
 
     [Fact]
@@ -74,6 +90,10 @@ public sealed class AvoidNotInWithNullRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+        Assert.Equal(2, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(2, diagnostics[0].Range.End.Line);
+        Assert.Equal(35, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -133,6 +153,10 @@ public sealed class AvoidNotInWithNullRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+        Assert.Equal(4, diagnostics[0].Range.Start.Line);
+        Assert.Equal(30, diagnostics[0].Range.Start.Character);
+        Assert.Equal(4, diagnostics[0].Range.End.Line);
+        Assert.Equal(36, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
