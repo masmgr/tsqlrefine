@@ -227,29 +227,40 @@ public sealed class PluginLoader
                 continue;
             }
 
-            if (baseDirectory is not null)
+            string fullPath;
+
+            if (plugin.ResolvedFullPath is not null)
             {
-                var validationError = ValidatePluginPath(plugin.Path, baseDirectory);
-                if (validationError is not null)
+                // Path was pre-resolved by search-path logic; use directly.
+                fullPath = plugin.ResolvedFullPath;
+            }
+            else
+            {
+                if (baseDirectory is not null)
                 {
-                    results.Add(new LoadedPlugin(
-                        plugin.Path,
-                        true,
-                        Array.Empty<IRuleProvider>(),
-                        new PluginLoadDiagnostic(
-                            PluginLoadStatus.PathRejected,
-                            validationError)));
-                    continue;
+                    var validationError = ValidatePluginPath(plugin.Path, baseDirectory);
+                    if (validationError is not null)
+                    {
+                        results.Add(new LoadedPlugin(
+                            plugin.Path,
+                            true,
+                            Array.Empty<IRuleProvider>(),
+                            new PluginLoadDiagnostic(
+                                PluginLoadStatus.PathRejected,
+                                validationError)));
+                        continue;
+                    }
                 }
+
+                fullPath = baseDirectory is not null
+                    ? Path.GetFullPath(Path.Combine(baseDirectory, plugin.Path))
+                    : Path.GetFullPath(plugin.Path);
             }
 
             PluginLoadContext? loadContext = null;
 
             try
             {
-                var fullPath = baseDirectory is not null
-                    ? Path.GetFullPath(Path.Combine(baseDirectory, plugin.Path))
-                    : Path.GetFullPath(plugin.Path);
                 if (!File.Exists(fullPath))
                 {
                     results.Add(new LoadedPlugin(

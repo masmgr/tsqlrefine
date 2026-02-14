@@ -12,7 +12,7 @@ public sealed class PluginDiagnostics
         return diagnostic.Status switch
         {
             PluginLoadStatus.FileNotFound =>
-                "Check the plugin path in your tsqlrefine.json configuration.",
+                "Check the plugin path in your tsqlrefine.json. For filename-only paths, also searches CWD/.tsqlrefine/plugins/ and HOME/.tsqlrefine/plugins/.",
 
             PluginLoadStatus.VersionMismatch =>
                 $"Rebuild the plugin targeting PluginSdk API version {diagnostic.ExpectedApiVersion}.",

@@ -225,14 +225,12 @@ public sealed class CommandExecutor
             return 0;
         }
 
-        var plugins = pluginConfigs
-            .Select(p => new PluginDescriptor(p.Path, p.Enabled))
-            .ToArray();
-
         var configPath = ConfigLoader.GetConfigPath(args);
         var baseDirectory = configPath is not null
             ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
             : Directory.GetCurrentDirectory();
+
+        var plugins = ConfigLoader.ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
         await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);

@@ -210,14 +210,12 @@ public sealed class ConfigLoader
             return rules;
         }
 
-        var plugins = pluginConfigs
-            .Select(p => new PluginDescriptor(p.Path, p.Enabled))
-            .ToArray();
-
         var configPath = GetConfigPath(args);
         var baseDirectory = configPath is not null
             ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
             : Directory.GetCurrentDirectory();
+
+        var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var loaded = PluginLoader.Load(plugins, baseDirectory);
 
@@ -327,5 +325,72 @@ public sealed class ConfigLoader
                 yield return rule.Metadata.RuleId;
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves plugin descriptors, searching known directories for filename-only paths.
+    /// </summary>
+    internal static IReadOnlyList<PluginDescriptor> ResolvePluginDescriptors(
+        IReadOnlyList<PluginConfig> pluginConfigs,
+        string baseDirectory,
+        string? cwd = null,
+        string? homePath = null)
+    {
+        cwd ??= Directory.GetCurrentDirectory();
+        homePath ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        var descriptors = new List<PluginDescriptor>(pluginConfigs.Count);
+
+        foreach (var config in pluginConfigs)
+        {
+            if (IsFilenameOnly(config.Path))
+            {
+                var resolvedPath = SearchPluginPath(config.Path, baseDirectory, cwd, homePath);
+                descriptors.Add(new PluginDescriptor(config.Path, config.Enabled, resolvedPath));
+            }
+            else
+            {
+                descriptors.Add(new PluginDescriptor(config.Path, config.Enabled));
+            }
+        }
+
+        return descriptors;
+    }
+
+    private static bool IsFilenameOnly(string path)
+        => Path.GetFileName(path) == path;
+
+    /// <summary>
+    /// Searches for a plugin filename in the standard search directories.
+    /// Returns the full resolved path if found, or null if not found in any location.
+    /// </summary>
+    internal static string? SearchPluginPath(
+        string filename, string baseDirectory, string cwd, string? homePath)
+    {
+        // 1. baseDirectory (config file directory or CWD)
+        var candidate = Path.Combine(baseDirectory, filename);
+        if (File.Exists(candidate))
+        {
+            return Path.GetFullPath(candidate);
+        }
+
+        // 2. CWD/.tsqlrefine/plugins/
+        candidate = Path.Combine(cwd, ConfigDirName, "plugins", filename);
+        if (File.Exists(candidate))
+        {
+            return Path.GetFullPath(candidate);
+        }
+
+        // 3. HOME/.tsqlrefine/plugins/
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            candidate = Path.Combine(homePath, ConfigDirName, "plugins", filename);
+            if (File.Exists(candidate))
+            {
+                return Path.GetFullPath(candidate);
+            }
+        }
+
+        return null;
     }
 }
