@@ -204,56 +204,43 @@ public sealed class PluginDiagnostics
     {
         await stdout.WriteLineAsync($"  Error: {plugin.Diagnostic.ExceptionType}: {plugin.Diagnostic.Message}");
 
-        // Show native DLL probe attempts if available
-        if (plugin.Diagnostic.MissingNativeDll is not null && plugin.Diagnostic.NativeDllProbeAttempts is not null)
+        if (verbose)
         {
-            await stdout.WriteLineAsync($"  Missing Native DLL: {plugin.Diagnostic.MissingNativeDll}");
-            await stdout.WriteLineAsync($"  Probe Attempts ({plugin.Diagnostic.NativeDllProbeAttempts.Count}):");
-            var attempts = plugin.Diagnostic.NativeDllProbeAttempts.Take(verbose ? int.MaxValue : 5);
-            foreach (var attempt in attempts)
+            // Show native DLL probe attempts only in verbose mode
+            if (plugin.Diagnostic.MissingNativeDll is not null && plugin.Diagnostic.NativeDllProbeAttempts is not null)
             {
-                await stdout.WriteLineAsync($"    {attempt}");
+                await stdout.WriteLineAsync($"  Missing Native DLL: {plugin.Diagnostic.MissingNativeDll}");
+                await stdout.WriteLineAsync($"  Probe Attempts ({plugin.Diagnostic.NativeDllProbeAttempts.Count}):");
+                foreach (var attempt in plugin.Diagnostic.NativeDllProbeAttempts)
+                {
+                    await stdout.WriteLineAsync($"    {attempt}");
+                }
             }
-            if (!verbose && plugin.Diagnostic.NativeDllProbeAttempts.Count > 5)
+
+            // Show full stack trace only in verbose mode
+            if (!string.IsNullOrWhiteSpace(plugin.Diagnostic.StackTrace))
             {
-                await stdout.WriteLineAsync($"    ... ({plugin.Diagnostic.NativeDllProbeAttempts.Count - 5} more, use --verbose to see all)");
+                await stdout.WriteLineAsync($"  Stack Trace:");
+                foreach (var line in plugin.Diagnostic.StackTrace.Split('\n'))
+                {
+                    await stdout.WriteLineAsync($"    {line.TrimEnd()}");
+                }
             }
         }
-
-        // Show stack trace (simplified unless --verbose)
-        if (!string.IsNullOrWhiteSpace(plugin.Diagnostic.StackTrace))
+        else
         {
-            await WriteStackTraceAsync(plugin.Diagnostic.StackTrace, verbose, stdout);
+            var hasDetails = plugin.Diagnostic.NativeDllProbeAttempts is { Count: > 0 }
+                || !string.IsNullOrWhiteSpace(plugin.Diagnostic.StackTrace);
+            if (hasDetails)
+            {
+                await stdout.WriteLineAsync($"  (use --verbose for full details)");
+            }
         }
 
         var hint = GetRemediationHint(plugin.Diagnostic);
         if (!string.IsNullOrEmpty(hint))
         {
             await stdout.WriteLineAsync($"  Hint: {hint}");
-        }
-    }
-
-    private static async Task WriteStackTraceAsync(string stackTrace, bool verbose, TextWriter stdout)
-    {
-        if (verbose)
-        {
-            await stdout.WriteLineAsync($"  Stack Trace:");
-            foreach (var line in stackTrace.Split('\n'))
-            {
-                await stdout.WriteLineAsync($"    {line.TrimEnd()}");
-            }
-        }
-        else
-        {
-            var lines = stackTrace.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).Take(3).ToList();
-            if (lines.Count > 0)
-            {
-                await stdout.WriteLineAsync($"  Stack Trace (top 3 frames, use --verbose for full trace):");
-                foreach (var line in lines)
-                {
-                    await stdout.WriteLineAsync($"    {line.TrimEnd()}");
-                }
-            }
         }
     }
 
