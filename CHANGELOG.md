@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-02-14
+
+### Added
+
+- New correctness rules: `group-by-column-mismatch`, `having-column-mismatch`, `aggregate-in-where-clause`
+- New performance rules: `avoid-scalar-udf-in-query`, `avoid-correlated-subquery`, `avoid-cross-column-or`
+- New style rules: `require-alias-as-keyword`, `require-semicolon`, `prefer-ansi-join`
+- 4 SET preamble rules for session environment consistency: `require-set-nocount`, `require-set-xact-abort`, `require-set-ansi-nulls`, `require-set-quoted-identifier`
+- 7 additional lint rules covering correctness, performance, security, schema, and transactions
+- Autofix for `avoid-null-comparison` rule
+- IS NOT NULL guard exemption for `prefer-exists-over-in-subquery` rule
+- `.tsqlrefine/` directory support for config file discovery
+- Source context display for parse errors in text output
+- Formatting pipeline enhancements and new options
+
+### Changed
+
+- Preset ruleset composition revised with enforced subset hierarchy
+- Pragmatic ruleset tightened to safety and correctness focus
+- Plugin rules enabled by default under preset/ruleset whitelist
+- Default to `recommended` preset when no ruleset is configured
+- Rule docs reorganized by importance tier derived from presets
+
+### Fixed
+
+- Diagnostic spans narrowed to precise keywords for 15+ rules (security, transaction, BEGIN/END, catch, data-compression, require-primary-key, require-ms-description, prefer-exists-over-in-subquery, STUFF, print-statement, and more)
+- GROUP BY / HAVING mismatch handling for grouping sets with deduplication
+- Aggregate detection gaps in WHERE clause analysis
+- Window functions and bracketed identifiers in group/having mismatch rules
+- Union/insert-select type and column-name mismatch detection gaps
+- Duplicate alias detection extended to recursive queries and DML scopes
+- Helper scope handling regressions
+- Ruleset null handling and inline-disable rule ID semantics
+- `cross-database-transaction` detection for unterminated transactions and JOIN sources
+- Heap table and `ms_description` detection improvements
+- `avoid-scalar-udf-in-query` limited to query contexts to reduce false positives
+- `ban-query-hints` tuned for production-oriented exclusions
+- `top-without-order-by` detection in nested queries
+- `order-by-in-subquery` handling for CTE and FOR clause
+- `prefer-json-functions` false positives reduced
+- Trailing-comma formatting around line comments
+- GROUP BY expression support in `group-by-column-mismatch` and `having-column-mismatch`
+- `qualified-select-columns` edge cases
+
 ## [0.3.0] - 2026-02-11
 
 ### Added
@@ -68,7 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/masmgr/tsqlrefine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/masmgr/tsqlrefine/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/masmgr/tsqlrefine/releases/tag/v0.1.0
