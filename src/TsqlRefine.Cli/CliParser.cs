@@ -31,7 +31,7 @@ public static class CliParser
         };
 
         // Input options
-        public static readonly Option<string?> IgnoreList = new("--ignorelist", "-g")
+        public static readonly Option<string?> IgnoreList = new("--ignorelist")
         {
             Description = "Ignore patterns file",
             Arity = ArgumentArity.ZeroOrOne

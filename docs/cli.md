@@ -59,7 +59,7 @@ tsqlrefine lint [options] [paths...]
 
 | Option | Description |
 |------------|------|
-| `-g, --ignorelist <path>` | Ignore pattern file |
+| `--ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
 | `--output <text\|json>` | Output format (default: `text`) |
@@ -111,7 +111,7 @@ tsqlrefine format [options] [paths...]
 
 | Option | Description |
 |------------|------|
-| `-g, --ignorelist <path>` | Ignore pattern file |
+| `--ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
 | `--compat-level <100-160>` | SQL Server compatibility level |
@@ -133,7 +133,7 @@ tsqlrefine fix [options] [paths...]
 
 | Option | Description |
 |------------|------|
-| `-g, --ignorelist <path>` | Ignore pattern file |
+| `--ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
 | `--output <text\|json>` | Output format (default: `text`) |
