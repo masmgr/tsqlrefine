@@ -30,7 +30,7 @@ public sealed class AvoidExecDynamicSqlRule : DiagnosticVisitorRuleBase
             if (node.ExecuteSpecification?.ExecutableEntity is ExecutableStringList)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "Avoid dynamic SQL execution with EXEC(@variable) or EXEC('string'). Consider using sp_executesql with parameters or static stored procedures to prevent SQL injection.",
                     code: "avoid-exec-dynamic-sql",
                     category: "Security",

@@ -43,7 +43,11 @@ public static class ScriptStatementAnalysisHelpers
             foreach (var statement in batch.Statements)
             {
                 totalStatements++;
-                if (statement is CreateProcedureStatement or CreateFunctionStatement)
+                if (statement is
+                    CreateProcedureStatement or
+                    CreateOrAlterProcedureStatement or
+                    CreateFunctionStatement or
+                    CreateOrAlterFunctionStatement)
                 {
                     hasCreateStatement = true;
                     break;

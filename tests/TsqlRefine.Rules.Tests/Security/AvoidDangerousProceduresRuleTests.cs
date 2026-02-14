@@ -51,6 +51,11 @@ public sealed class AvoidDangerousProceduresRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-dangerous-procedures", diagnostics[0].Code);
+        // Diagnostic should highlight only the procedure name "XP_CMDSHELL"
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(5, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(16, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -62,6 +67,11 @@ public sealed class AvoidDangerousProceduresRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("avoid-dangerous-procedures", diagnostics[0].Code);
+        // Diagnostic should highlight only the procedure name "xp_cmdshell" (last identifier)
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(16, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(27, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

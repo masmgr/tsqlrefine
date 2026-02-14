@@ -25,13 +25,20 @@ public static class FormattingConfigMapper
             TableCasing = ParseElementCasing(config.TableCasing),
             ColumnCasing = ParseElementCasing(config.ColumnCasing),
             VariableCasing = ParseElementCasing(config.VariableCasing),
+            SystemTableCasing = ParseElementCasing(config.SystemTableCasing),
+            StoredProcedureCasing = ParseElementCasing(config.StoredProcedureCasing),
+            UserDefinedFunctionCasing = ParseElementCasing(config.UserDefinedFunctionCasing),
             CommaStyle = ParseCommaStyle(config.CommaStyle),
             MaxLineLength = config.MaxLineLength,
             InsertFinalNewline = config.InsertFinalNewline,
             TrimTrailingWhitespace = config.TrimTrailingWhitespace,
             NormalizeInlineSpacing = config.NormalizeInlineSpacing,
             NormalizeOperatorSpacing = config.NormalizeOperatorSpacing,
-            NormalizeKeywordSpacing = config.NormalizeKeywordSpacing
+            NormalizeKeywordSpacing = config.NormalizeKeywordSpacing,
+            NormalizeFunctionSpacing = config.NormalizeFunctionSpacing,
+            LineEnding = ParseLineEnding(config.LineEnding),
+            MaxConsecutiveBlankLines = config.MaxConsecutiveBlankLines,
+            TrimLeadingBlankLines = config.TrimLeadingBlankLines
         };
     }
 
@@ -47,6 +54,7 @@ public static class FormattingConfigMapper
         "none" => ElementCasing.None,
         "upper" => ElementCasing.Upper,
         "lower" => ElementCasing.Lower,
+        "pascal" => ElementCasing.Pascal,
         _ => ElementCasing.None
     };
 
@@ -55,5 +63,13 @@ public static class FormattingConfigMapper
         "trailing" => CommaStyle.Trailing,
         "leading" => CommaStyle.Leading,
         _ => CommaStyle.Trailing
+    };
+
+    private static LineEnding ParseLineEnding(string value) => value.ToLowerInvariant() switch
+    {
+        "lf" => LineEnding.Lf,
+        "crlf" => LineEnding.CrLf,
+        "auto" => LineEnding.Auto,
+        _ => LineEnding.Auto
     };
 }

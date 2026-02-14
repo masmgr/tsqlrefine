@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Config;
@@ -23,16 +24,26 @@ public sealed class CommandExecutor
         _inputReader = inputReader;
     }
 
+    private const string ConfigDirName = ".tsqlrefine";
+
     public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-        var ignorePath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
+        var baseDir = args.Global
+            ? Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ConfigDirName)
+            : Path.Combine(Directory.GetCurrentDirectory(), ConfigDirName);
+
+        var configPath = Path.Combine(baseDir, "tsqlrefine.json");
+        var ignorePath = Path.Combine(baseDir, "tsqlrefine.ignore");
 
         if (!args.Force && (File.Exists(configPath) || File.Exists(ignorePath)))
         {
             await stderr.WriteLineAsync("Config files already exist. Use --force to overwrite.");
             return ExitCodes.Fatal;
         }
+
+        Directory.CreateDirectory(baseDir);
 
         var preset = args.Preset ?? "recommended";
         var config = new TsqlRefineConfig(
@@ -44,7 +55,7 @@ public sealed class CommandExecutor
         // Serialize with $schema reference for IDE support
         var jsonNode = System.Text.Json.JsonSerializer.SerializeToNode(config, JsonDefaults.Options)!;
         var jsonObj = jsonNode.AsObject();
-        jsonObj.Insert(0, "$schema", "schemas/tsqlrefine.schema.json");
+        jsonObj.Insert(0, "$schema", "../schemas/tsqlrefine.schema.json");
         var json = System.Text.Json.JsonSerializer.Serialize(jsonObj, JsonDefaults.Options);
 
         await File.WriteAllTextAsync(configPath, json, Encoding.UTF8);
@@ -103,12 +114,7 @@ public sealed class CommandExecutor
             filtered = filtered.Where(r => r.Metadata.Fixable);
         }
 
-        // Apply preset filter if specified
-        Ruleset? presetRuleset = null;
-        if (!string.IsNullOrWhiteSpace(args.Preset))
-        {
-            presetRuleset = ConfigLoader.LoadRuleset(args, config);
-        }
+        var ruleset = ConfigLoader.LoadRuleset(args, config, allRules);
 
         var rules = filtered.ToArray();
 
@@ -120,54 +126,73 @@ public sealed class CommandExecutor
                 description = r.Metadata.Description,
                 category = r.Metadata.Category,
                 defaultSeverity = r.Metadata.DefaultSeverity.ToString().ToLowerInvariant(),
+                effectiveSeverity = GetEffectiveSeverity(r, ruleset),
                 fixable = r.Metadata.Fixable,
+                enabled = ruleset.IsRuleEnabled(r.Metadata.RuleId),
                 minCompatLevel = r.Metadata.MinCompatLevel,
                 maxCompatLevel = r.Metadata.MaxCompatLevel,
                 documentationUri = r.Metadata.DocumentationUri?.ToString(),
-                enabled = presetRuleset?.IsRuleEnabled(r.Metadata.RuleId)
             });
             await OutputWriter.WriteJsonOutputAsync(stdout, ruleInfos);
         }
         else
         {
-            await WriteRulesTableAsync(stdout, rules, presetRuleset);
+            await WriteRulesTableAsync(stdout, rules, ruleset);
         }
 
         return 0;
     }
 
-    private static async Task WriteRulesTableAsync(TextWriter stdout, IRule[] rules, Ruleset? preset)
+    private static async Task WriteRulesTableAsync(TextWriter stdout, IRule[] rules, Ruleset ruleset)
     {
         const int idWidth = 38;
         const int categoryWidth = 16;
         const int severityWidth = 13;
         const int fixableWidth = 7;
+        const int enabledWidth = 7;
 
-        var showEnabled = preset is not null;
-        var header = $"{"Rule ID",-idWidth} {"Category",-categoryWidth} {"Severity",-severityWidth} {"Fixable",-fixableWidth}";
-        if (showEnabled)
-            header += " Enabled";
+        var header = $"{"Rule ID",-idWidth} {"Category",-categoryWidth} {"Severity",-severityWidth} {"Fixable",-fixableWidth} {"Enabled",-enabledWidth}";
 
         await stdout.WriteLineAsync(header);
-        var separatorLength = header.Length;
-        await stdout.WriteLineAsync(new string('\u2500', separatorLength));
+        await stdout.WriteLineAsync(new string('\u2500', header.Length));
 
         foreach (var rule in rules)
         {
             var m = rule.Metadata;
             var fixable = m.Fixable ? "Yes" : "No";
-            var line = $"{m.RuleId,-idWidth} {m.Category,-categoryWidth} {m.DefaultSeverity,-severityWidth} {fixable,-fixableWidth}";
-            if (showEnabled)
-            {
-                var enabled = preset!.IsRuleEnabled(m.RuleId) ? "Yes" : "No";
-                line += $" {enabled}";
-            }
+            var severity = GetEffectiveSeverity(rule, ruleset);
+            var capitalizedSeverity = char.ToUpperInvariant(severity[0]) + severity[1..];
+            var enabled = ruleset.IsRuleEnabled(m.RuleId) ? "Yes" : "No";
+            var line = $"{m.RuleId,-idWidth} {m.Category,-categoryWidth} {capitalizedSeverity,-severityWidth} {fixable,-fixableWidth} {enabled,-enabledWidth}";
 
             await stdout.WriteLineAsync(line);
         }
 
         await stdout.WriteLineAsync();
         await stdout.WriteLineAsync($"Total: {rules.Length} rules");
+    }
+
+    /// <summary>
+    /// Computes the effective severity for a rule, considering ruleset overrides.
+    /// </summary>
+    private static string GetEffectiveSeverity(IRule rule, Ruleset ruleset)
+    {
+        var defaultSeverity = rule.Metadata.DefaultSeverity.ToString().ToLowerInvariant();
+
+        if (!ruleset.IsRuleEnabled(rule.Metadata.RuleId))
+        {
+            return "none";
+        }
+
+        var overrideSeverity = ruleset.GetSeverityOverride(rule.Metadata.RuleId);
+        return overrideSeverity switch
+        {
+            DiagnosticSeverity.Error => "error",
+            DiagnosticSeverity.Warning => "warning",
+            DiagnosticSeverity.Information => "information",
+            DiagnosticSeverity.Hint => "hint",
+            _ => defaultSeverity
+        };
     }
 
     public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
@@ -195,8 +220,8 @@ public sealed class CommandExecutor
         }
 
         var config = ConfigLoader.LoadConfig(args);
-        var ruleset = ConfigLoader.LoadRuleset(args, config);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -211,6 +236,13 @@ public sealed class CommandExecutor
         }
         else
         {
+            // Build source lookup for parse-error context display
+            var sourceByPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var input in read.Inputs)
+            {
+                sourceByPath[input.FilePath] = input.Text;
+            }
+
             // Sort by file path, then by line, then by character
             var sortedFiles = result.Files.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
             foreach (var file in sortedFiles)
@@ -224,6 +256,12 @@ public sealed class CommandExecutor
                     var ruleId = d.Data?.RuleId ?? d.Code;
                     var fixableIndicator = d.Data?.Fixable == true ? ",Fixable" : "";
                     await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator})");
+
+                    if (d.Code == TsqlRefineEngine.ParseErrorCode &&
+                        sourceByPath.TryGetValue(file.FilePath, out var sourceText))
+                    {
+                        await WriteSourceContextAsync(stdout, sourceText, d.Range.Start);
+                    }
                 }
             }
         }
@@ -302,7 +340,7 @@ public sealed class CommandExecutor
         // --rule オプションのバリデーション（存在確認 + Fixable 確認）
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
-        var ruleset = ConfigLoader.LoadRuleset(args, config);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
 
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset);
@@ -459,6 +497,28 @@ public sealed class CommandExecutor
         }
 
         return false;
+    }
+
+    private static async Task WriteSourceContextAsync(TextWriter writer, string sourceText, Position position)
+    {
+        var lines = sourceText.Split('\n');
+        var lineIndex = position.Line;
+        if (lineIndex < 0 || lineIndex >= lines.Length)
+        {
+            return;
+        }
+
+        var sourceLine = lines[lineIndex].TrimEnd('\r');
+        var lineNumber = lineIndex + 1;
+        var gutterWidth = Math.Max(lineNumber.ToString(CultureInfo.InvariantCulture).Length, 1);
+        var gutter = lineNumber.ToString(CultureInfo.InvariantCulture).PadLeft(gutterWidth);
+        var emptyGutter = new string(' ', gutterWidth);
+
+        await writer.WriteLineAsync($"  {gutter} | {sourceLine}");
+
+        var caretCol = Math.Min(position.Character, sourceLine.Length);
+        var padding = new string(' ', caretCol);
+        await writer.WriteLineAsync($"  {emptyGutter} | {padding}^");
     }
 
     private static bool IsStdinInput(string filePath) =>

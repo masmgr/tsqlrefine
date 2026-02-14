@@ -25,6 +25,9 @@ public static class FormatConfigWriter
                 tableCasing = new { value = resolved.TableCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.TableCasing.Source) },
                 columnCasing = new { value = resolved.ColumnCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.ColumnCasing.Source) },
                 variableCasing = new { value = resolved.VariableCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.VariableCasing.Source) },
+                systemTableCasing = new { value = resolved.SystemTableCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.SystemTableCasing.Source) },
+                storedProcedureCasing = new { value = resolved.StoredProcedureCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.StoredProcedureCasing.Source) },
+                userDefinedFunctionCasing = new { value = resolved.UserDefinedFunctionCasing.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.UserDefinedFunctionCasing.Source) },
                 commaStyle = new { value = resolved.CommaStyle.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.CommaStyle.Source) },
                 maxLineLength = new { value = resolved.MaxLineLength.Value, source = FormatSource(resolved.MaxLineLength.Source) },
                 insertFinalNewline = new { value = resolved.InsertFinalNewline.Value, source = FormatSource(resolved.InsertFinalNewline.Source) },
@@ -32,7 +35,10 @@ public static class FormatConfigWriter
                 normalizeInlineSpacing = new { value = resolved.NormalizeInlineSpacing.Value, source = FormatSource(resolved.NormalizeInlineSpacing.Source) },
                 normalizeOperatorSpacing = new { value = resolved.NormalizeOperatorSpacing.Value, source = FormatSource(resolved.NormalizeOperatorSpacing.Source) },
                 normalizeKeywordSpacing = new { value = resolved.NormalizeKeywordSpacing.Value, source = FormatSource(resolved.NormalizeKeywordSpacing.Source) },
-                lineEnding = new { value = resolved.LineEnding.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.LineEnding.Source) }
+                normalizeFunctionSpacing = new { value = resolved.NormalizeFunctionSpacing.Value, source = FormatSource(resolved.NormalizeFunctionSpacing.Source) },
+                lineEnding = new { value = resolved.LineEnding.Value.ToString().ToLowerInvariant(), source = FormatSource(resolved.LineEnding.Source) },
+                maxConsecutiveBlankLines = new { value = resolved.MaxConsecutiveBlankLines.Value, source = FormatSource(resolved.MaxConsecutiveBlankLines.Source) },
+                trimLeadingBlankLines = new { value = resolved.TrimLeadingBlankLines.Value, source = FormatSource(resolved.TrimLeadingBlankLines.Source) }
             },
             sourcePaths = new
             {
@@ -60,6 +66,9 @@ public static class FormatConfigWriter
         await WriteOptionLineAsync(stdout, "tableCasing", resolved.TableCasing.Value.ToString().ToLowerInvariant(), resolved.TableCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "columnCasing", resolved.ColumnCasing.Value.ToString().ToLowerInvariant(), resolved.ColumnCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "variableCasing", resolved.VariableCasing.Value.ToString().ToLowerInvariant(), resolved.VariableCasing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "systemTableCasing", resolved.SystemTableCasing.Value.ToString().ToLowerInvariant(), resolved.SystemTableCasing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "storedProcedureCasing", resolved.StoredProcedureCasing.Value.ToString().ToLowerInvariant(), resolved.StoredProcedureCasing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "userDefinedFunctionCasing", resolved.UserDefinedFunctionCasing.Value.ToString().ToLowerInvariant(), resolved.UserDefinedFunctionCasing.Source, showSources);
         await WriteOptionLineAsync(stdout, "commaStyle", resolved.CommaStyle.Value.ToString().ToLowerInvariant(), resolved.CommaStyle.Source, showSources);
         await WriteOptionLineAsync(stdout, "maxLineLength", resolved.MaxLineLength.Value.ToString(CultureInfo.InvariantCulture), resolved.MaxLineLength.Source, showSources);
         await WriteOptionLineAsync(stdout, "insertFinalNewline", resolved.InsertFinalNewline.Value.ToString().ToLowerInvariant(), resolved.InsertFinalNewline.Source, showSources);
@@ -67,7 +76,10 @@ public static class FormatConfigWriter
         await WriteOptionLineAsync(stdout, "normalizeInlineSpacing", resolved.NormalizeInlineSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeInlineSpacing.Source, showSources);
         await WriteOptionLineAsync(stdout, "normalizeOperatorSpacing", resolved.NormalizeOperatorSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeOperatorSpacing.Source, showSources);
         await WriteOptionLineAsync(stdout, "normalizeKeywordSpacing", resolved.NormalizeKeywordSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeKeywordSpacing.Source, showSources);
+        await WriteOptionLineAsync(stdout, "normalizeFunctionSpacing", resolved.NormalizeFunctionSpacing.Value.ToString().ToLowerInvariant(), resolved.NormalizeFunctionSpacing.Source, showSources);
         await WriteOptionLineAsync(stdout, "lineEnding", resolved.LineEnding.Value.ToString().ToLowerInvariant(), resolved.LineEnding.Source, showSources);
+        await WriteOptionLineAsync(stdout, "maxConsecutiveBlankLines", resolved.MaxConsecutiveBlankLines.Value.ToString(CultureInfo.InvariantCulture), resolved.MaxConsecutiveBlankLines.Source, showSources);
+        await WriteOptionLineAsync(stdout, "trimLeadingBlankLines", resolved.TrimLeadingBlankLines.Value.ToString().ToLowerInvariant(), resolved.TrimLeadingBlankLines.Source, showSources);
 
         if (showSources)
         {
@@ -93,7 +105,7 @@ public static class FormatConfigWriter
 
     private static async Task WriteOptionLineAsync(TextWriter stdout, string name, string value, FormattingOptionSource source, bool showSources)
     {
-        var paddedName = name.PadRight(24);
+        var paddedName = name.PadRight(30);
         var paddedValue = value.PadRight(12);
 
         if (showSources)

@@ -71,6 +71,11 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
                 return querySpec.SelectElements;
             }
 
+            if (queryExpression is QueryParenthesisExpression paren)
+            {
+                return GetSelectElements(paren.QueryExpression);
+            }
+
             // For nested UNION, get the right-most query's columns
             if (queryExpression is BinaryQueryExpression bqe)
             {
@@ -99,6 +104,16 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
             if (expression is ConvertCall convertCall)
             {
                 return GetDataTypeName(convertCall.DataType);
+            }
+
+            if (expression is TryCastCall tryCastCall)
+            {
+                return GetDataTypeName(tryCastCall.DataType);
+            }
+
+            if (expression is TryConvertCall tryConvertCall)
+            {
+                return GetDataTypeName(tryConvertCall.DataType);
             }
 
             return expression switch

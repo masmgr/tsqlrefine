@@ -19,6 +19,9 @@ internal sealed class ResolvedFormattingOptionsBuilder
     private ResolvedFormattingOption<ElementCasing> _tableCasing;
     private ResolvedFormattingOption<ElementCasing> _columnCasing;
     private ResolvedFormattingOption<ElementCasing> _variableCasing;
+    private ResolvedFormattingOption<ElementCasing> _systemTableCasing;
+    private ResolvedFormattingOption<ElementCasing> _storedProcedureCasing;
+    private ResolvedFormattingOption<ElementCasing> _userDefinedFunctionCasing;
     private ResolvedFormattingOption<CommaStyle> _commaStyle;
     private ResolvedFormattingOption<int> _maxLineLength;
     private ResolvedFormattingOption<bool> _insertFinalNewline;
@@ -26,7 +29,10 @@ internal sealed class ResolvedFormattingOptionsBuilder
     private ResolvedFormattingOption<bool> _normalizeInlineSpacing;
     private ResolvedFormattingOption<bool> _normalizeOperatorSpacing;
     private ResolvedFormattingOption<bool> _normalizeKeywordSpacing;
+    private ResolvedFormattingOption<bool> _normalizeFunctionSpacing;
     private ResolvedFormattingOption<LineEnding> _lineEnding;
+    private ResolvedFormattingOption<int> _maxConsecutiveBlankLines;
+    private ResolvedFormattingOption<bool> _trimLeadingBlankLines;
 
     public string? ConfigPath { get; set; }
     public string? EditorConfigPath { get; set; }
@@ -45,6 +51,9 @@ internal sealed class ResolvedFormattingOptionsBuilder
         _tableCasing = new(_defaults.TableCasing, FormattingOptionSource.Default);
         _columnCasing = new(_defaults.ColumnCasing, FormattingOptionSource.Default);
         _variableCasing = new(_defaults.VariableCasing, FormattingOptionSource.Default);
+        _systemTableCasing = new(_defaults.SystemTableCasing, FormattingOptionSource.Default);
+        _storedProcedureCasing = new(_defaults.StoredProcedureCasing, FormattingOptionSource.Default);
+        _userDefinedFunctionCasing = new(_defaults.UserDefinedFunctionCasing, FormattingOptionSource.Default);
         _commaStyle = new(_defaults.CommaStyle, FormattingOptionSource.Default);
         _maxLineLength = new(_defaults.MaxLineLength, FormattingOptionSource.Default);
         _insertFinalNewline = new(_defaults.InsertFinalNewline, FormattingOptionSource.Default);
@@ -52,7 +61,10 @@ internal sealed class ResolvedFormattingOptionsBuilder
         _normalizeInlineSpacing = new(_defaults.NormalizeInlineSpacing, FormattingOptionSource.Default);
         _normalizeOperatorSpacing = new(_defaults.NormalizeOperatorSpacing, FormattingOptionSource.Default);
         _normalizeKeywordSpacing = new(_defaults.NormalizeKeywordSpacing, FormattingOptionSource.Default);
+        _normalizeFunctionSpacing = new(_defaults.NormalizeFunctionSpacing, FormattingOptionSource.Default);
         _lineEnding = new(_defaults.LineEnding, FormattingOptionSource.Default);
+        _maxConsecutiveBlankLines = new(_defaults.MaxConsecutiveBlankLines, FormattingOptionSource.Default);
+        _trimLeadingBlankLines = new(_defaults.TrimLeadingBlankLines, FormattingOptionSource.Default);
     }
 
     /// <summary>
@@ -80,6 +92,12 @@ internal sealed class ResolvedFormattingOptionsBuilder
             _columnCasing = new(configOptions.ColumnCasing, FormattingOptionSource.Config);
         if (configOptions.VariableCasing != _defaults.VariableCasing)
             _variableCasing = new(configOptions.VariableCasing, FormattingOptionSource.Config);
+        if (configOptions.SystemTableCasing != _defaults.SystemTableCasing)
+            _systemTableCasing = new(configOptions.SystemTableCasing, FormattingOptionSource.Config);
+        if (configOptions.StoredProcedureCasing != _defaults.StoredProcedureCasing)
+            _storedProcedureCasing = new(configOptions.StoredProcedureCasing, FormattingOptionSource.Config);
+        if (configOptions.UserDefinedFunctionCasing != _defaults.UserDefinedFunctionCasing)
+            _userDefinedFunctionCasing = new(configOptions.UserDefinedFunctionCasing, FormattingOptionSource.Config);
         if (configOptions.CommaStyle != _defaults.CommaStyle)
             _commaStyle = new(configOptions.CommaStyle, FormattingOptionSource.Config);
         if (configOptions.MaxLineLength != _defaults.MaxLineLength)
@@ -94,8 +112,14 @@ internal sealed class ResolvedFormattingOptionsBuilder
             _normalizeOperatorSpacing = new(configOptions.NormalizeOperatorSpacing, FormattingOptionSource.Config);
         if (configOptions.NormalizeKeywordSpacing != _defaults.NormalizeKeywordSpacing)
             _normalizeKeywordSpacing = new(configOptions.NormalizeKeywordSpacing, FormattingOptionSource.Config);
+        if (configOptions.NormalizeFunctionSpacing != _defaults.NormalizeFunctionSpacing)
+            _normalizeFunctionSpacing = new(configOptions.NormalizeFunctionSpacing, FormattingOptionSource.Config);
         if (configOptions.LineEnding != _defaults.LineEnding)
             _lineEnding = new(configOptions.LineEnding, FormattingOptionSource.Config);
+        if (configOptions.MaxConsecutiveBlankLines != _defaults.MaxConsecutiveBlankLines)
+            _maxConsecutiveBlankLines = new(configOptions.MaxConsecutiveBlankLines, FormattingOptionSource.Config);
+        if (configOptions.TrimLeadingBlankLines != _defaults.TrimLeadingBlankLines)
+            _trimLeadingBlankLines = new(configOptions.TrimLeadingBlankLines, FormattingOptionSource.Config);
 
         return this;
     }
@@ -149,6 +173,9 @@ internal sealed class ResolvedFormattingOptionsBuilder
             TableCasing: _tableCasing,
             ColumnCasing: _columnCasing,
             VariableCasing: _variableCasing,
+            SystemTableCasing: _systemTableCasing,
+            StoredProcedureCasing: _storedProcedureCasing,
+            UserDefinedFunctionCasing: _userDefinedFunctionCasing,
             CommaStyle: _commaStyle,
             MaxLineLength: _maxLineLength,
             InsertFinalNewline: _insertFinalNewline,
@@ -156,7 +183,10 @@ internal sealed class ResolvedFormattingOptionsBuilder
             NormalizeInlineSpacing: _normalizeInlineSpacing,
             NormalizeOperatorSpacing: _normalizeOperatorSpacing,
             NormalizeKeywordSpacing: _normalizeKeywordSpacing,
-            LineEnding: _lineEnding
+            NormalizeFunctionSpacing: _normalizeFunctionSpacing,
+            LineEnding: _lineEnding,
+            MaxConsecutiveBlankLines: _maxConsecutiveBlankLines,
+            TrimLeadingBlankLines: _trimLeadingBlankLines
         )
         {
             ConfigPath = ConfigPath,

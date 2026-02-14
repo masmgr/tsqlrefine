@@ -25,6 +25,12 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("require-begin-end-for-if-with-controlflow-exception", diagnostics[0].Code);
         Assert.Contains("BEGIN/END", diagnostics[0].Message);
+
+        // Diagnostic should highlight only the IF keyword
+        Assert.Equal(1, diagnostics[0].Range.Start.Line);
+        Assert.Equal(12, diagnostics[0].Range.Start.Character);
+        Assert.Equal(1, diagnostics[0].Range.End.Line);
+        Assert.Equal(14, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -143,6 +149,12 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("require-begin-end-for-if-with-controlflow-exception", diagnostics[0].Code);
         Assert.Contains("ELSE", diagnostics[0].Message);
+
+        // Diagnostic should highlight only the ELSE keyword
+        Assert.Equal(5, diagnostics[0].Range.Start.Line);
+        Assert.Equal(12, diagnostics[0].Range.Start.Character);
+        Assert.Equal(5, diagnostics[0].Range.End.Line);
+        Assert.Equal(16, diagnostics[0].Range.End.Character);
     }
 
     [Fact]

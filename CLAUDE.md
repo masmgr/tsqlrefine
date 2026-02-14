@@ -80,11 +80,11 @@ src/
 ```
 
 **Built-in presets** (via `"preset"` field or `--preset` CLI option):
-- `recommended`: Balanced production use (58 rules)
-- `strict`: Maximum enforcement including style (97 rules)
-- `strict-logic`: Comprehensive correctness without cosmetic rules (74 rules)
-- `pragmatic`: Production-ready minimum (34 rules)
-- `security-only`: Security and critical safety (13 rules)
+- `recommended`: Balanced production use (87 rules)
+- `strict`: Maximum enforcement including style (130 rules)
+- `strict-logic`: Comprehensive correctness without cosmetic rules (107 rules)
+- `pragmatic`: Production-ready minimum (43 rules)
+- `security-only`: Security and critical safety (14 rules)
 
 For custom rulesets, use the `"ruleset"` field with a path to a custom JSON file instead.
 

@@ -36,6 +36,21 @@ public sealed class PrintStatementRuleTests
         Assert.Contains("THROW", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_PrintStatement_HighlightsPrintKeyword()
+    {
+        var sql = "PRINT 'This is a debug message';";
+        var rule = new PrintStatementRule();
+        var context = CreateContext(sql);
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(0, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(5, diagnostic.Range.End.Character);
+    }
+
     [Theory]
     [InlineData("SELECT 'Hello World'")]
     [InlineData("RAISERROR('This is an error', 16, 1)")]

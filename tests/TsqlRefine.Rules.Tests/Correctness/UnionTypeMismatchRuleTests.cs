@@ -119,6 +119,41 @@ public sealed class UnionTypeMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_ParenthesizedLeftQuery_ReturnsDiagnostic()
+    {
+        const string sql = "(SELECT 1) UNION ALL SELECT 'a';";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("union-type-mismatch", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_ParenthesizedRightQuery_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT 1 UNION ALL (SELECT 'a');";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("union-type-mismatch", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_TryCastTypeMismatch_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT TRY_CAST(1 AS INT) UNION ALL SELECT TRY_CAST('a' AS VARCHAR(10));";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("union-type-mismatch", diagnostics[0].Code);
+        Assert.Contains("numeric", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Fact]
     public void Analyze_Except_NoDiagnostic()
     {
         // Only UNION is checked

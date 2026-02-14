@@ -10,10 +10,14 @@ TsqlRefine now supports independent casing control for different SQL elements:
 - **Table names and aliases** (Users, Orders, u, o, etc.)
 - **Column names and aliases** (UserId, OrderCount, etc.)
 - **Variables** (@userId, @@ROWCOUNT, etc.)
+- **System tables** (sys.objects, information_schema.columns, etc.)
+- **Stored procedures** (sp_helptext, usp_GetUsers, etc.)
+- **User-defined functions** (dbo.fn_GetTotal, etc.)
 
 Each element type can be independently set to:
 - `Upper` - Convert to UPPERCASE
 - `Lower` - Convert to lowercase
+- `Pascal` - Convert to PascalCase (e.g., `user_name` → `UserName`, `select` → `Select`)
 - `None` - Preserve original casing
 
 ## Recommended Defaults
@@ -29,6 +33,9 @@ When granular casing is enabled, the following defaults are applied:
 | Tables | `None` | **Safe default** - CS collation environments may break |
 | Columns | `None` | **Safe default** - CS collation environments may break |
 | Variables | `Lower` | Variables use lowercase convention with @ prefix |
+| System Tables | `Lower` | System tables are conventionally lowercase |
+| Stored Procedures | `None` | **Safe default** - preserve original naming |
+| User-Defined Functions | `None` | **Safe default** - preserve original naming |
 
 > **WARNING**: Case-Sensitive collation environments (e.g., Microsoft Fabric Data Warehouse)
 > may break queries if identifier casing is changed. The default for Schema/Table/Column
@@ -61,7 +68,7 @@ var formatted = SqlFormatter.Format(sql, options);
 
 ### Configuration File
 
-In `tsqlrefine.json` (future CLI support):
+In `tsqlrefine.json`:
 
 ```json
 {
@@ -72,10 +79,15 @@ In `tsqlrefine.json` (future CLI support):
     "schemaCasing": "lower",
     "tableCasing": "upper",
     "columnCasing": "upper",
-    "variableCasing": "lower"
+    "variableCasing": "lower",
+    "systemTableCasing": "lower",
+    "storedProcedureCasing": "none",
+    "userDefinedFunctionCasing": "none"
   }
 }
 ```
+
+Available casing values: `"none"`, `"upper"`, `"lower"`, `"pascal"`
 
 ## Examples
 
@@ -291,11 +303,36 @@ All 19 granular casing tests verify:
 - Preservation of original case with `ElementCasing.None`
 - Quoted identifiers and literals
 
+### Example 5: PascalCase Style
+
+```csharp
+var options = new FormattingOptions
+{
+    KeywordElementCasing = ElementCasing.Pascal,
+    BuiltInFunctionCasing = ElementCasing.Pascal,
+    DataTypeCasing = ElementCasing.Pascal,
+    SchemaCasing = ElementCasing.Pascal,
+    TableCasing = ElementCasing.Pascal,
+    ColumnCasing = ElementCasing.Pascal,
+    VariableCasing = ElementCasing.Pascal
+};
+```
+
+**Input:**
+```sql
+SELECT user_name, COUNT(*) FROM dbo.users WHERE active = 1;
+```
+
+**Output:**
+```sql
+Select UserName, Count(*) From Dbo.Users Where Active = 1;
+```
+
+PascalCase splits on underscores and capitalizes each word: `user_name` → `UserName`, `select` → `Select`.
+
 ## Future Enhancements
 
 Potential future additions:
-- CLI options: `--keyword-casing upper --table-casing lower`
-- Configuration file support
 - Per-function casing (treat window functions differently)
 - Custom element lists (user-defined functions, custom types)
 - IDE integration (VS Code extension settings)

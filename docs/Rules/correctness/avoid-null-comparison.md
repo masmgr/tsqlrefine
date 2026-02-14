@@ -3,7 +3,7 @@
 **Rule ID:** `avoid-null-comparison`
 **Category:** Correctness
 **Severity:** Warning
-**Fixable:** No
+**Fixable:** Yes
 
 ## Description
 

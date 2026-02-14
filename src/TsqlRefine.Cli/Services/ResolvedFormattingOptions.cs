@@ -39,6 +39,9 @@ public sealed record ResolvedFormattingOptions(
     ResolvedFormattingOption<ElementCasing> TableCasing,
     ResolvedFormattingOption<ElementCasing> ColumnCasing,
     ResolvedFormattingOption<ElementCasing> VariableCasing,
+    ResolvedFormattingOption<ElementCasing> SystemTableCasing,
+    ResolvedFormattingOption<ElementCasing> StoredProcedureCasing,
+    ResolvedFormattingOption<ElementCasing> UserDefinedFunctionCasing,
     ResolvedFormattingOption<CommaStyle> CommaStyle,
     ResolvedFormattingOption<int> MaxLineLength,
     ResolvedFormattingOption<bool> InsertFinalNewline,
@@ -46,7 +49,10 @@ public sealed record ResolvedFormattingOptions(
     ResolvedFormattingOption<bool> NormalizeInlineSpacing,
     ResolvedFormattingOption<bool> NormalizeOperatorSpacing,
     ResolvedFormattingOption<bool> NormalizeKeywordSpacing,
-    ResolvedFormattingOption<LineEnding> LineEnding
+    ResolvedFormattingOption<bool> NormalizeFunctionSpacing,
+    ResolvedFormattingOption<LineEnding> LineEnding,
+    ResolvedFormattingOption<int> MaxConsecutiveBlankLines,
+    ResolvedFormattingOption<bool> TrimLeadingBlankLines
 )
 {
     /// <summary>

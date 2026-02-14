@@ -31,22 +31,25 @@ public sealed record RulesetRule(string Id, string? Severity = null);
 
 /// <summary>
 /// Represents a collection of rule configurations that determine which rules are enabled during analysis.
+/// When loaded from a ruleset file (whitelist mode), only listed rules are enabled.
 /// </summary>
 public sealed class Ruleset
 {
     private readonly IReadOnlyList<RulesetRule> _rules;
     private readonly Dictionary<string, RuleSeverityLevel>? _ruleCache;
     private readonly string? _singleRuleWhitelist;
+    private readonly bool _whitelistMode;
 
     [JsonConstructor]
-    public Ruleset(IReadOnlyList<RulesetRule>? rules) : this(rules, null)
+    public Ruleset(IReadOnlyList<RulesetRule>? rules) : this(rules, null, whitelistMode: true)
     {
     }
 
-    private Ruleset(IReadOnlyList<RulesetRule>? rules, string? singleRuleWhitelist)
+    private Ruleset(IReadOnlyList<RulesetRule>? rules, string? singleRuleWhitelist, bool whitelistMode = true)
     {
         _rules = rules ?? Array.Empty<RulesetRule>();
         _singleRuleWhitelist = singleRuleWhitelist;
+        _whitelistMode = whitelistMode;
 
         // Pre-build cache for O(1) lookup
         if (_rules.Count > 0)
@@ -66,11 +69,13 @@ public sealed class Ruleset
     private Ruleset(
         IReadOnlyList<RulesetRule> rules,
         string? singleRuleWhitelist,
-        Dictionary<string, RuleSeverityLevel>? ruleCache)
+        Dictionary<string, RuleSeverityLevel>? ruleCache,
+        bool whitelistMode)
     {
         _rules = rules;
         _singleRuleWhitelist = singleRuleWhitelist;
         _ruleCache = ruleCache;
+        _whitelistMode = whitelistMode;
     }
 
     /// <summary>
@@ -84,7 +89,7 @@ public sealed class Ruleset
     [JsonPropertyName("rules")]
     public IReadOnlyList<RulesetRule> Rules => _rules;
 
-    public static readonly Ruleset Empty = new(Array.Empty<RulesetRule>());
+    public static readonly Ruleset Empty = new(Array.Empty<RulesetRule>(), singleRuleWhitelist: null, whitelistMode: false);
 
     /// <summary>
     /// Loads ruleset from the specified path.
@@ -118,7 +123,9 @@ public sealed class Ruleset
             var json = File.ReadAllText(path);
             var ruleset = JsonSerializer.Deserialize<Ruleset>(json, JsonDefaults.Options);
 
-            return ConfigLoadResult<Ruleset>.Ok(ruleset ?? Empty);
+            // Treat JSON `null` as an empty whitelist ruleset (disable all rules),
+            // not as override-only mode.
+            return ConfigLoadResult<Ruleset>.Ok(ruleset ?? new Ruleset([]));
         }
         catch (JsonException ex)
         {
@@ -135,7 +142,9 @@ public sealed class Ruleset
     }
 
     /// <summary>
-    /// Checks if a rule is enabled. Returns true by default if the rule is not in the ruleset.
+    /// Checks if a rule is enabled.
+    /// In whitelist mode (ruleset file), unlisted rules are disabled.
+    /// In override-only mode (<see cref="Empty"/>), unlisted rules are enabled.
     /// </summary>
     public bool IsRuleEnabled(string ruleId)
     {
@@ -150,16 +159,32 @@ public sealed class Ruleset
 
     /// <summary>
     /// Gets the configured severity level for the specified rule.
-    /// Returns <see cref="RuleSeverityLevel.Inherit"/> if not configured (default enabled).
+    /// In whitelist mode, unlisted rules return <see cref="RuleSeverityLevel.None"/> (disabled).
+    /// Otherwise, unlisted rules return <see cref="RuleSeverityLevel.Inherit"/> (enabled).
     /// </summary>
     public RuleSeverityLevel GetRuleSeverityLevel(string ruleId)
     {
-        if (_ruleCache is null)
+        // Single-rule whitelist mode.
+        if (_singleRuleWhitelist is not null)
         {
-            return RuleSeverityLevel.Inherit;
+            return string.Equals(_singleRuleWhitelist, ruleId, StringComparison.OrdinalIgnoreCase)
+                ? RuleSeverityLevel.Inherit
+                : RuleSeverityLevel.None;
         }
 
-        return _ruleCache.TryGetValue(ruleId, out var level) ? level : RuleSeverityLevel.Inherit;
+        if (_ruleCache is null)
+        {
+            // Empty ruleset file in whitelist mode means "disable all rules".
+            return _whitelistMode ? RuleSeverityLevel.None : RuleSeverityLevel.Inherit;
+        }
+
+        if (_ruleCache.TryGetValue(ruleId, out var level))
+        {
+            return level;
+        }
+
+        // Whitelist mode: unlisted rules are disabled.
+        return _whitelistMode ? RuleSeverityLevel.None : RuleSeverityLevel.Inherit;
     }
 
     /// <summary>
@@ -179,6 +204,42 @@ public sealed class Ruleset
     }
 
     /// <summary>
+    /// Creates a new Ruleset with plugin rule IDs added as defaults.
+    /// In whitelist mode, plugin rules are added with <see cref="RuleSeverityLevel.Inherit"/>
+    /// (enabled with default severity) unless already present in the cache.
+    /// In non-whitelist mode, this is a no-op since all rules are enabled by default.
+    /// </summary>
+    public Ruleset WithPluginDefaults(IEnumerable<string> pluginRuleIds)
+    {
+        if (_singleRuleWhitelist is not null)
+        {
+            return this;
+        }
+
+        if (!_whitelistMode)
+        {
+            return this;
+        }
+
+        var merged = _ruleCache is not null
+            ? new Dictionary<string, RuleSeverityLevel>(_ruleCache, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, RuleSeverityLevel>(StringComparer.OrdinalIgnoreCase);
+
+        var changed = false;
+        foreach (var ruleId in pluginRuleIds)
+        {
+            if (merged.TryAdd(ruleId, RuleSeverityLevel.Inherit))
+            {
+                changed = true;
+            }
+        }
+
+        return changed
+            ? new Ruleset(_rules, _singleRuleWhitelist, merged, _whitelistMode)
+            : this;
+    }
+
+    /// <summary>
     /// Creates a new Ruleset by merging config-level rule overrides on top of this instance.
     /// </summary>
     public Ruleset WithOverrides(IReadOnlyDictionary<string, string> overrides)
@@ -192,7 +253,7 @@ public sealed class Ruleset
             merged[ruleId] = ParseSeverityLevel(severityStr);
         }
 
-        return new Ruleset(_rules, _singleRuleWhitelist, merged);
+        return new Ruleset(_rules, _singleRuleWhitelist, merged, _whitelistMode);
     }
 
     /// <summary>

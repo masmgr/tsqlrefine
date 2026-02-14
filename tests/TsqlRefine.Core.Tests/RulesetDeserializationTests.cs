@@ -68,4 +68,19 @@ public sealed class RulesetDeserializationTests
         Assert.Equal(RuleSeverityLevel.Inherit, ruleset.GetRuleSeverityLevel("r4"));
         Assert.Equal(RuleSeverityLevel.None, ruleset.GetRuleSeverityLevel("r5"));
     }
+
+    [Fact]
+    public void Deserialize_EmptyRules_DisablesAllRules()
+    {
+        var json = """
+        {
+            "rules": []
+        }
+        """;
+
+        var ruleset = JsonSerializer.Deserialize<Ruleset>(json, JsonDefaults.Options)!;
+
+        Assert.False(ruleset.IsRuleEnabled("rule-a"));
+        Assert.False(ruleset.IsRuleEnabled("rule-b"));
+    }
 }

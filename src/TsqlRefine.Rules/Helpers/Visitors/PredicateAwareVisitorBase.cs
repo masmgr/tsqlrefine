@@ -8,19 +8,27 @@ namespace TsqlRefine.Rules.Helpers.Visitors;
 /// </summary>
 public abstract class PredicateAwareVisitorBase : DiagnosticVisitorBase
 {
+    private int _predicateDepth;
+
     /// <summary>
     /// Gets a value indicating whether the visitor is currently inside a predicate context.
     /// </summary>
-    protected bool IsInPredicate { get; private set; }
+    protected bool IsInPredicate => _predicateDepth > 0;
 
     /// <summary>
     /// Visits a WHERE clause and sets the predicate context.
     /// </summary>
     public override void ExplicitVisit(WhereClause node)
     {
-        IsInPredicate = true;
-        base.ExplicitVisit(node);
-        IsInPredicate = false;
+        _predicateDepth++;
+        try
+        {
+            base.ExplicitVisit(node);
+        }
+        finally
+        {
+            _predicateDepth--;
+        }
     }
 
     /// <summary>
@@ -31,9 +39,15 @@ public abstract class PredicateAwareVisitorBase : DiagnosticVisitorBase
         // Check JOIN ON conditions
         if (node.SearchCondition != null)
         {
-            IsInPredicate = true;
-            node.SearchCondition.Accept(this);
-            IsInPredicate = false;
+            _predicateDepth++;
+            try
+            {
+                node.SearchCondition.Accept(this);
+            }
+            finally
+            {
+                _predicateDepth--;
+            }
         }
 
         // Continue visiting other parts of the join
@@ -48,8 +62,14 @@ public abstract class PredicateAwareVisitorBase : DiagnosticVisitorBase
     /// </summary>
     public override void ExplicitVisit(HavingClause node)
     {
-        IsInPredicate = true;
-        base.ExplicitVisit(node);
-        IsInPredicate = false;
+        _predicateDepth++;
+        try
+        {
+            base.ExplicitVisit(node);
+        }
+        finally
+        {
+            _predicateDepth--;
+        }
     }
 }

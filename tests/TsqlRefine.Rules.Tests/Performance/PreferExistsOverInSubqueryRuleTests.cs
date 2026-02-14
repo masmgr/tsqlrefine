@@ -26,6 +26,11 @@ public sealed class PreferExistsOverInSubqueryRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+        // "IN" starts at column 29, length 2
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(31, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -37,6 +42,11 @@ public sealed class PreferExistsOverInSubqueryRuleTests
 
         Assert.Single(diagnostics);
         Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+        // "NOT IN" starts at column 29, ends at column 35
+        Assert.Equal(0, diagnostics[0].Range.Start.Line);
+        Assert.Equal(29, diagnostics[0].Range.Start.Character);
+        Assert.Equal(0, diagnostics[0].Range.End.Line);
+        Assert.Equal(35, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
@@ -86,6 +96,22 @@ public sealed class PreferExistsOverInSubqueryRuleTests
         Assert.All(diagnostics, d => Assert.Equal("prefer-exists-over-in-subquery", d.Code));
     }
 
+    [Fact]
+    public void Analyze_InAfterNestedExistsSubquery_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT * FROM Users
+            WHERE EXISTS (SELECT 1 FROM Orders o WHERE o.UserId = Users.Id)
+              AND Id IN (SELECT UserId FROM ActiveUsers);
+            """;
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM Users WHERE Id IN (1, 2, 3);")]
     [InlineData("SELECT * FROM Users WHERE Status IN ('Active', 'Pending');")]
@@ -131,6 +157,107 @@ public sealed class PreferExistsOverInSubqueryRuleTests
     [InlineData("")]
     public void Analyze_NoInPredicate_NoDiagnostic(string sql)
     {
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnDifferentColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE SomeOtherCol IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullInAndCondition_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL AND Status = 'Active');";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubqueryWhereIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id NOT IN (SELECT UserId FROM Orders WHERE UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNullOnSameColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE UserId IS NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereQualifiedIsNotNullOnSameColumn_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT o.UserId FROM Orders o WHERE o.UserId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullOnDifferentQualifier_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT * FROM Users
+            WHERE Id IN (
+                SELECT o.UserId
+                FROM Orders o
+                INNER JOIN Blacklist b ON b.UserId = o.UserId
+                WHERE b.UserId IS NOT NULL
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("prefer-exists-over-in-subquery", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereParenthesizedIsNotNull_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT UserId FROM Orders WHERE (UserId IS NOT NULL) AND Status = 1);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InWithSubqueryWhereIsNotNullCaseInsensitive_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM Users WHERE Id IN (SELECT userid FROM Orders WHERE USERID IS NOT NULL);";
         var context = RuleTestContext.CreateContext(sql);
         var diagnostics = _rule.Analyze(context).ToArray();
 

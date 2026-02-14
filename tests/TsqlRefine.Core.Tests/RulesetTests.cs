@@ -6,6 +6,27 @@ namespace TsqlRefine.Core.Tests;
 public sealed class RulesetTests
 {
     [Fact]
+    public void TryLoad_NullJson_ReturnsEmptyWhitelistRuleset()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "null");
+
+            var result = Ruleset.TryLoad(path);
+
+            Assert.True(result.Success);
+            var ruleset = Assert.IsType<Ruleset>(result.Value);
+            Assert.False(ruleset.IsRuleEnabled("any-rule"));
+            Assert.False(ruleset.IsRuleEnabled("another-rule"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void CreateSingleRuleWhitelist_EnablesOnlySpecifiedRule()
     {
         var ruleset = Ruleset.CreateSingleRuleWhitelist("rule-a");
@@ -26,12 +47,21 @@ public sealed class RulesetTests
     }
 
     [Fact]
-    public void DefaultRuleset_EnablesAllRules()
+    public void EmptyRuleset_EnablesAllRules()
     {
-        var ruleset = new Ruleset(null);
+        var ruleset = Ruleset.Empty;
 
         Assert.True(ruleset.IsRuleEnabled("any-rule"));
         Assert.True(ruleset.IsRuleEnabled("another-rule"));
+    }
+
+    [Fact]
+    public void EmptyWhitelistRuleset_DisablesAllRules()
+    {
+        var ruleset = new Ruleset([]);
+
+        Assert.False(ruleset.IsRuleEnabled("any-rule"));
+        Assert.False(ruleset.IsRuleEnabled("another-rule"));
     }
 
     [Fact]
@@ -45,7 +75,7 @@ public sealed class RulesetTests
 
         Assert.True(ruleset.IsRuleEnabled("rule-a"));
         Assert.False(ruleset.IsRuleEnabled("rule-b"));
-        Assert.True(ruleset.IsRuleEnabled("rule-c")); // Not in ruleset, default is true
+        Assert.False(ruleset.IsRuleEnabled("rule-c")); // Not in ruleset, disabled in whitelist mode
     }
 
     // --- ParseSeverityLevel tests ---
@@ -138,11 +168,12 @@ public sealed class RulesetTests
     }
 
     [Fact]
-    public void GetRuleSeverityLevel_UnknownRule_ReturnsInherit()
+    public void GetRuleSeverityLevel_UnknownRule_ReturnsNoneInWhitelistMode()
     {
         var ruleset = new Ruleset([new RulesetRule("rule-a", Severity: "error")]);
 
-        Assert.Equal(RuleSeverityLevel.Inherit, ruleset.GetRuleSeverityLevel("unknown-rule"));
+        // Whitelist mode: unlisted rules are disabled
+        Assert.Equal(RuleSeverityLevel.None, ruleset.GetRuleSeverityLevel("unknown-rule"));
     }
 
     // --- GetSeverityOverride tests ---
@@ -270,5 +301,102 @@ public sealed class RulesetTests
         Assert.True(merged.IsRuleEnabled("rule-a"));
         Assert.False(merged.IsRuleEnabled("rule-b"));
         Assert.Equal(DiagnosticSeverity.Error, merged.GetSeverityOverride("rule-a"));
+    }
+
+    // --- WithPluginDefaults tests ---
+
+    [Fact]
+    public void WithPluginDefaults_WhitelistMode_EnablesPluginRules()
+    {
+        var baseRuleset = new Ruleset([new RulesetRule("builtin-rule")]);
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.True(result.IsRuleEnabled("builtin-rule"));
+        Assert.True(result.IsRuleEnabled("myteam/plugin-rule"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_WhitelistMode_UnlistedBuiltinStillDisabled()
+    {
+        var baseRuleset = new Ruleset([new RulesetRule("rule-a")]);
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.False(result.IsRuleEnabled("rule-b"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_DoesNotOverrideExistingEntry()
+    {
+        var baseRuleset = new Ruleset(
+        [
+            new RulesetRule("builtin-rule"),
+            new RulesetRule("myteam/plugin-rule", "none")
+        ]);
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.False(result.IsRuleEnabled("myteam/plugin-rule"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_EmptyWhitelist_EnablesPluginRules()
+    {
+        var baseRuleset = new Ruleset([]);
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.True(result.IsRuleEnabled("myteam/plugin-rule"));
+        Assert.False(result.IsRuleEnabled("builtin-rule"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_NonWhitelistMode_NoOp()
+    {
+        var baseRuleset = Ruleset.Empty;
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.Same(baseRuleset, result);
+        Assert.True(result.IsRuleEnabled("myteam/plugin-rule"));
+        Assert.True(result.IsRuleEnabled("any-rule"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_SingleRuleWhitelist_NoOp()
+    {
+        var baseRuleset = Ruleset.CreateSingleRuleWhitelist("specific-rule");
+
+        var result = baseRuleset.WithPluginDefaults(["myteam/plugin-rule"]);
+
+        Assert.Same(baseRuleset, result);
+        Assert.False(result.IsRuleEnabled("myteam/plugin-rule"));
+    }
+
+    [Fact]
+    public void WithPluginDefaults_NoPluginRules_ReturnsSameInstance()
+    {
+        var baseRuleset = new Ruleset([new RulesetRule("rule-a")]);
+
+        var result = baseRuleset.WithPluginDefaults([]);
+
+        Assert.Same(baseRuleset, result);
+    }
+
+    [Fact]
+    public void WithPluginDefaults_ThenWithOverrides_CanDisablePluginRule()
+    {
+        var preset = new Ruleset([new RulesetRule("builtin-rule")]);
+
+        var withPlugins = preset.WithPluginDefaults(["myteam/plugin-rule"]);
+        Assert.True(withPlugins.IsRuleEnabled("myteam/plugin-rule"));
+
+        var withOverrides = withPlugins.WithOverrides(new Dictionary<string, string>
+        {
+            ["myteam/plugin-rule"] = "none"
+        });
+        Assert.False(withOverrides.IsRuleEnabled("myteam/plugin-rule"));
+        Assert.True(withOverrides.IsRuleEnabled("builtin-rule"));
     }
 }

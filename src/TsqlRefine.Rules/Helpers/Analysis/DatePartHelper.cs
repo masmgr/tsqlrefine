@@ -16,7 +16,7 @@ namespace TsqlRefine.Rules.Helpers.Analysis;
 public static class DatePartHelper
 {
     private static readonly FrozenSet<string> DatePartFunctions = FrozenSet.ToFrozenSet(
-        ["DATEADD", "DATEDIFF", "DATEPART", "DATENAME"],
+        ["DATEADD", "DATEDIFF", "DATEDIFF_BIG", "DATEPART", "DATENAME", "DATETRUNC", "DATE_BUCKET"],
         StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

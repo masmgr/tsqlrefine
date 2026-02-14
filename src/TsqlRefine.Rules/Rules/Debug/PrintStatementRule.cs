@@ -27,7 +27,7 @@ public sealed class PrintStatementRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(PrintStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "PRINT statement found. Use THROW or RAISERROR WITH NOWAIT for error messages. For debugging, use RAISERROR WITH NOWAIT to ensure immediate output.",
                 code: "print-statement",
                 category: "Debug",

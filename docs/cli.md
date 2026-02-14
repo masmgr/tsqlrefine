@@ -155,11 +155,14 @@ tsqlrefine init [options]
 | Option | Description |
 |------------|------|
 | `--force` | Overwrite existing configuration files |
+| `--global` | Create configuration in home directory (`~/.tsqlrefine/`) |
 | `--preset <name>` | Preset ruleset to use (default: `recommended`) |
 | `--compat-level <100-160>` | SQL Server compatibility level (default: `150`) |
 
-Generates `tsqlrefine.json` and `tsqlrefine.ignore` in the current directory.
+Generates `tsqlrefine.json` and `tsqlrefine.ignore` in the `.tsqlrefine/` directory.
 
+- By default, creates files in `{CWD}/.tsqlrefine/`
+- With `--global`, creates files in `~/.tsqlrefine/` (home directory)
 - The generated `tsqlrefine.json` uses the `preset` field (e.g. `"preset": "recommended"`) to reference a built-in preset
 - The generated `tsqlrefine.json` includes a `$schema` reference for IDE autocompletion
 - If configuration files already exist, returns an error with a hint to use `--force`
@@ -168,11 +171,14 @@ Generates `tsqlrefine.json` and `tsqlrefine.ignore` in the current directory.
 Example:
 
 ```bash
-# Default initialization
+# Default initialization (creates .tsqlrefine/ in current directory)
 tsqlrefine init
 
 # Initialize with strict preset and SQL Server 2022
 tsqlrefine init --preset strict --compat-level 160
+
+# Create global configuration in home directory
+tsqlrefine init --global
 
 # Overwrite existing configuration
 tsqlrefine init --force
@@ -213,15 +219,18 @@ tsqlrefine list-rules [options]
 | `--output <text\|json>` | Output format (default: `text`) |
 | `--category <name>` | Filter rules by category |
 | `--fixable` | Show only fixable rules |
-| `--preset <name>` | Show enabled status for the specified preset |
+| `--preset <name>` | Override preset (overrides config file preset) |
+| `--ruleset <path>` | Override ruleset file (overrides config file ruleset) |
+
+The output always shows effective configuration: which rules are enabled/disabled and their effective severity after applying the preset, ruleset, and per-rule overrides from `tsqlrefine.json`.
 
 Text output displays a formatted table:
 
 ```
-Rule ID                                Category         Severity      Fixable
-──────────────────────────────────────────────────────────────────────────────
-avoid-select-star                      Performance      Warning       No
-semantic/undefined-alias               Correctness      Error         No
+Rule ID                                Category         Severity      Fixable Enabled
+─────────────────────────────────────────────────────────────────────────────────────
+avoid-select-star                      Performance      Warning       No      Yes
+semantic/undefined-alias               Correctness      Error         No      Yes
 
 Total: 101 rules
 ```
@@ -235,7 +244,9 @@ JSON output returns an array of rule objects:
     "description": "Avoid SELECT *; explicitly list required columns.",
     "category": "Performance",
     "defaultSeverity": "warning",
+    "effectiveSeverity": "warning",
     "fixable": false,
+    "enabled": true,
     "minCompatLevel": 100,
     "maxCompatLevel": 160
   }

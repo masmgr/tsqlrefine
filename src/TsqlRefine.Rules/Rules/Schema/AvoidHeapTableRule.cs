@@ -60,7 +60,8 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
 
             foreach (var constraint in definition.TableConstraints)
             {
-                if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                if (constraint is UniqueConstraintDefinition uniqueConstraint &&
+                    IsClusteredConstraint(uniqueConstraint))
                 {
                     return true;
                 }
@@ -85,7 +86,8 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
 
                 foreach (var constraint in column.Constraints)
                 {
-                    if (constraint is UniqueConstraintDefinition { IsPrimaryKey: true, Clustered: true })
+                    if (constraint is UniqueConstraintDefinition uniqueConstraint &&
+                        IsClusteredConstraint(uniqueConstraint))
                     {
                         return true;
                     }
@@ -105,6 +107,43 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
             foreach (var index in definition.Indexes)
             {
                 if (index.IndexType?.IndexTypeKind is IndexTypeKind.Clustered or IndexTypeKind.ClusteredColumnStore)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsClusteredConstraint(UniqueConstraintDefinition constraint)
+        {
+            // Explicit CLUSTERED always means the table is not a heap.
+            if (constraint.Clustered == true)
+            {
+                return true;
+            }
+
+            // PRIMARY KEY defaults to CLUSTERED when NONCLUSTERED is not explicitly specified.
+            if (constraint.IsPrimaryKey &&
+                constraint.Clustered is not false &&
+                !ContainsKeyword(constraint, "NONCLUSTERED"))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool ContainsKeyword(TSqlFragment fragment, string keyword)
+        {
+            if (fragment.ScriptTokenStream == null)
+            {
+                return false;
+            }
+
+            for (var i = fragment.FirstTokenIndex; i <= fragment.LastTokenIndex && i < fragment.ScriptTokenStream.Count; i++)
+            {
+                if (string.Equals(fragment.ScriptTokenStream[i].Text, keyword, StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

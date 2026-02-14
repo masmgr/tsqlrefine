@@ -58,7 +58,7 @@ public sealed class AvoidDangerousProceduresRule : DiagnosticVisitorRuleBase
                     if (s_dangerousProcedures.Contains(baseName))
                     {
                         AddDiagnostic(
-                            fragment: node,
+                            fragment: procName.Identifiers[^1],
                             message: $"Avoid using '{baseName}'. Extended stored procedures like xp_cmdshell, xp_reg*, and sp_OA* pose security risks by enabling OS command execution, registry manipulation, or COM object automation.",
                             code: "avoid-dangerous-procedures",
                             category: "Security",

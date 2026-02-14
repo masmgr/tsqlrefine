@@ -57,6 +57,12 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UnionTypeMismatchRule(),
         new DuplicateSelectColumnRule(),
         new DuplicateInsertColumnRule(),
+        new AvoidSetRowcountRule(),
+        new AvoidNotInWithNullRule(),
+        new AvoidBetweenForDatetimeRangeRule(),
+        new GroupByColumnMismatchRule(),
+        new AggregateInWhereClauseRule(),
+        new HavingColumnMismatchRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -71,6 +77,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DisallowSelectDistinctRule(),
         new LikeLeadingWildcardRule(),
         new PreferExistsOverInSubqueryRule(),
+        new AvoidOptionalParameterPatternRule(),
+        new AvoidScalarUdfInQueryRule(),
+        new AvoidCorrelatedScalarSubqueryInSelectRule(),
+        new AvoidOrOnDifferentColumnsRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
@@ -89,6 +99,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidNolockRule(),
         new LinkedServerRule(),
         new AvoidExecuteAsRule(),
+        new RequireParameterizedSpExecutesqlRule(),
 
         // === Schema ===
         new NamedConstraintRule(),
@@ -102,6 +113,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DuplicateViewColumnRule(),
         new DuplicateTableFunctionColumnRule(),
         new DuplicateTableVariableColumnRule(),
+        new AvoidDeprecatedTypesRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
@@ -121,6 +133,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new NormalizeExecuteKeywordRule(),
         new NormalizeProcedureKeywordRule(),
         new NormalizeTransactionKeywordRule(),
+        new DisallowOrderByOrdinalRule(),
+        new RequireSchemaQualifyExecRule(),
+        new NormalizeInequalityOperatorRule(),
 
         // === Style (Semantic) ===
         new MultiTableAliasRule(),
@@ -149,12 +164,17 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UncommittedTransactionRule(),
         new CatchSwallowingRule(),
         new RequireSaveTransactionInNestedRule(),
+        new RequireThrowOrRaiserrorInCatchRule(),
 
         // === SET Options ===
         new SetAnsiRule(),
         new SetNocountRule(),
         new SetQuotedIdentifierRule(),
         new SetTransactionIsolationLevelRule(),
+        new SetAnsiWarningsRule(),
+        new SetAnsiPaddingRule(),
+        new SetConcatNullYieldsNullRule(),
+        new SetArithabortRule(),
         new SetVariableRule(),
 
         // === Feature Usage ===

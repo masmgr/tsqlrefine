@@ -14,9 +14,11 @@ namespace TsqlRefine.Formatting;
 /// 1. Keyword space normalization (KeywordSpaceNormalizer)
 /// 2. Granular element casing (ScriptDomElementCaser)
 /// 3. Whitespace normalization (WhitespaceNormalizer)
-/// 4. Inline spacing normalization (InlineSpaceNormalizer)
-/// 5. Operator spacing normalization (OperatorSpaceNormalizer)
-/// 6. Comma style transformation (CommaStyleTransformer, optional)
+/// 4. Blank line normalization (BlankLineNormalizer)
+/// 5. Inline spacing normalization (InlineSpaceNormalizer)
+/// 6. Function-parenthesis spacing normalization (FunctionParenSpaceNormalizer)
+/// 7. Operator spacing normalization (OperatorSpaceNormalizer)
+/// 8. Comma style transformation (CommaStyleTransformer, optional)
 /// </summary>
 public static class SqlFormatter
 {
@@ -63,16 +65,26 @@ public static class SqlFormatter
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 
+        // Apply blank line normalization (consecutive blank line limiting and leading blank trimming)
+        var blankLineNormalized = BlankLineNormalizer.Normalize(whitespaceNormalized, options);
+
         // Apply inline spacing normalization
-        var inlineNormalized = InlineSpaceNormalizer.Normalize(whitespaceNormalized, options);
+        var inlineNormalized = InlineSpaceNormalizer.Normalize(blankLineNormalized, options);
+
+        // Apply function-parenthesis spacing normalization
+        var functionNormalized = FunctionParenSpaceNormalizer.Normalize(inlineNormalized, options);
 
         // Apply operator spacing normalization with AST context
-        var operatorNormalized = OperatorSpaceNormalizer.Normalize(inlineNormalized, options, positionMap);
+        var operatorNormalized = OperatorSpaceNormalizer.Normalize(functionNormalized, options, positionMap);
 
-        // Apply comma style if not default trailing
+        // Apply comma style transformation
         if (options.CommaStyle == CommaStyle.Leading)
         {
             operatorNormalized = CommaStyleTransformer.ToLeadingCommas(operatorNormalized);
+        }
+        else if (options.CommaStyle == CommaStyle.Trailing)
+        {
+            operatorNormalized = CommaStyleTransformer.ToTrailingCommas(operatorNormalized);
         }
 
         return operatorNormalized;

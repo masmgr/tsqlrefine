@@ -120,6 +120,32 @@ SELECT TOP 5 * FROM orders;";
     }
 
     [Fact]
+    public void Analyze_SubqueryTopWithoutOrderBy_ReturnsDiagnostic()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT id FROM (SELECT TOP 1 id FROM users) AS subquery;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("top-without-order-by", diagnostics[0].Data?.RuleId);
+    }
+
+    [Fact]
+    public void Analyze_UnionBranchWithTopWithoutOrderBy_ReturnsDiagnostic()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 id FROM users UNION ALL SELECT id FROM orders;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("top-without-order-by", diagnostics[0].Data?.RuleId);
+    }
+
+    [Fact]
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new TopWithoutOrderByRule();

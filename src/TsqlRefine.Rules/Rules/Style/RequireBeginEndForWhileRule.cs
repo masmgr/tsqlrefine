@@ -29,7 +29,7 @@ public sealed class RequireBeginEndForWhileRule : DiagnosticVisitorRuleBase
             if (BeginEndHelpers.NeedsBeginEndBlock(node.Statement))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "WHILE statement should use BEGIN/END block to avoid accidental single-statement loops.",
                     code: "require-begin-end-for-while",
                     category: "Style",

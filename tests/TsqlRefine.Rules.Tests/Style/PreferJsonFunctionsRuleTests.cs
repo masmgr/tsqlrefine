@@ -9,11 +9,11 @@ public sealed class PreferJsonFunctionsRuleTests
     private readonly PreferJsonFunctionsRule _rule = new();
 
     [Theory]
-    [InlineData("SELECT CHARINDEX('{', json_data) FROM data;")]
-    [InlineData("SELECT SUBSTRING(json_col, CHARINDEX('{', json_col), 50) FROM table1;")]  // May return 2 diagnostics (nested)
-    [InlineData("SELECT PATINDEX('%[%', json_string) FROM documents;")]
-    [InlineData("SELECT REPLACE(json_text, '{', '') FROM logs;")]
-    [InlineData("SELECT STUFF(json_data, 1, 1, '{') FROM raw_data;")]
+    [InlineData("""SELECT CHARINDEX('{"name":', json_data) FROM data;""")]
+    [InlineData("""SELECT REPLACE(json_text, '{"', '') FROM logs;""")]
+    [InlineData("""SELECT CHARINDEX('":', json_data) FROM data;""")]
+    [InlineData("SELECT STUFF(json_data, 1, 1, '[{') FROM raw_data;")]
+    [InlineData("""SELECT PATINDEX('%{"name%', json_string) FROM documents;""")]
     public void Analyze_StringFunctionWithJsonPattern_ReturnsDiagnostic(string sql)
     {
         // Arrange
@@ -22,7 +22,7 @@ public sealed class PreferJsonFunctionsRuleTests
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        // Assert - May return multiple diagnostics for nested functions
+        // Assert
         Assert.NotEmpty(diagnostics);
         Assert.All(diagnostics, d => Assert.Equal("prefer-json-functions", d.Code));
         Assert.All(diagnostics, d => Assert.Contains("JSON", d.Message));
@@ -33,10 +33,17 @@ public sealed class PreferJsonFunctionsRuleTests
     [InlineData("SELECT JSON_QUERY(json_data, '$.items') FROM orders;")]
     [InlineData("SELECT * FROM OPENJSON(@json);")]
     [InlineData("SELECT id, name FROM users FOR JSON AUTO;")]
-    [InlineData("SELECT CHARINDEX('test', description) FROM products;")]  // No JSON pattern
-    [InlineData("SELECT SUBSTRING(name, 1, 5) FROM users;")]  // No JSON pattern
+    [InlineData("SELECT CHARINDEX('test', description) FROM products;")]
+    [InlineData("SELECT SUBSTRING(name, 1, 5) FROM users;")]
     [InlineData("SELECT * FROM users;")]
-    [InlineData("")]  // Empty
+    [InlineData("")]
+    [InlineData("SELECT CHARINDEX('{', json_data) FROM data;")]                     // Single brace, no pair
+    [InlineData("SELECT REPLACE(json_text, '{', '') FROM logs;")]                    // Single brace, no pair
+    [InlineData("SELECT STUFF(json_data, 1, 1, '{') FROM raw_data;")]               // Single brace, no pair
+    [InlineData("SELECT PATINDEX('%[^0]%', col1 + '0') FROM t;")]                   // PATINDEX wildcard
+    [InlineData("SELECT PATINDEX('%[a-z]%', col1) FROM t;")]                        // Character class
+    [InlineData("SELECT PATINDEX('%[0-9]%', col1) FROM t;")]                        // Digit class
+    [InlineData("SELECT CHARINDEX('[', col1) FROM t;")]                             // Single bracket, no pair
     public void Analyze_WhenValid_ReturnsEmpty(string sql)
     {
         // Arrange
@@ -53,7 +60,7 @@ public sealed class PreferJsonFunctionsRuleTests
     public void Analyze_OldCompatLevel_ReturnsEmpty()
     {
         // Arrange
-        const string sql = "SELECT CHARINDEX('{', json_data) FROM data;";
+        const string sql = """SELECT CHARINDEX('{"key":', json_data) FROM data;""";
         var context = CreateContext(sql, compatLevel: 120);  // SQL Server 2014
 
         // Act
@@ -66,8 +73,8 @@ public sealed class PreferJsonFunctionsRuleTests
     [Fact]
     public void Analyze_CompatLevel130_ReturnsDiagnostic()
     {
-        // Arrange
-        const string sql = "SELECT SUBSTRING(json_col, CHARINDEX('{', json_col), 100) FROM data;";
+        // Arrange — paired braces across nested function parameters
+        const string sql = "SELECT SUBSTRING(json_col, CHARINDEX('{', json_col), CHARINDEX('}', json_col)) FROM data;";
         var context = CreateContext(sql, compatLevel: 130);  // SQL Server 2016
 
         // Act
@@ -80,12 +87,13 @@ public sealed class PreferJsonFunctionsRuleTests
     [Fact]
     public void Analyze_MultipleJsonPatterns_ReturnsMultipleDiagnostics()
     {
-        // Arrange
-        const string sql = @"
+        // Arrange — strong JSON patterns in multiple function calls
+        const string sql = """
             SELECT
-                CHARINDEX('{', col1) AS pos1,
-                SUBSTRING(col2, CHARINDEX('{', col2), 20) AS id
-            FROM data;";
+                CHARINDEX('":', col1) AS pos1,
+                REPLACE(col2, '{"id":', '') AS id
+            FROM data;
+            """;
         var context = CreateContext(sql, compatLevel: 130);
 
         // Act
@@ -99,7 +107,7 @@ public sealed class PreferJsonFunctionsRuleTests
     [Fact]
     public void Analyze_ComplexJsonParsing_ReturnsDiagnostic()
     {
-        // Arrange
+        // Arrange — paired braces '{' and '}' across nested CHARINDEX parameters
         const string sql = @"
             SELECT
                 id,
@@ -122,7 +130,7 @@ public sealed class PreferJsonFunctionsRuleTests
     [Fact]
     public void Analyze_ReplaceWithJsonBraces_ReturnsDiagnostic()
     {
-        // Arrange
+        // Arrange — nested REPLACE with both '{' and '}' across parameters
         const string sql = @"
             SELECT REPLACE(REPLACE(data, '{', ''), '}', '') AS cleaned
             FROM json_logs;";
@@ -138,7 +146,7 @@ public sealed class PreferJsonFunctionsRuleTests
     [Fact]
     public void Analyze_PatindexWithJsonPattern_ReturnsDiagnostic()
     {
-        // Arrange
+        // Arrange — '%[{%' contains '[{' which is a strong JSON array-of-objects pattern
         const string sql = @"
             SELECT
                 id,
@@ -157,21 +165,31 @@ public sealed class PreferJsonFunctionsRuleTests
     }
 
     [Fact]
-    public void Analyze_FalsePositive_BracesInNonJson_MayTrigger()
+    public void Analyze_SingleBraceInNonJsonContext_ReturnsEmpty()
     {
-        // Arrange - This might be a false positive, but rule uses heuristics
+        // Arrange — single '{' without a matching '}' is not sufficient evidence
         const string sql = "SELECT CHARINDEX('{', description) FROM users WHERE name LIKE '%test%';";
         var context = CreateContext(sql, compatLevel: 130);
 
         // Act
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        // Assert - Rule may trigger on any braces, even in non-JSON context
-        // This test documents the heuristic nature of the rule
-        if (diagnostics.Length > 0)
-        {
-            Assert.All(diagnostics, d => Assert.Equal("prefer-json-functions", d.Code));
-        }
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_PatindexLeadingZeroStrip_ReturnsEmpty()
+    {
+        // Arrange — leading zero stripping pattern (the reported false positive)
+        const string sql = "SELECT STUFF(COLUMN1, 1, PATINDEX('%[^0]%', COLUMN1 + '0') - 1, '') FROM t;";
+        var context = CreateContext(sql, compatLevel: 130);
+
+        // Act
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
     }
 
     [Fact]
@@ -202,7 +220,7 @@ public sealed class PreferJsonFunctionsRuleTests
     public void GetFixes_ReturnsEmpty()
     {
         // Arrange
-        var context = CreateContext("SELECT CHARINDEX('{', json_data) FROM data;", compatLevel: 130);
+        var context = CreateContext("""SELECT CHARINDEX('{"key":', json_data) FROM data;""", compatLevel: 130);
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",

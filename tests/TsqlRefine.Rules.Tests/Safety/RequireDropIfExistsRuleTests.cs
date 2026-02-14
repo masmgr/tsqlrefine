@@ -64,6 +64,23 @@ public sealed class RequireDropIfExistsRuleTests
     }
 
     [Theory]
+    [InlineData("DROP TABLE dbo.Users;", 0, 10)]
+    [InlineData("DROP PROCEDURE dbo.MyProc;", 0, 14)]
+    [InlineData("DROP VIEW dbo.MyView;", 0, 9)]
+    [InlineData("DROP FUNCTION dbo.MyFunc;", 0, 13)]
+    public void Analyze_DropWithoutIfExists_HighlightsDropObjectType(string sql, int expectedStartChar, int expectedEndChar)
+    {
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(expectedStartChar, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(expectedEndChar, diagnostic.Range.End.Character);
+    }
+
+    [Theory]
     [InlineData("DROP TABLE IF EXISTS dbo.Users;")]
     [InlineData("DROP PROCEDURE IF EXISTS dbo.MyProc;")]
     [InlineData("DROP VIEW IF EXISTS dbo.MyView;")]

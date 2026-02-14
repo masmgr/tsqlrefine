@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
@@ -11,15 +12,61 @@ namespace TsqlRefine.Cli.Services;
 /// </summary>
 public sealed class ConfigLoader
 {
-    private static string? ResolveConfigPath(CliArgs args)
+    private const string ConfigDirName = ".tsqlrefine";
+    internal const string DefaultPresetName = "recommended";
+
+    /// <summary>
+    /// Returns the ordered list of candidate paths for a settings file.
+    /// Pure function for testability.
+    /// </summary>
+    internal static IReadOnlyList<string> GetCandidatePaths(
+        string? explicitPath, string fileName, string cwd, string? homePath)
     {
-        if (args.ConfigPath is not null)
+        if (explicitPath is not null)
         {
-            return args.ConfigPath;
+            return [explicitPath];
         }
 
-        var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.json");
-        return File.Exists(defaultPath) ? defaultPath : null;
+        var candidates = new List<string>(3)
+        {
+            Path.Combine(cwd, fileName),
+            Path.Combine(cwd, ConfigDirName, fileName)
+        };
+
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            candidates.Add(Path.Combine(homePath, ConfigDirName, fileName));
+        }
+
+        return candidates;
+    }
+
+    private static string? ResolveSettingsFilePath(string? explicitPath, string fileName)
+    {
+        // Explicit path is returned as-is (existence check is done downstream)
+        if (explicitPath is not null)
+        {
+            return explicitPath;
+        }
+
+        var cwd = Directory.GetCurrentDirectory();
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var candidates = GetCandidatePaths(null, fileName, cwd, home);
+
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ResolveConfigPath(CliArgs args)
+    {
+        return ResolveSettingsFilePath(args.ConfigPath, "tsqlrefine.json");
     }
 
     /// <summary>
@@ -64,7 +111,7 @@ public sealed class ConfigLoader
         }
     }
 
-    public static Ruleset? LoadRuleset(CliArgs args, TsqlRefineConfig config)
+    public static Ruleset LoadRuleset(CliArgs args, TsqlRefineConfig config, IReadOnlyList<IRule> allRules)
     {
         // When --rule is specified, use a single-rule whitelist.
         // Rule ID validation is performed by ValidateRuleIdForFix.
@@ -75,15 +122,19 @@ public sealed class ConfigLoader
 
         var baseRuleset = ResolveBaseRuleset(args, config);
 
+        // Enable plugin rules by default (bypass preset/ruleset whitelist)
+        var pluginRuleIds = GetPluginRuleIds(allRules);
+        var withPlugins = baseRuleset.WithPluginDefaults(pluginRuleIds);
+
         if (config.Rules is { Count: > 0 })
         {
-            return (baseRuleset ?? Ruleset.Empty).WithOverrides(config.Rules);
+            return withPlugins.WithOverrides(config.Rules);
         }
 
-        return baseRuleset;
+        return withPlugins;
     }
 
-    private static Ruleset? ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
+    private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // Preset resolution priority: CLI --preset > config preset
         var presetName = args.Preset ?? config.Preset;
@@ -94,9 +145,13 @@ public sealed class ConfigLoader
 
         // Custom ruleset path resolution: CLI --ruleset > config ruleset
         var rulesetPath = args.RulesetPath ?? config.Ruleset;
-        return string.IsNullOrWhiteSpace(rulesetPath)
-            ? null
-            : LoadRulesetFromPath(rulesetPath);
+        if (!string.IsNullOrWhiteSpace(rulesetPath))
+        {
+            return LoadRulesetFromPath(rulesetPath);
+        }
+
+        // Default: apply recommended preset
+        return LoadPresetRuleset(DefaultPresetName);
     }
 
     private static Ruleset LoadPresetRuleset(string presetName)
@@ -194,14 +249,7 @@ public sealed class ConfigLoader
 
     public static List<string> LoadIgnorePatterns(string? ignoreListPath)
     {
-        // Check explicit path first, then default tsqlrefine.ignore
-        var path = ignoreListPath;
-        if (path is null)
-        {
-            var defaultPath = Path.Combine(Directory.GetCurrentDirectory(), "tsqlrefine.ignore");
-            if (File.Exists(defaultPath))
-                path = defaultPath;
-        }
+        var path = ResolveSettingsFilePath(ignoreListPath, "tsqlrefine.ignore");
 
         if (path is null)
             return new List<string>();
@@ -246,5 +294,22 @@ public sealed class ConfigLoader
             .Select(f => Path.GetFileNameWithoutExtension(f))
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static readonly Lazy<FrozenSet<string>> BuiltinRuleIds = new(() =>
+        new BuiltinRuleProvider().GetRules()
+            .Select(r => r.Metadata.RuleId)
+            .ToFrozenSet(StringComparer.OrdinalIgnoreCase));
+
+    private static IEnumerable<string> GetPluginRuleIds(IReadOnlyList<IRule> allRules)
+    {
+        var builtinIds = BuiltinRuleIds.Value;
+        foreach (var rule in allRules)
+        {
+            if (!builtinIds.Contains(rule.Metadata.RuleId))
+            {
+                yield return rule.Metadata.RuleId;
+            }
+        }
     }
 }

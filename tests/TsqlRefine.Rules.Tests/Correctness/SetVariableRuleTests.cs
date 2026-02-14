@@ -39,6 +39,23 @@ public sealed class SetVariableRuleTests
     }
 
     [Fact]
+    public void Analyze_SetVariableAssignment_HighlightsSetKeyword()
+    {
+        // Arrange
+        var sql = "DECLARE @Count INT; SET @Count = 10;";
+
+        // Act
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(20, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(23, diagnostic.Range.End.Character);
+    }
+
+    [Fact]
     public void Analyze_SetVariableWithExpression_ReturnsDiagnostic()
     {
         // Arrange

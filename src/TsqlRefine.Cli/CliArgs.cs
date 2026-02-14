@@ -25,6 +25,7 @@ namespace TsqlRefine.Cli;
 /// <param name="Quiet">Whether to suppress informational stderr output (for IDE/extension integration).</param>
 /// <param name="ShowSources">Whether to show formatting option sources.</param>
 /// <param name="Force">Whether to overwrite existing files (for init command).</param>
+/// <param name="Global">Whether to create configuration in home directory (for init command).</param>
 /// <param name="Category">Filter rules by category (for list-rules command).</param>
 /// <param name="FixableOnly">Show only fixable rules (for list-rules command).</param>
 /// <param name="Paths">File paths to analyze.</param>
@@ -49,6 +50,7 @@ public sealed record CliArgs(
     bool Quiet,
     bool ShowSources,
     bool Force,
+    bool Global,
     string? Category,
     bool FixableOnly,
     IReadOnlyList<string> Paths,

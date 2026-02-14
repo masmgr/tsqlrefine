@@ -89,6 +89,43 @@ public sealed class CrossDatabaseTransactionRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenCrossDatabaseTransactionWithoutTermination_ReturnsDiagnostic()
+    {
+        var sql = @"
+            BEGIN TRANSACTION
+                INSERT INTO DB1.dbo.Table1 VALUES (1)
+                INSERT INTO DB2.dbo.Table2 VALUES (2)
+        ";
+
+        var rule = new CrossDatabaseTransactionRule();
+        var context = CreateContext(sql);
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.All(diagnostics, d => Assert.Equal("cross-database-transaction", d.Code));
+    }
+
+    [Fact]
+    public void Analyze_WhenCrossDatabaseReferenceAppearsInFromJoin_ReturnsDiagnostic()
+    {
+        var sql = @"
+            BEGIN TRANSACTION
+                UPDATE u
+                SET u.Name = o.Name
+                FROM DB1.dbo.Users u
+                INNER JOIN DB2.dbo.Orders o ON u.Id = o.UserId
+            COMMIT
+        ";
+
+        var rule = new CrossDatabaseTransactionRule();
+        var context = CreateContext(sql);
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.All(diagnostics, d => Assert.Equal("cross-database-transaction", d.Code));
+    }
+
+    [Fact]
     public void GetFixes_ReturnsNoFixes()
     {
         var sql = @"

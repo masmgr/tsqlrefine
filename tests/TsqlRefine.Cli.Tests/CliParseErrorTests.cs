@@ -60,6 +60,53 @@ public sealed class CliParseErrorTests
     }
 
     [Fact]
+    public async Task Lint_WhenSyntaxError_TextOutputContainsSourceContext()
+    {
+        var stdin = new StringReader("SELECT * FROM");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
+
+        var output = stdout.ToString();
+        // Source line is displayed
+        Assert.Contains("SELECT * FROM", output);
+        // Caret marker is displayed
+        Assert.Contains("^", output);
+        // Line number gutter is displayed
+        Assert.Contains("1 |", output);
+    }
+
+    [Fact]
+    public async Task Lint_WhenMultiLineSyntaxError_ShowsCorrectLine()
+    {
+        var sql = "SELECT id\nFROM dbo.users\nWHERE id =";
+        var stdin = new StringReader(sql);
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin" }, stdin, stdout, stderr);
+
+        var output = stdout.ToString();
+        // The error line content should appear in source context
+        Assert.Contains("WHERE id =", output);
+    }
+
+    [Fact]
+    public async Task Lint_WhenSyntaxError_JsonOutputDoesNotContainSourceContext()
+    {
+        var stdin = new StringReader("SELECT * FROM");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        await CliApp.RunAsync(new[] { "lint", "--stdin", "--output", "json" }, stdin, stdout, stderr);
+
+        var output = stdout.ToString();
+        // JSON output should not contain the gutter format
+        Assert.DoesNotContain(" | SELECT", output);
+    }
+
+    [Fact]
     public async Task Lint_WhenValidSql_DoesNotReturnAnalysisError()
     {
         var stdin = new StringReader("SELECT id FROM dbo.users;");

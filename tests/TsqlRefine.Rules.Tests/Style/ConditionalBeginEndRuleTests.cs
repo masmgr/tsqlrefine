@@ -69,6 +69,39 @@ public sealed class ConditionalBeginEndRuleTests
     }
 
     [Fact]
+    public void Analyze_IfWithoutBeginEnd_HighlightsIfKeyword()
+    {
+        var sql = "IF @x = 1 SELECT 1";
+        var rule = new ConditionalBeginEndRule();
+        var context = CreateContext(sql);
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        // Diagnostic should highlight only the IF keyword
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(0, diagnostic.Range.Start.Character);
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(2, diagnostic.Range.End.Character);
+    }
+
+    [Fact]
+    public void Analyze_ElseWithoutBeginEnd_HighlightsElseKeyword()
+    {
+        var sql = "IF @x = 1\r\nBEGIN\r\n    SELECT 1\r\nEND\r\nELSE\r\n    SELECT 2";
+
+        var rule = new ConditionalBeginEndRule();
+        var context = CreateContext(sql);
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        var elseDiag = diagnostics.Single(d => d.Message.Contains("ELSE"));
+        // Diagnostic should highlight only the ELSE keyword
+        Assert.Equal(4, elseDiag.Range.Start.Line);
+        Assert.Equal(0, elseDiag.Range.Start.Character);
+        Assert.Equal(4, elseDiag.Range.End.Line);
+        Assert.Equal(4, elseDiag.Range.End.Character);
+    }
+
+    [Fact]
     public void Analyze_WhenElseWithoutBeginEnd_ReturnsDiagnostic()
     {
         var sql = @"

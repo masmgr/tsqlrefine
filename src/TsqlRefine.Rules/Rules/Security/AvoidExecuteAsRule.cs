@@ -28,7 +28,7 @@ public sealed class AvoidExecuteAsRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(ExecuteAsStatement node)
         {
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: $"Avoid EXECUTE AS {node.ExecuteContext.Kind}. Changing the security context can lead to unintended privilege escalation. Ensure this is intentional and properly paired with REVERT.",
                 code: "avoid-execute-as",
                 category: "Security",
@@ -40,25 +40,25 @@ public sealed class AvoidExecuteAsRule : DiagnosticVisitorRuleBase
         // EXECUTE AS clause in CREATE PROCEDURE
         public override void ExplicitVisit(ExecuteAsProcedureOption node)
         {
-            CheckExecuteAsClause(node, node.ExecuteAs);
+            CheckExecuteAsClause(node.ExecuteAs);
             base.ExplicitVisit(node);
         }
 
         // EXECUTE AS clause in CREATE FUNCTION
         public override void ExplicitVisit(ExecuteAsFunctionOption node)
         {
-            CheckExecuteAsClause(node, node.ExecuteAs);
+            CheckExecuteAsClause(node.ExecuteAs);
             base.ExplicitVisit(node);
         }
 
         // EXECUTE AS clause in CREATE TRIGGER
         public override void ExplicitVisit(ExecuteAsTriggerOption node)
         {
-            CheckExecuteAsClause(node, node.ExecuteAsClause);
+            CheckExecuteAsClause(node.ExecuteAsClause);
             base.ExplicitVisit(node);
         }
 
-        private void CheckExecuteAsClause(TSqlFragment fragment, ExecuteAsClause? executeAsClause)
+        private void CheckExecuteAsClause(ExecuteAsClause? executeAsClause)
         {
             if (executeAsClause is null)
             {
@@ -78,7 +78,7 @@ public sealed class AvoidExecuteAsRule : DiagnosticVisitorRuleBase
             }
 
             AddDiagnostic(
-                fragment: fragment,
+                fragment: executeAsClause,
                 message: $"Avoid EXECUTE AS {optionText} clause. This changes the execution security context and may lead to unintended privilege escalation.",
                 code: "avoid-execute-as",
                 category: "Security",

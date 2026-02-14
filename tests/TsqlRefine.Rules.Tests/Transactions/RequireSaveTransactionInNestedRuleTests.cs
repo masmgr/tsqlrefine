@@ -33,6 +33,11 @@ public sealed class RequireSaveTransactionInNestedRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("require-save-transaction-in-nested", diagnostics[0].Code);
         Assert.Contains("Nested", diagnostics[0].Message);
+        // Diagnostic should highlight only "BEGIN TRANSACTION" keywords on the nested statement
+        Assert.Equal(2, diagnostics[0].Range.Start.Line);
+        Assert.Equal(16, diagnostics[0].Range.Start.Character);
+        Assert.Equal(2, diagnostics[0].Range.End.Line);
+        Assert.Equal(33, diagnostics[0].Range.End.Character);
     }
 
     [Fact]
