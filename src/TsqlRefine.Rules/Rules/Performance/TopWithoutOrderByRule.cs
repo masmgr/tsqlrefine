@@ -24,16 +24,14 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
 
     private sealed class TopWithoutOrderByVisitor : DiagnosticVisitorBase
     {
-        public override void ExplicitVisit(SelectStatement node)
+        public override void ExplicitVisit(QuerySpecification node)
         {
-            var querySpec = node.QueryExpression as QuerySpecification;
-            if (querySpec != null &&
-                querySpec.TopRowFilter != null &&
-                querySpec.OrderByClause == null &&
-                !IsTopZero(querySpec.TopRowFilter.Expression))
+            if (node.TopRowFilter != null &&
+                node.OrderByClause == null &&
+                !IsTopZero(node.TopRowFilter.Expression))
             {
                 AddDiagnostic(
-                    fragment: querySpec.TopRowFilter,
+                    fragment: node.TopRowFilter,
                     message: "TOP clause without ORDER BY produces non-deterministic results. Add an ORDER BY clause to ensure consistent results.",
                     code: "top-without-order-by",
                     category: "Performance",
