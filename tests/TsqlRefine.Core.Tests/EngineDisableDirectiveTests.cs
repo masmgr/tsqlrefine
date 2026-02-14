@@ -243,6 +243,27 @@ public sealed class EngineDisableDirectiveTests
     }
 
     [Fact]
+    public void DisableDuplicateRuleIds_IsIdempotent()
+    {
+        var sql = "/* tsqlrefine-disable dml-without-where, DML-WITHOUT-WHERE */\nupdate t set x = 1;\n/* tsqlrefine-enable dml-without-where */\nupdate t set y = 2;";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        var dmlDiags = result.Files[0].Diagnostics
+            .Where(d => d.Code == "dml-without-where").ToList();
+
+        // Line 1: suppressed by disable directive.
+        Assert.DoesNotContain(dmlDiags, d => d.Range.Start.Line == 1);
+        // Line 3: not suppressed after a single enable.
+        Assert.Contains(dmlDiags, d => d.Range.Start.Line == 3);
+    }
+
+    [Fact]
     public void NestedGlobalDisables_AllSuppressed()
     {
         // Test that nested disables work - all diagnostics within any disable range are suppressed

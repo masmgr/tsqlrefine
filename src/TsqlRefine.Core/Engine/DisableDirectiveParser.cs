@@ -109,7 +109,7 @@ public static class DisableDirectiveParser
         }
 
         var line = diagnostic.Range.Start.Line;
-        var ruleId = diagnostic.Code;
+        var ruleId = diagnostic.Data?.RuleId;
 
         foreach (var range in disabledRanges)
         {
@@ -254,11 +254,12 @@ public static class DisableDirectiveParser
 
         var parts = trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var ruleIds = new List<string>(parts.Length);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var part in parts)
         {
             var ruleId = part.Trim();
-            if (!string.IsNullOrEmpty(ruleId))
+            if (!string.IsNullOrEmpty(ruleId) && seen.Add(ruleId))
             {
                 ruleIds.Add(ruleId);
             }

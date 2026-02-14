@@ -6,6 +6,27 @@ namespace TsqlRefine.Core.Tests;
 public sealed class RulesetTests
 {
     [Fact]
+    public void TryLoad_NullJson_ReturnsEmptyWhitelistRuleset()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, "null");
+
+            var result = Ruleset.TryLoad(path);
+
+            Assert.True(result.Success);
+            var ruleset = Assert.IsType<Ruleset>(result.Value);
+            Assert.False(ruleset.IsRuleEnabled("any-rule"));
+            Assert.False(ruleset.IsRuleEnabled("another-rule"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void CreateSingleRuleWhitelist_EnablesOnlySpecifiedRule()
     {
         var ruleset = Ruleset.CreateSingleRuleWhitelist("rule-a");

@@ -123,7 +123,9 @@ public sealed class Ruleset
             var json = File.ReadAllText(path);
             var ruleset = JsonSerializer.Deserialize<Ruleset>(json, JsonDefaults.Options);
 
-            return ConfigLoadResult<Ruleset>.Ok(ruleset ?? Empty);
+            // Treat JSON `null` as an empty whitelist ruleset (disable all rules),
+            // not as override-only mode.
+            return ConfigLoadResult<Ruleset>.Ok(ruleset ?? new Ruleset([]));
         }
         catch (JsonException ex)
         {

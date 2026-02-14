@@ -91,6 +91,20 @@ public sealed class DisableDirectiveParserTests
     }
 
     [Fact]
+    public void ParseDirectives_BlockComment_DuplicateRuleIds_AreDeduplicated()
+    {
+        var tokens = new Token[]
+        {
+            new("/* tsqlrefine-disable rule-a, RULE-A, rule-b, rule-a */", new Position(0, 0), 58, "MultilineComment")
+        };
+        var result = DisableDirectiveParser.ParseDirectives(tokens);
+
+        Assert.Single(result);
+        Assert.Equal(DisableDirectiveType.Disable, result[0].Type);
+        Assert.Equal(["rule-a", "rule-b"], result[0].RuleIds);
+    }
+
+    [Fact]
     public void ParseDirectives_CaseInsensitive_ParsesCorrectly()
     {
         var tokens = new Token[]
@@ -356,6 +370,24 @@ public sealed class DisableDirectiveParserTests
     }
 
     [Fact]
+    public void IsSuppressed_RuleSpecific_UsesDiagnosticDataRuleId()
+    {
+        var diagnostic = new Diagnostic(
+            Range: new TsqlRefine.PluginSdk.Range(
+                new Position(3, 0),
+                new Position(3, 10)),
+            Message: "Test diagnostic",
+            Code: "subcode",
+            Data: new DiagnosticData(RuleId: "rule-a", Category: "Test", Fixable: false)
+        );
+        var ranges = new[] { new DisabledRange("rule-a", StartLine: 0, EndLine: 5) };
+
+        var result = DisableDirectiveParser.IsSuppressed(diagnostic, ranges);
+
+        Assert.True(result);
+    }
+
+    [Fact]
     public void IsSuppressed_DiagnosticAtStartLine_ReturnsTrue()
     {
         var diagnostic = CreateDiagnostic(line: 0, code: "rule-a");
@@ -593,7 +625,8 @@ public sealed class DisableDirectiveParserTests
                 new Position(line, 0),
                 new Position(line, 10)),
             Message: "Test diagnostic",
-            Code: code
+            Code: code,
+            Data: new DiagnosticData(RuleId: code, Category: "Test", Fixable: false)
         );
     }
 

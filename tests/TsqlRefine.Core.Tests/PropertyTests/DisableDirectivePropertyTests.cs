@@ -166,6 +166,7 @@ public sealed class DisableDirectivePropertyTests
         return new Diagnostic(
             new TsqlRefine.PluginSdk.Range(new Position(line, 0), new Position(line, 1)),
             "test message",
-            Code: ruleId);
+            Code: ruleId,
+            Data: new DiagnosticData(RuleId: ruleId, Category: "Test", Fixable: false));
     }
 }
