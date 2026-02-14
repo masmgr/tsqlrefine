@@ -26,6 +26,18 @@ public sealed class InsertSelectColumnNameMismatchRuleTests
         });
     }
 
+    [Fact]
+    public void Analyze_WhenUnionSelectColumnsMismatch_ReturnsDiagnostic()
+    {
+        var rule = new InsertSelectColumnNameMismatchRule();
+        var context = RuleTestContext.CreateContext(
+            "INSERT INTO Users (Id, Name) SELECT Name, Id FROM Users_Staging UNION ALL SELECT Name, Id FROM Users_Archive;");
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "insert-select-column-name-mismatch").ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
     [Theory]
     [InlineData("INSERT INTO Users (Id, Name) SELECT Id, Name FROM Users_Staging;")]
     [InlineData("INSERT INTO Users (Id, Name) SELECT u.Id, u.Name FROM Users_Staging u;")]
@@ -35,6 +47,18 @@ public sealed class InsertSelectColumnNameMismatchRuleTests
     {
         var rule = new InsertSelectColumnNameMismatchRule();
         var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "insert-select-column-name-mismatch").ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenUnionSelectColumnsMatch_ReturnsEmpty()
+    {
+        var rule = new InsertSelectColumnNameMismatchRule();
+        var context = RuleTestContext.CreateContext(
+            "INSERT INTO Users (Id, Name) SELECT Id, Name FROM Users_Staging UNION ALL SELECT Id, Name FROM Users_Archive;");
 
         var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "insert-select-column-name-mismatch").ToArray();
 

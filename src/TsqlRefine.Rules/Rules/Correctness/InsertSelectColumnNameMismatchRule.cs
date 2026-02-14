@@ -39,13 +39,14 @@ public sealed class InsertSelectColumnNameMismatchRule : DiagnosticVisitorRuleBa
                 return;
             }
 
-            if (selectSource.Select is not QuerySpecification querySpec || querySpec.SelectElements == null)
+            var selectElements = GetSelectOutputElements(selectSource.Select);
+            if (selectElements == null)
             {
                 base.ExplicitVisit(node);
                 return;
             }
 
-            if (querySpec.SelectElements.Count != insertSpec.Columns.Count)
+            if (selectElements.Count != insertSpec.Columns.Count)
             {
                 // Column count mismatch is handled by a separate rule.
                 base.ExplicitVisit(node);
@@ -53,7 +54,7 @@ public sealed class InsertSelectColumnNameMismatchRule : DiagnosticVisitorRuleBa
             }
 
             if (!TryGetInsertTargetNames(insertSpec.Columns, out var targetNames) ||
-                !TryGetSelectOutputNames(querySpec.SelectElements, out var selectNames))
+                !TryGetSelectOutputNames(selectElements, out var selectNames))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -75,6 +76,24 @@ public sealed class InsertSelectColumnNameMismatchRule : DiagnosticVisitorRuleBa
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private static IList<SelectElement>? GetSelectOutputElements(QueryExpression? queryExpression)
+        {
+            switch (queryExpression)
+            {
+                case QuerySpecification querySpec:
+                    return querySpec.SelectElements;
+
+                case QueryParenthesisExpression paren:
+                    return GetSelectOutputElements(paren.QueryExpression);
+
+                case BinaryQueryExpression binary:
+                    // UNION/INTERSECT/EXCEPT output column names are defined by the first query.
+                    return GetSelectOutputElements(binary.FirstQueryExpression);
+            }
+
+            return null;
         }
 
         private static bool TryGetInsertTargetNames(IList<ColumnReferenceExpression> columns, out List<string> names)
