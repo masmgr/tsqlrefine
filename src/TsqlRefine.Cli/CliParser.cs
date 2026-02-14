@@ -150,6 +150,18 @@ public static class CliParser
             Description = "Show where each option value originated"
         };
 
+        public static readonly Option<string?> MaxFileSize = new("--max-file-size")
+        {
+            Description = "Maximum file size in MB (default: 10)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> AllowPlugins = new("--allow-plugins")
+        {
+            Description = "Enable loading of plugin DLLs from configuration",
+            Recursive = true
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -167,6 +179,7 @@ public static class CliParser
         command.Options.Add(Options.IgnoreList);
         command.Options.Add(Options.DetectEncoding);
         command.Options.Add(Options.Stdin);
+        command.Options.Add(Options.MaxFileSize);
         return command;
     }
 
@@ -308,6 +321,7 @@ public static class CliParser
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
         root.Options.Add(Options.Utf8);
+        root.Options.Add(Options.AllowPlugins);
 
         // Root command supports lint options for default command behavior
         // (tsqlrefine *.sql == tsqlrefine lint *.sql)
@@ -390,7 +404,9 @@ public static class CliParser
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             Paths: GetPaths(parseResult),
-            RuleId: GetOptionValue<string?>(parseResult, "--rule")
+            RuleId: GetOptionValue<string?>(parseResult, "--rule"),
+            MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
+            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins")
         );
     }
 
@@ -441,6 +457,17 @@ public static class CliParser
         }
 
         return [];
+    }
+
+    private const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024; // 10 MB
+
+    private static long ParseMaxFileSize(string? s)
+    {
+        if (s is null)
+            return DefaultMaxFileSizeBytes;
+        if (int.TryParse(s, out var mb) && mb > 0)
+            return (long)mb * 1024 * 1024;
+        return DefaultMaxFileSizeBytes;
     }
 
     private static int? ParseInt(string? s) =>

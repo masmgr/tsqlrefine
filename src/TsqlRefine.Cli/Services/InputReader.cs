@@ -41,8 +41,18 @@ public sealed class InputReader
 
         if (readFromStdin)
         {
-            var sql = await stdin.ReadToEndAsync();
-            inputs.Add(new SqlInput("<stdin>", sql));
+            var sql = args.MaxFileSize > 0
+                ? await ReadBoundedAsync(stdin, args.MaxFileSize)
+                : await stdin.ReadToEndAsync();
+            if (sql is null)
+            {
+                await stderr.WriteLineAsync(
+                    $"Stdin input exceeds maximum size of {args.MaxFileSize / (1024 * 1024)} MB. Use --max-file-size to increase.");
+            }
+            else
+            {
+                inputs.Add(new SqlInput("<stdin>", sql));
+            }
         }
 
         var ignoreList = ignorePatterns as IReadOnlyList<string> ?? ignorePatterns.ToArray();
@@ -52,6 +62,18 @@ public sealed class InputReader
             {
                 await stderr.WriteLineAsync($"File not found: {path}");
                 continue;
+            }
+
+            // Check file size before reading
+            if (args.MaxFileSize > 0)
+            {
+                var fileInfo = new FileInfo(path);
+                if (fileInfo.Length > args.MaxFileSize)
+                {
+                    await stderr.WriteLineAsync(
+                        $"Skipped {path}: file size ({fileInfo.Length / (1024 * 1024)} MB) exceeds maximum ({args.MaxFileSize / (1024 * 1024)} MB). Use --max-file-size to increase.");
+                    continue;
+                }
             }
 
             // Read bytes once
@@ -139,6 +161,27 @@ public sealed class InputReader
         _cachedIgnoreMatcher = matcher;
         _cachedIgnorePatterns = ignorePatterns;
         return matcher;
+    }
+
+    private static async Task<string?> ReadBoundedAsync(TextReader reader, long maxBytes)
+    {
+        var sb = new StringBuilder();
+        var buffer = new char[8192];
+        long totalBytes = 0;
+
+        int charsRead;
+        while ((charsRead = await reader.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        {
+            totalBytes += Encoding.UTF8.GetByteCount(buffer, 0, charsRead);
+            if (totalBytes > maxBytes)
+            {
+                return null;
+            }
+
+            sb.Append(buffer, 0, charsRead);
+        }
+
+        return sb.ToString();
     }
 
     private static bool HasUtf8Bom(byte[] bytes)

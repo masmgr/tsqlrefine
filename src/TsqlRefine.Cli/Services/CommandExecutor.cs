@@ -197,13 +197,39 @@ public sealed class CommandExecutor
 
     public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        _ = stderr;
         var config = ConfigLoader.LoadConfig(args);
-        var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
+        var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
+
+        if (pluginConfigs.Count == 0)
+        {
+            await stdout.WriteLineAsync("No plugins configured.");
+            return 0;
+        }
+
+        if (!args.AllowPlugins)
+        {
+            await stderr.WriteLineAsync(
+                $"{pluginConfigs.Count} plugin(s) configured but --allow-plugins not specified.");
+            await stderr.WriteLineAsync(
+                "Plugin loading is disabled by default for security. Use --allow-plugins to load plugins.");
+            foreach (var p in pluginConfigs)
+            {
+                await stdout.WriteLineAsync($"  {p.Path} (not loaded, enabled={p.Enabled})");
+            }
+
+            return 0;
+        }
+
+        var plugins = pluginConfigs
             .Select(p => new PluginDescriptor(p.Path, p.Enabled))
             .ToArray();
 
-        var (loaded, _) = PluginLoader.LoadWithSummary(plugins);
+        var configPath = ConfigLoader.GetConfigPath(args);
+        var baseDirectory = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
+
+        var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
         await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
 
         return 0;

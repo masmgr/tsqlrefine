@@ -29,7 +29,7 @@ public sealed class PluginLoadDiagnosticsTests
             var stderr = new StringWriter();
 
             // Use --config to specify config path instead of changing directory
-            var code = await CliApp.RunAsync(new[] { "list-plugins", "--config", configPath }, stdin, stdout, stderr);
+            var code = await CliApp.RunAsync(new[] { "list-plugins", "--allow-plugins", "--config", configPath }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
             var output = stdout.ToString();
@@ -69,7 +69,7 @@ public sealed class PluginLoadDiagnosticsTests
             var stderr = new StringWriter();
 
             // Use --config to specify config path instead of changing directory
-            var code = await CliApp.RunAsync(new[] { "list-plugins", "--config", configPath }, stdin, stdout, stderr);
+            var code = await CliApp.RunAsync(new[] { "list-plugins", "--allow-plugins", "--config", configPath }, stdin, stdout, stderr);
 
             Assert.Equal(0, code);
             var output = stdout.ToString();

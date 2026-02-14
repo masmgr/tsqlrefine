@@ -25,10 +25,10 @@ jobs:
       DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Setup .NET (global.json)
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
           cache: true
@@ -65,14 +65,43 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-${{ matrix.os }}
           path: TestResults
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-report-${{ matrix.os }}
           path: TestResults/CoverageReport
+
+  vulnerability_check:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup .NET (global.json)
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore src/TsqlRefine.sln
+
+      - name: Check for vulnerable packages
+        run: |
+          OUTPUT=$(dotnet list src/TsqlRefine.sln package --vulnerable 2>&1)
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -qi "has the following vulnerable packages"; then
+            echo "::error::Vulnerable packages detected. Update dependencies to resolve."
+            exit 1
+          fi
+          echo "No vulnerable packages found."

@@ -30,6 +30,8 @@ namespace TsqlRefine.Cli;
 /// <param name="FixableOnly">Show only fixable rules (for list-rules command).</param>
 /// <param name="Paths">File paths to analyze.</param>
 /// <param name="RuleId">Specific rule ID to run (for single-rule mode).</param>
+/// <param name="MaxFileSize">Maximum file size in bytes (0 = unlimited).</param>
+/// <param name="AllowPlugins">Whether to allow loading plugin DLLs from configuration.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -54,5 +56,7 @@ public sealed record CliArgs(
     string? Category,
     bool FixableOnly,
     IReadOnlyList<string> Paths,
-    string? RuleId
+    string? RuleId,
+    long MaxFileSize,
+    bool AllowPlugins
 );

@@ -104,7 +104,24 @@ Pushing a tag automatically triggers GitHub Actions to:
 Check release progress at:
 - GitHub Actions: https://github.com/masmgr/tsqlrefine/actions
 
-### 6. Edit Release Notes
+### 6. Verify Release Integrity
+
+Each GitHub Release includes a `checksums.sha256` file containing SHA256 hashes for all
+NuGet packages. To verify a downloaded package:
+
+```bash
+# Download checksums.sha256 from the GitHub Release, then verify:
+sha256sum -c checksums.sha256
+```
+
+On Windows (PowerShell):
+
+```powershell
+Get-FileHash *.nupkg -Algorithm SHA256 | Format-Table Hash, Path
+# Compare with the values in checksums.sha256
+```
+
+### 7. Edit Release Notes
 
 After GitHub Release is created, edit release notes if needed:
 

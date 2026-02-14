@@ -193,18 +193,34 @@ public sealed class ConfigLoader
 
     public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
     {
-        _ = args;
-
         var rules = new List<IRule>();
         rules.AddRange(new BuiltinRuleProvider().GetRules());
 
-        var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
+        var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
+
+        if (pluginConfigs.Count > 0 && !args.AllowPlugins)
+        {
+            stderr?.WriteLine(
+                $"Warning: {pluginConfigs.Count} plugin(s) configured but not loaded. Use --allow-plugins to enable plugin loading.");
+            return rules;
+        }
+
+        if (pluginConfigs.Count == 0)
+        {
+            return rules;
+        }
+
+        var plugins = pluginConfigs
             .Select(p => new PluginDescriptor(p.Path, p.Enabled))
             .ToArray();
 
-        var loaded = PluginLoader.Load(plugins);
+        var configPath = GetConfigPath(args);
+        var baseDirectory = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
 
-        // Report plugin loading issues with summary
+        var loaded = PluginLoader.Load(plugins, baseDirectory);
+
         if (stderr is not null)
         {
             PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
