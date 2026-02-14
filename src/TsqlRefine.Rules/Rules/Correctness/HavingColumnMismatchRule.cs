@@ -207,9 +207,9 @@ public sealed class HavingColumnMismatchRule : DiagnosticVisitorRuleBase
                     return;
 
                 case FunctionCall func:
-                    if (AggregateFunctionHelpers.IsAggregateFunction(func))
+                    if (IsAggregateOrWindowFunction(func))
                     {
-                        // Don't collect column references inside aggregate functions
+                        // Window/aggregate function internals have independent semantics for this rule.
                         return;
                     }
                     if (func.Parameters != null)
@@ -397,10 +397,33 @@ public sealed class HavingColumnMismatchRule : DiagnosticVisitorRuleBase
                     continue;
                 }
 
-                sb.Append(tokens[i].Text);
+                sb.Append(NormalizeTokenText(tokens[i]));
             }
 
             return sb.ToString();
+        }
+
+        private static bool IsAggregateOrWindowFunction(FunctionCall func) =>
+            func.OverClause != null || AggregateFunctionHelpers.IsAggregateFunction(func);
+
+        private static string NormalizeTokenText(TSqlParserToken token)
+        {
+            if (token.TokenType == TSqlTokenType.QuotedIdentifier)
+            {
+                return NormalizeQuotedIdentifier(token.Text);
+            }
+
+            return token.Text;
+        }
+
+        private static string NormalizeQuotedIdentifier(string text)
+        {
+            if (text.Length >= 2 && text[0] == '[' && text[^1] == ']')
+            {
+                return text[1..^1].Replace("]]", "]", StringComparison.Ordinal);
+            }
+
+            return text;
         }
 
         private static string GetColumnDisplayName(ColumnReferenceExpression colRef)

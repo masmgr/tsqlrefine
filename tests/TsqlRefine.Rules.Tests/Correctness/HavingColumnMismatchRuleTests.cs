@@ -203,6 +203,17 @@ public sealed class HavingColumnMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_GroupByExpression_BracketedIdentifierEquivalentInHaving_ReturnsEmpty()
+    {
+        const string sql = "SELECT [a] + 1 FROM t GROUP BY a + 1 HAVING [a] + 1 > 0;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_NoHavingClause_ReturnsEmpty()
     {
         const string sql = "SELECT a, COUNT(*) FROM t GROUP BY a;";
@@ -284,6 +295,17 @@ public sealed class HavingColumnMismatchRuleTests
     public void Analyze_HavingWithSubquery_ReturnsEmpty()
     {
         const string sql = "SELECT a FROM t GROUP BY a HAVING a > (SELECT MAX(x) FROM s);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_HavingWithWindowFunctionOrderByColumn_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, COUNT(*) FROM t GROUP BY a HAVING ROW_NUMBER() OVER(ORDER BY b) > 0;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToArray();
