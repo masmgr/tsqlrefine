@@ -1,5 +1,10 @@
 # tsqlrefine
 
+[![CI](https://github.com/masmgr/tsqlrefine/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/masmgr/tsqlrefine/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/TsqlRefine)](https://www.nuget.org/packages/TsqlRefine)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
+
 T-SQL linter, auto-fixer, and formatter for SQL Server.
 
 > Note: This project is currently in early development (pre-1.0). Breaking changes are expected.
