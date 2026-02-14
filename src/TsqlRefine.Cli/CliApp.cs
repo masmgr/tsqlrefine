@@ -10,7 +10,7 @@ public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
         {
             return handledExitCode.Value;
@@ -21,7 +21,7 @@ public static class CliApp
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
     {
-        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
         {
             return handledExitCode.Value;
@@ -52,7 +52,8 @@ public static class CliApp
 
     private static async Task<(CliArgs? Parsed, int? HandledExitCode)> ParseOrHandleBuiltInAsync(
         string[] args,
-        TextWriter stdout)
+        TextWriter stdout,
+        TextWriter? stderr = null)
     {
         EncodingProviderRegistry.EnsureRegistered();
 
@@ -61,7 +62,19 @@ public static class CliApp
             return (null, await CliParser.InvokeAsync(args, stdout));
         }
 
-        return (CliParser.Parse(args), null);
+        try
+        {
+            return (CliParser.Parse(args), null);
+        }
+        catch (ConfigException ex)
+        {
+            if (stderr is not null)
+            {
+                await stderr.WriteLineAsync(ex.Message);
+            }
+
+            return (null, ExitCodes.ConfigError);
+        }
     }
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)

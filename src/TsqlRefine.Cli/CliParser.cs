@@ -474,7 +474,8 @@ public static class CliParser
             return DefaultMaxFileSizeBytes;
         if (int.TryParse(s, out var mb) && mb > 0)
             return (long)mb * 1024 * 1024;
-        return DefaultMaxFileSizeBytes;
+        throw new ConfigException(
+            $"Invalid --max-file-size value: '{s}'. Expected a positive integer (MB).");
     }
 
     private static int? ParseInt(string? s) =>

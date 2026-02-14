@@ -19,10 +19,27 @@ public sealed class InputSizeLimitTests
     }
 
     [Fact]
-    public void Parse_MaxFileSizeInvalid_FallsBackToDefault()
+    public void Parse_MaxFileSizeInvalid_ThrowsConfigException()
     {
-        var args = CliParser.Parse(["lint", "--stdin", "--max-file-size", "abc"]);
-        Assert.Equal(10L * 1024 * 1024, args.MaxFileSize);
+        var ex = Assert.Throws<ConfigException>(
+            () => CliParser.Parse(["lint", "--stdin", "--max-file-size", "abc"]));
+        Assert.Contains("Invalid --max-file-size", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_MaxFileSizeNegative_ThrowsConfigException()
+    {
+        var ex = Assert.Throws<ConfigException>(
+            () => CliParser.Parse(["lint", "--stdin", "--max-file-size", "-5"]));
+        Assert.Contains("Invalid --max-file-size", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_MaxFileSizeZero_ThrowsConfigException()
+    {
+        var ex = Assert.Throws<ConfigException>(
+            () => CliParser.Parse(["lint", "--stdin", "--max-file-size", "0"]));
+        Assert.Contains("Invalid --max-file-size", ex.Message);
     }
 
     [Fact]
