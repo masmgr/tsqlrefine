@@ -91,4 +91,4 @@ This rule can be disabled in your ruleset configuration:
 
 ## See Also
 
-- [non-sargable](non-sargable.md) - Detects other functions applied to columns (UPPER, LOWER, SUBSTRING, YEAR, etc.)
+- [avoid-non-sargable-predicate](avoid-non-sargable-predicate.md) - Detects other functions applied to columns (UPPER, LOWER, SUBSTRING, YEAR, etc.)

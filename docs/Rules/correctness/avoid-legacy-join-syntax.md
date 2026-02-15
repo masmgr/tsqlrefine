@@ -1,6 +1,6 @@
-# Ban Legacy Join Syntax
+# Avoid Legacy Join Syntax
 
-**Rule ID:** `ban-legacy-join-syntax`
+**Rule ID:** `avoid-legacy-join-syntax`
 **Category:** Correctness
 **Severity:** Error
 **Fixable:** No
@@ -84,7 +84,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "ban-legacy-join-syntax", "enabled": false }
+    { "id": "avoid-legacy-join-syntax", "enabled": false }
   ]
 }
 ```

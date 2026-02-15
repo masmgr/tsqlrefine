@@ -1,6 +1,6 @@
-﻿# Print Statement
+﻿# Avoid Print Statement
 
-**Rule ID:** `print-statement`
+**Rule ID:** `avoid-print-statement`
 **Category:** Style
 **Severity:** Information
 **Fixable:** No
@@ -165,7 +165,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "print-statement", "enabled": false }
+    { "id": "avoid-print-statement", "enabled": false }
   ]
 }
 ```

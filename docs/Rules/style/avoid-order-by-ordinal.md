@@ -1,6 +1,6 @@
-# Disallow Order By Ordinal
+# Avoid Order By Ordinal
 
-**Rule ID:** `disallow-order-by-ordinal`
+**Rule ID:** `avoid-order-by-ordinal`
 **Category:** Style
 **Severity:** Information
 **Fixable:** No
@@ -61,7 +61,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "disallow-order-by-ordinal", "enabled": false }
+    { "id": "avoid-order-by-ordinal", "enabled": false }
   ]
 }
 ```

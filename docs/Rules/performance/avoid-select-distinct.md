@@ -1,6 +1,6 @@
-# Disallow Select Distinct
+# Avoid Select Distinct
 
-**Rule ID:** `disallow-select-distinct`
+**Rule ID:** `avoid-select-distinct`
 **Category:** Performance
 **Severity:** Information
 **Fixable:** No
@@ -164,7 +164,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "disallow-select-distinct", "enabled": false }
+    { "id": "avoid-select-distinct", "enabled": false }
   ]
 }
 ```

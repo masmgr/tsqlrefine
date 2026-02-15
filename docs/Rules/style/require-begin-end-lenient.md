@@ -1,6 +1,6 @@
-﻿# Require Begin End For If With Controlflow Exception
+﻿# Require Begin End Lenient
 
-**Rule ID:** `require-begin-end-for-if-with-controlflow-exception`
+**Rule ID:** `require-begin-end-lenient`
 **Category:** Control Flow Safety
 **Severity:** Warning
 **Fixable:** No
@@ -52,7 +52,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "require-begin-end-for-if-with-controlflow-exception", "enabled": false }
+    { "id": "require-begin-end-lenient", "enabled": false }
   ]
 }
 ```

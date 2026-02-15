@@ -1,6 +1,6 @@
-﻿# Require Ms Description For Table Definition File
+﻿# Require Table Description
 
-**Rule ID:** `require-ms-description-for-table-definition-file`
+**Rule ID:** `require-table-description`
 **Category:** Schema Design
 **Severity:** Information
 **Fixable:** No
@@ -174,7 +174,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "require-ms-description-for-table-definition-file", "enabled": false }
+    { "id": "require-table-description", "enabled": false }
   ]
 }
 ```

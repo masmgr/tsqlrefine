@@ -1,6 +1,6 @@
-﻿# Information Schema
+﻿# Avoid Information Schema
 
-**Rule ID:** `information-schema`
+**Rule ID:** `avoid-information-schema`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -144,7 +144,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "information-schema", "enabled": false }
+    { "id": "avoid-information-schema", "enabled": false }
   ]
 }
 ```

@@ -1,6 +1,6 @@
-﻿# Disallow Select Into
+﻿# Avoid Select Into
 
-**Rule ID:** `disallow-select-into`
+**Rule ID:** `avoid-select-into`
 **Category:** Performance
 **Severity:** Information
 **Fixable:** No
@@ -50,7 +50,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "disallow-select-into", "enabled": false }
+    { "id": "avoid-select-into", "enabled": false }
   ]
 }
 ```

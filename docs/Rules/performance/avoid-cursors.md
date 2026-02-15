@@ -1,6 +1,6 @@
-﻿# Disallow Cursors
+﻿# Avoid Cursors
 
-**Rule ID:** `disallow-cursors`
+**Rule ID:** `avoid-cursors`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -261,7 +261,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "disallow-cursors", "enabled": false }
+    { "id": "avoid-cursors", "enabled": false }
   ]
 }
 ```

@@ -1,6 +1,6 @@
-﻿# Conditional Begin End
+﻿# Require Begin End Strict
 
-**Rule ID:** `conditional-begin-end`
+**Rule ID:** `require-begin-end-strict`
 **Category:** Style
 **Severity:** Information
 **Fixable:** Yes
@@ -127,7 +127,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "conditional-begin-end", "enabled": false }
+    { "id": "require-begin-end-strict", "enabled": false }
   ]
 }
 ```

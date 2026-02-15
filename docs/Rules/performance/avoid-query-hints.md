@@ -1,6 +1,6 @@
-# Ban Query Hints
+# Avoid Query Hints
 
-**Rule ID:** `ban-query-hints`
+**Rule ID:** `avoid-query-hints`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -198,7 +198,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "ban-query-hints", "enabled": false }
+    { "id": "avoid-query-hints", "enabled": false }
   ]
 }
 ```

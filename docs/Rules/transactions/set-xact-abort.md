@@ -1,6 +1,6 @@
-﻿# Require Xact Abort On
+﻿# Set Xact Abort
 
-**Rule ID:** `require-xact-abort-on`
+**Rule ID:** `set-xact-abort`
 **Category:** Transaction Safety
 **Severity:** Warning
 **Fixable:** No
@@ -142,7 +142,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "require-xact-abort-on", "enabled": false }
+    { "id": "set-xact-abort", "enabled": false }
   ]
 }
 ```

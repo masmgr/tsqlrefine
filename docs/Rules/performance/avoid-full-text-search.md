@@ -1,6 +1,6 @@
-﻿# Full Text
+﻿# Avoid Full Text Search
 
-**Rule ID:** `full-text`
+**Rule ID:** `avoid-full-text-search`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -127,7 +127,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "full-text", "enabled": false }
+    { "id": "avoid-full-text-search", "enabled": false }
   ]
 }
 ```

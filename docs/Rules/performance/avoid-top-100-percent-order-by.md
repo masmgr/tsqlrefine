@@ -1,6 +1,6 @@
-﻿# Forbid Top 100 Percent Order By
+﻿# Avoid Top 100 Percent Order By
 
-**Rule ID:** `forbid-top-100-percent-order-by`
+**Rule ID:** `avoid-top-100-percent-order-by`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -102,7 +102,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "forbid-top-100-percent-order-by", "enabled": false }
+    { "id": "avoid-top-100-percent-order-by", "enabled": false }
   ]
 }
 ```

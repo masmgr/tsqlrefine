@@ -1,6 +1,6 @@
-﻿# Object Property
+﻿# Avoid Objectproperty
 
-**Rule ID:** `object-property`
+**Rule ID:** `avoid-objectproperty`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -98,7 +98,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "object-property", "enabled": false }
+    { "id": "avoid-objectproperty", "enabled": false }
   ]
 }
 ```

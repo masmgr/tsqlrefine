@@ -1,6 +1,6 @@
-﻿# Upper Lower
+﻿# Avoid Upper Lower In Predicate
 
-**Rule ID:** `upper-lower`
+**Rule ID:** `avoid-upper-lower-in-predicate`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -108,7 +108,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "upper-lower", "enabled": false }
+    { "id": "avoid-upper-lower-in-predicate", "enabled": false }
   ]
 }
 ```

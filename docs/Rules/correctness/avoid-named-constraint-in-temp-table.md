@@ -1,6 +1,6 @@
-﻿# Named Constraint
+﻿# Avoid Named Constraint In Temp Table
 
-**Rule ID:** `named-constraint`
+**Rule ID:** `avoid-named-constraint-in-temp-table`
 **Category:** Correctness
 **Severity:** Error
 **Fixable:** No
@@ -152,7 +152,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "named-constraint", "enabled": false }
+    { "id": "avoid-named-constraint-in-temp-table", "enabled": false }
   ]
 }
 ```

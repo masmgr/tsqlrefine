@@ -1,6 +1,6 @@
-﻿# Non Sargable
+﻿# Avoid Non Sargable Predicate
 
-**Rule ID:** `non-sargable`
+**Rule ID:** `avoid-non-sargable-predicate`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -101,7 +101,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "non-sargable", "enabled": false }
+    { "id": "avoid-non-sargable-predicate", "enabled": false }
   ]
 }
 ```

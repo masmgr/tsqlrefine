@@ -1,6 +1,6 @@
-# Avoid Correlated Scalar Subquery In Select
+# Avoid Correlated Subquery In Select
 
-**Rule ID:** `avoid-correlated-scalar-subquery-in-select`
+**Rule ID:** `avoid-correlated-subquery-in-select`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -86,7 +86,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "avoid-correlated-scalar-subquery-in-select", "enabled": false }
+    { "id": "avoid-correlated-subquery-in-select", "enabled": false }
   ]
 }
 ```

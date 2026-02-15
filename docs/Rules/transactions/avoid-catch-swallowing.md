@@ -1,6 +1,6 @@
-# Catch Swallowing
+# Avoid Catch Swallowing
 
-**Rule ID:** `catch-swallowing`
+**Rule ID:** `avoid-catch-swallowing`
 **Category:** Transactions
 **Severity:** Warning
 **Fixable:** No
@@ -222,7 +222,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "catch-swallowing", "enabled": false }
+    { "id": "avoid-catch-swallowing", "enabled": false }
   ]
 }
 ```

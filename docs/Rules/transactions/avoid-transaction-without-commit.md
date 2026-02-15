@@ -1,6 +1,6 @@
-# Transaction Without Commit Or Rollback
+# Avoid Transaction Without Commit
 
-**Rule ID:** `transaction-without-commit-or-rollback`
+**Rule ID:** `avoid-transaction-without-commit`
 **Category:** Transactions
 **Severity:** Error
 **Fixable:** No
@@ -248,7 +248,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "transaction-without-commit-or-rollback", "enabled": false }
+    { "id": "avoid-transaction-without-commit", "enabled": false }
   ]
 }
 ```
@@ -276,12 +276,12 @@ IF @@TRANCOUNT > 0
 2. **Check `@@TRANCOUNT > 0`** before ROLLBACK in CATCH
 3. **Keep transactions short** - Reduces lock contention
 4. **Avoid cross-batch transactions** - Use stored procedures instead
-5. **Set `XACT_ABORT ON`** - Auto-rollback on errors (see [require-xact-abort-on](require-xact-abort-on.md))
+5. **Set `XACT_ABORT ON`** - Auto-rollback on errors (see [set-xact-abort](set-xact-abort.md))
 
 ## See Also
 
 - [TsqlRefine Rules Documentation](../README.md)
 - [require-try-catch-for-transaction](require-try-catch-for-transaction.md) - Requires TRY/CATCH for transaction safety
-- [require-xact-abort-on](require-xact-abort-on.md) - Auto-rollback on errors
-- [catch-swallowing](catch-swallowing.md) - Related error handling rule
+- [set-xact-abort](set-xact-abort.md) - Auto-rollback on errors
+- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Related error handling rule
 - [Microsoft Documentation: Transactions](https://docs.microsoft.com/en-us/sql/t-sql/language-elements/transactions-transact-sql)

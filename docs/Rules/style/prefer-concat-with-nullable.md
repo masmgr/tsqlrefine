@@ -1,6 +1,6 @@
-﻿# Prefer Concat Over Plus When Nullable Or Convert
+﻿# Prefer Concat With Nullable
 
-**Rule ID:** `prefer-concat-over-plus-when-nullable-or-convert`
+**Rule ID:** `prefer-concat-with-nullable`
 **Category:** Modernization
 **Severity:** Information
 **Fixable:** No
@@ -113,7 +113,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "prefer-concat-over-plus-when-nullable-or-convert", "enabled": false }
+    { "id": "prefer-concat-with-nullable", "enabled": false }
   ]
 }
 ```

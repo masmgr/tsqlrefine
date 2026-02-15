@@ -84,6 +84,6 @@ In `custom-ruleset.json`:
 
 ## See Also
 
-- [non-sargable](non-sargable.md) - Detects functions on columns in predicates
+- [avoid-non-sargable-predicate](avoid-non-sargable-predicate.md) - Detects functions on columns in predicates
 - [TsqlRefine Rules Documentation](../README.md)
 - [Configuration Guide](../../configuration.md)

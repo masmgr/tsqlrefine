@@ -1,6 +1,6 @@
-# No Top Without Order By In Select Into
+# Avoid Top Without Order By In Select Into
 
-**Rule ID:** `no-top-without-order-by-in-select-into`
+**Rule ID:** `avoid-top-without-order-by-in-select-into`
 **Category:** Correctness
 **Severity:** Error
 **Fixable:** No
@@ -112,7 +112,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "no-top-without-order-by-in-select-into", "enabled": false }
+    { "id": "avoid-top-without-order-by-in-select-into", "enabled": false }
   ]
 }
 ```

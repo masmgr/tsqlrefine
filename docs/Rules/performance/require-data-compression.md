@@ -1,6 +1,6 @@
-﻿# Data Compression
+﻿# Require Data Compression
 
-**Rule ID:** `data-compression`
+**Rule ID:** `require-data-compression`
 **Category:** Performance
 **Severity:** Information
 **Fixable:** No
@@ -116,7 +116,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "data-compression", "enabled": false }
+    { "id": "require-data-compression", "enabled": false }
   ]
 }
 ```

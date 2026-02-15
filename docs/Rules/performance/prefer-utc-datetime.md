@@ -1,6 +1,6 @@
-﻿# Utc Datetime
+﻿# Prefer Utc Datetime
 
-**Rule ID:** `utc-datetime`
+**Rule ID:** `prefer-utc-datetime`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -114,7 +114,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "utc-datetime", "enabled": false }
+    { "id": "prefer-utc-datetime", "enabled": false }
   ]
 }
 ```

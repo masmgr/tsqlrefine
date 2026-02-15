@@ -1,6 +1,6 @@
-﻿# Join Keyword
+﻿# Require Explicit Join
 
-**Rule ID:** `join-keyword`
+**Rule ID:** `require-explicit-join`
 **Category:** Style
 **Severity:** Warning
 **Fixable:** No
@@ -102,7 +102,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "join-keyword", "enabled": false }
+    { "id": "require-explicit-join", "enabled": false }
   ]
 }
 ```

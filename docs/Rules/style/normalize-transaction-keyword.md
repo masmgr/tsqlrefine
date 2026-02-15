@@ -150,7 +150,7 @@ In `custom-ruleset.json`:
 
 - [normalize-execute-keyword](normalize-execute-keyword.md) - Normalizes EXEC to EXECUTE
 - [normalize-procedure-keyword](normalize-procedure-keyword.md) - Normalizes PROC to PROCEDURE
-- [transaction-without-commit-or-rollback](../transactions/transaction-without-commit-or-rollback.md) - Detects missing COMMIT/ROLLBACK
+- [avoid-transaction-without-commit](../transactions/avoid-transaction-without-commit.md) - Detects missing COMMIT/ROLLBACK
 - [require-try-catch-for-transaction](../transactions/require-try-catch-for-transaction.md) - Requires TRY/CATCH for transactions
 - [TsqlRefine Rules Documentation](../README.md)
 - [Configuration Guide](../../configuration.md)

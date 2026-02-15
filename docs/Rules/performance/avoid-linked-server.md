@@ -1,6 +1,6 @@
-﻿# Linked Server
+﻿# Avoid Linked Server
 
-**Rule ID:** `linked-server`
+**Rule ID:** `avoid-linked-server`
 **Category:** Performance
 **Severity:** Warning
 **Fixable:** No
@@ -137,7 +137,7 @@ In `custom-ruleset.json`:
 ```json
 {
   "rules": [
-    { "id": "linked-server", "enabled": false }
+    { "id": "avoid-linked-server", "enabled": false }
   ]
 }
 ```
