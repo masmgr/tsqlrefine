@@ -1,4 +1,4 @@
--- transaction-without-commit-or-rollback rule examples
+-- avoid-transaction-without-commit rule examples
 -- This rule detects BEGIN TRANSACTION without COMMIT or ROLLBACK
 
 -- BAD: Missing commit entirely

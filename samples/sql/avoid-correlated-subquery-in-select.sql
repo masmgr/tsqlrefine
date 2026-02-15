@@ -1,4 +1,4 @@
--- avoid-correlated-scalar-subquery-in-select: Avoid correlated scalar subqueries in SELECT list
+-- avoid-correlated-subquery-in-select: Avoid correlated scalar subqueries in SELECT list
 
 -- Bad: Correlated scalar subquery in SELECT
 SELECT

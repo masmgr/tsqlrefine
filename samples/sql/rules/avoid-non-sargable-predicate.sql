@@ -1,4 +1,4 @@
--- non-sargable rule examples
+-- avoid-non-sargable-predicate rule examples
 -- This rule detects functions applied to columns in predicates
 
 -- BAD: String function on column in WHERE

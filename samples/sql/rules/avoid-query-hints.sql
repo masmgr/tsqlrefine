@@ -1,4 +1,4 @@
--- ban-query-hints rule examples
+-- avoid-query-hints rule examples
 -- This rule detects query and table hints that bypass the optimizer
 
 -- BAD: Table hint - forcing index

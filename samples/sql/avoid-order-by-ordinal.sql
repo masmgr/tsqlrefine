@@ -1,4 +1,4 @@
--- disallow-order-by-ordinal rule examples
+-- avoid-order-by-ordinal rule examples
 -- Forbids ORDER BY with ordinal positions which break when columns are reordered
 
 -- BAD: Ordinal positions

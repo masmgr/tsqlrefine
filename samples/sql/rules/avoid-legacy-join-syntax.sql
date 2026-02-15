@@ -1,4 +1,4 @@
--- ban-legacy-join-syntax rule examples
+-- avoid-legacy-join-syntax rule examples
 -- This rule detects legacy outer join syntax (*=, =*) which is deprecated since SQL Server 2000
 
 -- BAD: Legacy left outer join syntax

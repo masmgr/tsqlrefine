@@ -1,4 +1,4 @@
--- disallow-select-distinct rule examples
+-- avoid-select-distinct rule examples
 -- This rule flags SELECT DISTINCT usage which often masks JOIN bugs
 
 -- BAD: DISTINCT hiding 1:N relationship

@@ -1,4 +1,4 @@
--- catch-swallowing rule examples
+-- avoid-catch-swallowing rule examples
 -- This rule detects CATCH blocks that suppress errors without logging/rethrowing
 
 -- BAD: Empty CATCH block

@@ -1,4 +1,4 @@
--- no-top-without-order-by-in-select-into rule examples
+-- avoid-top-without-order-by-in-select-into rule examples
 -- This rule detects SELECT TOP ... INTO without ORDER BY
 
 -- BAD: TOP without ORDER BY in SELECT INTO
