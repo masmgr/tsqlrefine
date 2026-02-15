@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class DataCompressionRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "data-compression",
+        RuleId: "require-data-compression",
         Description: "Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,
@@ -47,7 +47,7 @@ public sealed class DataCompressionRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: node.SchemaObjectName.BaseIdentifier,
                     message: "CREATE TABLE statement missing DATA_COMPRESSION option. Consider specifying ROW, PAGE, or NONE for optimal storage.",
-                    code: "data-compression",
+                    code: "require-data-compression",
                     category: "Performance",
                     fixable: false
                 );

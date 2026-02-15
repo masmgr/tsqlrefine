@@ -23,7 +23,7 @@ public sealed class RequireXactAbortOnRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("require-xact-abort-on", diagnostics[0].Code);
+        Assert.Equal("set-xact-abort", diagnostics[0].Code);
         Assert.Contains("XACT_ABORT", diagnostics[0].Message);
     }
 
@@ -65,7 +65,7 @@ public sealed class RequireXactAbortOnRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("require-xact-abort-on", diagnostics[0].Code);
+        Assert.Equal("set-xact-abort", diagnostics[0].Code);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class RequireXactAbortOnRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("require-xact-abort-on", _rule.Metadata.RuleId);
+        Assert.Equal("set-xact-abort", _rule.Metadata.RuleId);
         Assert.Equal("Transactions", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -193,7 +193,7 @@ public sealed class RequireXactAbortOnRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "require-xact-abort-on"
+            Code: "set-xact-abort"
         );
 
         // Act

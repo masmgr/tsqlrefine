@@ -11,7 +11,7 @@ public sealed class TransactionWithoutCommitOrRollbackRuleTests
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
-        Assert.Equal("transaction-without-commit-or-rollback", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-transaction-without-commit", _rule.Metadata.RuleId);
         Assert.Equal("Transactions", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -27,7 +27,7 @@ SELECT 1;";
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("transaction-without-commit-or-rollback", diagnostics[0].Code);
+        Assert.Equal("avoid-transaction-without-commit", diagnostics[0].Code);
         // Diagnostic should highlight only "BEGIN TRANSACTION" keywords
         Assert.Equal(1, diagnostics[0].Range.Start.Line);
         Assert.Equal(0, diagnostics[0].Range.Start.Character);

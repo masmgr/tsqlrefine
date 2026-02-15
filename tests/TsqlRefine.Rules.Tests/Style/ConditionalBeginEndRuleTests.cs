@@ -11,7 +11,7 @@ public sealed class ConditionalBeginEndRuleTests
     {
         var rule = new ConditionalBeginEndRule();
 
-        Assert.Equal("conditional-begin-end", rule.Metadata.RuleId);
+        Assert.Equal("require-begin-end-strict", rule.Metadata.RuleId);
         Assert.Equal("Style", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.True(rule.Metadata.Fixable);
@@ -35,7 +35,7 @@ public sealed class ConditionalBeginEndRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.All(diagnostics, d => Assert.Equal("conditional-begin-end", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("require-begin-end-strict", d.Code));
         Assert.All(diagnostics, d => Assert.Contains("BEGIN", d.Message));
     }
 
@@ -117,7 +117,7 @@ public sealed class ConditionalBeginEndRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("conditional-begin-end", diagnostics[0].Code);
+        Assert.Equal("require-begin-end-strict", diagnostics[0].Code);
     }
 
     [Fact]
@@ -133,7 +133,7 @@ public sealed class ConditionalBeginEndRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("conditional-begin-end", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("require-begin-end-strict", d.Code));
     }
 
     [Fact]

@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class ObjectPropertyRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "object-property",
+        RuleId: "avoid-objectproperty",
         Description: "Prohibit OBJECTPROPERTY function; use OBJECTPROPERTYEX or sys catalog views instead",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -33,7 +33,7 @@ public sealed class ObjectPropertyRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: node,
                     message: "OBJECTPROPERTY function found. Use OBJECTPROPERTYEX or sys catalog views instead for better performance and compatibility.",
-                    code: "object-property",
+                    code: "avoid-objectproperty",
                     category: "Performance",
                     fixable: false
                 );

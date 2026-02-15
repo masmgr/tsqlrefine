@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style;
 public sealed class PreferConcatOverPlusWhenNullableOrConvertRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
-        RuleId: "prefer-concat-over-plus-when-nullable-or-convert",
+        RuleId: "prefer-concat-with-nullable",
         Description: "Stricter variant that also detects CAST/CONVERT in concatenations; enable instead of prefer-concat-over-plus for comprehensive coverage (SQL Server 2012+).",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
@@ -56,7 +56,7 @@ public sealed class PreferConcatOverPlusWhenNullableOrConvertRule : IRule
                     AddDiagnostic(
                         fragment: node,
                         message: "Use CONCAT() instead of + concatenation with ISNULL/COALESCE/CAST/CONVERT; it handles NULL values and type conversions automatically.",
-                        code: "prefer-concat-over-plus-when-nullable-or-convert",
+                        code: "prefer-concat-with-nullable",
                         category: "Style",
                         fixable: false
                     );

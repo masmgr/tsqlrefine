@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class UpperLowerRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "upper-lower",
+        RuleId: "avoid-upper-lower-in-predicate",
         Description: "Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -52,7 +52,7 @@ public sealed class UpperLowerRule : DiagnosticVisitorRuleBase
                         AddDiagnostic(
                             fragment: functionCall,
                             message: $"Avoid using {functionName}() on columns in predicates. This prevents index usage and causes performance issues. Consider using a case-insensitive collation or computed column with index instead.",
-                            code: "upper-lower",
+                            code: "avoid-upper-lower-in-predicate",
                             category: "Performance",
                             fixable: false
                         );

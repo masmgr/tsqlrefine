@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class LinkedServerRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "linked-server",
+        RuleId: "avoid-linked-server",
         Description: "Prohibit linked server queries (4-part identifiers); use alternative data access patterns",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,
@@ -32,7 +32,7 @@ public sealed class LinkedServerRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: node,
                     message: "Linked server query found (4-part identifier). Consider using alternative data access patterns for better performance and reliability.",
-                    code: "linked-server",
+                    code: "avoid-linked-server",
                     category: "Performance",
                     fixable: false
                 );

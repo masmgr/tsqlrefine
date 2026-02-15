@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class DisallowSelectDistinctRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "disallow-select-distinct",
+        RuleId: "avoid-select-distinct",
         Description: "Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications.",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,

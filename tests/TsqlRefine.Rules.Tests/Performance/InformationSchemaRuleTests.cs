@@ -11,7 +11,7 @@ public sealed class InformationSchemaRuleTests
     {
         var rule = new InformationSchemaRule();
 
-        Assert.Equal("information-schema", rule.Metadata.RuleId);
+        Assert.Equal("avoid-information-schema", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -29,7 +29,7 @@ public sealed class InformationSchemaRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("information-schema", diagnostics[0].Code);
+        Assert.Equal("avoid-information-schema", diagnostics[0].Code);
         Assert.Contains("INFORMATION_SCHEMA", diagnostics[0].Message);
     }
 
@@ -61,7 +61,7 @@ public sealed class InformationSchemaRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("information-schema", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-information-schema", d.Code));
     }
 
     [Fact]

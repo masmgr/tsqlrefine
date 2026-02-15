@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class FullTextRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "full-text",
+        RuleId: "avoid-full-text-search",
         Description: "Prohibit full-text search predicates; use alternative search strategies for better performance",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,
@@ -29,7 +29,7 @@ public sealed class FullTextRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: node,
                 message: "Full-text search predicate found (CONTAINS/FREETEXT). Consider using alternative search strategies for better performance.",
-                code: "full-text",
+                code: "avoid-full-text-search",
                 category: "Performance",
                 fixable: false
             );
@@ -42,7 +42,7 @@ public sealed class FullTextRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: node,
                 message: "Full-text table function found (CONTAINSTABLE/FREETEXTTABLE). Consider using alternative search strategies for better performance.",
-                code: "full-text",
+                code: "avoid-full-text-search",
                 category: "Performance",
                 fixable: false
             );

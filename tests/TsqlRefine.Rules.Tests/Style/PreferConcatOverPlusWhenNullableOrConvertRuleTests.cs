@@ -23,7 +23,7 @@ public sealed class PreferConcatOverPlusWhenNullableOrConvertRuleTests
 
         // Assert
         Assert.NotEmpty(diagnostics);
-        Assert.All(diagnostics, d => Assert.Equal("prefer-concat-over-plus-when-nullable-or-convert", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("prefer-concat-with-nullable", d.Code));
         Assert.All(diagnostics, d => Assert.Contains("CONCAT", d.Message));
     }
 
@@ -89,7 +89,7 @@ public sealed class PreferConcatOverPlusWhenNullableOrConvertRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("prefer-concat-over-plus-when-nullable-or-convert", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("prefer-concat-with-nullable", d.Code));
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public sealed class PreferConcatOverPlusWhenNullableOrConvertRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("prefer-concat-over-plus-when-nullable-or-convert", _rule.Metadata.RuleId);
+        Assert.Equal("prefer-concat-with-nullable", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -155,7 +155,7 @@ public sealed class PreferConcatOverPlusWhenNullableOrConvertRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "prefer-concat-over-plus-when-nullable-or-convert"
+            Code: "prefer-concat-with-nullable"
         );
 
         // Act

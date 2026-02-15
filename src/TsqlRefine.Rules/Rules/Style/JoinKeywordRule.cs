@@ -5,7 +5,7 @@ namespace TsqlRefine.Rules.Rules.Style;
 
 public sealed class JoinKeywordRule : DiagnosticVisitorRuleBase
 {
-    private const string RuleId = "join-keyword";
+    private const string RuleId = "require-explicit-join";
     private const string Category = "Style";
 
     public override RuleMetadata Metadata { get; } = new(

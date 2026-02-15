@@ -11,7 +11,7 @@ public sealed class NamedConstraintRuleTests
     {
         var rule = new NamedConstraintRule();
 
-        Assert.Equal("named-constraint", rule.Metadata.RuleId);
+        Assert.Equal("avoid-named-constraint-in-temp-table", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -40,7 +40,7 @@ public sealed class NamedConstraintRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("named-constraint", diagnostics[0].Code);
+        Assert.Equal("avoid-named-constraint-in-temp-table", diagnostics[0].Code);
         Assert.Contains("temp table", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -87,7 +87,7 @@ public sealed class NamedConstraintRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("named-constraint", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-named-constraint-in-temp-table", d.Code));
     }
 
     [Fact]

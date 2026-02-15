@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class DisallowSelectIntoRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "disallow-select-into",
+        RuleId: "avoid-select-into",
         Description: "Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results.",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,
@@ -31,7 +31,7 @@ public sealed class DisallowSelectIntoRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetRange(node.Into),
                     message: "Avoid SELECT...INTO; it implicitly creates schema and can produce environment-dependent results. Use CREATE TABLE + INSERT instead.",
-                    code: "disallow-select-into",
+                    code: "avoid-select-into",
                     category: "Performance",
                     fixable: false
                 );

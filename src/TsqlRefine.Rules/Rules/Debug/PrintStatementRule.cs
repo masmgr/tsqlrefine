@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Debug;
 public sealed class PrintStatementRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "print-statement",
+        RuleId: "avoid-print-statement",
         Description: "Prohibit PRINT statements; use THROW or RAISERROR WITH NOWAIT for error messages and debugging",
         Category: "Debug",
         DefaultSeverity: RuleSeverity.Information,
@@ -29,7 +29,7 @@ public sealed class PrintStatementRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "PRINT statement found. Use THROW or RAISERROR WITH NOWAIT for error messages. For debugging, use RAISERROR WITH NOWAIT to ensure immediate output.",
-                code: "print-statement",
+                code: "avoid-print-statement",
                 category: "Debug",
                 fixable: false
             );

@@ -11,7 +11,7 @@ public sealed class AvoidCorrelatedScalarSubqueryInSelectRuleTests
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
-        Assert.Equal("avoid-correlated-scalar-subquery-in-select", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-correlated-subquery-in-select", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -25,7 +25,7 @@ public sealed class AvoidCorrelatedScalarSubqueryInSelectRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("avoid-correlated-scalar-subquery-in-select", diagnostics[0].Code);
+        Assert.Equal("avoid-correlated-subquery-in-select", diagnostics[0].Code);
     }
 
     [Fact]

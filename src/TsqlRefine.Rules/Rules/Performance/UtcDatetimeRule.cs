@@ -22,7 +22,7 @@ public sealed class UtcDatetimeRule : IRule
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     public RuleMetadata Metadata { get; } = new(
-        RuleId: "utc-datetime",
+        RuleId: "prefer-utc-datetime",
         Description: "Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -63,7 +63,7 @@ public sealed class UtcDatetimeRule : IRule
                 AddDiagnostic(
                     fragment: node,
                     message: $"Avoid using local datetime function '{functionName}'. Use {utcAlternative} instead for timezone-independent datetime handling and better consistency across distributed systems.",
-                    code: "utc-datetime",
+                    code: "prefer-utc-datetime",
                     category: "Performance",
                     fixable: false
                 );
@@ -79,7 +79,7 @@ public sealed class UtcDatetimeRule : IRule
                 AddDiagnostic(
                     fragment: node,
                     message: "Avoid using local datetime function 'CURRENT_TIMESTAMP'. Use GETUTCDATE() instead for timezone-independent datetime handling and better consistency across distributed systems.",
-                    code: "utc-datetime",
+                    code: "prefer-utc-datetime",
                     category: "Performance",
                     fixable: false
                 );
