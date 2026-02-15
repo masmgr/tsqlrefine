@@ -29,7 +29,7 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             if (IsInPredicate && node.NotDefined && node.Subquery is not null)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetInKeywordRange(node),
                     message: "NOT IN with subquery can produce unexpected empty results when the subquery returns NULL values. Use NOT EXISTS or EXCEPT instead.",
                     code: "avoid-not-in-with-null",
                     category: "Correctness",

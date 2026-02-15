@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "named-constraint",
+        RuleId: "avoid-named-constraint-in-temp-table",
         Description: "Prohibit named constraints in temp tables to avoid naming conflicts",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -39,7 +39,7 @@ public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
                             AddDiagnostic(
                                 fragment: element,
                                 message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
-                                code: "named-constraint",
+                                code: "avoid-named-constraint-in-temp-table",
                                 category: "Correctness",
                                 fixable: false
                             );
@@ -57,7 +57,7 @@ public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
                                     AddDiagnostic(
                                         fragment: constraint,
                                         message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
-                                        code: "named-constraint",
+                                        code: "avoid-named-constraint-in-temp-table",
                                         category: "Correctness",
                                         fixable: false
                                     );

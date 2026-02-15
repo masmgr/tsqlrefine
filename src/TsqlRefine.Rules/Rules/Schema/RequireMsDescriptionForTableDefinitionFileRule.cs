@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Schema;
 public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "require-ms-description-for-table-definition-file",
+        RuleId: "require-table-description",
         Description: "Ensures table definition files include an MS_Description extended property so schema intent is captured alongside DDL.",
         Category: "Schema",
         DefaultSeverity: RuleSeverity.Information,
@@ -162,7 +162,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                     AddDiagnostic(
                         fragment: tableStmt.SchemaObjectName.BaseIdentifier,
                         message: $"Table '{tableName}' should have an MS_Description extended property to document its purpose.",
-                        code: "require-ms-description-for-table-definition-file",
+                        code: "require-table-description",
                         category: "Schema",
                         fixable: false
                     );
@@ -179,7 +179,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRule : DiagnosticV
                             AddDiagnostic(
                                 fragment: column.ColumnIdentifier!,
                                 message: $"Column '{columnName}' in table '{tableName}' should have an MS_Description extended property.",
-                                code: "require-ms-description-for-table-definition-file",
+                                code: "require-table-description",
                                 category: "Schema",
                                 fixable: false
                             );

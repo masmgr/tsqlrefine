@@ -10,7 +10,7 @@ public static class CliApp
 {
     public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
         {
             return handledExitCode.Value;
@@ -21,7 +21,7 @@ public static class CliApp
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
     {
-        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout);
+        var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
         {
             return handledExitCode.Value;
@@ -52,7 +52,8 @@ public static class CliApp
 
     private static async Task<(CliArgs? Parsed, int? HandledExitCode)> ParseOrHandleBuiltInAsync(
         string[] args,
-        TextWriter stdout)
+        TextWriter stdout,
+        TextWriter? stderr = null)
     {
         EncodingProviderRegistry.EnsureRegistered();
 
@@ -61,7 +62,19 @@ public static class CliApp
             return (null, await CliParser.InvokeAsync(args, stdout));
         }
 
-        return (CliParser.Parse(args), null);
+        try
+        {
+            return (CliParser.Parse(args), null);
+        }
+        catch (ConfigException ex)
+        {
+            if (stderr is not null)
+            {
+                await stderr.WriteLineAsync(ex.Message);
+            }
+
+            return (null, ExitCodes.ConfigError);
+        }
     }
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
@@ -71,6 +84,15 @@ public static class CliApp
 
         try
         {
+            ValidateOptions(parsed);
+            WarnConflictingOptions(parsed, stderr);
+
+            // Warn about legacy file locations only for commands that use config files
+            if (command is "lint" or "format" or "fix")
+            {
+                WarnLegacyFileLocations(parsed, stderr);
+            }
+
             // Initialize services
             var inputReader = new InputReader();
             var commandExecutor = new CommandExecutor(inputReader);
@@ -100,6 +122,59 @@ public static class CliApp
         {
             await stderr.WriteLineAsync(ex.ToString());
             return ExitCodes.Fatal;
+        }
+    }
+
+    private static void ValidateOptions(CliArgs args)
+    {
+        if (args.Preset is not null && args.RulesetPath is not null)
+        {
+            throw new ConfigException(
+                "--preset and --ruleset are mutually exclusive. Use one or the other.");
+        }
+
+        if (args.Verbose && args.Quiet)
+        {
+            throw new ConfigException(
+                "--verbose and --quiet are mutually exclusive. Use one or the other.");
+        }
+    }
+
+    private static void WarnConflictingOptions(CliArgs args, TextWriter stderr)
+    {
+        if (args.RuleId is null)
+        {
+            return;
+        }
+
+        if (args.Preset is not null)
+        {
+            stderr.WriteLine("Warning: --rule overrides --preset; preset will be ignored.");
+        }
+
+        if (args.RulesetPath is not null)
+        {
+            stderr.WriteLine("Warning: --rule overrides --ruleset; ruleset will be ignored.");
+        }
+    }
+
+    private static void WarnLegacyFileLocations(CliArgs args, TextWriter stderr)
+    {
+        if (args.Quiet)
+        {
+            return;
+        }
+
+        var configWarning = ConfigLoader.CheckLegacyFileWarning("tsqlrefine.json", args.ConfigPath, "--config");
+        if (configWarning is not null)
+        {
+            stderr.WriteLine(configWarning);
+        }
+
+        var ignoreWarning = ConfigLoader.CheckLegacyFileWarning("tsqlrefine.ignore", args.IgnoreListPath, "--ignorelist");
+        if (ignoreWarning is not null)
+        {
+            stderr.WriteLine(ignoreWarning);
         }
     }
 

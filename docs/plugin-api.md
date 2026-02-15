@@ -34,7 +34,7 @@ The internal model of `tsqlrefine` depends on the implementation language, but t
 
 - `ruleId` (unique)
 - `description` / `messageTemplate`
-- `category` (categories from `docs/rules.md`)
+- `category` (categories from `docs/Rules/README.md`)
 - `defaultSeverity` (Error/Warning/Info/Hint)
 - `fixable` (boolean)
 - `minSqlVersion` / `maxSqlVersion` (optional)
@@ -47,9 +47,7 @@ The internal model of `tsqlrefine` depends on the implementation language, but t
 
 ---
 
-## 4. C# Interface Proposal (Assuming .NET)
-
-> Even before the implementation language is finalized, you can define the expected interface shape upfront.
+## 4. C# Interface
 
 ```csharp
 public enum RuleSeverity
@@ -106,6 +104,20 @@ Example:
   ]
 }
 ```
+
+### Path resolution
+
+Plugin paths can be specified in two forms:
+
+- **Relative path with directory** (e.g. `"plugins/MyPlugin.dll"`) — resolved relative to the config file directory (or CWD if no config file).
+- **Filename only** (e.g. `"MyPlugin.dll"`) — searched in the following directories in order:
+  1. Config file directory (or CWD)
+  2. `CWD/.tsqlrefine/plugins/`
+  3. `HOME/.tsqlrefine/plugins/`
+
+The filename-only form is useful for sharing plugins across projects — place the DLL in `~/.tsqlrefine/plugins/` and reference it by name alone.
+
+### Load process
 
 At load time:
 

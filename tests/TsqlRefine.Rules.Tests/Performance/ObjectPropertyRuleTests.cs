@@ -11,7 +11,7 @@ public sealed class ObjectPropertyRuleTests
     {
         var rule = new ObjectPropertyRule();
 
-        Assert.Equal("object-property", rule.Metadata.RuleId);
+        Assert.Equal("avoid-objectproperty", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -30,7 +30,7 @@ public sealed class ObjectPropertyRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("object-property", diagnostics[0].Code);
+        Assert.Equal("avoid-objectproperty", diagnostics[0].Code);
         Assert.Contains("OBJECTPROPERTY", diagnostics[0].Message);
     }
 
@@ -60,7 +60,7 @@ public sealed class ObjectPropertyRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("object-property", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-objectproperty", d.Code));
     }
 
     [Fact]

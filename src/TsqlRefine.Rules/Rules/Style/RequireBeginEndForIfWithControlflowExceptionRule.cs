@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style;
 public sealed class RequireBeginEndForIfWithControlflowExceptionRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "require-begin-end-for-if-with-controlflow-exception",
+        RuleId: "require-begin-end-lenient",
         Description: "Enforces BEGIN/END for IF/ELSE blocks, while allowing a single control-flow statement (e.g., RETURN) without a block.",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Warning,
@@ -32,7 +32,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : Diagnosti
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "IF statement should use BEGIN/END block unless it contains a single control-flow statement (RETURN, BREAK, CONTINUE, THROW).",
-                    code: "require-begin-end-for-if-with-controlflow-exception",
+                    code: "require-begin-end-lenient",
                     category: "Style",
                     fixable: false
                 );
@@ -46,7 +46,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRule : Diagnosti
                 AddDiagnostic(
                     range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Else),
                     message: "ELSE statement should use BEGIN/END block unless it contains a single control-flow statement (RETURN, BREAK, CONTINUE, THROW).",
-                    code: "require-begin-end-for-if-with-controlflow-exception",
+                    code: "require-begin-end-lenient",
                     category: "Style",
                     fixable: false
                 );

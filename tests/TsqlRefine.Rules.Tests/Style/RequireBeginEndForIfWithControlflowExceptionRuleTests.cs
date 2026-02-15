@@ -23,7 +23,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("require-begin-end-for-if-with-controlflow-exception", diagnostics[0].Code);
+        Assert.Equal("require-begin-end-lenient", diagnostics[0].Code);
         Assert.Contains("BEGIN/END", diagnostics[0].Message);
 
         // Diagnostic should highlight only the IF keyword
@@ -147,7 +147,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("require-begin-end-for-if-with-controlflow-exception", diagnostics[0].Code);
+        Assert.Equal("require-begin-end-lenient", diagnostics[0].Code);
         Assert.Contains("ELSE", diagnostics[0].Message);
 
         // Diagnostic should highlight only the ELSE keyword
@@ -224,7 +224,7 @@ public sealed class RequireBeginEndForIfWithControlflowExceptionRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("require-begin-end-for-if-with-controlflow-exception", _rule.Metadata.RuleId);
+        Assert.Equal("require-begin-end-lenient", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

@@ -22,7 +22,7 @@ public sealed class UpperLowerRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("upper-lower", diagnostic.Code);
+        Assert.Equal("avoid-upper-lower-in-predicate", diagnostic.Code);
         Assert.Contains("UPPER", diagnostic.Message);
         Assert.Contains("index", diagnostic.Message.ToLowerInvariant());
     }
@@ -39,7 +39,7 @@ public sealed class UpperLowerRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("upper-lower", diagnostic.Code);
+        Assert.Equal("avoid-upper-lower-in-predicate", diagnostic.Code);
         Assert.Contains("LOWER", diagnostic.Message);
     }
 
@@ -58,7 +58,7 @@ public sealed class UpperLowerRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Count);
-        Assert.All(diagnostics, d => Assert.Equal("upper-lower", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-upper-lower-in-predicate", d.Code));
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class UpperLowerRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("upper-lower", diagnostic.Code);
+        Assert.Equal("avoid-upper-lower-in-predicate", diagnostic.Code);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public sealed class UpperLowerRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Count);
-        Assert.All(diagnostics, d => Assert.Equal("upper-lower", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-upper-lower-in-predicate", d.Code));
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class UpperLowerRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("upper-lower", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-upper-lower-in-predicate", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

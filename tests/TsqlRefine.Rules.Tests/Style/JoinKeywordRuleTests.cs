@@ -25,7 +25,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("join-keyword", diagnostic.Code);
+        Assert.Equal("require-explicit-join", diagnostic.Code);
         Assert.Contains("implicit join", diagnostic.Message.ToLowerInvariant());
         Assert.Contains("INNER JOIN", diagnostic.Message);
     }
@@ -42,7 +42,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         Assert.Equal(2, diagnostics.Count);
-        Assert.All(diagnostics, d => Assert.Equal("join-keyword", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("require-explicit-join", d.Code));
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("join-keyword", diagnostic.Code);
+        Assert.Equal("require-explicit-join", diagnostic.Code);
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("join-keyword", diagnostic.Code);
+        Assert.Equal("require-explicit-join", diagnostic.Code);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("join-keyword", diagnostic.Code);
+        Assert.Equal("require-explicit-join", diagnostic.Code);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class JoinKeywordRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("join-keyword", diagnostic.Code);
+        Assert.Equal("require-explicit-join", diagnostic.Code);
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public sealed class JoinKeywordRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("join-keyword", _rule.Metadata.RuleId);
+        Assert.Equal("require-explicit-join", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

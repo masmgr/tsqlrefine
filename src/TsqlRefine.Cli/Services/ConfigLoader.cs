@@ -27,9 +27,8 @@ public sealed class ConfigLoader
             return [explicitPath];
         }
 
-        var candidates = new List<string>(3)
+        var candidates = new List<string>(2)
         {
-            Path.Combine(cwd, fileName),
             Path.Combine(cwd, ConfigDirName, fileName)
         };
 
@@ -39,6 +38,46 @@ public sealed class ConfigLoader
         }
 
         return candidates;
+    }
+
+    /// <summary>
+    /// Returns a warning message if a legacy config/ignore file exists in CWD root
+    /// but was not loaded (because it is no longer a search candidate).
+    /// </summary>
+    internal static string? CheckLegacyFileWarning(string fileName, string? loadedPath, string cliFlag)
+    {
+        var cwd = Directory.GetCurrentDirectory();
+        var legacyPath = Path.Combine(cwd, fileName);
+
+        if (!File.Exists(legacyPath))
+        {
+            return null;
+        }
+
+        // If the loaded path IS the legacy path (via explicit --config/--ignorelist), no warning
+        if (loadedPath is not null)
+        {
+            try
+            {
+                if (string.Equals(
+                        Path.GetFullPath(legacyPath),
+                        Path.GetFullPath(loadedPath),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+            }
+#pragma warning disable CA1031 // Guard against malformed explicit paths
+            catch (Exception ex) when (
+                ex is ArgumentException or NotSupportedException or PathTooLongException)
+#pragma warning restore CA1031
+            {
+                // Invalid loadedPath — cannot compare, proceed to emit warning
+            }
+        }
+
+        return $"Warning: Found {fileName} in current directory, but it is not loaded. " +
+               $"Move it to .tsqlrefine/{fileName} or use {cliFlag} to specify it explicitly.";
     }
 
     private static string? ResolveSettingsFilePath(string? explicitPath, string fileName)
@@ -136,22 +175,93 @@ public sealed class ConfigLoader
 
     private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
     {
-        // Preset resolution priority: CLI --preset > config preset
-        var presetName = args.Preset ?? config.Preset;
-        if (!string.IsNullOrWhiteSpace(presetName))
+        // CLI --preset always wins (already mutually exclusive with --ruleset via ValidateOptions)
+        if (!string.IsNullOrWhiteSpace(args.Preset))
         {
-            return LoadPresetRuleset(presetName);
+            return LoadPresetRuleset(args.Preset);
         }
 
-        // Custom ruleset path resolution: CLI --ruleset > config ruleset
-        var rulesetPath = args.RulesetPath ?? config.Ruleset;
-        if (!string.IsNullOrWhiteSpace(rulesetPath))
+        // CLI --ruleset overrides any config-level preset or ruleset
+        if (!string.IsNullOrWhiteSpace(args.RulesetPath))
         {
-            return LoadRulesetFromPath(rulesetPath);
+            return ResolveRulesetRef(args.RulesetPath);
+        }
+
+        // Config preset takes precedence over config ruleset
+        if (!string.IsNullOrWhiteSpace(config.Preset))
+        {
+            return LoadPresetRuleset(config.Preset);
+        }
+
+        // Config ruleset
+        if (!string.IsNullOrWhiteSpace(config.Ruleset))
+        {
+            return ResolveRulesetRef(config.Ruleset);
         }
 
         // Default: apply recommended preset
         return LoadPresetRuleset(DefaultPresetName);
+    }
+
+    private static Ruleset ResolveRulesetRef(string rulesetRef)
+    {
+        if (IsRulesetNameReference(rulesetRef))
+        {
+            return LoadNamedRuleset(rulesetRef);
+        }
+
+        return LoadRulesetFromPath(rulesetRef);
+    }
+
+    /// <summary>
+    /// Returns true if the ruleset string is a name reference (not a file path).
+    /// Name references contain no directory separators and do not end with .json.
+    /// </summary>
+    internal static bool IsRulesetNameReference(string ruleset)
+        => !ruleset.Contains('/') && !ruleset.Contains('\\')
+           && !ruleset.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Resolves a named ruleset to a file path by searching standard directories.
+    /// Returns null if the named ruleset is not found.
+    /// </summary>
+    internal static string? ResolveNamedRulesetPath(
+        string name, string? cwd = null, string? homePath = null)
+    {
+        cwd ??= Directory.GetCurrentDirectory();
+        homePath ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        // 1. CWD/.tsqlrefine/rulesets/{name}.json
+        var candidate = Path.Combine(cwd, ConfigDirName, "rulesets", $"{name}.json");
+        if (File.Exists(candidate))
+        {
+            return Path.GetFullPath(candidate);
+        }
+
+        // 2. HOME/.tsqlrefine/rulesets/{name}.json
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            candidate = Path.Combine(homePath, ConfigDirName, "rulesets", $"{name}.json");
+            if (File.Exists(candidate))
+            {
+                return Path.GetFullPath(candidate);
+            }
+        }
+
+        return null;
+    }
+
+    private static Ruleset LoadNamedRuleset(string name)
+    {
+        var path = ResolveNamedRulesetPath(name);
+        if (path is null)
+        {
+            throw new ConfigException(
+                $"Named ruleset '{name}' not found. " +
+                $"Place a ruleset file at .tsqlrefine/rulesets/{name}.json");
+        }
+
+        return LoadRulesetFromPath(path);
     }
 
     private static Ruleset LoadPresetRuleset(string presetName)
@@ -193,18 +303,32 @@ public sealed class ConfigLoader
 
     public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
     {
-        _ = args;
-
         var rules = new List<IRule>();
         rules.AddRange(new BuiltinRuleProvider().GetRules());
 
-        var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
-            .Select(p => new PluginDescriptor(p.Path, p.Enabled))
-            .ToArray();
+        var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
 
-        var loaded = PluginLoader.Load(plugins);
+        if (pluginConfigs.Count > 0 && !args.AllowPlugins)
+        {
+            stderr?.WriteLine(
+                $"Warning: {pluginConfigs.Count} plugin(s) configured but not loaded. Use --allow-plugins to enable plugin loading.");
+            return rules;
+        }
 
-        // Report plugin loading issues with summary
+        if (pluginConfigs.Count == 0)
+        {
+            return rules;
+        }
+
+        var configPath = GetConfigPath(args);
+        var baseDirectory = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
+
+        var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
+
+        var loaded = PluginLoader.Load(plugins, baseDirectory);
+
         if (stderr is not null)
         {
             PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
@@ -311,5 +435,72 @@ public sealed class ConfigLoader
                 yield return rule.Metadata.RuleId;
             }
         }
+    }
+
+    /// <summary>
+    /// Resolves plugin descriptors, searching known directories for filename-only paths.
+    /// </summary>
+    internal static IReadOnlyList<PluginDescriptor> ResolvePluginDescriptors(
+        IReadOnlyList<PluginConfig> pluginConfigs,
+        string baseDirectory,
+        string? cwd = null,
+        string? homePath = null)
+    {
+        cwd ??= Directory.GetCurrentDirectory();
+        homePath ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        var descriptors = new List<PluginDescriptor>(pluginConfigs.Count);
+
+        foreach (var config in pluginConfigs)
+        {
+            if (IsFilenameOnly(config.Path))
+            {
+                var resolvedPath = SearchPluginPath(config.Path, baseDirectory, cwd, homePath);
+                descriptors.Add(new PluginDescriptor(config.Path, config.Enabled, resolvedPath));
+            }
+            else
+            {
+                descriptors.Add(new PluginDescriptor(config.Path, config.Enabled));
+            }
+        }
+
+        return descriptors;
+    }
+
+    private static bool IsFilenameOnly(string path)
+        => Path.GetFileName(path) == path;
+
+    /// <summary>
+    /// Searches for a plugin filename in the standard search directories.
+    /// Returns the full resolved path if found, or null if not found in any location.
+    /// </summary>
+    internal static string? SearchPluginPath(
+        string filename, string baseDirectory, string cwd, string? homePath)
+    {
+        // 1. baseDirectory (config file directory or CWD)
+        var candidate = Path.Combine(baseDirectory, filename);
+        if (File.Exists(candidate))
+        {
+            return Path.GetFullPath(candidate);
+        }
+
+        // 2. CWD/.tsqlrefine/plugins/
+        candidate = Path.Combine(cwd, ConfigDirName, "plugins", filename);
+        if (File.Exists(candidate))
+        {
+            return Path.GetFullPath(candidate);
+        }
+
+        // 3. HOME/.tsqlrefine/plugins/
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            candidate = Path.Combine(homePath, ConfigDirName, "plugins", filename);
+            if (File.Exists(candidate))
+            {
+                return Path.GetFullPath(candidate);
+            }
+        }
+
+        return null;
     }
 }

@@ -20,7 +20,7 @@ public sealed class ForbidTop100PercentOrderByRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("forbid-top-100-percent-order-by", diagnostics[0].Code);
+        Assert.Equal("avoid-top-100-percent-order-by", diagnostics[0].Code);
         Assert.Contains("TOP 100 PERCENT", diagnostics[0].Message);
     }
 
@@ -84,7 +84,7 @@ public sealed class ForbidTop100PercentOrderByRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("forbid-top-100-percent-order-by", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-top-100-percent-order-by", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

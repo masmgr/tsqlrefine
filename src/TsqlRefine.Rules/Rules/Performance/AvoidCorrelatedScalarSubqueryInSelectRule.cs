@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class AvoidCorrelatedScalarSubqueryInSelectRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "avoid-correlated-scalar-subquery-in-select",
+        RuleId: "avoid-correlated-subquery-in-select",
         Description: "Detects correlated scalar subqueries in SELECT list which execute once per row and cause severe performance degradation.",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -46,7 +46,7 @@ public sealed class AvoidCorrelatedScalarSubqueryInSelectRule : DiagnosticVisito
                                     AddDiagnostic(
                                         fragment: subquery,
                                         message: "Avoid correlated scalar subqueries in the SELECT list. This subquery executes once per outer row, causing performance degradation. Consider using JOIN, CROSS APPLY, or a window function instead.",
-                                        code: "avoid-correlated-scalar-subquery-in-select",
+                                        code: "avoid-correlated-subquery-in-select",
                                         category: "Performance",
                                         fixable: false
                                     );

@@ -11,7 +11,7 @@ public sealed class LinkedServerRuleTests
     {
         var rule = new LinkedServerRule();
 
-        Assert.Equal("linked-server", rule.Metadata.RuleId);
+        Assert.Equal("avoid-linked-server", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -28,7 +28,7 @@ public sealed class LinkedServerRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.NotEmpty(diagnostics);
-        Assert.All(diagnostics, d => Assert.Equal("linked-server", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-linked-server", d.Code));
         Assert.All(diagnostics, d => Assert.Contains("linked server", d.Message, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -60,7 +60,7 @@ public sealed class LinkedServerRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("linked-server", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-linked-server", d.Code));
     }
 
     [Fact]

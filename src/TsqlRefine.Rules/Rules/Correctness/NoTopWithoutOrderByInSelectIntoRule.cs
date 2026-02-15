@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "no-top-without-order-by-in-select-into",
+        RuleId: "avoid-top-without-order-by-in-select-into",
         Description: "Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -37,7 +37,7 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
                 AddDiagnostic(
                     fragment: querySpec.TopRowFilter,
                     message: "SELECT TOP ... INTO without ORDER BY creates a permanent table with non-deterministic data. Add an ORDER BY clause to ensure reproducible results.",
-                    code: "no-top-without-order-by-in-select-into",
+                    code: "avoid-top-without-order-by-in-select-into",
                     category: "Correctness",
                     fixable: false
                 );

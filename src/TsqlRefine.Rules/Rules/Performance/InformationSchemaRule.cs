@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class InformationSchemaRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "information-schema",
+        RuleId: "avoid-information-schema",
         Description: "Prohibit INFORMATION_SCHEMA views; use sys catalog views for better performance",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Information,
@@ -33,7 +33,7 @@ public sealed class InformationSchemaRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     fragment: node,
                     message: "INFORMATION_SCHEMA view found. Use sys catalog views instead for better performance.",
-                    code: "information-schema",
+                    code: "avoid-information-schema",
                     category: "Performance",
                     fixable: false
                 );

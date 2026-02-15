@@ -67,6 +67,6 @@ To disable this rule:
 
 ## See Also
 
-- [non-sargable](non-sargable.md) - Detects functions applied to columns in predicates
-- [upper-lower](upper-lower.md) - Detects UPPER/LOWER in predicates
+- [avoid-non-sargable-predicate](avoid-non-sargable-predicate.md) - Detects functions applied to columns in predicates
+- [avoid-upper-lower-in-predicate](avoid-upper-lower-in-predicate.md) - Detects UPPER/LOWER in predicates
 - [TsqlRefine Rules Documentation](../README.md)

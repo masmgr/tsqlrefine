@@ -27,7 +27,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
         // Single CREATE TABLE statements may not trigger
         if (diagnostics.Length > 0)
         {
-            Assert.Equal("require-ms-description-for-table-definition-file", diagnostics[0].Code);
+            Assert.Equal("require-table-description", diagnostics[0].Code);
             Assert.Contains("MS_Description", diagnostics[0].Message);
         }
     }
@@ -260,7 +260,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
         // Assert - Custom property doesn't count, but detection depends on AST structure
         if (diagnostics.Length > 0)
         {
-            Assert.Equal("require-ms-description-for-table-definition-file", diagnostics[0].Code);
+            Assert.Equal("require-table-description", diagnostics[0].Code);
         }
     }
 
@@ -333,7 +333,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("require-ms-description-for-table-definition-file", _rule.Metadata.RuleId);
+        Assert.Equal("require-table-description", _rule.Metadata.RuleId);
         Assert.Equal("Schema", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -348,7 +348,7 @@ public sealed class RequireMsDescriptionForTableDefinitionFileRuleTests
         var diagnostic = new Diagnostic(
             Range: new TsqlRefine.PluginSdk.Range(new Position(0, 0), new Position(0, 10)),
             Message: "test",
-            Code: "require-ms-description-for-table-definition-file"
+            Code: "require-table-description"
         );
 
         // Act

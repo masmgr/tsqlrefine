@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScript>
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "require-xact-abort-on",
+        RuleId: "set-xact-abort",
         Description: "Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.",
         Category: "Transactions",
         DefaultSeverity: RuleSeverity.Warning,
@@ -54,7 +54,7 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScrip
                     AddDiagnostic(
                         range: ScriptDomHelpers.GetFirstTokenRange(node),
                         message: "BEGIN TRANSACTION should be preceded by SET XACT_ABORT ON to ensure runtime errors reliably abort the transaction.",
-                        code: "require-xact-abort-on",
+                        code: "set-xact-abort",
                         category: "Transactions",
                         fixable: false
                     );

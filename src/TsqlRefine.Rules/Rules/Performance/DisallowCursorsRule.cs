@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class DisallowCursorsRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "disallow-cursors",
+        RuleId: "avoid-cursors",
         Description: "Prohibit cursor usage; prefer set-based operations for better performance",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -29,7 +29,7 @@ public sealed class DisallowCursorsRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Cursor declaration found. Use set-based operations instead for better performance.",
-                code: "disallow-cursors",
+                code: "avoid-cursors",
                 category: "Performance",
                 fixable: false
             );

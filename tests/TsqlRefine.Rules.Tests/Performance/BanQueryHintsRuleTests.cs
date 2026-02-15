@@ -11,7 +11,7 @@ public sealed class BanQueryHintsRuleTests
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
-        Assert.Equal("ban-query-hints", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-query-hints", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -28,7 +28,7 @@ public sealed class BanQueryHintsRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("ban-query-hints", diagnostic.Code);
+        Assert.Equal("avoid-query-hints", diagnostic.Code);
     }
 
     [Theory]
@@ -57,7 +57,7 @@ public sealed class BanQueryHintsRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("ban-query-hints", diagnostic.Code);
+        Assert.Equal("avoid-query-hints", diagnostic.Code);
     }
 
     [Theory]

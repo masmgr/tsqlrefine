@@ -8,7 +8,7 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 public sealed class BanLegacyJoinSyntaxRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
-        RuleId: "ban-legacy-join-syntax",
+        RuleId: "avoid-legacy-join-syntax",
         Description: "Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
@@ -34,7 +34,7 @@ public sealed class BanLegacyJoinSyntaxRule : IRule
                     yield return RuleHelpers.CreateDiagnostic(
                         range: range,
                         message: "Legacy outer join syntax '*=' is deprecated since SQL Server 2000. Use LEFT JOIN instead.",
-                        code: "ban-legacy-join-syntax",
+                        code: "avoid-legacy-join-syntax",
                         category: "Correctness",
                         fixable: false
                     );
@@ -51,7 +51,7 @@ public sealed class BanLegacyJoinSyntaxRule : IRule
                     yield return RuleHelpers.CreateDiagnostic(
                         range: range,
                         message: "Legacy outer join syntax '=*' is deprecated since SQL Server 2000. Use RIGHT JOIN instead.",
-                        code: "ban-legacy-join-syntax",
+                        code: "avoid-legacy-join-syntax",
                         category: "Correctness",
                         fixable: false
                     );

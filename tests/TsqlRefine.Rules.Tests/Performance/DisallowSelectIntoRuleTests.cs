@@ -20,7 +20,7 @@ public sealed class DisallowSelectIntoRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("disallow-select-into", diagnostics[0].Code);
+        Assert.Equal("avoid-select-into", diagnostics[0].Code);
         Assert.Contains("SELECT...INTO", diagnostics[0].Message);
     }
 
@@ -36,7 +36,7 @@ public sealed class DisallowSelectIntoRuleTests
 
         // Assert
         Assert.Single(diagnostics);
-        Assert.Equal("disallow-select-into", diagnostics[0].Code);
+        Assert.Equal("avoid-select-into", diagnostics[0].Code);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class DisallowSelectIntoRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("disallow-select-into", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-select-into", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

@@ -69,6 +69,6 @@ To disable this rule:
 
 ## See Also
 
-- [linked-server](../performance/linked-server.md) - Detects linked server queries (4-part identifiers)
+- [avoid-linked-server](../performance/avoid-linked-server.md) - Detects linked server queries (4-part identifiers)
 - [avoid-exec-dynamic-sql](avoid-exec-dynamic-sql.md) - Detects dynamic SQL injection risks
 - [TsqlRefine Rules Documentation](../README.md)

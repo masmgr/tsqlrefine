@@ -88,4 +88,41 @@ public sealed class PluginLoaderTests
         Assert.Equal("FileNotFoundException", diagnostic.ExceptionType);
         Assert.Equal("at System.IO.File.Load()", diagnostic.StackTrace);
     }
+
+    [Fact]
+    public void PluginApiVersionAttribute_Constructor_SetsVersion()
+    {
+        var attr = new PluginApiVersionAttribute(42);
+        Assert.Equal(42, attr.Version);
+    }
+
+    [Fact]
+    public void PluginApiVersionAttribute_CurrentVersion_SetsCorrectly()
+    {
+        var attr = new PluginApiVersionAttribute(PluginApi.CurrentVersion);
+        Assert.Equal(PluginApi.CurrentVersion, attr.Version);
+    }
+
+    [Fact]
+    public void Load_WithPathRejected_ReturnsPathRejectedStatus()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var plugins = new[] { new PluginDescriptor("../../escape.dll", Enabled: true) };
+            var results = PluginLoader.Load(plugins, tempDir);
+
+            Assert.Single(results);
+            var result = results[0];
+            Assert.Equal(PluginLoadStatus.PathRejected, result.Diagnostic.Status);
+            Assert.Contains("escapes", result.Diagnostic.Message);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }

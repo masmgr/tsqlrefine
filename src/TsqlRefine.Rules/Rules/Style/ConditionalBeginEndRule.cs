@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Style;
 public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "conditional-begin-end",
+        RuleId: "require-begin-end-strict",
         Description: "Require BEGIN/END blocks in conditional statements for clarity and maintainability",
         Category: "Style",
         DefaultSeverity: RuleSeverity.Information,
@@ -105,7 +105,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "IF statement should use BEGIN/END block for clarity and maintainability.",
-                    code: "conditional-begin-end",
+                    code: "require-begin-end-strict",
                     category: "Style",
                     fixable: true
                 );
@@ -119,7 +119,7 @@ public sealed class ConditionalBeginEndRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Else),
                     message: "ELSE statement should use BEGIN/END block for clarity and maintainability.",
-                    code: "conditional-begin-end",
+                    code: "require-begin-end-strict",
                     category: "Style",
                     fixable: true
                 );

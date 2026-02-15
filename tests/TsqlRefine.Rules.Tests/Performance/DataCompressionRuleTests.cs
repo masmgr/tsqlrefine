@@ -11,7 +11,7 @@ public sealed class DataCompressionRuleTests
     {
         var rule = new DataCompressionRule();
 
-        Assert.Equal("data-compression", rule.Metadata.RuleId);
+        Assert.Equal("require-data-compression", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -37,7 +37,7 @@ public sealed class DataCompressionRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("data-compression", diagnostics[0].Code);
+        Assert.Equal("require-data-compression", diagnostics[0].Code);
         Assert.Contains("DATA_COMPRESSION", diagnostics[0].Message);
     }
 
@@ -91,7 +91,7 @@ public sealed class DataCompressionRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("data-compression", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("require-data-compression", d.Code));
     }
 
     [Fact]

@@ -11,7 +11,7 @@ public sealed class FullTextRuleTests
     {
         var rule = new FullTextRule();
 
-        Assert.Equal("full-text", rule.Metadata.RuleId);
+        Assert.Equal("avoid-full-text-search", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -27,7 +27,7 @@ public sealed class FullTextRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("full-text", diagnostics[0].Code);
+        Assert.Equal("avoid-full-text-search", diagnostics[0].Code);
         Assert.Contains("full-text", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -58,7 +58,7 @@ public sealed class FullTextRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("full-text", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-full-text-search", d.Code));
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public sealed class FullTextRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("full-text", diagnostics[0].Code);
+        Assert.Equal("avoid-full-text-search", diagnostics[0].Code);
     }
 
     [Fact]

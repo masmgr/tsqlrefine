@@ -37,6 +37,24 @@ Create or update `tsqlrefine.json`:
 }
 ```
 
+Alternatively, copy the DLL to a search path and reference it by filename only:
+
+```powershell
+# Copy to user-wide plugin directory
+mkdir -p ~/.tsqlrefine/plugins
+cp samples/plugins/custom-rule/bin/Release/net10.0/CustomRule.dll ~/.tsqlrefine/plugins/
+```
+
+```json
+{
+  "plugins": [
+    { "path": "CustomRule.dll" }
+  ]
+}
+```
+
+Filename-only paths are searched in: config file directory, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`.
+
 Then run:
 
 ```powershell

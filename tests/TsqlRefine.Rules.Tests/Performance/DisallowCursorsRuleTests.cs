@@ -11,7 +11,7 @@ public sealed class DisallowCursorsRuleTests
     {
         var rule = new DisallowCursorsRule();
 
-        Assert.Equal("disallow-cursors", rule.Metadata.RuleId);
+        Assert.Equal("avoid-cursors", rule.Metadata.RuleId);
         Assert.Equal("Performance", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -34,7 +34,7 @@ public sealed class DisallowCursorsRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("disallow-cursors", diagnostics[0].Code);
+        Assert.Equal("avoid-cursors", diagnostics[0].Code);
         Assert.Contains("cursor", diagnostics[0].Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -68,7 +68,7 @@ public sealed class DisallowCursorsRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(3, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("disallow-cursors", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-cursors", d.Code));
     }
 
     [Fact]

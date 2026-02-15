@@ -22,7 +22,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
         Assert.Contains("GETDATE", diagnostic.Message);
         Assert.Contains("GETUTCDATE", diagnostic.Message);
     }
@@ -39,7 +39,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
         Assert.Contains("SYSDATETIME", diagnostic.Message);
         Assert.Contains("SYSUTCDATETIME", diagnostic.Message);
     }
@@ -56,7 +56,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
         Assert.Contains("CURRENT_TIMESTAMP", diagnostic.Message);
     }
 
@@ -72,7 +72,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
         Assert.Contains("SYSDATETIMEOFFSET", diagnostic.Message);
     }
 
@@ -116,7 +116,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         Assert.Equal(3, diagnostics.Count);
-        Assert.All(diagnostics, d => Assert.Equal("utc-datetime", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("prefer-utc-datetime", d.Code));
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public sealed class UtcDatetimeRuleTests
 
         // Assert
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("utc-datetime", diagnostic.Code);
+        Assert.Equal("prefer-utc-datetime", diagnostic.Code);
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public sealed class UtcDatetimeRuleTests
     public void Metadata_HasCorrectProperties()
     {
         // Assert
-        Assert.Equal("utc-datetime", _rule.Metadata.RuleId);
+        Assert.Equal("prefer-utc-datetime", _rule.Metadata.RuleId);
         Assert.Equal("Performance", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

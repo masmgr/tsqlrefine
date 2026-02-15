@@ -116,6 +116,11 @@ public sealed class CommandExecutor
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, allRules);
 
+        if (args.EnabledOnly)
+        {
+            filtered = filtered.Where(r => ruleset.IsRuleEnabled(r.Metadata.RuleId));
+        }
+
         var rules = filtered.ToArray();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
@@ -197,13 +202,37 @@ public sealed class CommandExecutor
 
     public static async Task<int> ExecuteListPluginsAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
-        _ = stderr;
         var config = ConfigLoader.LoadConfig(args);
-        var plugins = (config.Plugins ?? Array.Empty<PluginConfig>())
-            .Select(p => new PluginDescriptor(p.Path, p.Enabled))
-            .ToArray();
+        var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
 
-        var (loaded, _) = PluginLoader.LoadWithSummary(plugins);
+        if (pluginConfigs.Count == 0)
+        {
+            await stdout.WriteLineAsync("No plugins configured.");
+            return 0;
+        }
+
+        if (!args.AllowPlugins)
+        {
+            await stderr.WriteLineAsync(
+                $"{pluginConfigs.Count} plugin(s) configured but --allow-plugins not specified.");
+            await stderr.WriteLineAsync(
+                "Plugin loading is disabled by default for security. Use --allow-plugins to load plugins.");
+            foreach (var p in pluginConfigs)
+            {
+                await stdout.WriteLineAsync($"  {p.Path} (not loaded, enabled={p.Enabled})");
+            }
+
+            return 0;
+        }
+
+        var configPath = ConfigLoader.GetConfigPath(args);
+        var baseDirectory = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
+
+        var plugins = ConfigLoader.ResolvePluginDescriptors(pluginConfigs, baseDirectory);
+
+        var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
         await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
 
         return 0;
@@ -326,6 +355,8 @@ public sealed class CommandExecutor
 
     public async Task<int> ExecuteFixAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
         if (read is null)
         {
@@ -382,6 +413,17 @@ public sealed class CommandExecutor
                 var fixLabel = fixCount == 1 ? "fix" : "fixes";
                 await WriteInfoAsync(stderr, args.Quiet, $"Fixed: {file.FilePath} ({fixCount} {fixLabel} applied)");
             }
+        }
+
+        stopwatch.Stop();
+
+        if (!args.Quiet && args.Verbose)
+        {
+            var elapsed = stopwatch.Elapsed;
+            var elapsedText = elapsed.TotalSeconds >= 1
+                ? $"{elapsed.TotalSeconds:F2}s"
+                : $"{elapsed.TotalMilliseconds:F0}ms";
+            await stderr.WriteLineAsync($"Time: {elapsedText}");
         }
 
         // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）

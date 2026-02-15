@@ -31,7 +31,7 @@ public static class CliParser
         };
 
         // Input options
-        public static readonly Option<string?> IgnoreList = new("--ignorelist", "-g")
+        public static readonly Option<string?> IgnoreList = new("--ignorelist")
         {
             Description = "Ignore patterns file",
             Arity = ArgumentArity.ZeroOrOne
@@ -82,7 +82,7 @@ public static class CliParser
 
         public static readonly Option<string?> Ruleset = new("--ruleset")
         {
-            Description = "Custom ruleset file path",
+            Description = "Custom ruleset name or file path",
             Arity = ArgumentArity.ZeroOrOne
         };
 
@@ -134,6 +134,11 @@ public static class CliParser
             Description = "Show only fixable rules"
         };
 
+        public static readonly Option<bool> EnabledOnly = new("--enabled-only")
+        {
+            Description = "Show only enabled rules"
+        };
+
         // Misc options
         public static readonly Option<bool> Verbose = new("--verbose")
         {
@@ -148,6 +153,18 @@ public static class CliParser
         public static readonly Option<bool> ShowSources = new("--show-sources")
         {
             Description = "Show where each option value originated"
+        };
+
+        public static readonly Option<string?> MaxFileSize = new("--max-file-size")
+        {
+            Description = "Maximum file size in MB (default: 10)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> AllowPlugins = new("--allow-plugins")
+        {
+            Description = "Enable loading of plugin DLLs from configuration",
+            Recursive = true
         };
 
         // Arguments (factory method because each command needs its own instance)
@@ -167,6 +184,7 @@ public static class CliParser
         command.Options.Add(Options.IgnoreList);
         command.Options.Add(Options.DetectEncoding);
         command.Options.Add(Options.Stdin);
+        command.Options.Add(Options.MaxFileSize);
         return command;
     }
 
@@ -231,7 +249,6 @@ public static class CliParser
     {
         var command = new Command("format", "Format SQL files (keyword casing, whitespace)")
             .WithInputOptions()
-            .WithOutputOption()
             .WithCompatLevelOption()
             .WithFormatOptions()
             .WithPathsArgument();
@@ -248,6 +265,7 @@ public static class CliParser
             .WithRuleOptions()
             .WithRuleIdOption()
             .WithPathsArgument();
+        command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
         return command;
     }
@@ -263,8 +281,7 @@ public static class CliParser
     }
 
     private static Command BuildPrintConfigCommand() =>
-        new Command("print-config", "Print effective configuration")
-            .WithOutputOption();
+        new Command("print-config", "Print effective configuration");
 
     private static Command BuildListRulesCommand()
     {
@@ -272,6 +289,7 @@ public static class CliParser
             .WithOutputOption();
         command.Options.Add(Options.Category);
         command.Options.Add(Options.Fixable);
+        command.Options.Add(Options.EnabledOnly);
         command.Options.Add(Options.Preset);
         command.Options.Add(Options.Ruleset);
         return command;
@@ -308,6 +326,7 @@ public static class CliParser
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
         root.Options.Add(Options.Utf8);
+        root.Options.Add(Options.AllowPlugins);
 
         // Root command supports lint options for default command behavior
         // (tsqlrefine *.sql == tsqlrefine lint *.sql)
@@ -389,8 +408,11 @@ public static class CliParser
             Global: GetOptionValue<bool>(parseResult, "--global"),
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
+            EnabledOnly: GetOptionValue<bool>(parseResult, "--enabled-only"),
             Paths: GetPaths(parseResult),
-            RuleId: GetOptionValue<string?>(parseResult, "--rule")
+            RuleId: GetOptionValue<string?>(parseResult, "--rule"),
+            MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
+            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins")
         );
     }
 
@@ -441,6 +463,18 @@ public static class CliParser
         }
 
         return [];
+    }
+
+    private const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024; // 10 MB
+
+    private static long ParseMaxFileSize(string? s)
+    {
+        if (s is null)
+            return DefaultMaxFileSizeBytes;
+        if (int.TryParse(s, out var mb) && mb > 0)
+            return (long)mb * 1024 * 1024;
+        throw new ConfigException(
+            $"Invalid --max-file-size value: '{s}'. Expected a positive integer (MB).");
     }
 
     private static int? ParseInt(string? s) =>

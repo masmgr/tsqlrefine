@@ -25,7 +25,7 @@ public class CliIgnoreListTests
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "lint", "-g", ignoreFile, tempDir },
+                new[] { "lint", "--ignorelist", ignoreFile, tempDir },
                 stdin, stdout, stderr);
 
             // Should only process main.sql, not bin/test.sql
@@ -61,7 +61,7 @@ public class CliIgnoreListTests
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "lint", "-g", ignoreFile, tempDir },
+                new[] { "lint", "--ignorelist", ignoreFile, tempDir },
                 stdin, stdout, stderr);
 
             // Should succeed (blank lines don't cause errors)
@@ -81,7 +81,7 @@ public class CliIgnoreListTests
         var stderr = new StringWriter();
 
         var code = await CliApp.RunAsync(
-            new[] { "lint", "-g", "nonexistent.ignore", "." },
+            new[] { "lint", "--ignorelist", "nonexistent.ignore", "." },
             stdin, stdout, stderr);
 
         Assert.Equal(ExitCodes.ConfigError, code);
@@ -103,7 +103,7 @@ public class CliIgnoreListTests
             var stdout = new StringWriter();
             var stderr = new StringWriter();
 
-            // No -g option, no default ignore file
+            // No --ignorelist option, no default ignore file
             var code = await CliApp.RunAsync(
                 new[] { "lint", tempDir },
                 stdin, stdout, stderr);
@@ -141,7 +141,7 @@ public class CliIgnoreListTests
             var stderr = new StringWriter();
 
             var code = await CliApp.RunAsync(
-                new[] { "lint", "-g", ignoreFile, tempDir },
+                new[] { "lint", "--ignorelist", ignoreFile, tempDir },
                 stdin, stdout, stderr);
 
             // Should succeed, ignoring bin/** files

@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "catch-swallowing",
+        RuleId: "avoid-catch-swallowing",
         Description: "Detects CATCH blocks that suppress errors without proper logging or rethrowing, creating silent failures.",
         Category: "Transactions",
         DefaultSeverity: RuleSeverity.Warning,
@@ -54,7 +54,7 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetCatchKeywordPairRange(node),
                     message: "CATCH block suppresses errors without THROW or RAISERROR. This creates silent failures that are difficult to debug. Consider rethrowing the error or logging to a persistent store.",
-                    code: "catch-swallowing",
+                    code: "avoid-catch-swallowing",
                     category: "Transactions",
                     fixable: false
                 );

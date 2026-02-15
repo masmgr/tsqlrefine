@@ -11,7 +11,7 @@ public sealed class PrintStatementRuleTests
     {
         var rule = new PrintStatementRule();
 
-        Assert.Equal("print-statement", rule.Metadata.RuleId);
+        Assert.Equal("avoid-print-statement", rule.Metadata.RuleId);
         Assert.Equal("Debug", rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
@@ -32,7 +32,7 @@ public sealed class PrintStatementRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("print-statement", diagnostics[0].Code);
+        Assert.Equal("avoid-print-statement", diagnostics[0].Code);
         Assert.Contains("THROW", diagnostics[0].Message);
     }
 
@@ -79,7 +79,7 @@ public sealed class PrintStatementRuleTests
         var diagnostics = rule.Analyze(context).ToArray();
 
         Assert.Equal(3, diagnostics.Length);
-        Assert.All(diagnostics, d => Assert.Equal("print-statement", d.Code));
+        Assert.All(diagnostics, d => Assert.Equal("avoid-print-statement", d.Code));
     }
 
     [Fact]

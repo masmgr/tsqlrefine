@@ -48,7 +48,7 @@ Determine the version number for the next release.
 Edit `Directory.Build.props` to update the version number.
 
 ```xml
-<VersionPrefix>0.2.0</VersionPrefix>
+<VersionPrefix>X.Y.Z</VersionPrefix>
 <VersionSuffix Condition="'$(VersionSuffix)' == ''">alpha</VersionSuffix>
 ```
 
@@ -64,17 +64,16 @@ For stable releases:
 Create/update `CHANGELOG.md` to record release contents.
 
 ```markdown
-## [0.2.0] - 2026-01-29
+## [X.Y.Z] - YYYY-MM-DD
 
 ### Added
-- New rule: `require-schema-prefix`
-- `--parallel` option for parallel processing support
+- New rule: `example-rule`
 
 ### Changed
-- Performance improvement: 2x faster analysis for large SQL files
+- Performance improvement for large SQL files
 
 ### Fixed
-- Fixed false positive for `avoid-select-star` rule inside CTEs
+- Fixed false positive for `example-rule` in specific context
 ```
 
 ### 4. Create Commit and Tag
@@ -82,14 +81,14 @@ Create/update `CHANGELOG.md` to record release contents.
 ```bash
 # Commit changes
 git add Directory.Build.props CHANGELOG.md
-git commit -m "chore: bump version to 0.2.0"
+git commit -m "chore: bump version to X.Y.Z"
 
 # Create tag (v prefix required)
-git tag v0.2.0
+git tag vX.Y.Z
 
 # Push to remote
 git push origin main
-git push origin v0.2.0
+git push origin vX.Y.Z
 ```
 
 ### 5. Automated Release via GitHub Actions
@@ -104,7 +103,24 @@ Pushing a tag automatically triggers GitHub Actions to:
 Check release progress at:
 - GitHub Actions: https://github.com/masmgr/tsqlrefine/actions
 
-### 6. Edit Release Notes
+### 6. Verify Release Integrity
+
+Each GitHub Release includes a `checksums.sha256` file containing SHA256 hashes for all
+NuGet packages. To verify a downloaded package:
+
+```bash
+# Download checksums.sha256 from the GitHub Release, then verify:
+sha256sum -c checksums.sha256
+```
+
+On Windows (PowerShell):
+
+```powershell
+Get-FileHash *.nupkg -Algorithm SHA256 | Format-Table Hash, Path
+# Compare with the values in checksums.sha256
+```
+
+### 7. Edit Release Notes
 
 After GitHub Release is created, edit release notes if needed:
 
@@ -129,10 +145,10 @@ dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release /p:VersionSuffix
 dotnet pack src/TsqlRefine.PluginSdk/TsqlRefine.PluginSdk.csproj -c Release /p:VersionSuffix=
 
 # Output location
-# nupkg/TsqlRefine.0.2.0.nupkg
-# nupkg/TsqlRefine.0.2.0.snupkg (symbols package)
-# nupkg/TsqlRefine.PluginSdk.0.2.0.nupkg
-# nupkg/TsqlRefine.PluginSdk.0.2.0.snupkg (symbols package)
+# nupkg/TsqlRefine.X.Y.Z.nupkg
+# nupkg/TsqlRefine.X.Y.Z.snupkg (symbols package)
+# nupkg/TsqlRefine.PluginSdk.X.Y.Z.nupkg
+# nupkg/TsqlRefine.PluginSdk.X.Y.Z.snupkg (symbols package)
 ```
 
 ## Installation Methods
@@ -144,10 +160,10 @@ dotnet pack src/TsqlRefine.PluginSdk/TsqlRefine.PluginSdk.csproj -c Release /p:V
 dotnet tool install --global TsqlRefine
 
 # Install specific version
-dotnet tool install --global TsqlRefine --version 0.2.0
+dotnet tool install --global TsqlRefine --version X.Y.Z
 
 # Install pre-release version
-dotnet tool install --global TsqlRefine --version 0.2.0-alpha --prerelease
+dotnet tool install --global TsqlRefine --version X.Y.Z-alpha --prerelease
 
 # Update
 dotnet tool update --global TsqlRefine
@@ -183,7 +199,7 @@ For development or testing with locally built packages:
 dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release /p:VersionSuffix=
 
 # Install from local source
-dotnet tool install --global TsqlRefine --add-source ./nupkg --version 0.2.0
+dotnet tool install --global TsqlRefine --add-source ./nupkg --version X.Y.Z
 
 # Or specify package directly
 dotnet tool install --global --add-source ./nupkg TsqlRefine

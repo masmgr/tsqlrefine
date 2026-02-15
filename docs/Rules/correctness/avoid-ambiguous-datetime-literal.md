@@ -236,4 +236,4 @@ This rule can be disabled in your ruleset configuration:
 ## See Also
 
 - [avoid-magic-convert-style-for-datetime](../style/avoid-magic-convert-style-for-datetime.md) - Warns on datetime CONVERT style numbers
-- [utc-datetime](../performance/utc-datetime.md) - Detects local datetime functions and suggests UTC alternatives
+- [prefer-utc-datetime](../performance/prefer-utc-datetime.md) - Detects local datetime functions and suggests UTC alternatives

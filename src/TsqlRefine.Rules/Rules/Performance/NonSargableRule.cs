@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class NonSargableRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "non-sargable",
+        RuleId: "avoid-non-sargable-predicate",
         Description: "Detects functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage (non-sargable predicates)",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -57,7 +57,7 @@ public sealed class NonSargableRule : DiagnosticVisitorRuleBase
                     AddDiagnostic(
                         fragment: functionCall,
                         message: $"Avoid applying function '{functionName ?? "function"}' to columns in predicates. This prevents index usage (non-sargable) and causes performance issues. Consider using computed columns with indexes or rewriting the query.",
-                        code: "non-sargable",
+                        code: "avoid-non-sargable-predicate",
                         category: "Performance",
                         fixable: false
                     );

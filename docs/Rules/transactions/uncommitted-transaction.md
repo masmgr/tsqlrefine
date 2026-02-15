@@ -131,7 +131,7 @@ IF @condition = 1
 ```
 
 **Recommendation:** Use this rule as a first-pass check for obvious errors. For complete coverage, also use:
-- [transaction-without-commit-or-rollback](transaction-without-commit-or-rollback.md) - More sophisticated batch-level analysis
+- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - More sophisticated batch-level analysis
 - Runtime monitoring with `@@TRANCOUNT` checks
 
 ## Best Practices
@@ -140,20 +140,20 @@ IF @condition = 1
 2. **Use TRY/CATCH** - Wrap transactions in error handling (see [require-try-catch-for-transaction](require-try-catch-for-transaction.md))
 3. **Keep transactions short** - Minimize time between BEGIN and COMMIT/ROLLBACK
 4. **Avoid nesting** - Use savepoints instead of nested transactions when possible
-5. **Set XACT_ABORT ON** - Auto-rollback on errors (see [require-xact-abort-on](require-xact-abort-on.md))
+5. **Set XACT_ABORT ON** - Auto-rollback on errors (see [set-xact-abort](set-xact-abort.md))
 
 ## Comparison with Similar Rules
 
 - **uncommitted-transaction** (this rule) - File-level greedy matching, Warning severity
-- **transaction-without-commit-or-rollback** - Batch-level analysis with control flow awareness, Error severity
+- **avoid-transaction-without-commit** - Batch-level analysis with control flow awareness, Error severity
 
 Use both rules together for comprehensive transaction checking.
 
 ## See Also
 
 - [TsqlRefine Rules Documentation](../README.md)
-- [transaction-without-commit-or-rollback](transaction-without-commit-or-rollback.md) - Related batch-level transaction rule
+- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - Related batch-level transaction rule
 - [require-try-catch-for-transaction](require-try-catch-for-transaction.md) - Requires TRY/CATCH for transaction safety
-- [require-xact-abort-on](require-xact-abort-on.md) - Auto-rollback on errors
-- [catch-swallowing](catch-swallowing.md) - Related error handling rule
+- [set-xact-abort](set-xact-abort.md) - Auto-rollback on errors
+- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Related error handling rule
 - [Microsoft Documentation: Transactions](https://docs.microsoft.com/en-us/sql/t-sql/language-elements/transactions-transact-sql)

@@ -8,7 +8,7 @@ namespace TsqlRefine.Rules.Rules.Style;
 /// </summary>
 public sealed class DisallowOrderByOrdinalRule : DiagnosticVisitorRuleBase
 {
-    private const string RuleId = "disallow-order-by-ordinal";
+    private const string RuleId = "avoid-order-by-ordinal";
     private const string Category = "Style";
 
     public override RuleMetadata Metadata { get; } = new(

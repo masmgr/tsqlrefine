@@ -11,7 +11,7 @@ public sealed class CatchSwallowingRuleTests
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
-        Assert.Equal("catch-swallowing", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-catch-swallowing", _rule.Metadata.RuleId);
         Assert.Equal("Transactions", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
@@ -31,7 +31,7 @@ END CATCH;";
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("catch-swallowing", diagnostics[0].Code);
+        Assert.Equal("avoid-catch-swallowing", diagnostics[0].Code);
         // Diagnostic should highlight only "BEGIN CATCH" keywords
         Assert.Equal(4, diagnostics[0].Range.Start.Line);
         Assert.Equal(0, diagnostics[0].Range.Start.Character);
@@ -52,7 +52,7 @@ END CATCH;";
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);
-        Assert.Equal("catch-swallowing", diagnostics[0].Code);
+        Assert.Equal("avoid-catch-swallowing", diagnostics[0].Code);
     }
 
     [Fact]

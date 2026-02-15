@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class ForbidTop100PercentOrderByRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "forbid-top-100-percent-order-by",
+        RuleId: "avoid-top-100-percent-order-by",
         Description: "Forbids TOP 100 PERCENT ORDER BY; it is redundant and often ignored by the optimizer.",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -38,7 +38,7 @@ public sealed class ForbidTop100PercentOrderByRule : DiagnosticVisitorRuleBase
                     AddDiagnostic(
                         fragment: node.TopRowFilter,
                         message: "TOP 100 PERCENT with ORDER BY is redundant; the optimizer often ignores it. Remove TOP 100 PERCENT or use a different approach.",
-                        code: "forbid-top-100-percent-order-by",
+                        code: "avoid-top-100-percent-order-by",
                         category: "Performance",
                         fixable: false
                     );

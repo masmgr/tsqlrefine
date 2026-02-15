@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Performance;
 public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "ban-query-hints",
+        RuleId: "avoid-query-hints",
         Description: "Detects query hints and table hints that bypass the optimizer, causing long-term maintenance issues.",
         Category: "Performance",
         DefaultSeverity: RuleSeverity.Warning,
@@ -116,7 +116,7 @@ public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: node,
                 message: $"Table hint '{hintKind}' constrains optimizer choices and can become long-term technical debt. Consider removing the hint and validating indexes/statistics instead.",
-                code: "ban-query-hints",
+                code: "avoid-query-hints",
                 category: "Performance",
                 fixable: false
             );
@@ -132,7 +132,7 @@ public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
             AddDiagnostic(
                 fragment: node,
                 message: $"Query hint '{hintKind}' bypasses optimizer decisions and can become technical debt as data and indexes evolve.",
-                code: "ban-query-hints",
+                code: "avoid-query-hints",
                 category: "Performance",
                 fixable: false
             );

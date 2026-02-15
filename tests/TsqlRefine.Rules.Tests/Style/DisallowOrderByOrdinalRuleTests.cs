@@ -17,7 +17,7 @@ public sealed class DisallowOrderByOrdinalRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("disallow-order-by-ordinal", diagnostic.Code);
+        Assert.Equal("avoid-order-by-ordinal", diagnostic.Code);
         Assert.Contains("1", diagnostic.Message);
     }
 
@@ -116,7 +116,7 @@ public sealed class DisallowOrderByOrdinalRuleTests
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
-        Assert.Equal("disallow-order-by-ordinal", _rule.Metadata.RuleId);
+        Assert.Equal("avoid-order-by-ordinal", _rule.Metadata.RuleId);
         Assert.Equal("Style", _rule.Metadata.Category);
         Assert.Equal(RuleSeverity.Information, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);

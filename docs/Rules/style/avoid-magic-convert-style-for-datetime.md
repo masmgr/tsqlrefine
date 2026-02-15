@@ -103,4 +103,4 @@ This rule can be disabled in your ruleset configuration:
 ## See Also
 
 - [avoid-ambiguous-datetime-literal](../correctness/avoid-ambiguous-datetime-literal.md) - Disallows slash-delimited date literals
-- [utc-datetime](../performance/utc-datetime.md) - Recommends UTC datetime functions
+- [prefer-utc-datetime](../performance/prefer-utc-datetime.md) - Recommends UTC datetime functions

@@ -1,0 +1,61 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TsqlRefine: Lint Current File",
+      "type": "shell",
+      "command": "tsqlrefine",
+      "args": ["lint", "${file}"],
+      "problemMatcher": {
+        "owner": "tsqlrefine",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info)\\s+([\\w-]+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "TsqlRefine: Lint Workspace",
+      "type": "shell",
+      "command": "tsqlrefine",
+      "args": ["lint", "src/**/*.sql"],
+      "problemMatcher": {
+        "owner": "tsqlrefine",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning|info)\\s+([\\w-]+):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "code": 5,
+          "message": 6
+        }
+      }
+    },
+    {
+      "label": "TsqlRefine: Fix Current File",
+      "type": "shell",
+      "command": "tsqlrefine",
+      "args": ["fix", "--write", "${file}"],
+      "problemMatcher": []
+    },
+    {
+      "label": "TsqlRefine: Format Current File",
+      "type": "shell",
+      "command": "tsqlrefine",
+      "args": ["format", "--write", "${file}"],
+      "problemMatcher": []
+    }
+  ]
+}

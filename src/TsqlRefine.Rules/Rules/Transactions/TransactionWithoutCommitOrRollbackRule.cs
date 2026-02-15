@@ -9,7 +9,7 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
-        RuleId: "transaction-without-commit-or-rollback",
+        RuleId: "avoid-transaction-without-commit",
         Description: "Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch.",
         Category: "Transactions",
         DefaultSeverity: RuleSeverity.Error,
@@ -43,7 +43,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                     AddDiagnostic(
                         range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION without corresponding COMMIT or ROLLBACK in the same batch. Orphaned transactions hold locks indefinitely and cause blocking issues. Ensure all transaction paths have proper termination.",
-                        code: "transaction-without-commit-or-rollback",
+                        code: "avoid-transaction-without-commit",
                         category: "Transactions",
                         fixable: false
                     );
@@ -90,7 +90,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                     AddDiagnostic(
                         range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION in stored procedure without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
-                        code: "transaction-without-commit-or-rollback",
+                        code: "avoid-transaction-without-commit",
                         category: "Transactions",
                         fixable: false
                     );
@@ -121,7 +121,7 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
                     AddDiagnostic(
                         range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
                         message: "BEGIN TRANSACTION in function without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
-                        code: "transaction-without-commit-or-rollback",
+                        code: "avoid-transaction-without-commit",
                         category: "Transactions",
                         fixable: false
                     );
