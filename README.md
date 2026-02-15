@@ -133,6 +133,8 @@ tsqlrefine format --write path/to/dir
 
 ### .NET Global Tool (Recommended)
 
+Available on [NuGet](https://www.nuget.org/packages/TsqlRefine).
+
 ```bash
 # Install
 dotnet tool install --global TsqlRefine
