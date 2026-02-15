@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code when working with code in this repository.
-
 ## Project Overview
 
 **tsqlrefine** is a SQL Server/T-SQL linter, static analyzer, and formatter written in C#. It provides:
@@ -14,29 +12,17 @@ Key patterns: most rules use ScriptDOM AST (preferred over token-based), helpers
 
 ## Workflow
 
-After any refactoring or code changes, always run the full test suite (all ~1600 tests) before committing. Never commit with failing tests.
-
-## Refactoring Checklist
-
-When moving/renaming files or reorganizing directories, always update namespaces AND using statements in both the main project and the test project. Build before running tests to catch missing references early.
-
-## Testing
-
-When adding new tests, double-check expected error counts and assertion values against the actual rule behavior. Run the specific new tests first before running the full suite.
+- Run the full test suite (~1600 tests) before committing. Never commit with failing tests.
+- When moving/renaming files, update namespaces AND using statements in both main and test projects. Build before running tests to catch missing references early.
+- When adding tests, double-check expected error counts against actual rule behavior. Run new tests first before the full suite.
 
 ## Performance Conventions
 
 Prefer `FrozenSet`/`FrozenDictionary` over `HashSet`/`Dictionary` for static lookup collections. Use `StringBuilder` for string concatenation in hot paths. Cache repeated computations.
 
-## Quick Reference Commands
+## CLI Usage
 
 ```powershell
-# Build
-dotnet build src/TsqlRefine.sln -c Release
-
-# Test
-dotnet test src/TsqlRefine.sln -c Release
-
 # Lint SQL
 dotnet run --project src/TsqlRefine.Cli -c Release -- lint file.sql
 
@@ -97,31 +83,17 @@ indent_style = spaces
 indent_size = 4
 ```
 
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success (no violations) |
-| 1 | Rule violations found |
-| 2 | Parse error |
-| 3 | Config error |
-| 4 | Fatal error |
-
 ## Documentation
 
 - [docs/cli.md](docs/cli.md): CLI specification
 - [docs/configuration.md](docs/configuration.md): Configuration format
-- [docs/formatting.md](docs/formatting.md): Formatting options
-- [docs/granular-casing.md](docs/granular-casing.md): Granular element casing
-- [docs/inline-disable.md](docs/inline-disable.md): Inline disable comments
-- [docs/plugin-api.md](docs/plugin-api.md): Plugin API contract
-- [docs/release.md](docs/release.md): Release procedures
-- [docs/Rules/README.md](docs/Rules/README.md): Rules overview and guide
 - [docs/Rules/REFERENCE.md](docs/Rules/REFERENCE.md): Full rule reference (auto-generated)
+
+See also: `docs/formatting.md`, `docs/granular-casing.md`, `docs/inline-disable.md`, `docs/plugin-api.md`, `docs/release.md`.
 
 ## Development Guidelines
 
-Path-specific development patterns are in `.claude/rules/`:
+Path-specific rules auto-load via `.claude/rules/` YAML frontmatter:
 
 | File | Applies To |
 |------|------------|
@@ -132,5 +104,3 @@ Path-specific development patterns are in `.claude/rules/`:
 | [core-development.md](.claude/rules/core-development.md) | `src/TsqlRefine.Core/**`, `src/TsqlRefine.PluginSdk/**` |
 | [plugin-development.md](.claude/rules/plugin-development.md) | `src/TsqlRefine.PluginHost/**` |
 | [testing-patterns.md](.claude/rules/testing-patterns.md) | `tests/**` |
-
-These rules use YAML frontmatter with `paths` field to automatically load context-specific guidance when working with files in those directories.
