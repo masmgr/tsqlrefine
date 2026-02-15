@@ -66,7 +66,7 @@ tsqlrefine lint [options] [paths...]
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
-| `--ruleset <path>` | Custom ruleset file |
+| `--ruleset <name\|path>` | Custom ruleset name or file |
 | `--verbose` | Show detailed information (execution time) |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
@@ -140,7 +140,7 @@ tsqlrefine fix [options] [paths...]
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
-| `--ruleset <path>` | Custom ruleset file |
+| `--ruleset <name\|path>` | Custom ruleset name or file |
 | `--rule <id>` | Rule ID to apply |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `--verbose` | Show detailed information (execution time) |
@@ -225,7 +225,7 @@ tsqlrefine list-rules [options]
 | `--fixable` | Show only fixable rules |
 | `--enabled-only` | Show only enabled rules |
 | `--preset <name>` | Override preset (overrides config file preset) |
-| `--ruleset <path>` | Override ruleset file (overrides config file ruleset) |
+| `--ruleset <name\|path>` | Override ruleset name or file (overrides config file ruleset) |
 
 The output always shows effective configuration: which rules are enabled/disabled and their effective severity after applying the preset, ruleset, and per-rule overrides from `tsqlrefine.json`.
 

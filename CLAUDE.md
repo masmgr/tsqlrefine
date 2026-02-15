@@ -72,7 +72,9 @@ src/
 - `pragmatic`: Production-ready minimum (43 rules)
 - `security-only`: Security and critical safety (14 rules)
 
-For custom rulesets, use the `"ruleset"` field with a path to a custom JSON file instead.
+For custom rulesets, use the `"ruleset"` field with a name (resolved from `.tsqlrefine/rulesets/`) or a file path.
+
+Configuration files are discovered from `.tsqlrefine/` directories (project-level then home-level). Use `--config` for explicit paths.
 
 ### .editorconfig
 

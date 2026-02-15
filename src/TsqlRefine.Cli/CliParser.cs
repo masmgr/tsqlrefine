@@ -82,7 +82,7 @@ public static class CliParser
 
         public static readonly Option<string?> Ruleset = new("--ruleset")
         {
-            Description = "Custom ruleset file path",
+            Description = "Custom ruleset name or file path",
             Arity = ArgumentArity.ZeroOrOne
         };
 

@@ -87,6 +87,12 @@ public static class CliApp
             ValidateOptions(parsed);
             WarnConflictingOptions(parsed, stderr);
 
+            // Warn about legacy file locations only for commands that use config files
+            if (command is "lint" or "format" or "fix")
+            {
+                WarnLegacyFileLocations(parsed, stderr);
+            }
+
             // Initialize services
             var inputReader = new InputReader();
             var commandExecutor = new CommandExecutor(inputReader);
@@ -149,6 +155,26 @@ public static class CliApp
         if (args.RulesetPath is not null)
         {
             stderr.WriteLine("Warning: --rule overrides --ruleset; ruleset will be ignored.");
+        }
+    }
+
+    private static void WarnLegacyFileLocations(CliArgs args, TextWriter stderr)
+    {
+        if (args.Quiet)
+        {
+            return;
+        }
+
+        var configWarning = ConfigLoader.CheckLegacyFileWarning("tsqlrefine.json", args.ConfigPath, "--config");
+        if (configWarning is not null)
+        {
+            stderr.WriteLine(configWarning);
+        }
+
+        var ignoreWarning = ConfigLoader.CheckLegacyFileWarning("tsqlrefine.ignore", args.IgnoreListPath, "--ignorelist");
+        if (ignoreWarning is not null)
+        {
+            stderr.WriteLine(ignoreWarning);
         }
     }
 

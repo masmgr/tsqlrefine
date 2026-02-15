@@ -18,10 +18,9 @@ tsqlrefine searches for configuration files (`tsqlrefine.json` and `tsqlrefine.i
 | Priority | Location | Description |
 |----------|----------|-------------|
 | 1 (highest) | CLI argument | `--config` / `--ignorelist` explicit path |
-| 2 | `{CWD}/tsqlrefine.json` | Current directory (legacy, backward-compatible) |
-| 3 | `{CWD}/.tsqlrefine/` | Current directory `.tsqlrefine/` subdirectory |
-| 4 | `~/.tsqlrefine/` | Home directory `.tsqlrefine/` subdirectory |
-| 5 (lowest) | Default | Built-in defaults (no file) |
+| 2 | `{CWD}/.tsqlrefine/` | Project-level `.tsqlrefine/` directory |
+| 3 | `~/.tsqlrefine/` | User-level `.tsqlrefine/` directory |
+| 4 (lowest) | Default | Built-in defaults (no file) |
 
 The first file found wins. Configuration files are **not** merged across locations.
 
@@ -33,11 +32,11 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 
 - `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `130`, `140`, `150`, `160`).
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
-- `ruleset` (string): path to a custom ruleset file. Can be relative to the working directory or absolute. For built-in presets, use `preset` instead.
+- `ruleset` (string): custom ruleset name or file path. A short name (e.g. `"my-team"`) is resolved from `.tsqlrefine/rulesets/` directories. A file path (containing `/`, `\`, or ending in `.json`) is resolved relative to the working directory or as an absolute path. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection. Paths can be relative (resolved from config file directory) or filename-only (searched in config dir, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`).
 - `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
 
-> **Note**: If both `preset` and `ruleset` are specified, `preset` takes precedence. The `--preset` CLI option overrides both.
+> **Note**: If both `preset` and `ruleset` are specified in the config file, `preset` takes precedence. CLI options (`--preset` or `--ruleset`) always override config-level settings.
 
 Example:
 
@@ -172,6 +171,28 @@ Example `custom-ruleset.json`:
 ```
 
 In this example, only `avoid-null-comparison` and `dml-without-where` are enabled. All other rules are disabled.
+
+### Named rulesets
+
+Instead of specifying a file path, you can use a short name to reference a custom ruleset stored in standard locations:
+
+```json
+{
+  "ruleset": "my-team"
+}
+```
+
+Named rulesets are resolved by searching:
+1. `{CWD}/.tsqlrefine/rulesets/{name}.json`
+2. `~/.tsqlrefine/rulesets/{name}.json`
+
+A value is treated as a name (not a file path) when it contains no directory separators (`/` or `\`) and does not end with `.json`.
+
+The `--ruleset` CLI option also accepts names:
+
+```bash
+tsqlrefine lint --ruleset my-team file.sql
+```
 
 ## Preset rulesets
 
