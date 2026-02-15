@@ -413,6 +413,8 @@ For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
 
 ## 6. IDE / Extension Integration
 
+> **Tip**: For VS Code, the [tsqlrefine extension](https://marketplace.visualstudio.com/items?itemName=masmgr.tsqlrefine) provides integrated support out of the box. The information below is for extension authors and other tool integrations.
+
 For integration from VS Code extensions or other tools, use `--quiet` (`-q`) with `--output json`:
 
 ```bash

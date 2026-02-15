@@ -160,6 +160,10 @@ cd tsqlrefine
 dotnet build src/TsqlRefine.sln -c Release
 ```
 
+### VS Code Extension
+
+Install the [tsqlrefine extension](https://marketplace.visualstudio.com/items?itemName=masmgr.tsqlrefine) from the VS Code Marketplace for integrated linting, auto-fix, and formatting directly in the editor.
+
 ## Configuration
 
 ### Generate Config Files

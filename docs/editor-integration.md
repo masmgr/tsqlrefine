@@ -4,6 +4,15 @@ This guide shows how to integrate tsqlrefine into your editor and development wo
 
 ## Visual Studio Code
 
+### Extension (Recommended)
+
+Install the [tsqlrefine extension](https://marketplace.visualstudio.com/items?itemName=masmgr.tsqlrefine) from the VS Code Marketplace for integrated linting, auto-fix, and formatting support.
+
+- [Marketplace](https://marketplace.visualstudio.com/items?itemName=masmgr.tsqlrefine)
+- [GitHub](https://github.com/masmgr/tsqlrefine-vscode)
+
+The sections below describe manual task-based integration as an alternative.
+
 ### Tasks
 
 Add these tasks to `.vscode/tasks.json` to run tsqlrefine from VS Code:
