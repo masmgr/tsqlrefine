@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-15
+
+### Added
+
+- Security hardening: `--allow-plugins` opt-in flag, `--max-file-size` option (default 10 MB), plugin API version verification via assembly attribute, plugin path validation
+- `SECURITY.md` vulnerability reporting policy
+- Dependabot configuration for NuGet and GitHub Actions dependency updates
+- Vulnerable package scanning in CI workflow
+- SHA256 checksums for GitHub Release artifacts
+- GitHub Actions pinned to commit SHAs for supply chain security
+- `--enabled-only` option for `list-rules` command to hide disabled rules
+- `--verbose` option for `fix` command to display execution time
+- `--preset` / `--ruleset` mutual exclusion validation
+- `--verbose` / `--quiet` mutual exclusion validation
+- Plugin search paths for filename-only plugin references
+- CI integration guide with GitHub Actions, Azure Pipelines, and GitLab CI examples
+- Editor integration guide with VS Code tasks, pre-commit hooks, and JetBrains setup
+- CI and editor integration sample files
+- Named ruleset resolution from `.tsqlrefine/rulesets/` directory, legacy file warnings, and config priority tests
+- NuGet package link in README Installation section
+- VS Code extension references in documentation
+
+### Changed
+
+- Renamed 27 rule IDs for kebab-case naming consistency
+- Warn when `--rule` overrides `--preset` or `--ruleset` on `fix` command
+- Removed `-g` short alias from `--ignorelist`
+- Removed unused `--output` option from `format` command
+- Removed unused `--output` option from `print-config` command
+- `--max-file-size` rejects invalid values instead of silent fallback
+- Suppress stack traces and probe paths in non-verbose plugin output
+
+### Fixed
+
+- `avoid-not-in-with-null` highlight narrowed to NOT IN keyword
+- JSON schema: added missing `compatLevel` values (130, 140) and corrected casing defaults
+- `FormattingConfig` default casing for schema/table/column corrected to `None`
+- CLI docs: added `--allow-plugins`, `--max-file-size`, fixed rule ID format
+- Plugin API docs: corrected rules link and removed outdated phrasing
+- Configuration docs: added missing `compatLevel` values 130 and 140
+- Formatting docs: fixed CompatLevel range from 100–170 to 100–160
+- Samples README: fixed paths, rule counts, output examples, and URLs
+
 ## [0.4.0] - 2026-02-14
 
 ### Added
@@ -112,7 +155,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/masmgr/tsqlrefine/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/masmgr/tsqlrefine/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/masmgr/tsqlrefine/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/masmgr/tsqlrefine/compare/v0.1.0...v0.2.0
