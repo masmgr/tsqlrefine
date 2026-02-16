@@ -41,6 +41,7 @@ public sealed class OrderByInSubqueryRuleTests
     [InlineData(@"SELECT * FROM (SELECT id, name FROM users ORDER BY name FOR JSON PATH) AS sub;")]
     [InlineData(@"SELECT id, name FROM users ORDER BY name;")]
     [InlineData(@"SELECT * FROM users;")]
+    [InlineData(@"INSERT INTO t (id) SELECT id FROM users ORDER BY id;")]
     [InlineData(@"")]
     public void Analyze_WhenValid_ReturnsEmpty(string sql)
     {
@@ -66,6 +67,21 @@ public sealed class OrderByInSubqueryRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InsertSelectWithSubqueryOrderBy_ReturnsDiagnostic()
+    {
+        const string sql = @"
+            INSERT INTO t (id)
+            SELECT id
+            FROM (SELECT id FROM users ORDER BY id) AS sub;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("order-by-in-subquery", diagnostics[0].Code);
     }
 
     [Fact]
