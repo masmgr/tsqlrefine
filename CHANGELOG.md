@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-16
+
+First stable release.
+
+### Added
+
+- Core linting engine with 130+ built-in rules covering security, performance, correctness, style, schema, and transactions
+- Auto-fix capability for fixable rules (e.g., keyword casing, NULL comparison operators, EXEC to sp_executesql)
+- SQL formatter with keyword uppercasing, indentation, and whitespace normalization
+- CLI commands: `lint`, `fix`, `format`, `init`, `list-rules`, `list-plugins`, `print-config`
+- Plugin system for custom rules with .NET plugin loading and API version verification
+- Configuration via `tsqlrefine.json`, `.tsqlrefine/` directory discovery, and `.editorconfig` integration
+- Preset rulesets: `recommended`, `strict`, `strict-logic`, `pragmatic`, `security-only`
+- Named ruleset resolution from `.tsqlrefine/rulesets/` directory
+- Per-rule severity configuration (`error`, `warning`, `info`, `inherit`, `none`)
+- JSON output format for CI/CD integration
+- Inline disable comments (`-- tsqlrefine-disable-next-line rule-id`) with optional reason text
+- Security hardening: `--allow-plugins` opt-in flag, `--max-file-size` option, plugin path validation
+- Documentation URI for each rule for editor integration
+- CI integration guide with GitHub Actions, Azure Pipelines, and GitLab CI examples
+- Editor integration guide with VS Code tasks, pre-commit hooks, and JetBrains setup
+- TsqlRefine.PluginSdk published as NuGet package
+
 ## [0.6.0] - 2026-02-16
 
 ### Fixed
@@ -168,7 +191,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/masmgr/tsqlrefine/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/masmgr/tsqlrefine/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/masmgr/tsqlrefine/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/masmgr/tsqlrefine/compare/v0.4.0...v0.5.0
