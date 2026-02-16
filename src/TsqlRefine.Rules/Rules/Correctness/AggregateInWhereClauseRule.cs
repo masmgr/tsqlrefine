@@ -25,9 +25,24 @@ public sealed class AggregateInWhereClauseRule : DiagnosticVisitorRuleBase
 
     private sealed class AggregateInWhereClauseVisitor : DiagnosticVisitorBase
     {
+        private int _scalarSubqueryDepth;
+
+        public override void ExplicitVisit(ScalarSubquery node)
+        {
+            _scalarSubqueryDepth++;
+            base.ExplicitVisit(node);
+            _scalarSubqueryDepth--;
+        }
+
         public override void ExplicitVisit(WhereClause node)
         {
-            CheckBooleanExpressionForAggregates(node.SearchCondition);
+            // Skip aggregate checking for WHERE clauses inside scalar subqueries.
+            // Aggregates there are resolved against the outer query's GROUP BY scope.
+            if (_scalarSubqueryDepth == 0)
+            {
+                CheckBooleanExpressionForAggregates(node.SearchCondition);
+            }
+
             base.ExplicitVisit(node);
         }
 

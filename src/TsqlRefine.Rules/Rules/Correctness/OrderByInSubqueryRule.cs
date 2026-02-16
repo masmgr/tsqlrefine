@@ -36,6 +36,17 @@ public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
             AddDiagnosticsFromParseErrors(context);
         }
 
+        public override void ExplicitVisit(InsertStatement node)
+        {
+            if (node.InsertSpecification?.InsertSource is SelectInsertSource selectSource
+                && selectSource.Select is QuerySpecification querySpec)
+            {
+                _rootQuerySpecifications.Add(querySpec);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
         public override void ExplicitVisit(SelectStatement node)
         {
             var isRootSelectStatement = _selectStatementDepth == 0;

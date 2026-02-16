@@ -314,6 +314,99 @@ public sealed class AggregateInWhereClauseRuleTests
         Assert.Single(diagnostics);
     }
 
+    // === Scalar subquery cases (no false positives) ===
+
+    [Fact]
+    public void Analyze_AggregateInScalarSubqueryWhereReferencingOuterGroupBy_ReturnsEmpty()
+    {
+        const string sql = @"
+            SELECT
+                (
+                    SELECT TOP 1 t2.code
+                    FROM t2
+                    WHERE t2.project = MAX(t1.project)
+                ) AS code
+            FROM t1
+            GROUP BY t1.category;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_AggregateInScalarSubqueryWhereWithinOuterWhere_ReturnsEmpty()
+    {
+        const string sql = @"
+            SELECT col
+            FROM t1
+            WHERE x > (
+                SELECT TOP 1 val
+                FROM t2
+                WHERE t2.y = MAX(t1.z)
+            )
+            GROUP BY col, x;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_AggregateInOuterWhereWithSubquery_ReturnsDiagnostic()
+    {
+        const string sql = @"
+            SELECT *
+            FROM t
+            WHERE COUNT(*) > 5
+                AND x IN (SELECT y FROM s);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("COUNT", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_AggregateInNestedScalarSubqueryWhere_ReturnsEmpty()
+    {
+        const string sql = @"
+            SELECT
+                (
+                    SELECT TOP 1
+                        (SELECT TOP 1 a.val FROM a WHERE a.id = MAX(t.id))
+                    FROM b
+                    WHERE b.code = MIN(t.code)
+                ) AS nested_val
+            FROM t
+            GROUP BY t.category;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_MixedAggregatesOuterAndSubquery_ReportsOnlyOuter()
+    {
+        const string sql = @"
+            SELECT
+                (SELECT TOP 1 s.val FROM s WHERE s.id = MAX(t.id)) AS sub_val
+            FROM t
+            WHERE SUM(t.amount) > 100
+            GROUP BY t.category;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("SUM", diagnostics[0].Message);
+    }
+
     // === Metadata tests ===
 
     [Fact]
