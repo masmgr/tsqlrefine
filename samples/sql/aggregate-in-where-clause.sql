@@ -24,3 +24,23 @@ SELECT * FROM t WHERE x > 5 AND y = 'abc';
 
 -- Good: aggregate in EXISTS subquery
 SELECT * FROM t WHERE EXISTS (SELECT 1 FROM s HAVING COUNT(*) > 0);
+
+-- Good: aggregate in scalar subquery WHERE referencing outer GROUP BY scope
+SELECT
+    (
+        SELECT TOP 1 t2.code
+        FROM t2
+        WHERE t2.project = MAX(t1.project)
+    ) AS code
+FROM t1
+GROUP BY t1.category;
+
+-- Good: aggregate in scalar subquery WHERE within outer WHERE
+SELECT col
+FROM t1
+WHERE x > (
+    SELECT TOP 1 val
+    FROM t2
+    WHERE t2.y = MAX(t1.z)
+)
+GROUP BY col, x;
