@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-02-17
+
+No user-facing changes.
+
 ## [1.0.0] - 2026-02-16
 
 First stable release.
@@ -191,7 +195,8 @@ First stable release.
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/masmgr/tsqlrefine/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/masmgr/tsqlrefine/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/masmgr/tsqlrefine/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/masmgr/tsqlrefine/compare/v0.5.0...v0.5.1
