@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE = 'C:/Users/imasa/github/tsqlrefine';
+const BASE = path.resolve(__dirname, '../../');
 const RULES_DIR = path.join(BASE, 'src/TsqlRefine.Rules/Rules');
 const RULESETS_DIR = path.join(BASE, 'rulesets');
 
