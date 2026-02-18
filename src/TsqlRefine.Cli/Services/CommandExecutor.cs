@@ -53,10 +53,18 @@ public sealed class CommandExecutor
         );
 
         // Serialize with $schema reference for IDE support
+        // Prepend $schema by rebuilding the JsonObject with it as the first property
         var jsonNode = System.Text.Json.JsonSerializer.SerializeToNode(config, JsonDefaults.Options)!;
         var jsonObj = jsonNode.AsObject();
-        jsonObj.Insert(0, "$schema", "../schemas/tsqlrefine.schema.json");
-        var json = System.Text.Json.JsonSerializer.Serialize(jsonObj, JsonDefaults.Options);
+        var ordered = new System.Text.Json.Nodes.JsonObject
+        {
+            ["$schema"] = "../schemas/tsqlrefine.schema.json"
+        };
+        foreach (var kvp in jsonObj)
+        {
+            ordered[kvp.Key] = kvp.Value?.DeepClone();
+        }
+        var json = System.Text.Json.JsonSerializer.Serialize(ordered, JsonDefaults.Options);
 
         await File.WriteAllTextAsync(configPath, json, Encoding.UTF8);
         await File.WriteAllTextAsync(ignorePath, "# One glob per line\nbin/\nobj/\n", Encoding.UTF8);
