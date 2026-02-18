@@ -310,8 +310,12 @@ public sealed class ConfigLoader
 
         if (pluginConfigs.Count > 0 && !args.AllowPlugins)
         {
-            stderr?.WriteLine(
-                $"Warning: {pluginConfigs.Count} plugin(s) configured but not loaded. Use --allow-plugins to enable plugin loading.");
+            if (!args.Quiet)
+            {
+                stderr?.WriteLine(
+                    $"Warning: {pluginConfigs.Count} plugin(s) configured but not loaded. Use --allow-plugins to enable plugin loading.");
+            }
+
             return rules;
         }
 
