@@ -19,7 +19,7 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 130
+- **Total Rules**: 131
 - **Fixable Rules**: 14 (11%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
@@ -29,7 +29,7 @@
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 18 rules (14%)
-  - Warning: 73 rules (56%)
+  - Warning: 74 rules (56%)
   - Information: 39 rules (30%)
 
 ## Importance Tiers
@@ -54,7 +54,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 5 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 39 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
 | **Schema** | 11 | Enforces database schema best practices |
@@ -336,7 +336,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 
-### Warning (73 rules)
+### Warning (74 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -408,6 +408,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
+- [trim-from-in-return](correctness/trim-from-in-return.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
