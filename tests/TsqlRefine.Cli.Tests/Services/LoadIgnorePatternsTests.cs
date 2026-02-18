@@ -103,20 +103,25 @@ public sealed class LoadIgnorePatternsTests
     }
 
     [Fact]
-    public void LoadIgnorePatterns_WithNullPath_NoFileExists_ReturnsEmpty()
+    public void LoadIgnorePatterns_WithNullPath_CwdIgnoreFileLoaded()
     {
+        // Verifies that when null is passed, the CWD .tsqlrefine/tsqlrefine.ignore
+        // is loaded (CWD takes priority over home directory).
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var originalDir = Directory.GetCurrentDirectory();
 
         try
         {
-            // Set CWD to a temp dir with no .tsqlrefine/ directory
-            Directory.CreateDirectory(tempDir);
+            var ignoreDir = Path.Combine(tempDir, ".tsqlrefine");
+            Directory.CreateDirectory(ignoreDir);
+            File.WriteAllText(Path.Combine(ignoreDir, "tsqlrefine.ignore"), "bin/\nobj/\n");
             Directory.SetCurrentDirectory(tempDir);
 
             var patterns = ConfigLoader.LoadIgnorePatterns(null);
 
-            Assert.Empty(patterns);
+            Assert.Equal(2, patterns.Count);
+            Assert.Equal("bin/", patterns[0]);
+            Assert.Equal("obj/", patterns[1]);
         }
         finally
         {
