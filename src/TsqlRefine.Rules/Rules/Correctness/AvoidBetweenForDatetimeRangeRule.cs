@@ -45,7 +45,7 @@ public sealed class AvoidBetweenForDatetimeRangeRule : DiagnosticVisitorRuleBase
                 && IsDatetimeRelated(node))
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Between),
                     message: "Avoid BETWEEN for datetime ranges. BETWEEN includes both endpoints, which can cause boundary issues with time components. Use >= and < pattern instead.",
                     code: "avoid-between-for-datetime-range",
                     category: "Correctness",
