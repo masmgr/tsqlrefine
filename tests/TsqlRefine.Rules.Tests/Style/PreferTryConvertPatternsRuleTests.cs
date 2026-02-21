@@ -158,6 +158,25 @@ public sealed class PreferTryConvertPatternsRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenCaseWithValidationAndConversion_ReportsAtCaseKeyword()
+    {
+        // "SELECT CASE WHEN ISNUMERIC(@v) = 1 THEN CONVERT(INT, @v) END;"
+        //         ^^^^  position 7, length 4 ("CASE")
+        const string sql = "SELECT CASE WHEN ISNUMERIC(@v) = 1 THEN CONVERT(INT, @v) END;";
+        var context = CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context)
+            .Where(d => d.Code == "prefer-try-convert-patterns")
+            .ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(7, diagnostic.Range.Start.Character);  // 'C' of 'CASE'
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(11, diagnostic.Range.End.Character);   // after 'E' of 'CASE'
+    }
+
+    [Fact]
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         // Arrange

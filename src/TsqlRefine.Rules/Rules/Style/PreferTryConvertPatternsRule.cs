@@ -35,7 +35,7 @@ public sealed class PreferTryConvertPatternsRule : DiagnosticVisitorRuleBase
                         ContainsConversion(whenClause.ThenExpression))
                     {
                         AddDiagnostic(
-                            fragment: node,
+                            range: ScriptDomHelpers.FindKeywordTokenRange(node, TSqlTokenType.Case),
                             message: "Use TRY_CONVERT or TRY_CAST instead of CASE with ISNUMERIC/ISDATE; it's safer and has fewer false positives.",
                             code: "prefer-try-convert-patterns",
                             category: "Style",

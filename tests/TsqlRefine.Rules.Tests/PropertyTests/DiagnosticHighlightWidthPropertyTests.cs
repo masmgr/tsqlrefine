@@ -67,6 +67,8 @@ public sealed class DiagnosticHighlightWidthPropertyTests
             ["avoid-nolock"] = "SELECT id FROM t WITH (NOLOCK);",
             ["avoid-linked-server"] = "SELECT id FROM [server].[db].[dbo].[t];",
 
+            ["prefer-try-convert-patterns"] = "SELECT CASE WHEN ISNUMERIC(@v) = 1 THEN CONVERT(INT, @v) END;",
+
             // Style
             ["semicolon-termination"] = "SELECT id FROM t",
             ["require-as-for-table-alias"] = "SELECT t.id FROM t u;",

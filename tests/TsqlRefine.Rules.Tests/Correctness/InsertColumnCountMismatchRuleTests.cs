@@ -96,6 +96,26 @@ public sealed class InsertColumnCountMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenColumnCountMismatch_ReportsAtInsertKeyword()
+    {
+        var rule = new InsertColumnCountMismatchRule();
+        // "INSERT INTO t (a, b) VALUES (1);"
+        //  ^^^^^  position 0, length 6 ("INSERT")
+        const string sql = "INSERT INTO t (a, b) VALUES (1);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "semantic-insert-column-count-mismatch")
+            .ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(0, diagnostic.Range.Start.Character);  // 'I' of 'INSERT'
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(6, diagnostic.Range.End.Character);    // after 'T' of 'INSERT'
+    }
+
+    [Fact]
     public void Analyze_EmptyInput_ReturnsEmpty()
     {
         var rule = new InsertColumnCountMismatchRule();
