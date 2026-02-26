@@ -1,9 +1,12 @@
 using System.Collections.Frozen;
 using System.Text;
+using System.Text.Json;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Snapshot;
 
 namespace TsqlRefine.Cli.Services;
 
@@ -506,5 +509,81 @@ public sealed class ConfigLoader
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Loads a schema provider from a snapshot file specified by CLI args or configuration.
+    /// CLI --schema takes precedence over config schema.snapshotPath.
+    /// </summary>
+    /// <returns>An <see cref="ISchemaProvider"/> instance, or null if no schema is configured.</returns>
+    public static ISchemaProvider? LoadSchema(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    {
+        var (snapshotPath, source) = ResolveSchemaPath(args, config);
+
+        if (snapshotPath is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(snapshotPath))
+        {
+            throw new ConfigException($"Schema snapshot file not found: {snapshotPath}");
+        }
+
+        try
+        {
+            var json = File.ReadAllText(snapshotPath);
+            var snapshot = SchemaSnapshotSerializer.Deserialize(json);
+            var defaultSchema = config.Schema?.DefaultSchema ?? "dbo";
+            var provider = new SchemaProvider(snapshot, defaultSchema);
+
+            if (stderr is not null && !args.Quiet)
+            {
+                var tableCount = snapshot.Databases.Sum(db => db.Tables.Count + db.Views.Count);
+                stderr.WriteLine($"Schema loaded: {snapshot.Metadata.DatabaseName} ({tableCount} tables/views) [from {source}]");
+            }
+
+            return provider;
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException($"Failed to parse schema snapshot: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw new ConfigException($"Failed to read schema snapshot: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves the schema snapshot path from CLI args and config, returning
+    /// the absolute path and a human-readable source label.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveSchemaPath(CliArgs args, TsqlRefineConfig config)
+    {
+        // CLI --schema takes precedence (resolved from CWD)
+        if (!string.IsNullOrWhiteSpace(args.SchemaPath))
+        {
+            var resolved = Path.IsPathRooted(args.SchemaPath)
+                ? args.SchemaPath
+                : Path.GetFullPath(args.SchemaPath);
+            return (resolved, "--schema");
+        }
+
+        // Config schema.snapshotPath (resolved from config file directory)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.SnapshotPath))
+        {
+            var configPath = ResolveConfigPath(args);
+            var configDir = configPath is not null
+                ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+                : Directory.GetCurrentDirectory();
+
+            var resolved = Path.IsPathRooted(config.Schema.SnapshotPath)
+                ? config.Schema.SnapshotPath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.SnapshotPath));
+            return (resolved, "config");
+        }
+
+        return (null, "none");
     }
 }

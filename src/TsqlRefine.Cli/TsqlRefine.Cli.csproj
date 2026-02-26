@@ -43,6 +43,7 @@
     <ProjectReference Include="..\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
     <ProjectReference Include="..\TsqlRefine.PluginHost\TsqlRefine.PluginHost.csproj" />
     <ProjectReference Include="..\TsqlRefine.Rules\TsqlRefine.Rules.csproj" />
+    <ProjectReference Include="..\TsqlRefine.Schema\TsqlRefine.Schema.csproj" />
   </ItemGroup>
 
   <ItemGroup>
