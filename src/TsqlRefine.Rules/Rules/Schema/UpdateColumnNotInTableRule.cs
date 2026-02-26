@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
@@ -42,7 +43,7 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
             var schemaName = schemaObject.SchemaIdentifier?.Value;
             var dbName = schemaObject.DatabaseIdentifier?.Value;
 
-            var resolvedTable = schema.ResolveTable(dbName, schemaName, tableName);
+            var resolvedTable = ResolveTargetTable(updateSpec, tableName, dbName, schemaName);
             if (resolvedTable is null)
             {
                 // Table not found — skip (reported by unresolved-table-reference)
@@ -83,6 +84,31 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private ResolvedTable? ResolveTargetTable(
+            UpdateSpecification updateSpec,
+            string tableName,
+            string? dbName,
+            string? schemaName)
+        {
+            // Qualified targets are direct table references.
+            if (dbName is not null || schemaName is not null)
+            {
+                return schema.ResolveTable(dbName, schemaName, tableName);
+            }
+
+            // Unqualified targets in UPDATE ... FROM can be aliases.
+            if (updateSpec.FromClause?.TableReferences is { Count: > 0 } tableRefs)
+            {
+                var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
+                if (aliasMap.TryResolve(tableName, out var mapped))
+                {
+                    return mapped;
+                }
+            }
+
+            return schema.ResolveTable(null, null, tableName);
         }
     }
 }
