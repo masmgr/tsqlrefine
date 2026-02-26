@@ -11,5 +11,6 @@
     <PackageVersion Include="DiffPlex" Version="1.7.2" />
     <PackageVersion Include="editorconfig" Version="0.15.0" />
     <PackageVersion Include="UTF.Unknown" Version="2.6.0" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.1" />
   </ItemGroup>
 </Project>
