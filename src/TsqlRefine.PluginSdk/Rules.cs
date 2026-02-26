@@ -153,12 +153,14 @@ public sealed class ScriptDomAst
 /// <param name="Ast">The parsed syntax tree and raw SQL.</param>
 /// <param name="Tokens">Flat token stream for pattern matching.</param>
 /// <param name="Settings">Per-rule configuration settings.</param>
+/// <param name="Schema">Optional schema provider for schema-aware analysis. Null when no schema snapshot is loaded.</param>
 public sealed record RuleContext(
     string FilePath,
     int CompatLevel,
     ScriptDomAst Ast,
     IReadOnlyList<Token> Tokens,
-    RuleSettings Settings
+    RuleSettings Settings,
+    ISchemaProvider? Schema = null
 );
 
 /// <summary>

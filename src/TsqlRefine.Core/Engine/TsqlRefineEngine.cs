@@ -236,7 +236,8 @@ public sealed class TsqlRefineEngine
             CompatLevel: options.CompatLevel,
             Ast: analysis.Ast,
             Tokens: analysis.Tokens,
-            Settings: ruleSettings
+            Settings: ruleSettings,
+            Schema: options.Schema
         );
     }
 
