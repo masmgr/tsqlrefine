@@ -114,6 +114,10 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DuplicateTableFunctionColumnRule(),
         new DuplicateTableVariableColumnRule(),
         new AvoidDeprecatedTypesRule(),
+        new UnresolvedTableReferenceRule(),
+        new UnresolvedColumnReferenceRule(),
+        new InsertColumnNotInTableRule(),
+        new UpdateColumnNotInTableRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),

@@ -7,6 +7,11 @@ internal static class RuleTestContext
 {
     public static RuleContext CreateContext(string sql, int compatLevel = 150)
     {
+        return CreateContext(sql, schema: null, compatLevel: compatLevel);
+    }
+
+    public static RuleContext CreateContext(string sql, ISchemaProvider? schema, int compatLevel = 150)
+    {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
 
         using var fragmentReader = new StringReader(sql);
@@ -23,7 +28,8 @@ internal static class RuleTestContext
             CompatLevel: compatLevel,
             Ast: ast,
             Tokens: tokens,
-            Settings: new RuleSettings()
+            Settings: new RuleSettings(),
+            Schema: schema
         );
     }
 

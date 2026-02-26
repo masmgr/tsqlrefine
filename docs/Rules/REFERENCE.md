@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 130
-- **Fixable Rules**: 14 (11%)
+- **Total Rules**: 134
+- **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
-  - Essential (pragmatic): 29 rules
-  - Recommended (recommended): 44 rules
+  - Essential (pragmatic): 31 rules
+  - Recommended (recommended): 46 rules
   - Thorough (strict-logic): 20 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 18 rules (14%)
-  - Warning: 73 rules (56%)
-  - Information: 39 rules (30%)
+  - Error: 20 rules (15%)
+  - Warning: 75 rules (56%)
+  - Information: 39 rules (29%)
 
 ## Importance Tiers
 
@@ -43,10 +43,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 29 | 43 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 44 | 87 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 107 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 130 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Essential** | pragmatic | 31 | 45 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 46 | 91 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 20 | 111 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 134 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -57,7 +57,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
-| **Schema** | 11 | Enforces database schema best practices |
+| **Schema** | 15 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -98,7 +98,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Essential (pragmatic)
 
-**29 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
+**31 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
 
 #### Correctness (22 rules)
 
@@ -139,7 +139,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
 
-#### Schema (5 rules)
+#### Schema (7 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -148,10 +148,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [duplicate-table-function-column](schema/duplicate-table-function-column.md) | Detects duplicate column names in table-valued function definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-table-variable-column](schema/duplicate-table-variable-column.md) | Detects duplicate column names in DECLARE @table TABLE variable definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-view-column](schema/duplicate-view-column.md) | Detects duplicate column names in CREATE VIEW definitions; duplicate columns always cause a runtime error. | Error | No |
+| [insert-column-not-in-table](schema/insert-column-not-in-table.md) | Detects INSERT statements that reference columns not found in the target table. | Error | No |
+| [update-column-not-in-table](schema/update-column-not-in-table.md) | Detects UPDATE statements that reference columns not found in the target table. | Error | No |
 
 ### Recommended
 
-**44 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**46 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
 #### Correctness (10 rules)
 
@@ -203,13 +205,15 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md) | Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements. | Information | No |
 | [set-xact-abort](transactions/set-xact-abort.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 
-#### Schema (3 rules)
+#### Schema (5 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md) | Detects duplicate columns within a single FOREIGN KEY constraint definition. | Warning | No |
 | [duplicate-index-column](schema/duplicate-index-column.md) | Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition. | Warning | No |
 | [duplicate-index-definition](schema/duplicate-index-definition.md) | Detects multiple indexes or unique constraints within a table that have the exact same column composition. | Warning | No |
+| [unresolved-column-reference](schema/unresolved-column-reference.md) | Detects references to columns that do not exist in the schema snapshot. | Warning | No |
+| [unresolved-table-reference](schema/unresolved-table-reference.md) | Detects references to tables or views that do not exist in the schema snapshot. | Warning | No |
 
 #### Style (6 rules)
 
@@ -315,7 +319,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (18 rules)
+### Error (20 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -329,14 +333,16 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-table-function-column](schema/duplicate-table-function-column.md)
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
+- [insert-column-not-in-table](schema/insert-column-not-in-table.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
 - [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md)
 - [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md)
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
+- [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (73 rules)
+### Warning (75 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -411,6 +417,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
+- [unresolved-column-reference](schema/unresolved-column-reference.md)
+- [unresolved-table-reference](schema/unresolved-table-reference.md)
 
 ### Information (39 rules)
 
