@@ -90,6 +90,7 @@
     { "id": "unresolved-table-reference" },
     { "id": "unresolved-column-reference" },
     { "id": "insert-column-not-in-table" },
-    { "id": "update-column-not-in-table" }
+    { "id": "update-column-not-in-table" },
+    { "id": "implicit-conversion-in-predicate-schema" }
   ]
 }
