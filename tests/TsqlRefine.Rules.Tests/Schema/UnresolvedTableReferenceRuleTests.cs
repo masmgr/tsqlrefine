@@ -51,6 +51,21 @@ public sealed class UnresolvedTableReferenceRuleTests
         Assert.Contains("not found in schema snapshot", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_CteReference_SkipsValidation()
+    {
+        const string sql = """
+            WITH cte AS (SELECT 1 AS Id)
+            SELECT c.Id
+            FROM cte AS c;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM #TempTable;")]
     [InlineData("SELECT * FROM ##GlobalTemp;")]
@@ -121,5 +136,20 @@ public sealed class UnresolvedTableReferenceRuleTests
 
         Assert.Single(diagnostics);
         Assert.Contains("Missing", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_UpdateAliasTarget_SkipsValidation()
+    {
+        const string sql = """
+            UPDATE u
+            SET Name = N'Updated'
+            FROM dbo.Users AS u;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
     }
 }
