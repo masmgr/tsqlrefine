@@ -19,6 +19,9 @@ public sealed class UnresolvedColumnReferenceRuleTests
                 .AddColumn("Id", "int")
                 .AddColumn("UserId", "int")
                 .AddColumn("Total", "decimal", precision: 18, scale: 2))
+            .AddTable("sales", "Orders", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("SalesTotal", "decimal", precision: 18, scale: 2))
             .Build());
 
     [Theory]
@@ -168,6 +171,21 @@ public sealed class UnresolvedColumnReferenceRuleTests
     public void Analyze_NoFromClause_SkipsValidation()
     {
         const string sql = "SELECT 1 AS Col;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_SchemaQualifiedColumn_ResolvesCorrectTable()
+    {
+        const string sql = """
+            SELECT sales.Orders.SalesTotal
+            FROM dbo.Orders
+            INNER JOIN sales.Orders ON dbo.Orders.Id = sales.Orders.Id;
+            """;
         var context = RuleTestContext.CreateContext(sql, CreateSchema());
 
         var diagnostics = _rule.Analyze(context).ToArray();
