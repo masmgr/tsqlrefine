@@ -8,6 +8,7 @@ using TsqlRefine.Core.Model;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Relations;
 using TsqlRefine.Schema.Snapshot;
 using TsqlRefine.Schema.SqlServer;
 
@@ -502,6 +503,53 @@ public sealed class CommandExecutor
             await stderr.WriteLineAsync($"Error: Failed to connect to database. {ex.Message}");
             return ExitCodes.Fatal;
         }
+    }
+
+    /// <summary>
+    /// Executes the 'schema collect-relations' command to collect JOIN patterns from SQL files.
+    /// </summary>
+    public async Task<int> ExecuteSchemaCollectRelationsAsync(
+        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaOutput))
+        {
+            await stderr.WriteLineAsync("Error: --output is required for collect-relations.");
+            return ExitCodes.ConfigError;
+        }
+
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var compatLevel = args.CompatLevel ?? 150;
+
+        if (!args.Quiet)
+        {
+            await stderr.WriteLineAsync($"Collecting JOIN patterns from {read.Inputs.Count} file(s)...");
+        }
+
+        var inputs = read.Inputs.Select(i => (i.Text, i.FilePath));
+        var profile = RelationCollector.Collect(inputs, compatLevel);
+
+        var json = RelationProfileSerializer.Serialize(profile);
+        var outputPath = Path.GetFullPath(args.SchemaOutput);
+
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+
+        await stdout.WriteLineAsync($"Relation profile written to {outputPath}");
+        await stdout.WriteLineAsync(
+            $"  {read.Inputs.Count} files analyzed, {profile.Relations.Count} table relations, "
+            + $"{profile.Metadata.TotalJoinCount} total JOIN occurrences");
+
+        return 0;
     }
 
     private static string[]? ParseCommaSeparated(string? value)
