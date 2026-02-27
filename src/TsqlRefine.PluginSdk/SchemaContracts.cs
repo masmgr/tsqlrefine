@@ -93,6 +93,64 @@ public sealed record ResolvedColumn(
 );
 
 /// <summary>
+/// Represents a foreign key relationship between tables (PluginSdk DTO).
+/// </summary>
+/// <param name="Name">The foreign key constraint name.</param>
+/// <param name="SourceTable">The table that contains the foreign key columns.</param>
+/// <param name="SourceColumns">The column names in the source (referencing) table.</param>
+/// <param name="TargetTable">The table that is referenced by the foreign key.</param>
+/// <param name="TargetColumns">The column names in the target (referenced) table.</param>
+public sealed record SchemaForeignKeyInfo(
+    string Name,
+    ResolvedTable SourceTable,
+    IReadOnlyList<string> SourceColumns,
+    ResolvedTable TargetTable,
+    IReadOnlyList<string> TargetColumns
+);
+
+/// <summary>
+/// Represents a primary key constraint (PluginSdk DTO).
+/// </summary>
+/// <param name="Columns">The column names that make up the primary key.</param>
+/// <param name="IsClustered">Whether the primary key is clustered.</param>
+public sealed record SchemaPrimaryKeyInfo(
+    IReadOnlyList<string> Columns,
+    bool IsClustered
+);
+
+/// <summary>
+/// Represents a unique constraint or unique index (PluginSdk DTO).
+/// Combines UNIQUE constraints and unique indexes into a unified view.
+/// </summary>
+/// <param name="Name">The constraint or index name.</param>
+/// <param name="Columns">The column names that make up the unique constraint.</param>
+public sealed record SchemaUniqueConstraintInfo(
+    string Name,
+    IReadOnlyList<string> Columns
+);
+
+/// <summary>
+/// Describes the cardinality of a JOIN relationship between two tables.
+/// </summary>
+public enum JoinCardinality
+{
+    /// <summary>Both sides are unique: each row matches at most one row.</summary>
+    OneToOne,
+
+    /// <summary>Left side is unique, right side may have duplicates.</summary>
+    OneToMany,
+
+    /// <summary>Right side is unique, left side may have duplicates.</summary>
+    ManyToOne,
+
+    /// <summary>Neither side is unique: both may have duplicates.</summary>
+    ManyToMany,
+
+    /// <summary>Cardinality cannot be determined from available schema information.</summary>
+    Unknown
+}
+
+/// <summary>
 /// Metadata about a schema snapshot.
 /// </summary>
 /// <param name="GeneratedAt">ISO 8601 timestamp of when the snapshot was generated.</param>
@@ -147,4 +205,55 @@ public interface ISchemaProvider
     /// Gets the metadata about the schema snapshot.
     /// </summary>
     SchemaSnapshotMetadata Metadata { get; }
+
+    // --- ER relationship query methods (default implementations for backward compatibility) ---
+
+    /// <summary>
+    /// Gets the primary key information for a table.
+    /// </summary>
+    /// <param name="table">The resolved table.</param>
+    /// <returns>The primary key info, or null if the table has no primary key.</returns>
+    SchemaPrimaryKeyInfo? GetPrimaryKey(ResolvedTable table) => null;
+
+    /// <summary>
+    /// Gets all unique constraints and unique indexes for a table (unified view).
+    /// </summary>
+    /// <param name="table">The resolved table.</param>
+    /// <returns>All unique constraints and unique indexes on the table.</returns>
+    IReadOnlyList<SchemaUniqueConstraintInfo> GetUniqueConstraints(ResolvedTable table) => [];
+
+    /// <summary>
+    /// Gets all foreign keys defined on a table (where this table is the source/referencing table).
+    /// </summary>
+    /// <param name="table">The resolved table.</param>
+    /// <returns>Foreign keys originating from this table.</returns>
+    IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table) => [];
+
+    /// <summary>
+    /// Gets all foreign keys that reference this table (where this table is the target/referenced table).
+    /// </summary>
+    /// <param name="table">The resolved table.</param>
+    /// <returns>Foreign keys from other tables that reference this table.</returns>
+    IReadOnlyList<SchemaForeignKeyInfo> GetReferencingForeignKeys(ResolvedTable table) => [];
+
+    /// <summary>
+    /// Determines whether the specified column set has a uniqueness guarantee
+    /// (via primary key, unique constraint, or unique index).
+    /// </summary>
+    /// <param name="table">The resolved table.</param>
+    /// <param name="columnNames">The column names to check for uniqueness.</param>
+    /// <returns>True if the column set is guaranteed unique; false otherwise.</returns>
+    bool IsUniqueColumnSet(ResolvedTable table, IReadOnlyList<string> columnNames) => false;
+
+    /// <summary>
+    /// Estimates the JOIN cardinality between two tables based on the uniqueness of the JOIN columns.
+    /// </summary>
+    /// <param name="leftTable">The left table in the JOIN.</param>
+    /// <param name="leftColumns">The JOIN columns from the left table.</param>
+    /// <param name="rightTable">The right table in the JOIN.</param>
+    /// <param name="rightColumns">The JOIN columns from the right table.</param>
+    /// <returns>The estimated cardinality of the JOIN relationship.</returns>
+    JoinCardinality EstimateJoinCardinality(
+        ResolvedTable leftTable, IReadOnlyList<string> leftColumns,
+        ResolvedTable rightTable, IReadOnlyList<string> rightColumns) => JoinCardinality.Unknown;
 }

@@ -26,6 +26,33 @@ internal sealed class NameResolver
     }
 
     /// <summary>
+    /// Gets the internal <see cref="TableSchema"/> for a resolved table.
+    /// </summary>
+    internal TableSchema? GetTableSchema(ResolvedTable table)
+    {
+        if (!_databases.TryGetValue(table.DatabaseName, out var dbLookup))
+        {
+            return null;
+        }
+
+        return dbLookup.FindTableSchema(table.SchemaName, table.TableName, table.IsView);
+    }
+
+    /// <summary>
+    /// Gets all foreign keys from other tables that reference the specified table.
+    /// </summary>
+    internal List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
+        ResolvedTable table)
+    {
+        if (!_databases.TryGetValue(table.DatabaseName, out var dbLookup))
+        {
+            return [];
+        }
+
+        return dbLookup.GetReferencingForeignKeys(table.SchemaName, table.TableName);
+    }
+
+    /// <summary>
     /// Resolves a table or view by 1, 2, or 3-part name.
     /// </summary>
     internal ResolvedTable? ResolveTable(string? database, string? schema, string name)
@@ -92,11 +119,13 @@ internal sealed class NameResolver
     {
         private readonly Dictionary<string, TableSchema> _tables;
         private readonly Dictionary<string, TableSchema> _views;
+        private readonly Dictionary<string, List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
 
         internal DatabaseLookup(DatabaseSchema db)
         {
             _tables = new Dictionary<string, TableSchema>(StringComparer.OrdinalIgnoreCase);
             _views = new Dictionary<string, TableSchema>(StringComparer.OrdinalIgnoreCase);
+            _referencingFks = new Dictionary<string, List<(TableSchema, ForeignKeyInfo)>>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var table in db.Tables)
             {
@@ -106,6 +135,27 @@ internal sealed class NameResolver
             foreach (var view in db.Views)
             {
                 _views[$"{view.SchemaName}.{view.Name}"] = view;
+            }
+
+            // Build reverse FK index: target table key → list of (source table, FK)
+            foreach (var table in db.Tables)
+            {
+                if (table.ForeignKeys is null)
+                {
+                    continue;
+                }
+
+                foreach (var fk in table.ForeignKeys)
+                {
+                    var targetKey = $"{fk.TargetSchema}.{fk.TargetTable}";
+                    if (!_referencingFks.TryGetValue(targetKey, out var list))
+                    {
+                        list = [];
+                        _referencingFks[targetKey] = list;
+                    }
+
+                    list.Add((table, fk));
+                }
             }
         }
 
@@ -130,6 +180,13 @@ internal sealed class NameResolver
             var key = $"{schemaName}.{tableName}";
             var lookup = isView ? _views : _tables;
             return lookup.GetValueOrDefault(key);
+        }
+
+        internal List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
+            string schemaName, string tableName)
+        {
+            var key = $"{schemaName}.{tableName}";
+            return _referencingFks.TryGetValue(key, out var list) ? list : [];
         }
     }
 }
