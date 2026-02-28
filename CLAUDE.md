@@ -12,7 +12,7 @@ Key patterns: most rules use ScriptDOM AST (preferred over token-based), helpers
 
 ## Workflow
 
-- Run the full test suite (~1600 tests) before committing. Never commit with failing tests.
+- Run the full test suite (~2700 tests) before committing. Never commit with failing tests.
 - When moving/renaming files, update namespaces AND using statements in both main and test projects. Build before running tests to catch missing references early.
 - When adding tests, double-check expected error counts against actual rule behavior. Run new tests first before the full suite.
 
@@ -34,22 +34,30 @@ dotnet run --project src/TsqlRefine.Cli -c Release -- fix file.sql
 
 # Lint from stdin
 echo "SELECT * FROM users;" | dotnet run --project src/TsqlRefine.Cli -c Release -- lint --stdin
+
+# Schema snapshot from SQL Server
+dotnet run --project src/TsqlRefine.Cli -c Release -- schema snapshot --connection-string "Server=...;Database=..." --output schema.json
+
+# Collect JOIN relation patterns from SQL files
+dotnet run --project src/TsqlRefine.Cli -c Release -- schema collect-relations --output relations.json *.sql
 ```
 
 ## Architecture Overview
 
 ```
 src/
-├── TsqlRefine.PluginSdk/     # Contracts and interfaces (foundation, zero dependencies)
-├── TsqlRefine.Core/          # Analysis engine and tokenizer
-├── TsqlRefine.Rules/         # Built-in rules and helper classes
-├── TsqlRefine.Formatting/    # SQL formatter
-├── TsqlRefine.PluginHost/    # Plugin loading infrastructure
-├── TsqlRefine.Cli/           # Command-line interface
-└── TsqlRefine.DebugTool/     # Development/debugging utility
+├── TsqlRefine.PluginSdk/          # Contracts and interfaces (foundation, zero dependencies)
+├── TsqlRefine.Core/               # Analysis engine and tokenizer
+├── TsqlRefine.Rules/              # Built-in rules and helper classes
+├── TsqlRefine.Formatting/         # SQL formatter
+├── TsqlRefine.Schema/             # Schema models, relation analysis, and name resolution
+├── TsqlRefine.Schema.SqlServer/   # SQL Server schema snapshot extraction
+├── TsqlRefine.PluginHost/         # Plugin loading infrastructure
+├── TsqlRefine.Cli/                # Command-line interface
+└── TsqlRefine.DebugTool/          # Development/debugging utility
 ```
 
-**Dependency flow**: `Cli` → `Core`/`Formatting`/`PluginHost`/`Rules` → `PluginSdk`
+**Dependency flow**: `Cli` → `Core`/`Formatting`/`PluginHost`/`Rules`/`Schema.SqlServer` → `Schema` → `PluginSdk`
 
 ## Configuration
 
@@ -66,10 +74,10 @@ src/
 ```
 
 **Built-in presets** (via `"preset"` field or `--preset` CLI option):
-- `recommended`: Balanced production use (87 rules)
-- `strict`: Maximum enforcement including style (130 rules)
-- `strict-logic`: Comprehensive correctness without cosmetic rules (107 rules)
-- `pragmatic`: Production-ready minimum (43 rules)
+- `recommended`: Balanced production use (94 rules)
+- `strict`: Maximum enforcement including style (137 rules)
+- `strict-logic`: Comprehensive correctness without cosmetic rules (114 rules)
+- `pragmatic`: Production-ready minimum (47 rules)
 - `security-only`: Security and critical safety (14 rules)
 
 For custom rulesets, use the `"ruleset"` field with a name (resolved from `.tsqlrefine/rulesets/`) or a file path.
@@ -91,7 +99,7 @@ indent_size = 4
 - [docs/configuration.md](docs/configuration.md): Configuration format
 - [docs/Rules/REFERENCE.md](docs/Rules/REFERENCE.md): Full rule reference (auto-generated)
 
-See also: `docs/formatting.md`, `docs/granular-casing.md`, `docs/inline-disable.md`, `docs/plugin-api.md`, `docs/release.md`.
+See also: `docs/formatting.md`, `docs/granular-casing.md`, `docs/inline-disable.md`, `docs/plugin-api.md`, `docs/release.md`, `docs/ci-integration.md`, `docs/editor-integration.md`.
 
 ## Development Guidelines
 
