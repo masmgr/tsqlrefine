@@ -224,6 +224,89 @@ internal static class RelationExtractor
         return ids[ids.Count - 1].Value;
     }
 
+    /// <summary>
+    /// Detects structural flags in a JOIN ON clause by walking the expression tree.
+    /// </summary>
+    private static JoinShape DetectShapeFlags(BooleanExpression? condition)
+    {
+        if (condition is null)
+        {
+            return JoinShape.None;
+        }
+
+        var flags = JoinShape.None;
+        DetectShapeFlagsCore(condition, ref flags);
+        return flags;
+    }
+
+    private static void DetectShapeFlagsCore(BooleanExpression expression, ref JoinShape flags)
+    {
+        switch (expression)
+        {
+            case BooleanBinaryExpression binary:
+                if (binary.BinaryExpressionType == BooleanBinaryExpressionType.Or)
+                {
+                    flags |= JoinShape.ContainsOr;
+                }
+
+                DetectShapeFlagsCore(binary.FirstExpression, ref flags);
+                DetectShapeFlagsCore(binary.SecondExpression, ref flags);
+                return;
+
+            case BooleanComparisonExpression comp:
+                if (comp.ComparisonType is BooleanComparisonType.GreaterThan
+                    or BooleanComparisonType.GreaterThanOrEqualTo
+                    or BooleanComparisonType.LessThan
+                    or BooleanComparisonType.LessThanOrEqualTo)
+                {
+                    flags |= JoinShape.ContainsRange;
+                }
+
+                if (ContainsFunctionCall(comp.FirstExpression) ||
+                    ContainsFunctionCall(comp.SecondExpression))
+                {
+                    flags |= JoinShape.ContainsFunction;
+                }
+
+                return;
+
+            case BooleanIsNullExpression:
+                flags |= JoinShape.ContainsIsNull;
+                return;
+
+            case LikePredicate:
+                flags |= JoinShape.ContainsLike;
+                return;
+
+            case InPredicate:
+                flags |= JoinShape.ContainsIn;
+                return;
+
+            case BooleanNotExpression notExpr:
+                flags |= JoinShape.ContainsNot;
+                DetectShapeFlagsCore(notExpr.Expression, ref flags);
+                return;
+
+            case BooleanParenthesisExpression paren:
+                DetectShapeFlagsCore(paren.Expression, ref flags);
+                return;
+
+            case BooleanTernaryExpression ternary
+                when ternary.TernaryExpressionType is BooleanTernaryExpressionType.Between
+                    or BooleanTernaryExpressionType.NotBetween:
+                flags |= JoinShape.ContainsRange;
+                return;
+        }
+    }
+
+    private static bool ContainsFunctionCall(ScalarExpression? expr) =>
+        expr is FunctionCall
+            or CastCall
+            or ConvertCall
+            or CoalesceExpression
+            or IIfCall
+            or NullIfExpression;
+
     private sealed class JoinCollectorVisitor : TSqlFragmentVisitor
     {
         private readonly string _sourceFile;
@@ -255,6 +338,8 @@ internal static class RelationExtractor
 
                 var joinType = JoinTypeNames.GetValueOrDefault(node.QualifiedJoinType, "INNER");
 
+                var shapeFlags = DetectShapeFlags(node.SearchCondition);
+
                 Joins.Add(new RawJoinInfo(
                     extraction.LeftTable.Schema,
                     extraction.LeftTable.Table,
@@ -262,7 +347,8 @@ internal static class RelationExtractor
                     extraction.RightTable.Table,
                     joinType,
                     extraction.ColumnPairs,
-                    _sourceFile
+                    _sourceFile,
+                    shapeFlags
                 ));
             }
 
@@ -289,7 +375,8 @@ internal static class RelationExtractor
                         right.Table,
                         "CROSS",
                         [],
-                        _sourceFile
+                        _sourceFile,
+                        JoinShape.None
                     ));
                 }
             }

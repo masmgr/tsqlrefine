@@ -225,4 +225,116 @@ public sealed class RelationExtractorTests
         Assert.Single(joins);
         Assert.Equal("my/query.sql", joins[0].SourceFile);
     }
+
+    // --- Shape flag detection tests ---
+
+    [Fact]
+    public void Extract_PureEquiJoin_NoFlags()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId AND a.Code = b.Code");
+
+        Assert.Single(joins);
+        Assert.Equal(JoinShape.None, joins[0].ShapeFlags);
+    }
+
+    [Fact]
+    public void Extract_OrCondition_DetectsContainsOrFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId OR a.Code = b.Code");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsOr));
+    }
+
+    [Fact]
+    public void Extract_FunctionInOnClause_DetectsContainsFunctionFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON ISNULL(a.Id, 0) = b.AId");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsFunction));
+    }
+
+    [Fact]
+    public void Extract_CastInOnClause_DetectsContainsFunctionFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON CAST(a.Id AS VARCHAR) = b.Code");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsFunction));
+    }
+
+    [Fact]
+    public void Extract_RangeCondition_DetectsContainsRangeFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId AND a.Date >= b.StartDate");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsRange));
+    }
+
+    [Fact]
+    public void Extract_BetweenCondition_DetectsContainsRangeFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId AND a.Date BETWEEN b.StartDate AND b.EndDate");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsRange));
+    }
+
+    [Fact]
+    public void Extract_IsNullCondition_DetectsIsNullFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId AND b.DeletedAt IS NULL");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsIsNull));
+    }
+
+    [Fact]
+    public void Extract_LikeCondition_DetectsLikeFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Name LIKE b.Pattern + '%'");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsLike));
+    }
+
+    [Fact]
+    public void Extract_InCondition_DetectsInFlag()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId AND b.Status IN ('Active', 'Pending')");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsIn));
+    }
+
+    [Fact]
+    public void Extract_MultipleFlags_CombinesCorrectly()
+    {
+        var joins = ExtractFromSql(
+            "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON UPPER(a.Code) = b.Code OR a.Id = b.AId");
+
+        Assert.Single(joins);
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsFunction));
+        Assert.True(joins[0].ShapeFlags.HasFlag(JoinShape.ContainsOr));
+    }
+
+    [Fact]
+    public void Extract_CrossJoin_NoShapeFlags()
+    {
+        var joins = ExtractFromSql("SELECT * FROM dbo.A a CROSS JOIN dbo.B b");
+
+        Assert.Single(joins);
+        Assert.Equal(JoinShape.None, joins[0].ShapeFlags);
+    }
 }

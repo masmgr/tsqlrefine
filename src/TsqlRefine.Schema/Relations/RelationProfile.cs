@@ -48,11 +48,13 @@ public sealed record TableRelation(
 /// <param name="ColumnPairs">Column pairs used in the ON clause.</param>
 /// <param name="OccurrenceCount">Number of times this exact pattern appears across all files.</param>
 /// <param name="SourceFiles">File paths containing this pattern.</param>
+/// <param name="ShapeFlags">Structural flags describing non-equi features of the ON clause.</param>
 public sealed record JoinPattern(
     string JoinType,
     IReadOnlyList<ColumnPair> ColumnPairs,
     int OccurrenceCount,
-    IReadOnlyList<string> SourceFiles
+    IReadOnlyList<string> SourceFiles,
+    JoinShape ShapeFlags = JoinShape.None
 );
 
 /// <summary>
@@ -64,3 +66,35 @@ public sealed record ColumnPair(
     string LeftColumn,
     string RightColumn
 );
+
+/// <summary>
+/// Flags describing the structural shape of a JOIN ON clause beyond simple equi-join.
+/// Multiple flags can be combined when an ON clause contains several non-equi features.
+/// </summary>
+[Flags]
+public enum JoinShape
+{
+    /// <summary>Pure equi-join: only equality comparisons connected by AND.</summary>
+    None = 0,
+
+    /// <summary>ON clause contains a function call (e.g., ISNULL, CAST, UPPER).</summary>
+    ContainsFunction = 1 << 0,
+
+    /// <summary>ON clause contains OR conditions.</summary>
+    ContainsOr = 1 << 1,
+
+    /// <summary>ON clause contains range comparisons (&lt;, &gt;, &lt;=, &gt;=, BETWEEN).</summary>
+    ContainsRange = 1 << 2,
+
+    /// <summary>ON clause contains IS NULL / IS NOT NULL checks.</summary>
+    ContainsIsNull = 1 << 3,
+
+    /// <summary>ON clause contains LIKE patterns.</summary>
+    ContainsLike = 1 << 4,
+
+    /// <summary>ON clause contains IN list.</summary>
+    ContainsIn = 1 << 5,
+
+    /// <summary>ON clause contains NOT conditions.</summary>
+    ContainsNot = 1 << 6,
+}
