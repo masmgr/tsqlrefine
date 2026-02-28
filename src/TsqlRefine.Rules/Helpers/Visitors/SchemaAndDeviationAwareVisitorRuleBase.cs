@@ -16,7 +16,7 @@ public abstract class SchemaAndDeviationAwareVisitorRuleBase : DiagnosticVisitor
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.Schema is null || context.RelationDeviations is null)
+        if (context.SchemaContext is null || context.SchemaContext.RelationDeviations is null)
         {
             return [];
         }

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Schema.Model;
@@ -10,7 +11,7 @@ namespace TsqlRefine.Schema.Resolution;
 /// </summary>
 internal sealed class NameResolver
 {
-    private readonly Dictionary<string, DatabaseLookup> _databases;
+    private readonly FrozenDictionary<string, DatabaseLookup> _databases;
     private readonly string _defaultSchema;
     private readonly string? _defaultDatabaseName;
 
@@ -18,13 +19,8 @@ internal sealed class NameResolver
     {
         _defaultSchema = defaultSchema;
         _defaultDatabaseName = snapshot.Databases.Count > 0 ? snapshot.Databases[0].Name : null;
-        _databases = new Dictionary<string, DatabaseLookup>(
-            snapshot.Databases.Count, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var db in snapshot.Databases)
-        {
-            _databases[db.Name] = new DatabaseLookup(db);
-        }
+        _databases = snapshot.Databases
+            .ToFrozenDictionary(db => db.Name, db => new DatabaseLookup(db), StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -43,7 +39,7 @@ internal sealed class NameResolver
     /// <summary>
     /// Gets all foreign keys from other tables that reference the specified table.
     /// </summary>
-    internal List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
+    internal IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
         ResolvedTable table)
     {
         if (!_databases.TryGetValue(table.DatabaseName, out var dbLookup))
@@ -104,32 +100,27 @@ internal sealed class NameResolver
     /// </summary>
     private sealed class DatabaseLookup
     {
-        private readonly Dictionary<(string SchemaName, string TableName), TableLookup> _tables;
-        private readonly Dictionary<(string SchemaName, string TableName), TableLookup> _views;
-        private readonly Dictionary<(string SchemaName, string TableName), List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
+        private readonly FrozenDictionary<(string SchemaName, string TableName), TableLookup> _tables;
+        private readonly FrozenDictionary<(string SchemaName, string TableName), TableLookup> _views;
+        private readonly FrozenDictionary<(string SchemaName, string TableName), IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
 
         internal DatabaseLookup(DatabaseSchema db)
         {
-            _tables = new Dictionary<(string SchemaName, string TableName), TableLookup>(
-                db.Tables.Count, TableNameKeyComparer.Instance);
-            _views = new Dictionary<(string SchemaName, string TableName), TableLookup>(
-                db.Views.Count, TableNameKeyComparer.Instance);
-            _referencingFks = new Dictionary<(string SchemaName, string TableName), List<(TableSchema, ForeignKeyInfo)>>(
-                TableNameKeyComparer.Instance);
+            _tables = db.Tables
+                .ToFrozenDictionary(
+                    t => (t.SchemaName, t.Name),
+                    t => new TableLookup(db.Name, t, isView: false),
+                    TableNameKeyComparer.Instance);
 
-            foreach (var table in db.Tables)
-            {
-                _tables[(table.SchemaName, table.Name)] = new TableLookup(
-                    db.Name, table, isView: false);
-            }
-
-            foreach (var view in db.Views)
-            {
-                _views[(view.SchemaName, view.Name)] = new TableLookup(
-                    db.Name, view, isView: true);
-            }
+            _views = db.Views
+                .ToFrozenDictionary(
+                    v => (v.SchemaName, v.Name),
+                    v => new TableLookup(db.Name, v, isView: true),
+                    TableNameKeyComparer.Instance);
 
             // Build reverse FK index: target table key → list of (source table, FK)
+            var referencingFksBuilder = new Dictionary<(string, string), List<(TableSchema, ForeignKeyInfo)>>(
+                TableNameKeyComparer.Instance);
             foreach (var table in db.Tables)
             {
                 if (table.ForeignKeys is null)
@@ -140,15 +131,21 @@ internal sealed class NameResolver
                 foreach (var fk in table.ForeignKeys)
                 {
                     var targetKey = (fk.TargetSchema, fk.TargetTable);
-                    if (!_referencingFks.TryGetValue(targetKey, out var list))
+                    if (!referencingFksBuilder.TryGetValue(targetKey, out var list))
                     {
                         list = [];
-                        _referencingFks[targetKey] = list;
+                        referencingFksBuilder[targetKey] = list;
                     }
 
                     list.Add((table, fk));
                 }
             }
+
+            _referencingFks = referencingFksBuilder
+                .ToFrozenDictionary(
+                    kvp => kvp.Key,
+                    kvp => (IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>)kvp.Value,
+                    TableNameKeyComparer.Instance);
         }
 
         internal ResolvedTable? ResolveTable(string schemaName, string tableName)
@@ -197,7 +194,7 @@ internal sealed class NameResolver
             return tableLookup.Columns;
         }
 
-        internal List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
+        internal IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
             string schemaName, string tableName)
         {
             return _referencingFks.TryGetValue((schemaName, tableName), out var list) ? list : [];
@@ -223,7 +220,7 @@ internal sealed class NameResolver
 
     private sealed class TableLookup
     {
-        private readonly Dictionary<string, ResolvedColumn> _columns;
+        private readonly FrozenDictionary<string, ResolvedColumn> _columns;
         private readonly SchemaColumnInfo[] _columnList;
 
         internal TableLookup(string databaseName, TableSchema tableSchema, bool isView)
@@ -235,17 +232,20 @@ internal sealed class NameResolver
                 tableSchema.Name,
                 isView);
 
-            _columns = new Dictionary<string, ResolvedColumn>(
-                tableSchema.Columns.Count, StringComparer.OrdinalIgnoreCase);
             _columnList = new SchemaColumnInfo[tableSchema.Columns.Count];
+            // Build a temp dict first to handle duplicate column names (keep first occurrence).
+            var columnsBuilder = new Dictionary<string, ResolvedColumn>(
+                tableSchema.Columns.Count, StringComparer.OrdinalIgnoreCase);
 
             for (var i = 0; i < tableSchema.Columns.Count; i++)
             {
                 var dto = tableSchema.Columns[i].ToDto();
                 _columnList[i] = dto;
                 // Keep the first entry when duplicate names exist in metadata.
-                _columns.TryAdd(dto.Name, new ResolvedColumn(ResolvedTable, dto));
+                columnsBuilder.TryAdd(dto.Name, new ResolvedColumn(ResolvedTable, dto));
             }
+
+            _columns = columnsBuilder.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
         }
 
         internal TableSchema TableSchema { get; }

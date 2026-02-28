@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Schema.Relations;
@@ -8,7 +9,7 @@ namespace TsqlRefine.Schema.Relations;
 /// </summary>
 public sealed class RelationDeviationProvider : IRelationDeviationProvider
 {
-    private readonly Dictionary<TablePairKey, RelationTablePairSummary> _lookup;
+    private readonly FrozenDictionary<TablePairKey, RelationTablePairSummary> _lookup;
     private readonly List<RelationTablePairSummary> _summaries;
 
     /// <summary>
@@ -19,7 +20,7 @@ public sealed class RelationDeviationProvider : IRelationDeviationProvider
         ArgumentNullException.ThrowIfNull(report);
 
         var summaries = new List<RelationTablePairSummary>(report.Analyses.Count);
-        _lookup = new Dictionary<TablePairKey, RelationTablePairSummary>(
+        var lookupBuilder = new Dictionary<TablePairKey, RelationTablePairSummary>(
             report.Analyses.Count, TablePairKeyComparer.Instance);
 
         foreach (var analysis in report.Analyses)
@@ -29,9 +30,10 @@ public sealed class RelationDeviationProvider : IRelationDeviationProvider
             var key = CreateCanonicalKey(
                 summary.LeftSchema, summary.LeftTable,
                 summary.RightSchema, summary.RightTable);
-            _lookup[key] = summary;
+            lookupBuilder[key] = summary;
         }
 
+        _lookup = lookupBuilder.ToFrozenDictionary(TablePairKeyComparer.Instance);
         _summaries = summaries;
     }
 

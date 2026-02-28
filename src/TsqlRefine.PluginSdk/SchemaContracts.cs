@@ -384,3 +384,20 @@ public interface IRelationDeviationProvider
     /// </summary>
     IReadOnlyList<RelationTablePairSummary> GetAllSummaries();
 }
+
+/// <summary>
+/// Unified schema context that combines schema and relation deviation information.
+/// Rules use this single interface instead of accessing two separate providers.
+/// </summary>
+public interface ISchemaContext : ISchemaProvider
+{
+    /// <summary>
+    /// Gets the relation deviation provider, or null if no relations profile is loaded.
+    /// </summary>
+    IRelationDeviationProvider? RelationDeviations { get; }
+
+    /// <summary>
+    /// Returns true when relation deviation data is available.
+    /// </summary>
+    bool HasRelationDeviations => RelationDeviations is not null;
+}

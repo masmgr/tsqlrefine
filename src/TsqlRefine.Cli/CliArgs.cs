@@ -39,6 +39,8 @@ namespace TsqlRefine.Cli;
 /// <param name="SchemaOutput">Output path for schema snapshot generation.</param>
 /// <param name="SchemaIncludeSchemas">Comma-separated schema names to include in snapshot generation.</param>
 /// <param name="SchemaExcludeSchemas">Comma-separated schema names to exclude from snapshot generation.</param>
+/// <param name="SchemaOutputDir">Output directory for 'schema build' command (writes schema.json and relations.json).</param>
+/// <param name="SchemaRelationsOutput">Output path for relations profile in 'schema build' command (overrides SchemaOutputDir for relations.json).</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -72,5 +74,7 @@ public sealed record CliArgs(
     string? SchemaConnectionString = null,
     string? SchemaOutput = null,
     string? SchemaIncludeSchemas = null,
-    string? SchemaExcludeSchemas = null
+    string? SchemaExcludeSchemas = null,
+    string? SchemaOutputDir = null,
+    string? SchemaRelationsOutput = null
 );

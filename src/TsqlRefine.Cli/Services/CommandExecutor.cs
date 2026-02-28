@@ -262,11 +262,10 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
-        var schema = ConfigLoader.LoadSchema(args, config, stderr);
-        var relationDeviations = ConfigLoader.LoadRelationDeviations(args, config, stderr);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schema, relationDeviations);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
         var result = engine.Run(command, read.Inputs, options);
         var diagnosticsSummary = SummarizeDiagnostics(result.Files);
 
@@ -385,11 +384,10 @@ public sealed class CommandExecutor
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
-        var schema = ConfigLoader.LoadSchema(args, config, stderr);
-        var relationDeviations = ConfigLoader.LoadRelationDeviations(args, config, stderr);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schema, relationDeviations);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -508,6 +506,59 @@ public sealed class CommandExecutor
     }
 
     /// <summary>
+    /// Executes the 'schema build' command: generates a schema snapshot and collects JOIN relations in one step.
+    /// </summary>
+    public async Task<int> ExecuteSchemaBuildAsync(
+        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
+        {
+            await stderr.WriteLineAsync("Error: --connection-string is required for schema build.");
+            return ExitCodes.ConfigError;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.SchemaOutputDir))
+        {
+            await stderr.WriteLineAsync("Error: --output-dir is required for schema build.");
+            return ExitCodes.ConfigError;
+        }
+
+        var outputDir = Path.GetFullPath(args.SchemaOutputDir);
+        Directory.CreateDirectory(outputDir);
+
+        var schemaOutputPath = Path.Combine(outputDir, "schema.json");
+        var relationsOutputPath = !string.IsNullOrWhiteSpace(args.SchemaRelationsOutput)
+            ? Path.GetFullPath(args.SchemaRelationsOutput)
+            : Path.Combine(outputDir, "relations.json");
+
+        // Step 1: Generate schema snapshot
+        var snapshotArgs = args with { SchemaOutput = schemaOutputPath };
+        var snapshotResult = await ExecuteSchemaSnapshotAsync(snapshotArgs, stdout, stderr);
+        if (snapshotResult != 0)
+        {
+            return snapshotResult;
+        }
+
+        // Step 2: Collect relations (only if SQL file paths were provided)
+        if (args.Paths.Count > 0 || args.Stdin)
+        {
+            var relationsArgs = args with { SchemaOutput = relationsOutputPath };
+            var relationsResult = await ExecuteSchemaCollectRelationsAsync(relationsArgs, stdin, stdout, stderr);
+            if (relationsResult != 0)
+            {
+                return relationsResult;
+            }
+        }
+        else if (!args.Quiet)
+        {
+            await stderr.WriteLineAsync("No SQL files specified; skipping relations collection.");
+            await stderr.WriteLineAsync($"Run: tsqlrefine schema collect-relations --output {relationsOutputPath} <sql-files>");
+        }
+
+        return 0;
+    }
+
+    /// <summary>
     /// Executes the 'schema collect-relations' command to collect JOIN patterns from SQL files.
     /// </summary>
     public async Task<int> ExecuteSchemaCollectRelationsAsync(
@@ -566,15 +617,14 @@ public sealed class CommandExecutor
 
     private static EngineOptions CreateEngineOptions(
         CliArgs args, TsqlRefineConfig config, Ruleset? ruleset,
-        ISchemaProvider? schema = null, IRelationDeviationProvider? relationDeviations = null)
+        ISchemaContext? schemaContext = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset,
-            Schema: schema,
-            RelationDeviations: relationDeviations
+            SchemaContext: schemaContext
         );
     }
 
