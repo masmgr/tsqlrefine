@@ -34,6 +34,7 @@ namespace TsqlRefine.Cli;
 /// <param name="MaxFileSize">Maximum file size in bytes (0 = unlimited).</param>
 /// <param name="AllowPlugins">Whether to allow loading plugin DLLs from configuration.</param>
 /// <param name="SchemaPath">Path to schema snapshot file for schema-aware analysis.</param>
+/// <param name="RelationsProfilePath">Path to relations profile JSON file for JOIN pattern deviation analysis.</param>
 /// <param name="SchemaConnectionString">Connection string for schema snapshot generation.</param>
 /// <param name="SchemaOutput">Output path for schema snapshot generation.</param>
 /// <param name="SchemaIncludeSchemas">Comma-separated schema names to include in snapshot generation.</param>
@@ -67,6 +68,7 @@ public sealed record CliArgs(
     long MaxFileSize,
     bool AllowPlugins,
     string? SchemaPath = null,
+    string? RelationsProfilePath = null,
     string? SchemaConnectionString = null,
     string? SchemaOutput = null,
     string? SchemaIncludeSchemas = null,

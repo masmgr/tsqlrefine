@@ -586,4 +586,82 @@ public sealed class ConfigLoader
 
         return (null, "none");
     }
+
+    /// <summary>
+    /// Loads a relation deviation provider from a relations profile file specified by CLI args or configuration.
+    /// CLI --relations-profile takes precedence over config schema.relationsProfilePath.
+    /// </summary>
+    /// <returns>An <see cref="IRelationDeviationProvider"/> instance, or null if no relations profile is configured.</returns>
+    public static IRelationDeviationProvider? LoadRelationDeviations(
+        CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    {
+        var (profilePath, source) = ResolveRelationsProfilePath(args, config);
+
+        if (profilePath is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(profilePath))
+        {
+            throw new ConfigException($"Relations profile file not found: {profilePath}");
+        }
+
+        try
+        {
+            var json = File.ReadAllText(profilePath);
+            var profile = Schema.Relations.RelationProfileSerializer.Deserialize(json);
+            var provider = Schema.Relations.RelationDeviationProvider.FromProfile(profile);
+
+            if (stderr is not null && !args.Quiet)
+            {
+                stderr.WriteLine(
+                    $"Relations profile loaded: {profile.Relations.Count} table pairs, " +
+                    $"{profile.Metadata.TotalJoinCount} joins [from {source}]");
+            }
+
+            return provider;
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException($"Failed to parse relations profile: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw new ConfigException($"Failed to read relations profile: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves the relations profile path from CLI args and config, returning
+    /// the absolute path and a human-readable source label.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveRelationsProfilePath(
+        CliArgs args, TsqlRefineConfig config)
+    {
+        // CLI --relations-profile takes precedence (resolved from CWD)
+        if (!string.IsNullOrWhiteSpace(args.RelationsProfilePath))
+        {
+            var resolved = Path.IsPathRooted(args.RelationsProfilePath)
+                ? args.RelationsProfilePath
+                : Path.GetFullPath(args.RelationsProfilePath);
+            return (resolved, "--relations-profile");
+        }
+
+        // Config schema.relationsProfilePath (resolved from config file directory)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.RelationsProfilePath))
+        {
+            var configPath = ResolveConfigPath(args);
+            var configDir = configPath is not null
+                ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+                : Directory.GetCurrentDirectory();
+
+            var resolved = Path.IsPathRooted(config.Schema.RelationsProfilePath)
+                ? config.Schema.RelationsProfilePath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.RelationsProfilePath));
+            return (resolved, "config");
+        }
+
+        return (null, "none");
+    }
 }

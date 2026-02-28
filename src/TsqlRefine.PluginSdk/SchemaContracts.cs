@@ -257,3 +257,130 @@ public interface ISchemaProvider
         ResolvedTable leftTable, IReadOnlyList<string> leftColumns,
         ResolvedTable rightTable, IReadOnlyList<string> rightColumns) => JoinCardinality.Unknown;
 }
+
+// =============================================================================
+// Relation Deviation Contracts
+// =============================================================================
+
+/// <summary>
+/// Classification of how unusual a JOIN pattern is compared to the dominant pattern for a table pair.
+/// </summary>
+public enum RelationDeviationLevel
+{
+    /// <summary>This is the dominant (most frequent) pattern.</summary>
+    Dominant,
+
+    /// <summary>Common enough to not be flagged.</summary>
+    Common,
+
+    /// <summary>Occurs below the rare threshold.</summary>
+    Rare,
+
+    /// <summary>Occurs below the very-rare threshold.</summary>
+    VeryRare,
+
+    /// <summary>Structurally different from the dominant pattern.</summary>
+    Structural,
+
+    /// <summary>Insufficient data to classify.</summary>
+    InsufficientData,
+}
+
+/// <summary>
+/// Describes a structural difference between a JOIN pattern and the dominant pattern.
+/// </summary>
+public enum RelationStructuralDiff
+{
+    /// <summary>Different number of key columns.</summary>
+    DifferentKeyCount,
+
+    /// <summary>Function call presence mismatch.</summary>
+    FunctionPresenceMismatch,
+
+    /// <summary>OR presence mismatch.</summary>
+    OrPresenceMismatch,
+
+    /// <summary>Range condition presence mismatch.</summary>
+    RangePresenceMismatch,
+
+    /// <summary>Different JOIN type.</summary>
+    DifferentJoinType,
+}
+
+/// <summary>
+/// Deviation analysis result for a single JOIN pattern within a table pair (PluginSdk DTO).
+/// </summary>
+/// <param name="JoinType">The JOIN type (INNER, LEFT, etc.).</param>
+/// <param name="ColumnPairDescriptions">Descriptions of column pairs (e.g., "Id=UserId").</param>
+/// <param name="OccurrenceCount">Number of times this pattern was observed.</param>
+/// <param name="Ratio">Occurrence ratio within the table pair (0.0–1.0).</param>
+/// <param name="DominantRatio">Ratio of the dominant pattern.</param>
+/// <param name="Gap">Distance from the dominant ratio.</param>
+/// <param name="Rank">1-based rank among patterns (1 = most common).</param>
+/// <param name="Level">Classification level of this deviation.</param>
+/// <param name="StructuralDiffs">Structural differences from the dominant pattern.</param>
+public sealed record RelationPatternDeviation(
+    string JoinType,
+    IReadOnlyList<string> ColumnPairDescriptions,
+    int OccurrenceCount,
+    double Ratio,
+    double DominantRatio,
+    double Gap,
+    int Rank,
+    RelationDeviationLevel Level,
+    IReadOnlyList<RelationStructuralDiff> StructuralDiffs
+);
+
+/// <summary>
+/// Deviation analysis summary for a single table pair (PluginSdk DTO).
+/// </summary>
+/// <param name="LeftSchema">Left table schema.</param>
+/// <param name="LeftTable">Left table name.</param>
+/// <param name="RightSchema">Right table schema.</param>
+/// <param name="RightTable">Right table name.</param>
+/// <param name="Total">Total occurrence count across all patterns.</param>
+/// <param name="PatternCount">Number of distinct JOIN patterns.</param>
+/// <param name="Deviations">Per-pattern deviation analysis results.</param>
+public sealed record RelationTablePairSummary(
+    string LeftSchema,
+    string LeftTable,
+    string RightSchema,
+    string RightTable,
+    int Total,
+    int PatternCount,
+    IReadOnlyList<RelationPatternDeviation> Deviations
+);
+
+/// <summary>
+/// Provides JOIN pattern deviation information for deviation-aware analysis rules.
+/// When configured, enables rules that detect unusual JOIN patterns across SQL files.
+/// </summary>
+public interface IRelationDeviationProvider
+{
+    /// <summary>
+    /// Gets whether any deviation data is available.
+    /// </summary>
+    bool HasData { get; }
+
+    /// <summary>
+    /// Gets the total number of table pairs analyzed.
+    /// </summary>
+    int TablePairCount { get; }
+
+    /// <summary>
+    /// Gets the deviation summary for a specific table pair, using canonicalized (lexicographic) ordering.
+    /// </summary>
+    /// <param name="leftSchema">Left table schema.</param>
+    /// <param name="leftTable">Left table name.</param>
+    /// <param name="rightSchema">Right table schema.</param>
+    /// <param name="rightTable">Right table name.</param>
+    /// <returns>The table pair summary, or null if no data exists for this pair.</returns>
+    RelationTablePairSummary? GetTablePairSummary(
+        string leftSchema, string leftTable,
+        string rightSchema, string rightTable);
+
+    /// <summary>
+    /// Gets all table pair summaries.
+    /// </summary>
+    IReadOnlyList<RelationTablePairSummary> GetAllSummaries();
+}
