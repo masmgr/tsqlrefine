@@ -30,6 +30,22 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         ISchemaProvider schema,
         IRelationDeviationProvider deviations) : DiagnosticVisitorBase
     {
+        private readonly record struct RawColumnPair(
+            ColumnReferenceExpression Left,
+            ColumnReferenceExpression Right);
+
+        private readonly record struct ResolvedColumnPair(
+            string LeftColumn,
+            string RightColumn);
+
+        private readonly record struct CanonicalJoinPattern(
+            string LeftSchema,
+            string LeftTable,
+            string RightSchema,
+            string RightTable,
+            string JoinType,
+            IReadOnlyList<string> SortedPairDescriptions);
+
         private AliasMap? _currentAliasMap;
 
         public override void ExplicitVisit(QuerySpecification node)
@@ -60,147 +76,167 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         private void CheckJoinColumnDeviation(QualifiedJoin node)
         {
-            // Only process INNER/LEFT/RIGHT/FULL JOINs
-            var joinType = GetJoinTypeName(node.QualifiedJoinType);
-            if (joinType is null)
+            if (!TryBuildCanonicalPattern(node, out var pattern))
             {
                 return;
             }
 
-            // Extract equality column pairs from ON clause (AND-connected only, skip OR)
-            var rawPairs = ExtractEqualityPairs(node.SearchCondition);
-            if (rawPairs.Count == 0)
-            {
-                return;
-            }
-
-            // Collect tables from each side of the JOIN
-            var leftTableRef = ResolveSideTableFromPairs(node.FirstTableReference, rawPairs);
-            var rightTableRef = ResolveSideTableFromPairs(node.SecondTableReference, rawPairs);
-            if (leftTableRef is null || rightTableRef is null)
-            {
-                return;
-            }
-
-            var leftTable = leftTableRef;
-            var rightTable = rightTableRef;
-
-            // Orient column pairs so Left = FirstTableReference side, Right = SecondTableReference side
-            var columnPairs = OrientColumnPairs(rawPairs, leftTable, rightTable);
-            if (columnPairs.Count == 0)
-            {
-                return;
-            }
-
-            // Canonicalize: ensure lexicographic table order
-            var leftKey = $"{leftTable.SchemaName}.{leftTable.TableName}";
-            var rightKey = $"{rightTable.SchemaName}.{rightTable.TableName}";
-
-            string canonLeftSchema, canonLeftTable, canonRightSchema, canonRightTable;
-            string canonJoinType;
-            List<(string Left, string Right)> canonPairs;
-
-            if (string.Compare(leftKey, rightKey, StringComparison.OrdinalIgnoreCase) <= 0)
-            {
-                canonLeftSchema = leftTable.SchemaName;
-                canonLeftTable = leftTable.TableName;
-                canonRightSchema = rightTable.SchemaName;
-                canonRightTable = rightTable.TableName;
-                canonJoinType = joinType;
-                canonPairs = columnPairs;
-            }
-            else
-            {
-                // Swap tables and column pair sides
-                canonLeftSchema = rightTable.SchemaName;
-                canonLeftTable = rightTable.TableName;
-                canonRightSchema = leftTable.SchemaName;
-                canonRightTable = leftTable.TableName;
-                canonJoinType = SwapJoinDirection(joinType);
-                canonPairs = columnPairs.Select(p => (p.RightColumn, p.LeftColumn)).ToList();
-            }
-
-            // Build sorted column pair descriptions for comparison
-            var sortedDescriptions = canonPairs
-                .Select(p => $"{p.Left}={p.Right}")
-                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            // Get table pair summary from deviation data
             var summary = deviations.GetTablePairSummary(
-                canonLeftSchema, canonLeftTable, canonRightSchema, canonRightTable);
+                pattern.LeftSchema,
+                pattern.LeftTable,
+                pattern.RightSchema,
+                pattern.RightTable);
 
             if (summary is null)
             {
-                // Unknown table pair
-                if (deviations.HasData)
-                {
-                    var msg = $"JOIN between {canonLeftSchema}.{canonLeftTable} and " +
-                        $"{canonRightSchema}.{canonRightTable} was not found in the relation profile.";
-                    AddDiagnostic(
-                        fragment: node.SecondTableReference,
-                        message: msg,
-                        code: RuleCode,
-                        category: Category,
-                        fixable: false);
-                }
-
+                ReportUnknownTablePair(node.SecondTableReference, pattern);
                 return;
             }
 
-            // Find matching deviation by JoinType + sorted ColumnPairDescriptions
-            var matches = FindMatchingDeviations(summary, canonJoinType, sortedDescriptions);
-
+            var matches = FindMatchingDeviations(summary, pattern.JoinType, pattern.SortedPairDescriptions);
             if (matches.Count == 0)
             {
-                // Unseen pattern
-                var dominantInfo = GetDominantInfo(summary);
-                var pairDesc = string.Join(", ", sortedDescriptions);
-                var msg = $"JOIN between {canonLeftSchema}.{canonLeftTable} and " +
-                    $"{canonRightSchema}.{canonRightTable} on [{pairDesc}] was not observed " +
-                    $"in the relation profile ({summary.Total} total occurrences for this table pair).{dominantInfo}";
-                AddDiagnostic(
-                    fragment: node.SearchCondition!,
-                    message: msg,
-                    code: RuleCode,
-                    category: Category,
-                    fixable: false);
+                ReportUnseenPattern(node.SearchCondition!, pattern, summary);
                 return;
             }
 
             if (matches.Count > 1)
             {
-                // Ambiguous match — skip to avoid false positives
+                // Ambiguous match — skip to avoid false positives.
                 return;
             }
 
             var deviation = matches[0];
-
-            // Dominant, Common, InsufficientData: no warning
-            if (deviation.Level is RelationDeviationLevel.Rare
-                or RelationDeviationLevel.VeryRare
-                or RelationDeviationLevel.Structural)
+            if (IsWarnableLevel(deviation.Level))
             {
-                var levelName = deviation.Level.ToString().ToLowerInvariant();
-                var pct = (deviation.Ratio * 100).ToString("F0", CultureInfo.InvariantCulture);
-                var dominantInfo = GetDominantInfo(summary);
-                var pairDesc = string.Join(", ", sortedDescriptions);
-                var msg = $"JOIN between {canonLeftSchema}.{canonLeftTable} and " +
-                    $"{canonRightSchema}.{canonRightTable} on [{pairDesc}] is {levelName} " +
-                    $"({deviation.OccurrenceCount}/{summary.Total} occurrences, {pct}%).{dominantInfo}";
-                AddDiagnostic(
-                    fragment: node.SearchCondition!,
-                    message: msg,
-                    code: RuleCode,
-                    category: Category,
-                    fixable: false);
+                ReportRarePattern(node.SearchCondition!, pattern, summary, deviation);
             }
         }
+
+        private bool TryBuildCanonicalPattern(QualifiedJoin node, out CanonicalJoinPattern pattern)
+        {
+            pattern = default;
+
+            var joinType = GetJoinTypeName(node.QualifiedJoinType);
+            if (joinType is null)
+            {
+                return false;
+            }
+
+            var rawPairs = ExtractEqualityPairs(node.SearchCondition);
+            if (rawPairs.Count == 0)
+            {
+                return false;
+            }
+
+            var leftTable = ResolveSideTableFromPairs(node.FirstTableReference, rawPairs);
+            var rightTable = ResolveSideTableFromPairs(node.SecondTableReference, rawPairs);
+            if (leftTable is null || rightTable is null)
+            {
+                return false;
+            }
+
+            var orientedPairs = OrientColumnPairs(rawPairs, leftTable, rightTable);
+            if (orientedPairs.Count == 0)
+            {
+                return false;
+            }
+
+            pattern = CanonicalizePattern(leftTable, rightTable, joinType, orientedPairs);
+            return true;
+        }
+
+        private static CanonicalJoinPattern CanonicalizePattern(
+            ResolvedTable leftTable,
+            ResolvedTable rightTable,
+            string joinType,
+            IReadOnlyList<ResolvedColumnPair> orientedPairs)
+        {
+            var shouldSwap = string.Compare(
+                BuildTableKey(leftTable),
+                BuildTableKey(rightTable),
+                StringComparison.OrdinalIgnoreCase) > 0;
+
+            var canonicalLeft = shouldSwap ? rightTable : leftTable;
+            var canonicalRight = shouldSwap ? leftTable : rightTable;
+            var canonicalJoinType = shouldSwap ? SwapJoinDirection(joinType) : joinType;
+
+            var pairDescriptions = shouldSwap
+                ? orientedPairs.Select(static pair => $"{pair.RightColumn}={pair.LeftColumn}")
+                : orientedPairs.Select(static pair => $"{pair.LeftColumn}={pair.RightColumn}");
+
+            var sortedDescriptions = pairDescriptions
+                .OrderBy(static pair => pair, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new CanonicalJoinPattern(
+                canonicalLeft.SchemaName,
+                canonicalLeft.TableName,
+                canonicalRight.SchemaName,
+                canonicalRight.TableName,
+                canonicalJoinType,
+                sortedDescriptions);
+        }
+
+        private void ReportUnknownTablePair(TSqlFragment target, CanonicalJoinPattern pattern)
+        {
+            if (!deviations.HasData)
+            {
+                return;
+            }
+
+            AddDiagnostic(
+                fragment: target,
+                message: $"JOIN between {pattern.LeftSchema}.{pattern.LeftTable} and {pattern.RightSchema}.{pattern.RightTable} was not found in the relation profile.",
+                code: RuleCode,
+                category: Category,
+                fixable: false);
+        }
+
+        private void ReportUnseenPattern(
+            TSqlFragment target,
+            CanonicalJoinPattern pattern,
+            RelationTablePairSummary summary)
+        {
+            var pairDesc = string.Join(", ", pattern.SortedPairDescriptions);
+            var dominantInfo = GetDominantInfo(summary);
+
+            AddDiagnostic(
+                fragment: target,
+                message: $"JOIN between {pattern.LeftSchema}.{pattern.LeftTable} and {pattern.RightSchema}.{pattern.RightTable} on [{pairDesc}] was not observed in the relation profile ({summary.Total} total occurrences for this table pair).{dominantInfo}",
+                code: RuleCode,
+                category: Category,
+                fixable: false);
+        }
+
+        private void ReportRarePattern(
+            TSqlFragment target,
+            CanonicalJoinPattern pattern,
+            RelationTablePairSummary summary,
+            RelationPatternDeviation deviation)
+        {
+            var pairDesc = string.Join(", ", pattern.SortedPairDescriptions);
+            var levelName = deviation.Level.ToString().ToLowerInvariant();
+            var pct = (deviation.Ratio * 100).ToString("F0", CultureInfo.InvariantCulture);
+            var dominantInfo = GetDominantInfo(summary);
+
+            AddDiagnostic(
+                fragment: target,
+                message: $"JOIN between {pattern.LeftSchema}.{pattern.LeftTable} and {pattern.RightSchema}.{pattern.RightTable} on [{pairDesc}] is {levelName} ({deviation.OccurrenceCount}/{summary.Total} occurrences, {pct}%).{dominantInfo}",
+                code: RuleCode,
+                category: Category,
+                fixable: false);
+        }
+
+        private static bool IsWarnableLevel(RelationDeviationLevel level) =>
+            level is RelationDeviationLevel.Rare
+                or RelationDeviationLevel.VeryRare
+                or RelationDeviationLevel.Structural;
 
         private static List<RelationPatternDeviation> FindMatchingDeviations(
             RelationTablePairSummary summary,
             string joinType,
-            List<string> sortedDescriptions)
+            IReadOnlyList<string> sortedDescriptions)
         {
             var matches = new List<RelationPatternDeviation>();
 
@@ -211,32 +247,37 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                     continue;
                 }
 
-                if (deviation.ColumnPairDescriptions.Count != sortedDescriptions.Count)
-                {
-                    continue;
-                }
-
-                var sorted = deviation.ColumnPairDescriptions
-                    .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                var match = true;
-                for (var i = 0; i < sorted.Count; i++)
-                {
-                    if (!string.Equals(sorted[i], sortedDescriptions[i], StringComparison.OrdinalIgnoreCase))
-                    {
-                        match = false;
-                        break;
-                    }
-                }
-
-                if (match)
+                if (HasSameSortedPairDescriptions(deviation.ColumnPairDescriptions, sortedDescriptions))
                 {
                     matches.Add(deviation);
                 }
             }
 
             return matches;
+        }
+
+        private static bool HasSameSortedPairDescriptions(
+            IReadOnlyList<string> candidateDescriptions,
+            IReadOnlyList<string> sortedDescriptions)
+        {
+            if (candidateDescriptions.Count != sortedDescriptions.Count)
+            {
+                return false;
+            }
+
+            var sortedCandidate = candidateDescriptions
+                .OrderBy(static pair => pair, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            for (var i = 0; i < sortedCandidate.Count; i++)
+            {
+                if (!string.Equals(sortedCandidate[i], sortedDescriptions[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static string GetDominantInfo(RelationTablePairSummary summary)
@@ -274,25 +315,26 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 _ => joinType,
             };
 
-        private static List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right, BooleanComparisonExpression Node)>
-            ExtractEqualityPairs(
-            BooleanExpression? condition)
+        private static string BuildTableKey(ResolvedTable table) =>
+            $"{table.SchemaName}.{table.TableName}";
+
+        private static List<RawColumnPair> ExtractEqualityPairs(BooleanExpression? condition)
         {
-            var results = new List<(ColumnReferenceExpression, ColumnReferenceExpression, BooleanComparisonExpression)>();
+            var results = new List<RawColumnPair>();
             CollectEqualityPairs(condition, results);
             return results;
         }
 
         private static void CollectEqualityPairs(
             BooleanExpression? condition,
-            List<(ColumnReferenceExpression, ColumnReferenceExpression, BooleanComparisonExpression)> results)
+            List<RawColumnPair> results)
         {
             switch (condition)
             {
                 case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison
                     when comparison.FirstExpression is ColumnReferenceExpression leftCol
                       && comparison.SecondExpression is ColumnReferenceExpression rightCol:
-                    results.Add((leftCol, rightCol, comparison));
+                    results.Add(new RawColumnPair(leftCol, rightCol));
                     break;
 
                 case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } binary:
@@ -323,7 +365,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             if (identifiers.Count >= 2)
             {
-                foreach (var key in BuildQualifierLookupKeys(identifiers))
+                foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
                 {
                     if (_currentAliasMap.TryResolve(key, out var resolved))
                     {
@@ -345,51 +387,20 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             return null;
         }
 
-        private static IEnumerable<string> BuildQualifierLookupKeys(IList<Identifier> identifiers)
-        {
-            var qualifierCount = identifiers.Count - 1;
-            if (qualifierCount <= 0)
-            {
-                yield break;
-            }
-
-            var parts = new string[qualifierCount];
-            for (var i = 0; i < qualifierCount; i++)
-            {
-                parts[i] = identifiers[i].Value;
-            }
-
-            if (parts.Length == 1)
-            {
-                yield return parts[0];
-                yield break;
-            }
-
-            yield return string.Join(".", parts);
-
-            if (parts.Length >= 2)
-            {
-                yield return $"{parts[^2]}.{parts[^1]}";
-            }
-
-            yield return parts[^1];
-        }
-
         /// <summary>
         /// Orients column pairs so Left belongs to leftTable and Right to rightTable,
         /// regardless of the order they appear in the ON clause.
         /// </summary>
-        private List<(string LeftColumn, string RightColumn)> OrientColumnPairs(
-            List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right,
-                BooleanComparisonExpression Node)> rawPairs,
+        private List<ResolvedColumnPair> OrientColumnPairs(
+            IReadOnlyList<RawColumnPair> rawPairs,
             ResolvedTable leftTable,
             ResolvedTable rightTable)
         {
-            var result = new List<(string, string)>();
-            foreach (var (col1, col2, _) in rawPairs)
+            var result = new List<ResolvedColumnPair>();
+            foreach (var pair in rawPairs)
             {
-                var resolved1 = ResolveColumnToTable(col1);
-                var resolved2 = ResolveColumnToTable(col2);
+                var resolved1 = ResolveColumnToTable(pair.Left);
+                var resolved2 = ResolveColumnToTable(pair.Right);
                 if (resolved1 is null || resolved2 is null)
                 {
                     continue;
@@ -398,12 +409,16 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 if (TablesAreEqual(resolved1.Value.Table, leftTable) &&
                     TablesAreEqual(resolved2.Value.Table, rightTable))
                 {
-                    result.Add((resolved1.Value.ColumnName, resolved2.Value.ColumnName));
+                    result.Add(new ResolvedColumnPair(
+                        resolved1.Value.ColumnName,
+                        resolved2.Value.ColumnName));
                 }
                 else if (TablesAreEqual(resolved1.Value.Table, rightTable) &&
                          TablesAreEqual(resolved2.Value.Table, leftTable))
                 {
-                    result.Add((resolved2.Value.ColumnName, resolved1.Value.ColumnName));
+                    result.Add(new ResolvedColumnPair(
+                        resolved2.Value.ColumnName,
+                        resolved1.Value.ColumnName));
                 }
             }
 
@@ -412,8 +427,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         private ResolvedTable? ResolveSideTableFromPairs(
             TableReference tableRef,
-            List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right,
-                BooleanComparisonExpression Node)> rawPairs)
+            IReadOnlyList<RawColumnPair> rawPairs)
         {
             var candidates = ResolveNamedTables(tableRef);
             if (candidates.Count == 0)
@@ -428,15 +442,15 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             var referenced = new List<ResolvedTable>();
 
-            foreach (var (left, right, _) in rawPairs)
+            foreach (var pair in rawPairs)
             {
-                var leftResolved = ResolveColumnToTable(left);
+                var leftResolved = ResolveColumnToTable(pair.Left);
                 if (leftResolved is not null)
                 {
                     TryAddReferencedCandidate(referenced, candidates, leftResolved.Value.Table);
                 }
 
-                var rightResolved = ResolveColumnToTable(right);
+                var rightResolved = ResolveColumnToTable(pair.Right);
                 if (rightResolved is not null)
                 {
                     TryAddReferencedCandidate(referenced, candidates, rightResolved.Value.Table);

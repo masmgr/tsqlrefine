@@ -168,7 +168,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 return false;
             }
 
-            foreach (var key in BuildQualifierLookupKeys(identifiers))
+            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
             {
                 if (_currentAliasMap.TryResolve(key, out resolvedTable))
                 {
@@ -180,36 +180,5 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             return false;
         }
 
-        private static IEnumerable<string> BuildQualifierLookupKeys(IList<Identifier> identifiers)
-        {
-            var qualifierCount = identifiers.Count - 1;
-            if (qualifierCount <= 0)
-            {
-                yield break;
-            }
-
-            var parts = new string[qualifierCount];
-            for (var i = 0; i < qualifierCount; i++)
-            {
-                parts[i] = identifiers[i].Value;
-            }
-
-            if (parts.Length == 1)
-            {
-                yield return parts[0];
-                yield break;
-            }
-
-            // Prefer fully-qualified lookup first.
-            yield return string.Join(".", parts);
-
-            // Fallbacks for cases where the FROM clause omitted database/schema qualifiers.
-            if (parts.Length >= 2)
-            {
-                yield return $"{parts[^2]}.{parts[^1]}";
-            }
-
-            yield return parts[^1];
-        }
     }
 }
