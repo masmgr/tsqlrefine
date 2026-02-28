@@ -11,6 +11,14 @@ public sealed class SchemaProvider : ISchemaProvider
 {
     private readonly NameResolver _resolver;
     private readonly SchemaSnapshotMetadata _metadata;
+    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaUniqueConstraintInfo>> _uniqueConstraintsCache =
+        new(ResolvedTableKeyComparer.Instance);
+    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _foreignKeysCache =
+        new(ResolvedTableKeyComparer.Instance);
+    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _referencingForeignKeysCache =
+        new(ResolvedTableKeyComparer.Instance);
+    private readonly Dictionary<ResolvedTable, TableUniquenessLookup?> _uniquenessLookupCache =
+        new(ResolvedTableKeyComparer.Instance);
 
     /// <summary>
     /// Creates a new <see cref="SchemaProvider"/> from a schema snapshot.
@@ -65,9 +73,15 @@ public sealed class SchemaProvider : ISchemaProvider
     public IReadOnlyList<SchemaUniqueConstraintInfo> GetUniqueConstraints(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
+        if (_uniqueConstraintsCache.TryGetValue(table, out var cached))
+        {
+            return cached;
+        }
+
         var tableSchema = _resolver.GetTableSchema(table);
         if (tableSchema is null)
         {
+            _uniqueConstraintsCache[table] = [];
             return [];
         }
 
@@ -92,16 +106,24 @@ public sealed class SchemaProvider : ISchemaProvider
             }
         }
 
-        return result;
+        cached = result.Count == 0 ? [] : result;
+        _uniqueConstraintsCache[table] = cached;
+        return cached;
     }
 
     /// <inheritdoc />
     public IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
+        if (_foreignKeysCache.TryGetValue(table, out var cached))
+        {
+            return cached;
+        }
+
         var tableSchema = _resolver.GetTableSchema(table);
         if (tableSchema?.ForeignKeys is null)
         {
+            _foreignKeysCache[table] = [];
             return [];
         }
 
@@ -117,16 +139,24 @@ public sealed class SchemaProvider : ISchemaProvider
             result.Add(fk.ToDto(table, targetTable));
         }
 
-        return result;
+        cached = result.Count == 0 ? [] : result;
+        _foreignKeysCache[table] = cached;
+        return cached;
     }
 
     /// <inheritdoc />
     public IReadOnlyList<SchemaForeignKeyInfo> GetReferencingForeignKeys(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
+        if (_referencingForeignKeysCache.TryGetValue(table, out var cached))
+        {
+            return cached;
+        }
+
         var refs = _resolver.GetReferencingForeignKeys(table);
         if (refs.Count == 0)
         {
+            _referencingForeignKeysCache[table] = [];
             return [];
         }
 
@@ -142,7 +172,9 @@ public sealed class SchemaProvider : ISchemaProvider
             result.Add(fk.ToDto(sourceTable, table));
         }
 
-        return result;
+        cached = result.Count == 0 ? [] : result;
+        _referencingForeignKeysCache[table] = cached;
+        return cached;
     }
 
     /// <inheritdoc />
@@ -156,39 +188,19 @@ public sealed class SchemaProvider : ISchemaProvider
             return false;
         }
 
-        var tableSchema = _resolver.GetTableSchema(table);
-        if (tableSchema is null)
+        var uniquenessLookup = GetOrCreateUniquenessLookup(table);
+        if (uniquenessLookup is null)
         {
             return false;
         }
 
-        // Check primary key
-        if (tableSchema.PrimaryKey is not null && IsSubsetOf(tableSchema.PrimaryKey.Columns, columnNames))
-        {
-            return true;
-        }
+        var queryColumns = new HashSet<string>(columnNames, StringComparer.OrdinalIgnoreCase);
 
-        // Check unique constraints
-        if (tableSchema.UniqueConstraints is not null)
+        foreach (var uniqueColumnSet in uniquenessLookup.UniqueColumnSets)
         {
-            foreach (var uc in tableSchema.UniqueConstraints)
+            if (uniqueColumnSet.IsSubsetOf(queryColumns))
             {
-                if (IsSubsetOf(uc.Columns, columnNames))
-                {
-                    return true;
-                }
-            }
-        }
-
-        // Check unique indexes
-        if (tableSchema.Indexes is not null)
-        {
-            foreach (var idx in tableSchema.Indexes)
-            {
-                if (idx.IsUnique && IsSubsetOf(idx.Columns, columnNames))
-                {
-                    return true;
-                }
+                return true;
             }
         }
 
@@ -217,31 +229,99 @@ public sealed class SchemaProvider : ISchemaProvider
         };
     }
 
-    /// <summary>
-    /// Checks whether all columns in <paramref name="constraintColumns"/> are present
-    /// in the <paramref name="queryColumns"/> set (case-insensitive).
-    /// This determines if the query columns cover (are a superset of) the constraint.
-    /// </summary>
-    private static bool IsSubsetOf(IReadOnlyList<string> constraintColumns, IReadOnlyList<string> queryColumns)
+    private TableUniquenessLookup? GetOrCreateUniquenessLookup(ResolvedTable table)
     {
-        foreach (var constraintCol in constraintColumns)
+        if (_uniquenessLookupCache.TryGetValue(table, out var cached))
         {
-            var found = false;
-            foreach (var queryCol in queryColumns)
-            {
-                if (string.Equals(constraintCol, queryCol, StringComparison.OrdinalIgnoreCase))
-                {
-                    found = true;
-                    break;
-                }
-            }
+            return cached;
+        }
 
-            if (!found)
+        var tableSchema = _resolver.GetTableSchema(table);
+        if (tableSchema is null)
+        {
+            _uniquenessLookupCache[table] = null;
+            return null;
+        }
+
+        var uniqueColumnSets = new List<HashSet<string>>();
+
+        if (tableSchema.PrimaryKey is not null)
+        {
+            uniqueColumnSets.Add(ToCaseInsensitiveSet(tableSchema.PrimaryKey.Columns));
+        }
+
+        if (tableSchema.UniqueConstraints is not null)
+        {
+            foreach (var uniqueConstraint in tableSchema.UniqueConstraints)
             {
-                return false;
+                uniqueColumnSets.Add(ToCaseInsensitiveSet(uniqueConstraint.Columns));
             }
         }
 
-        return true;
+        if (tableSchema.Indexes is not null)
+        {
+            foreach (var index in tableSchema.Indexes)
+            {
+                if (index.IsUnique)
+                {
+                    uniqueColumnSets.Add(ToCaseInsensitiveSet(index.Columns));
+                }
+            }
+        }
+
+        cached = uniqueColumnSets.Count == 0
+            ? null
+            : new TableUniquenessLookup(uniqueColumnSets);
+        _uniquenessLookupCache[table] = cached;
+        return cached;
+    }
+
+    private static HashSet<string> ToCaseInsensitiveSet(IReadOnlyList<string> columns)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var column in columns)
+        {
+            set.Add(column);
+        }
+
+        return set;
+    }
+
+    private sealed class TableUniquenessLookup(IReadOnlyList<HashSet<string>> uniqueColumnSets)
+    {
+        internal IReadOnlyList<HashSet<string>> UniqueColumnSets { get; } = uniqueColumnSets;
+    }
+
+    private sealed class ResolvedTableKeyComparer : IEqualityComparer<ResolvedTable>
+    {
+        public static ResolvedTableKeyComparer Instance { get; } = new();
+
+        public bool Equals(ResolvedTable? x, ResolvedTable? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x is null || y is null)
+            {
+                return false;
+            }
+
+            return string.Equals(x.DatabaseName, y.DatabaseName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.SchemaName, y.SchemaName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.TableName, y.TableName, StringComparison.OrdinalIgnoreCase)
+                && x.IsView == y.IsView;
+        }
+
+        public int GetHashCode(ResolvedTable obj)
+        {
+            var hash = new HashCode();
+            hash.Add(obj.DatabaseName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.SchemaName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.TableName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.IsView);
+            return hash.ToHashCode();
+        }
     }
 }

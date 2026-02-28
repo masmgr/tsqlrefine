@@ -8,7 +8,7 @@ namespace TsqlRefine.Schema.Relations;
 /// </summary>
 public sealed class RelationDeviationProvider : IRelationDeviationProvider
 {
-    private readonly Dictionary<string, RelationTablePairSummary> _lookup;
+    private readonly Dictionary<TablePairKey, RelationTablePairSummary> _lookup;
     private readonly List<RelationTablePairSummary> _summaries;
 
     /// <summary>
@@ -19,14 +19,14 @@ public sealed class RelationDeviationProvider : IRelationDeviationProvider
         ArgumentNullException.ThrowIfNull(report);
 
         var summaries = new List<RelationTablePairSummary>(report.Analyses.Count);
-        _lookup = new Dictionary<string, RelationTablePairSummary>(
-            report.Analyses.Count, StringComparer.OrdinalIgnoreCase);
+        _lookup = new Dictionary<TablePairKey, RelationTablePairSummary>(
+            report.Analyses.Count, TablePairKeyComparer.Instance);
 
         foreach (var analysis in report.Analyses)
         {
             var summary = ConvertAnalysis(analysis);
             summaries.Add(summary);
-            var key = BuildKey(
+            var key = CreateCanonicalKey(
                 summary.LeftSchema, summary.LeftTable,
                 summary.RightSchema, summary.RightTable);
             _lookup[key] = summary;
@@ -57,30 +57,38 @@ public sealed class RelationDeviationProvider : IRelationDeviationProvider
         string leftSchema, string leftTable,
         string rightSchema, string rightTable)
     {
-        // Canonicalize: ensure lexicographic order
-        var leftKey = $"{leftSchema}.{leftTable}";
-        var rightKey = $"{rightSchema}.{rightTable}";
-
-        string key;
-        if (string.Compare(leftKey, rightKey, StringComparison.OrdinalIgnoreCase) <= 0)
-        {
-            key = BuildKey(leftSchema, leftTable, rightSchema, rightTable);
-        }
-        else
-        {
-            key = BuildKey(rightSchema, rightTable, leftSchema, leftTable);
-        }
-
+        var key = CreateCanonicalKey(leftSchema, leftTable, rightSchema, rightTable);
         return _lookup.GetValueOrDefault(key);
     }
 
     /// <inheritdoc />
     public IReadOnlyList<RelationTablePairSummary> GetAllSummaries() => _summaries;
 
-    private static string BuildKey(
+    private static TablePairKey CreateCanonicalKey(
         string leftSchema, string leftTable,
-        string rightSchema, string rightTable) =>
-        $"{leftSchema}.{leftTable}|{rightSchema}.{rightTable}";
+        string rightSchema, string rightTable)
+    {
+        if (IsCanonicalOrder(leftSchema, leftTable, rightSchema, rightTable))
+        {
+            return new TablePairKey(leftSchema, leftTable, rightSchema, rightTable);
+        }
+
+        return new TablePairKey(rightSchema, rightTable, leftSchema, leftTable);
+    }
+
+    private static bool IsCanonicalOrder(
+        string leftSchema, string leftTable,
+        string rightSchema, string rightTable)
+    {
+        var schemaComparison = string.Compare(
+            leftSchema, rightSchema, StringComparison.OrdinalIgnoreCase);
+        if (schemaComparison != 0)
+        {
+            return schemaComparison < 0;
+        }
+
+        return string.Compare(leftTable, rightTable, StringComparison.OrdinalIgnoreCase) <= 0;
+    }
 
     private static RelationTablePairSummary ConvertAnalysis(TablePairAnalysis analysis)
     {
@@ -148,4 +156,31 @@ public sealed class RelationDeviationProvider : IRelationDeviationProvider
             StructuralDiff.DifferentJoinType => RelationStructuralDiff.DifferentJoinType,
             _ => RelationStructuralDiff.DifferentKeyCount,
         };
+
+    private readonly record struct TablePairKey(
+        string LeftSchema,
+        string LeftTable,
+        string RightSchema,
+        string RightTable);
+
+    private sealed class TablePairKeyComparer : IEqualityComparer<TablePairKey>
+    {
+        public static TablePairKeyComparer Instance { get; } = new();
+
+        public bool Equals(TablePairKey x, TablePairKey y) =>
+            string.Equals(x.LeftSchema, y.LeftSchema, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.LeftTable, y.LeftTable, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.RightSchema, y.RightSchema, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(x.RightTable, y.RightTable, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode(TablePairKey obj)
+        {
+            var hash = new HashCode();
+            hash.Add(obj.LeftSchema, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.LeftTable, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.RightSchema, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.RightTable, StringComparer.OrdinalIgnoreCase);
+            return hash.ToHashCode();
+        }
+    }
 }

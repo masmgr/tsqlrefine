@@ -57,10 +57,7 @@ public static class AliasMapBuilder
         var map = new Dictionary<string, ResolvedTable?>(StringComparer.OrdinalIgnoreCase);
         var allTables = new List<ResolvedTable>();
 
-        var leafRefs = new List<TableReference>();
-        TableReferenceHelpers.CollectTableReferences(tableRefs, leafRefs);
-
-        foreach (var tableRef in leafRefs)
+        foreach (var tableRef in tableRefs)
         {
             ProcessTableReference(tableRef, schema, map, allTables);
         }
@@ -101,6 +98,18 @@ public static class AliasMapBuilder
         Dictionary<string, ResolvedTable?> map,
         List<ResolvedTable> allTables)
     {
+        switch (tableRef)
+        {
+            case JoinTableReference join:
+                ProcessTableReference(join.FirstTableReference, schema, map, allTables);
+                ProcessTableReference(join.SecondTableReference, schema, map, allTables);
+                return;
+
+            case JoinParenthesisTableReference joinParenthesis when joinParenthesis.Join is not null:
+                ProcessTableReference(joinParenthesis.Join, schema, map, allTables);
+                return;
+        }
+
         if (tableRef is NamedTableReference namedTable)
         {
             var schemaObject = namedTable.SchemaObject;

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Schema.Model;
 
@@ -17,7 +18,8 @@ internal sealed class NameResolver
     {
         _defaultSchema = defaultSchema;
         _defaultDatabaseName = snapshot.Databases.Count > 0 ? snapshot.Databases[0].Name : null;
-        _databases = new Dictionary<string, DatabaseLookup>(StringComparer.OrdinalIgnoreCase);
+        _databases = new Dictionary<string, DatabaseLookup>(
+            snapshot.Databases.Count, StringComparer.OrdinalIgnoreCase);
 
         foreach (var db in snapshot.Databases)
         {
@@ -67,7 +69,7 @@ internal sealed class NameResolver
         // Determine which schema to search
         var schemaName = schema ?? _defaultSchema;
 
-        return dbLookup.ResolveTable(dbName, schemaName, name);
+        return dbLookup.ResolveTable(schemaName, name);
     }
 
     /// <summary>
@@ -80,16 +82,7 @@ internal sealed class NameResolver
             return null;
         }
 
-        var tableSchema = dbLookup.FindTableSchema(table.SchemaName, table.TableName, table.IsView);
-        if (tableSchema is null)
-        {
-            return null;
-        }
-
-        var column = tableSchema.Columns
-            .FirstOrDefault(c => string.Equals(c.Name, columnName, StringComparison.OrdinalIgnoreCase));
-
-        return column is null ? null : new ResolvedColumn(table, column.ToDto());
+        return dbLookup.ResolveColumn(table.SchemaName, table.TableName, table.IsView, columnName);
     }
 
     /// <summary>
@@ -102,13 +95,7 @@ internal sealed class NameResolver
             return [];
         }
 
-        var tableSchema = dbLookup.FindTableSchema(table.SchemaName, table.TableName, table.IsView);
-        if (tableSchema is null)
-        {
-            return [];
-        }
-
-        return tableSchema.Columns.Select(c => c.ToDto()).ToArray();
+        return dbLookup.GetColumns(table.SchemaName, table.TableName, table.IsView);
     }
 
     /// <summary>
@@ -117,24 +104,29 @@ internal sealed class NameResolver
     /// </summary>
     private sealed class DatabaseLookup
     {
-        private readonly Dictionary<string, TableSchema> _tables;
-        private readonly Dictionary<string, TableSchema> _views;
-        private readonly Dictionary<string, List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
+        private readonly Dictionary<(string SchemaName, string TableName), TableLookup> _tables;
+        private readonly Dictionary<(string SchemaName, string TableName), TableLookup> _views;
+        private readonly Dictionary<(string SchemaName, string TableName), List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
 
         internal DatabaseLookup(DatabaseSchema db)
         {
-            _tables = new Dictionary<string, TableSchema>(StringComparer.OrdinalIgnoreCase);
-            _views = new Dictionary<string, TableSchema>(StringComparer.OrdinalIgnoreCase);
-            _referencingFks = new Dictionary<string, List<(TableSchema, ForeignKeyInfo)>>(StringComparer.OrdinalIgnoreCase);
+            _tables = new Dictionary<(string SchemaName, string TableName), TableLookup>(
+                db.Tables.Count, TableNameKeyComparer.Instance);
+            _views = new Dictionary<(string SchemaName, string TableName), TableLookup>(
+                db.Views.Count, TableNameKeyComparer.Instance);
+            _referencingFks = new Dictionary<(string SchemaName, string TableName), List<(TableSchema, ForeignKeyInfo)>>(
+                TableNameKeyComparer.Instance);
 
             foreach (var table in db.Tables)
             {
-                _tables[$"{table.SchemaName}.{table.Name}"] = table;
+                _tables[(table.SchemaName, table.Name)] = new TableLookup(
+                    db.Name, table, isView: false);
             }
 
             foreach (var view in db.Views)
             {
-                _views[$"{view.SchemaName}.{view.Name}"] = view;
+                _views[(view.SchemaName, view.Name)] = new TableLookup(
+                    db.Name, view, isView: true);
             }
 
             // Build reverse FK index: target table key → list of (source table, FK)
@@ -147,7 +139,7 @@ internal sealed class NameResolver
 
                 foreach (var fk in table.ForeignKeys)
                 {
-                    var targetKey = $"{fk.TargetSchema}.{fk.TargetTable}";
+                    var targetKey = (fk.TargetSchema, fk.TargetTable);
                     if (!_referencingFks.TryGetValue(targetKey, out var list))
                     {
                         list = [];
@@ -159,17 +151,17 @@ internal sealed class NameResolver
             }
         }
 
-        internal ResolvedTable? ResolveTable(string databaseName, string schemaName, string tableName)
+        internal ResolvedTable? ResolveTable(string schemaName, string tableName)
         {
-            var key = $"{schemaName}.{tableName}";
-            if (_tables.TryGetValue(key, out _))
+            var key = (schemaName, tableName);
+            if (_tables.TryGetValue(key, out var tableLookup))
             {
-                return new ResolvedTable(databaseName, schemaName, tableName, IsView: false);
+                return tableLookup.ResolvedTable;
             }
 
-            if (_views.TryGetValue(key, out _))
+            if (_views.TryGetValue(key, out var viewLookup))
             {
-                return new ResolvedTable(databaseName, schemaName, tableName, IsView: true);
+                return viewLookup.ResolvedTable;
             }
 
             return null;
@@ -177,16 +169,111 @@ internal sealed class NameResolver
 
         internal TableSchema? FindTableSchema(string schemaName, string tableName, bool isView)
         {
-            var key = $"{schemaName}.{tableName}";
             var lookup = isView ? _views : _tables;
-            return lookup.GetValueOrDefault(key);
+            return lookup.TryGetValue((schemaName, tableName), out var tableLookup)
+                ? tableLookup.TableSchema
+                : null;
+        }
+
+        internal ResolvedColumn? ResolveColumn(
+            string schemaName, string tableName, bool isView, string columnName)
+        {
+            if (!TryGetTableLookup(schemaName, tableName, isView, out var tableLookup))
+            {
+                return null;
+            }
+
+            return tableLookup.ResolveColumn(columnName);
+        }
+
+        internal IReadOnlyList<SchemaColumnInfo> GetColumns(
+            string schemaName, string tableName, bool isView)
+        {
+            if (!TryGetTableLookup(schemaName, tableName, isView, out var tableLookup))
+            {
+                return [];
+            }
+
+            return tableLookup.Columns;
         }
 
         internal List<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
             string schemaName, string tableName)
         {
-            var key = $"{schemaName}.{tableName}";
-            return _referencingFks.TryGetValue(key, out var list) ? list : [];
+            return _referencingFks.TryGetValue((schemaName, tableName), out var list) ? list : [];
+        }
+
+        private bool TryGetTableLookup(
+            string schemaName,
+            string tableName,
+            bool isView,
+            [NotNullWhen(true)] out TableLookup? tableLookup)
+        {
+            var lookup = isView ? _views : _tables;
+            if (lookup.TryGetValue((schemaName, tableName), out var found))
+            {
+                tableLookup = found;
+                return true;
+            }
+
+            tableLookup = null;
+            return false;
+        }
+    }
+
+    private sealed class TableLookup
+    {
+        private readonly Dictionary<string, ResolvedColumn> _columns;
+        private readonly SchemaColumnInfo[] _columnList;
+
+        internal TableLookup(string databaseName, TableSchema tableSchema, bool isView)
+        {
+            TableSchema = tableSchema;
+            ResolvedTable = new ResolvedTable(
+                databaseName,
+                tableSchema.SchemaName,
+                tableSchema.Name,
+                isView);
+
+            _columns = new Dictionary<string, ResolvedColumn>(
+                tableSchema.Columns.Count, StringComparer.OrdinalIgnoreCase);
+            _columnList = new SchemaColumnInfo[tableSchema.Columns.Count];
+
+            for (var i = 0; i < tableSchema.Columns.Count; i++)
+            {
+                var dto = tableSchema.Columns[i].ToDto();
+                _columnList[i] = dto;
+                // Keep the first entry when duplicate names exist in metadata.
+                _columns.TryAdd(dto.Name, new ResolvedColumn(ResolvedTable, dto));
+            }
+        }
+
+        internal TableSchema TableSchema { get; }
+
+        internal ResolvedTable ResolvedTable { get; }
+
+        internal IReadOnlyList<SchemaColumnInfo> Columns => _columnList;
+
+        internal ResolvedColumn? ResolveColumn(string columnName) =>
+            _columns.GetValueOrDefault(columnName);
+    }
+
+    private sealed class TableNameKeyComparer : IEqualityComparer<(string SchemaName, string TableName)>
+    {
+        public static TableNameKeyComparer Instance { get; } = new();
+
+        public bool Equals(
+            (string SchemaName, string TableName) x,
+            (string SchemaName, string TableName) y) =>
+            string.Equals(x.SchemaName, y.SchemaName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.TableName, y.TableName, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string SchemaName, string TableName) obj)
+        {
+            var hash = new HashCode();
+            hash.Add(obj.SchemaName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.TableName, StringComparer.OrdinalIgnoreCase);
+            return hash.ToHashCode();
         }
     }
 }

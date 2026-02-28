@@ -1,3 +1,4 @@
+using System.Text;
 using TsqlRefine.Schema.Relations;
 
 namespace TsqlRefine.Schema.Tests.Relations;
@@ -108,5 +109,19 @@ public sealed class RelationProfileSerializerTests
         var hash2 = RelationProfileSerializer.ComputeContentHash(relations2);
 
         Assert.NotEqual(hash1, hash2);
+    }
+
+    [Fact]
+    public void Deserialize_Stream_ValidJson_ReturnsProfile()
+    {
+        var profile = CreateSampleProfile();
+        var json = RelationProfileSerializer.Serialize(profile);
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        var deserialized = RelationProfileSerializer.Deserialize(stream);
+
+        Assert.Equal(profile.Metadata.TotalJoinCount, deserialized.Metadata.TotalJoinCount);
+        Assert.Single(deserialized.Relations);
+        Assert.Equal("Users", deserialized.Relations[0].LeftTable);
     }
 }
