@@ -74,10 +74,10 @@ src/
 ```
 
 **Built-in presets** (via `"preset"` field or `--preset` CLI option):
-- `recommended`: Balanced production use (94 rules)
-- `strict`: Maximum enforcement including style (137 rules)
-- `strict-logic`: Comprehensive correctness without cosmetic rules (114 rules)
-- `pragmatic`: Production-ready minimum (47 rules)
+- `recommended`: Balanced production use (97 rules)
+- `strict`: Maximum enforcement including style (140 rules)
+- `strict-logic`: Comprehensive correctness without cosmetic rules (117 rules)
+- `pragmatic`: Production-ready minimum (46 rules)
 - `security-only`: Security and critical safety (14 rules)
 
 For custom rulesets, use the `"ruleset"` field with a name (resolved from `.tsqlrefine/rulesets/`) or a file path.

@@ -123,6 +123,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new ImplicitConversionInPredicateSchemaRule(),
         new JoinForeignKeyMismatchRule(),
         new UpdateJoinCardinalityMismatchRule(),
+        new JoinColumnDeviationRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),

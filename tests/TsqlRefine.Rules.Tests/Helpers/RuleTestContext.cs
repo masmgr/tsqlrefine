@@ -12,6 +12,11 @@ internal static class RuleTestContext
 
     public static RuleContext CreateContext(string sql, ISchemaProvider? schema, int compatLevel = 150)
     {
+        return CreateContext(sql, schema, relationDeviations: null, compatLevel: compatLevel);
+    }
+
+    public static RuleContext CreateContext(string sql, ISchemaProvider? schema, IRelationDeviationProvider? relationDeviations, int compatLevel = 150)
+    {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
 
         using var fragmentReader = new StringReader(sql);
@@ -29,7 +34,8 @@ internal static class RuleTestContext
             Ast: ast,
             Tokens: tokens,
             Settings: new RuleSettings(),
-            Schema: schema
+            Schema: schema,
+            RelationDeviations: relationDeviations
         );
     }
 
