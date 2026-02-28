@@ -1,6 +1,8 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
@@ -8,12 +10,26 @@ public sealed class UnionTypeMismatchRuleTests
 {
     private readonly UnionTypeMismatchRule _rule = new();
 
+    private static SchemaProvider CreateSchema() =>
+        new(TestSchemaBuilder.Create()
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Name", "nvarchar", maxLength: 100)
+                .AddColumn("Email", "varchar", maxLength: 200)
+                .AddColumn("CreatedAt", "datetime2")
+                .AddColumn("ExternalId", "uniqueidentifier"))
+            .AddTable("dbo", "Products", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Title", "nvarchar", maxLength: 200)
+                .AddColumn("Price", "decimal", precision: 10, scale: 2))
+            .Build());
+
     [Fact]
     public void Metadata_HasCorrectProperties()
     {
         Assert.Equal("union-type-mismatch", _rule.Metadata.RuleId);
         Assert.Equal("Correctness", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Error, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 
@@ -197,5 +213,150 @@ public sealed class UnionTypeMismatchRuleTests
         var fixes = _rule.GetFixes(context, diagnostic);
 
         Assert.Empty(fixes);
+    }
+
+    // --- Schema-aware tests ---
+
+    [Fact]
+    public void Analyze_ColumnRefIntVsNvarchar_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.Users UNION ALL SELECT Name FROM dbo.Users;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("numeric", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_ColumnRefIntVsInt_WithSchema_NoDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.Users UNION ALL SELECT Id FROM dbo.Products;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_ColumnRefVsLiteral_TypeMismatch_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Name FROM dbo.Users UNION ALL SELECT 42;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("string", diagnostics[0].Message);
+        Assert.Contains("numeric", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_ColumnRefVsLiteral_Compatible_WithSchema_NoDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.Users UNION ALL SELECT 42;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_VarcharVsNvarchar_SameCategory_WithSchema_NoDiagnostic()
+    {
+        const string sql = "SELECT Email FROM dbo.Users UNION ALL SELECT Title FROM dbo.Products;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_AliasedColumnRef_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT u.Id FROM dbo.Users u UNION ALL SELECT p.Title FROM dbo.Products p;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("numeric", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_ColumnRefs_NoSchema_NoDiagnostic()
+    {
+        // Without schema, column references are still unresolvable
+        const string sql = "SELECT Id FROM dbo.Users UNION ALL SELECT Name FROM dbo.Users;";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UnresolvableTable_WithSchema_NoDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.UnknownTable UNION ALL SELECT 'text';";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_SelectStar_WithSchema_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Users UNION ALL SELECT * FROM dbo.Products;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_DatetimeVsString_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT CreatedAt FROM dbo.Users UNION ALL SELECT Title FROM dbo.Products;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("datetime", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_UniqueidentifierVsString_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT ExternalId FROM dbo.Users UNION ALL SELECT Title FROM dbo.Products;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("uniqueidentifier", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_NoFromClause_WithSchema_LiteralDetectionStillWorks()
+    {
+        const string sql = "SELECT 1 UNION ALL SELECT 'text';";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_ColumnRefIntVsCastVarchar_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.Users UNION ALL SELECT CAST('x' AS VARCHAR(10));";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("numeric", diagnostics[0].Message);
+        Assert.Contains("string", diagnostics[0].Message);
     }
 }
