@@ -24,17 +24,43 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
     private sealed class JoinForeignKeyMismatchVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private AliasMap? _currentAliasMap;
+        private Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache =
+            new(ReferenceEqualityComparer.Instance);
+        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
+            new(ResolvedTableColumnKeyComparer.Instance);
+        private Dictionary<string, (ResolvedTable Table, string ColumnName)?> _unqualifiedColumnResolutionCache =
+            new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _foreignKeysCache =
+            new(ResolvedTableKeyComparer.Instance);
+        private Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _referencingForeignKeysCache =
+            new(ResolvedTableKeyComparer.Instance);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
+                var previousResolvedColumnCache = _resolvedColumnCache;
+                var previousColumnExistsCache = _columnExistsCache;
+                var previousUnqualifiedColumnResolutionCache = _unqualifiedColumnResolutionCache;
+                var previousForeignKeysCache = _foreignKeysCache;
+                var previousReferencingForeignKeysCache = _referencingForeignKeysCache;
+
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
+                _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(ReferenceEqualityComparer.Instance);
+                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
+                _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(StringComparer.OrdinalIgnoreCase);
+                _foreignKeysCache = new Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>>(ResolvedTableKeyComparer.Instance);
+                _referencingForeignKeysCache = new Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>>(ResolvedTableKeyComparer.Instance);
 
                 node.FromClause.Accept(this);
 
                 _currentAliasMap = previousMap;
+                _resolvedColumnCache = previousResolvedColumnCache;
+                _columnExistsCache = previousColumnExistsCache;
+                _unqualifiedColumnResolutionCache = previousUnqualifiedColumnResolutionCache;
+                _foreignKeysCache = previousForeignKeysCache;
+                _referencingForeignKeysCache = previousReferencingForeignKeysCache;
                 return;
             }
 
@@ -106,6 +132,18 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
 
         private (ResolvedTable Table, string ColumnName)? ResolveColumnToTable(ColumnReferenceExpression colRef)
         {
+            if (_resolvedColumnCache.TryGetValue(colRef, out var cached))
+            {
+                return cached;
+            }
+
+            var resolved = ResolveColumnToTableCore(colRef);
+            _resolvedColumnCache[colRef] = resolved;
+            return resolved;
+        }
+
+        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTableCore(ColumnReferenceExpression colRef)
+        {
             if (_currentAliasMap is null || colRef.ColumnType == ColumnType.Wildcard)
             {
                 return null;
@@ -121,26 +159,43 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
 
             if (identifiers.Count >= 2)
             {
-                foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
+                if (QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out var resolved))
                 {
-                    if (_currentAliasMap.TryResolve(key, out var resolved))
-                    {
-                        return resolved is null ? null : (resolved, columnName);
-                    }
+                    return resolved is null ? null : (resolved, columnName);
                 }
 
                 return null;
             }
 
+            if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
+            {
+                return unqualifiedCached;
+            }
+
             foreach (var table in _currentAliasMap.AllTables)
             {
-                if (schema.ResolveColumn(table, columnName) is not null)
+                if (ColumnExists(table, columnName))
                 {
-                    return (table, columnName);
+                    var result = (table, columnName);
+                    _unqualifiedColumnResolutionCache[columnName] = result;
+                    return result;
                 }
             }
 
+            _unqualifiedColumnResolutionCache[columnName] = null;
             return null;
+        }
+
+        private bool ColumnExists(ResolvedTable table, string columnName)
+        {
+            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
+            {
+                return exists;
+            }
+
+            exists = schema.ResolveColumn(table, columnName) is not null;
+            _columnExistsCache[(table, columnName)] = exists;
+            return exists;
         }
 
         private void CheckForeignKeyOnColumn(
@@ -150,7 +205,7 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
             string joinedColumnName,
             BooleanComparisonExpression diagnosticTarget)
         {
-            var fks = schema.GetForeignKeys(sourceTable);
+            var fks = GetForeignKeys(sourceTable);
             foreach (var fk in fks)
             {
                 var idx = FindColumnIndex(fk.SourceColumns, sourceColumnName);
@@ -176,7 +231,7 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
                 }
             }
 
-            var refFks = schema.GetReferencingForeignKeys(sourceTable);
+            var refFks = GetReferencingForeignKeys(sourceTable);
             foreach (var fk in refFks)
             {
                 var idx = FindColumnIndex(fk.TargetColumns, sourceColumnName);
@@ -203,6 +258,30 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
             }
         }
 
+        private IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table)
+        {
+            if (_foreignKeysCache.TryGetValue(table, out var cached))
+            {
+                return cached;
+            }
+
+            cached = schema.GetForeignKeys(table);
+            _foreignKeysCache[table] = cached;
+            return cached;
+        }
+
+        private IReadOnlyList<SchemaForeignKeyInfo> GetReferencingForeignKeys(ResolvedTable table)
+        {
+            if (_referencingForeignKeysCache.TryGetValue(table, out var cached))
+            {
+                return cached;
+            }
+
+            cached = schema.GetReferencingForeignKeys(table);
+            _referencingForeignKeysCache[table] = cached;
+            return cached;
+        }
+
         private static int FindColumnIndex(IReadOnlyList<string> columns, string columnName)
         {
             for (var i = 0; i < columns.Count; i++)
@@ -221,6 +300,54 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
             return string.Equals(a.DatabaseName, b.DatabaseName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
+        {
+            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
+
+            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
+                TablesAreEqual(x.Table, y.Table)
+                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
+        }
+
+        private sealed class ResolvedTableKeyComparer : IEqualityComparer<ResolvedTable>
+        {
+            public static ResolvedTableKeyComparer Instance { get; } = new();
+
+            public bool Equals(ResolvedTable? x, ResolvedTable? y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return true;
+                }
+
+                if (x is null || y is null)
+                {
+                    return false;
+                }
+
+                return TablesAreEqual(x, y);
+            }
+
+            public int GetHashCode(ResolvedTable obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.DatabaseName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.SchemaName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.TableName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
         }
     }
 }

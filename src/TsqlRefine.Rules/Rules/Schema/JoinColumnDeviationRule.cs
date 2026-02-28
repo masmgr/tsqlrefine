@@ -47,17 +47,43 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             IReadOnlyList<string> SortedPairDescriptions);
 
         private AliasMap? _currentAliasMap;
+        private Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache =
+            new(ReferenceEqualityComparer.Instance);
+        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
+            new(ResolvedTableColumnKeyComparer.Instance);
+        private Dictionary<string, (ResolvedTable Table, string ColumnName)?> _unqualifiedColumnResolutionCache =
+            new(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<RelationPatternDeviation, IReadOnlyList<string>> _sortedDeviationPairsCache =
+            new(ReferenceEqualityComparer.Instance);
+        private Dictionary<RelationTablePairSummary, string> _dominantInfoCache =
+            new(ReferenceEqualityComparer.Instance);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
+                var previousResolvedColumnCache = _resolvedColumnCache;
+                var previousColumnExistsCache = _columnExistsCache;
+                var previousUnqualifiedColumnResolutionCache = _unqualifiedColumnResolutionCache;
+                var previousSortedDeviationPairsCache = _sortedDeviationPairsCache;
+                var previousDominantInfoCache = _dominantInfoCache;
+
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
+                _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(ReferenceEqualityComparer.Instance);
+                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
+                _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(StringComparer.OrdinalIgnoreCase);
+                _sortedDeviationPairsCache = new Dictionary<RelationPatternDeviation, IReadOnlyList<string>>(ReferenceEqualityComparer.Instance);
+                _dominantInfoCache = new Dictionary<RelationTablePairSummary, string>(ReferenceEqualityComparer.Instance);
 
                 node.FromClause.Accept(this);
 
                 _currentAliasMap = previousMap;
+                _resolvedColumnCache = previousResolvedColumnCache;
+                _columnExistsCache = previousColumnExistsCache;
+                _unqualifiedColumnResolutionCache = previousUnqualifiedColumnResolutionCache;
+                _sortedDeviationPairsCache = previousSortedDeviationPairsCache;
+                _dominantInfoCache = previousDominantInfoCache;
                 return;
             }
 
@@ -161,13 +187,15 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             var canonicalRight = shouldSwap ? leftTable : rightTable;
             var canonicalJoinType = shouldSwap ? SwapJoinDirection(joinType) : joinType;
 
-            var pairDescriptions = shouldSwap
-                ? orientedPairs.Select(static pair => $"{pair.RightColumn}={pair.LeftColumn}")
-                : orientedPairs.Select(static pair => $"{pair.LeftColumn}={pair.RightColumn}");
+            var sortedDescriptions = new List<string>(orientedPairs.Count);
+            foreach (var pair in orientedPairs)
+            {
+                sortedDescriptions.Add(shouldSwap
+                    ? $"{pair.RightColumn}={pair.LeftColumn}"
+                    : $"{pair.LeftColumn}={pair.RightColumn}");
+            }
 
-            var sortedDescriptions = pairDescriptions
-                .OrderBy(static pair => pair, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            sortedDescriptions.Sort(StringComparer.OrdinalIgnoreCase);
 
             return new CanonicalJoinPattern(
                 canonicalLeft.SchemaName,
@@ -233,7 +261,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 or RelationDeviationLevel.VeryRare
                 or RelationDeviationLevel.Structural;
 
-        private static List<RelationPatternDeviation> FindMatchingDeviations(
+        private List<RelationPatternDeviation> FindMatchingDeviations(
             RelationTablePairSummary summary,
             string joinType,
             IReadOnlyList<string> sortedDescriptions)
@@ -247,7 +275,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                     continue;
                 }
 
-                if (HasSameSortedPairDescriptions(deviation.ColumnPairDescriptions, sortedDescriptions))
+                if (HasSameSortedPairDescriptions(GetSortedDeviationPairs(deviation), sortedDescriptions))
                 {
                     matches.Add(deviation);
                 }
@@ -265,13 +293,9 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 return false;
             }
 
-            var sortedCandidate = candidateDescriptions
-                .OrderBy(static pair => pair, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-
-            for (var i = 0; i < sortedCandidate.Count; i++)
+            for (var i = 0; i < candidateDescriptions.Count; i++)
             {
-                if (!string.Equals(sortedCandidate[i], sortedDescriptions[i], StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(candidateDescriptions[i], sortedDescriptions[i], StringComparison.OrdinalIgnoreCase))
                 {
                     return false;
                 }
@@ -280,21 +304,68 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             return true;
         }
 
-        private static string GetDominantInfo(RelationTablePairSummary summary)
+        private IReadOnlyList<string> GetSortedDeviationPairs(RelationPatternDeviation deviation)
         {
-            var dominant = summary.Deviations
-                .FirstOrDefault(d => d.Level == RelationDeviationLevel.Dominant);
+            if (_sortedDeviationPairsCache.TryGetValue(deviation, out var cached))
+            {
+                return cached;
+            }
+
+            if (deviation.ColumnPairDescriptions.Count <= 1)
+            {
+                cached = deviation.ColumnPairDescriptions;
+            }
+            else
+            {
+                var sorted = new List<string>(deviation.ColumnPairDescriptions.Count);
+                foreach (var pair in deviation.ColumnPairDescriptions)
+                {
+                    sorted.Add(pair);
+                }
+
+                sorted.Sort(StringComparer.OrdinalIgnoreCase);
+                cached = sorted;
+            }
+
+            _sortedDeviationPairsCache[deviation] = cached;
+            return cached;
+        }
+
+        private string GetDominantInfo(RelationTablePairSummary summary)
+        {
+            if (_dominantInfoCache.TryGetValue(summary, out var cached))
+            {
+                return cached;
+            }
+
+            RelationPatternDeviation? dominant = null;
+            foreach (var deviation in summary.Deviations)
+            {
+                if (deviation.Level == RelationDeviationLevel.Dominant)
+                {
+                    dominant = deviation;
+                    break;
+                }
+            }
 
             if (dominant is null)
             {
+                cached = string.Empty;
+                _dominantInfoCache[summary] = cached;
                 return string.Empty;
             }
 
-            var sortedPairs = dominant.ColumnPairDescriptions
-                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var sortedPairs = new List<string>(dominant.ColumnPairDescriptions.Count);
+            foreach (var pair in dominant.ColumnPairDescriptions)
+            {
+                sortedPairs.Add(pair);
+            }
+
+            sortedPairs.Sort(StringComparer.OrdinalIgnoreCase);
             var pct = (dominant.Ratio * 100).ToString("F0", CultureInfo.InvariantCulture);
-            return $" The dominant pattern uses [{string.Join(", ", sortedPairs)}] ({pct}%).";
+            cached = $" The dominant pattern uses [{string.Join(", ", sortedPairs)}] ({pct}%).";
+            _dominantInfoCache[summary] = cached;
+            return cached;
         }
 
         private static string? GetJoinTypeName(QualifiedJoinType joinType) =>
@@ -350,6 +421,18 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         private (ResolvedTable Table, string ColumnName)? ResolveColumnToTable(ColumnReferenceExpression colRef)
         {
+            if (_resolvedColumnCache.TryGetValue(colRef, out var cached))
+            {
+                return cached;
+            }
+
+            var resolved = ResolveColumnToTableCore(colRef);
+            _resolvedColumnCache[colRef] = resolved;
+            return resolved;
+        }
+
+        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTableCore(ColumnReferenceExpression colRef)
+        {
             if (_currentAliasMap is null || colRef.ColumnType == ColumnType.Wildcard)
             {
                 return null;
@@ -365,26 +448,43 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             if (identifiers.Count >= 2)
             {
-                foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
+                if (QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out var resolved))
                 {
-                    if (_currentAliasMap.TryResolve(key, out var resolved))
-                    {
-                        return resolved is null ? null : (resolved, columnName);
-                    }
+                    return resolved is null ? null : (resolved, columnName);
                 }
 
                 return null;
             }
 
+            if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
+            {
+                return unqualifiedCached;
+            }
+
             foreach (var table in _currentAliasMap.AllTables)
             {
-                if (schema.ResolveColumn(table, columnName) is not null)
+                if (ColumnExists(table, columnName))
                 {
-                    return (table, columnName);
+                    var result = (table, columnName);
+                    _unqualifiedColumnResolutionCache[columnName] = result;
+                    return result;
                 }
             }
 
+            _unqualifiedColumnResolutionCache[columnName] = null;
             return null;
+        }
+
+        private bool ColumnExists(ResolvedTable table, string columnName)
+        {
+            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
+            {
+                return exists;
+            }
+
+            exists = schema.ResolveColumn(table, columnName) is not null;
+            _columnExistsCache[(table, columnName)] = exists;
+            return exists;
         }
 
         /// <summary>
@@ -521,9 +621,12 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         private static void TryAddUniqueTable(List<ResolvedTable> tables, ResolvedTable table)
         {
-            if (tables.Any(t => TablesAreEqual(t, table)))
+            for (var i = 0; i < tables.Count; i++)
             {
-                return;
+                if (TablesAreEqual(tables[i], table))
+                {
+                    return;
+                }
             }
 
             tables.Add(table);
@@ -557,5 +660,23 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b) =>
             string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase) &&
             string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
+
+        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
+        {
+            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
+
+            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
+                TablesAreEqual(x.Table, y.Table)
+                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
+        }
     }
 }

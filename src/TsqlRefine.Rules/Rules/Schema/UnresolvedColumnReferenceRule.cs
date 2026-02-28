@@ -23,13 +23,22 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
     private sealed class UnresolvedColumnReferenceVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private AliasMap? _currentAliasMap;
+        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
+            new(ResolvedTableColumnKeyComparer.Instance);
+        private Dictionary<string, IReadOnlyList<ResolvedTable>> _unqualifiedColumnMatchesCache =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
+                var previousColumnExistsCache = _columnExistsCache;
+                var previousUnqualifiedColumnMatchesCache = _unqualifiedColumnMatchesCache;
+
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
+                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
+                _unqualifiedColumnMatchesCache = new Dictionary<string, IReadOnlyList<ResolvedTable>>(StringComparer.OrdinalIgnoreCase);
 
                 // Visit SELECT list, WHERE, etc. with the alias map in scope
                 VisitSelectElements(node.SelectElements);
@@ -42,6 +51,8 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 node.FromClause.Accept(this);
 
                 _currentAliasMap = previousMap;
+                _columnExistsCache = previousColumnExistsCache;
+                _unqualifiedColumnMatchesCache = previousUnqualifiedColumnMatchesCache;
                 return; // We manually visited children
             }
 
@@ -107,8 +118,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                     return;
                 }
 
-                var resolvedColumn = schema.ResolveColumn(resolvedTable, columnName);
-                if (resolvedColumn is null)
+                if (!ColumnExists(resolvedTable, columnName))
                 {
                     AddDiagnostic(
                         fragment: node,
@@ -123,15 +133,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             {
                 // Unqualified column — search all tables
                 var columnName = identifiers[0].Value;
-                var matches = new List<ResolvedTable>();
-
-                foreach (var table in _currentAliasMap.AllTables)
-                {
-                    if (schema.ResolveColumn(table, columnName) is not null)
-                    {
-                        matches.Add(table);
-                    }
-                }
+                var matches = FindTablesContainingColumn(columnName);
 
                 if (matches.Count == 0 && _currentAliasMap.AllTables.Count > 0)
                 {
@@ -168,17 +170,68 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 return false;
             }
 
-            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
+            return QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out resolvedTable);
+        }
+
+        private bool ColumnExists(ResolvedTable table, string columnName)
+        {
+            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
             {
-                if (_currentAliasMap.TryResolve(key, out resolvedTable))
+                return exists;
+            }
+
+            exists = schema.ResolveColumn(table, columnName) is not null;
+            _columnExistsCache[(table, columnName)] = exists;
+            return exists;
+        }
+
+        private IReadOnlyList<ResolvedTable> FindTablesContainingColumn(string columnName)
+        {
+            if (_unqualifiedColumnMatchesCache.TryGetValue(columnName, out var cached))
+            {
+                return cached;
+            }
+
+            if (_currentAliasMap is null || _currentAliasMap.AllTables.Count == 0)
+            {
+                cached = Array.Empty<ResolvedTable>();
+                _unqualifiedColumnMatchesCache[columnName] = cached;
+                return cached;
+            }
+
+            var matches = new List<ResolvedTable>();
+            foreach (var table in _currentAliasMap.AllTables)
+            {
+                if (ColumnExists(table, columnName))
                 {
-                    return true;
+                    matches.Add(table);
                 }
             }
 
-            resolvedTable = null;
-            return false;
+            cached = matches.Count == 0 ? Array.Empty<ResolvedTable>() : matches;
+            _unqualifiedColumnMatchesCache[columnName] = cached;
+            return cached;
         }
 
+        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
+        {
+            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
+
+            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
+                string.Equals(x.Table.DatabaseName, y.Table.DatabaseName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Table.SchemaName, y.Table.SchemaName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Table.TableName, y.Table.TableName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
+        }
     }
 }

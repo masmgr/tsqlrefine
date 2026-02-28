@@ -25,19 +25,40 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
     private sealed class ImplicitConversionVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private AliasMap? _currentAliasMap;
+        private Dictionary<ScalarExpression, SchemaTypeInfo?> _expressionTypeCache =
+            new(ReferenceEqualityComparer.Instance);
+        private Dictionary<ColumnReferenceExpression, SchemaTypeInfo?> _columnTypeCache =
+            new(ReferenceEqualityComparer.Instance);
+        private Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?> _tableColumnTypeCache =
+            new(ResolvedTableColumnKeyComparer.Instance);
+        private Dictionary<string, SchemaTypeInfo?> _unqualifiedColumnTypeCache =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
+                var previousExpressionTypeCache = _expressionTypeCache;
+                var previousColumnTypeCache = _columnTypeCache;
+                var previousTableColumnTypeCache = _tableColumnTypeCache;
+                var previousUnqualifiedColumnTypeCache = _unqualifiedColumnTypeCache;
+
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
+                _expressionTypeCache = new Dictionary<ScalarExpression, SchemaTypeInfo?>(ReferenceEqualityComparer.Instance);
+                _columnTypeCache = new Dictionary<ColumnReferenceExpression, SchemaTypeInfo?>(ReferenceEqualityComparer.Instance);
+                _tableColumnTypeCache = new Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?>(ResolvedTableColumnKeyComparer.Instance);
+                _unqualifiedColumnTypeCache = new Dictionary<string, SchemaTypeInfo?>(StringComparer.OrdinalIgnoreCase);
 
                 node.WhereClause?.Accept(this);
                 node.HavingClause?.Accept(this);
                 node.FromClause.Accept(this);
 
                 _currentAliasMap = previousMap;
+                _expressionTypeCache = previousExpressionTypeCache;
+                _columnTypeCache = previousColumnTypeCache;
+                _tableColumnTypeCache = previousTableColumnTypeCache;
+                _unqualifiedColumnTypeCache = previousUnqualifiedColumnTypeCache;
                 return;
             }
 
@@ -108,15 +129,32 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
 
         private SchemaTypeInfo? ResolveExpressionType(ScalarExpression expression)
         {
-            if (expression is ColumnReferenceExpression colRef)
+            if (_expressionTypeCache.TryGetValue(expression, out var cached))
             {
-                return ResolveColumnType(colRef);
+                return cached;
             }
 
-            return InferLiteralType(expression);
+            var resolved = expression is ColumnReferenceExpression colRef
+                ? ResolveColumnType(colRef)
+                : InferLiteralType(expression);
+
+            _expressionTypeCache[expression] = resolved;
+            return resolved;
         }
 
         private SchemaTypeInfo? ResolveColumnType(ColumnReferenceExpression colRef)
+        {
+            if (_columnTypeCache.TryGetValue(colRef, out var cached))
+            {
+                return cached;
+            }
+
+            var resolved = ResolveColumnTypeCore(colRef);
+            _columnTypeCache[colRef] = resolved;
+            return resolved;
+        }
+
+        private SchemaTypeInfo? ResolveColumnTypeCore(ColumnReferenceExpression colRef)
         {
             if (_currentAliasMap is null || colRef.ColumnType == ColumnType.Wildcard)
             {
@@ -138,22 +176,29 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
                     return null;
                 }
 
-                var resolved = schema.ResolveColumn(resolvedTable, columnName);
-                return resolved?.Column.Type;
+                return ResolveColumnType(resolvedTable, columnName);
             }
             else
             {
                 // Unqualified — search all tables, return first match
                 var columnName = identifiers[0].Value;
+
+                if (_unqualifiedColumnTypeCache.TryGetValue(columnName, out var unqualifiedCached))
+                {
+                    return unqualifiedCached;
+                }
+
                 foreach (var table in _currentAliasMap.AllTables)
                 {
-                    var resolved = schema.ResolveColumn(table, columnName);
+                    var resolved = ResolveColumnType(table, columnName);
                     if (resolved is not null)
                     {
-                        return resolved.Column.Type;
+                        _unqualifiedColumnTypeCache[columnName] = resolved;
+                        return resolved;
                     }
                 }
 
+                _unqualifiedColumnTypeCache[columnName] = null;
                 return null;
             }
         }
@@ -166,16 +211,19 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
                 return false;
             }
 
-            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
+            return QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out resolvedTable);
+        }
+
+        private SchemaTypeInfo? ResolveColumnType(ResolvedTable table, string columnName)
+        {
+            if (_tableColumnTypeCache.TryGetValue((table, columnName), out var cached))
             {
-                if (_currentAliasMap.TryResolve(key, out resolvedTable))
-                {
-                    return true;
-                }
+                return cached;
             }
 
-            resolvedTable = null;
-            return false;
+            var resolved = schema.ResolveColumn(table, columnName)?.Column.Type;
+            _tableColumnTypeCache[(table, columnName)] = resolved;
+            return resolved;
         }
 
         private static SchemaTypeInfo? InferLiteralType(ScalarExpression expression)
@@ -201,6 +249,27 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
             }
 
             return string.Join(".", identifiers.Select(i => i.Value));
+        }
+
+        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
+        {
+            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
+
+            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
+                string.Equals(x.Table.DatabaseName, y.Table.DatabaseName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Table.SchemaName, y.Table.SchemaName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.Table.TableName, y.Table.TableName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
+            {
+                var hash = new HashCode();
+                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
         }
     }
 }
