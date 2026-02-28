@@ -132,6 +132,24 @@ public sealed class JoinColumnDeviationRuleTests
     }
 
     [Fact]
+    public void Analyze_NestedJoinSide_UsesOnClauseReferencedTable()
+    {
+        const string sql = @"
+            SELECT o.Id
+            FROM dbo.Orders AS o
+            LEFT JOIN (dbo.Products AS p INNER JOIN dbo.Users AS u ON u.Id = p.Id)
+                ON p.Id = o.Amount;
+        ";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema(), CreateDeviations());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-column-deviation");
+        Assert.Contains(diagnostics, d => d.Message.Contains("dbo.Products", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Analyze_ReversedOnClauseOrder_StillDetects()
     {
         // ON o.Amount = u.Id (reversed compared to ON u.Id = o.Amount) — same Rare pattern

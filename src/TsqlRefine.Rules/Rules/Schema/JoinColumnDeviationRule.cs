@@ -67,9 +67,16 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 return;
             }
 
+            // Extract equality column pairs from ON clause (AND-connected only, skip OR)
+            var rawPairs = ExtractEqualityPairs(node.SearchCondition);
+            if (rawPairs.Count == 0)
+            {
+                return;
+            }
+
             // Collect tables from each side of the JOIN
-            var leftTableRef = ResolveFirstNamedTable(node.FirstTableReference);
-            var rightTableRef = ResolveFirstNamedTable(node.SecondTableReference);
+            var leftTableRef = ResolveSideTableFromPairs(node.FirstTableReference, rawPairs);
+            var rightTableRef = ResolveSideTableFromPairs(node.SecondTableReference, rawPairs);
             if (leftTableRef is null || rightTableRef is null)
             {
                 return;
@@ -77,13 +84,6 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             var leftTable = leftTableRef;
             var rightTable = rightTableRef;
-
-            // Extract equality column pairs from ON clause (AND-connected only, skip OR)
-            var rawPairs = ExtractEqualityPairs(node.SearchCondition);
-            if (rawPairs.Count == 0)
-            {
-                return;
-            }
 
             // Orient column pairs so Left = FirstTableReference side, Right = SecondTableReference side
             var columnPairs = OrientColumnPairs(rawPairs, leftTable, rightTable);
@@ -410,7 +410,112 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             return result;
         }
 
-        private ResolvedTable? ResolveFirstNamedTable(TableReference tableRef)
+        private ResolvedTable? ResolveSideTableFromPairs(
+            TableReference tableRef,
+            List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right,
+                BooleanComparisonExpression Node)> rawPairs)
+        {
+            var candidates = ResolveNamedTables(tableRef);
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
+
+            if (candidates.Count == 1)
+            {
+                return candidates[0];
+            }
+
+            var referenced = new List<ResolvedTable>();
+
+            foreach (var (left, right, _) in rawPairs)
+            {
+                var leftResolved = ResolveColumnToTable(left);
+                if (leftResolved is not null)
+                {
+                    TryAddReferencedCandidate(referenced, candidates, leftResolved.Value.Table);
+                }
+
+                var rightResolved = ResolveColumnToTable(right);
+                if (rightResolved is not null)
+                {
+                    TryAddReferencedCandidate(referenced, candidates, rightResolved.Value.Table);
+                }
+            }
+
+            if (referenced.Count == 1)
+            {
+                return referenced[0];
+            }
+
+            if (referenced.Count > 1)
+            {
+                // Ambiguous side resolution in nested joins — skip to avoid false positives.
+                return null;
+            }
+
+            return ResolveFallbackSideTable(tableRef);
+        }
+
+        private List<ResolvedTable> ResolveNamedTables(TableReference tableRef)
+        {
+            var tables = new List<ResolvedTable>();
+            CollectResolvedNamedTables(tableRef, tables);
+            return tables;
+        }
+
+        private void CollectResolvedNamedTables(TableReference tableRef, List<ResolvedTable> tables)
+        {
+            switch (tableRef)
+            {
+                case NamedTableReference named:
+                    var alias = named.Alias?.Value ?? named.SchemaObject.BaseIdentifier?.Value;
+                    if (alias is not null &&
+                        _currentAliasMap?.TryResolve(alias, out var resolved) == true &&
+                        resolved is not null)
+                    {
+                        TryAddUniqueTable(tables, resolved);
+                    }
+
+                    return;
+
+                case JoinTableReference join:
+                    CollectResolvedNamedTables(join.FirstTableReference, tables);
+                    CollectResolvedNamedTables(join.SecondTableReference, tables);
+                    return;
+
+                case JoinParenthesisTableReference joinParen when joinParen.Join is not null:
+                    CollectResolvedNamedTables(joinParen.Join, tables);
+                    return;
+            }
+        }
+
+        private static void TryAddReferencedCandidate(
+            List<ResolvedTable> referenced,
+            IReadOnlyList<ResolvedTable> candidates,
+            ResolvedTable table)
+        {
+            foreach (var candidate in candidates)
+            {
+                if (TablesAreEqual(candidate, table))
+                {
+                    TryAddUniqueTable(referenced, candidate);
+                    return;
+                }
+            }
+        }
+
+        private static void TryAddUniqueTable(List<ResolvedTable> tables, ResolvedTable table)
+        {
+            if (tables.Any(t => TablesAreEqual(t, table)))
+            {
+                return;
+            }
+
+            tables.Add(table);
+        }
+
+        private ResolvedTable? ResolveFallbackSideTable(TableReference tableRef)
         {
             if (tableRef is NamedTableReference named)
             {
@@ -423,9 +528,13 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             }
             else if (tableRef is JoinTableReference join)
             {
-                // For nested JOINs, try the rightmost (second) table first
-                return ResolveFirstNamedTable(join.SecondTableReference)
-                    ?? ResolveFirstNamedTable(join.FirstTableReference);
+                // For nested JOINs, prefer the rightmost (second) table.
+                return ResolveFallbackSideTable(join.SecondTableReference)
+                    ?? ResolveFallbackSideTable(join.FirstTableReference);
+            }
+            else if (tableRef is JoinParenthesisTableReference joinParen && joinParen.Join is not null)
+            {
+                return ResolveFallbackSideTable(joinParen.Join);
             }
 
             return null;

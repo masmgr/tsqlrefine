@@ -231,6 +231,43 @@ public sealed class AvoidNotInWithNullRuleTests
     }
 
     [Fact]
+    public void Analyze_NotInWithSubquery_NotNullableColumnOnNullSupplyingOuterJoinSide_ReturnsDiagnostic()
+    {
+        const string sql = @"
+            SELECT *
+            FROM dbo.Orders
+            WHERE CustomerId NOT IN (
+                SELECT b.CustomerId
+                FROM dbo.Customers AS c
+                LEFT JOIN dbo.Blacklist AS b ON b.CustomerId = c.CustomerId
+            );
+        ";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_NotNullableColumnOnPreservedOuterJoinSide_NoDiagnostic()
+    {
+        const string sql = @"
+            SELECT *
+            FROM dbo.Orders
+            WHERE CustomerId NOT IN (
+                SELECT b.CustomerId
+                FROM dbo.Blacklist AS b
+                LEFT JOIN dbo.Customers AS c ON c.CustomerId = b.CustomerId
+            );
+        ";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_NotInWithSubquery_ExpressionInSelect_ReturnsDiagnostic()
     {
         const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT ISNULL(CustomerId, 0) FROM dbo.NullableList);";
