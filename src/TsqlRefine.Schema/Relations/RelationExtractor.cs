@@ -28,44 +28,60 @@ internal static class RelationExtractor
     }
 
     /// <summary>
-    /// Resolves the table name and schema from a table reference.
-    /// For nested JOINs (e.g., <c>A JOIN B JOIN C</c>), returns the rightmost named table
-    /// since that is the most recently joined table participating in the outer ON clause.
-    /// Returns null if the reference cannot be resolved to a named table.
+    /// Collects all named tables reachable from a table reference subtree.
     /// </summary>
-    private static (string Schema, string Table, string AliasOrName)? ResolveNamedTable(
-        TableReference tableRef) =>
-        tableRef switch
+    private static List<NamedTableRef> CollectNamedTables(TableReference tableRef)
+    {
+        var result = new List<NamedTableRef>();
+        CollectNamedTablesCore(tableRef, result);
+        return result;
+    }
+
+    private static void CollectNamedTablesCore(TableReference tableRef, List<NamedTableRef> result)
+    {
+        switch (tableRef)
         {
-            NamedTableReference named => (
-                named.SchemaObject.SchemaIdentifier?.Value ?? "dbo",
-                named.SchemaObject.BaseIdentifier.Value,
-                named.Alias?.Value ?? named.SchemaObject.BaseIdentifier.Value),
-            QualifiedJoin join => ResolveNamedTable(join.SecondTableReference),
-            UnqualifiedJoin join => ResolveNamedTable(join.SecondTableReference),
-            JoinParenthesisTableReference paren => ResolveNamedTable(paren.Join),
-            _ => null
-        };
+            case NamedTableReference named:
+                var tableName = named.SchemaObject.BaseIdentifier?.Value;
+                if (string.IsNullOrWhiteSpace(tableName))
+                {
+                    return;
+                }
+
+                result.Add(new NamedTableRef(
+                    named.SchemaObject.SchemaIdentifier?.Value ?? "dbo",
+                    tableName,
+                    named.Alias?.Value ?? tableName));
+                return;
+            case JoinTableReference join:
+                CollectNamedTablesCore(join.FirstTableReference, result);
+                CollectNamedTablesCore(join.SecondTableReference, result);
+                return;
+            case JoinParenthesisTableReference paren when paren.Join is not null:
+                CollectNamedTablesCore(paren.Join, result);
+                return;
+        }
+    }
 
     /// <summary>
     /// Extracts column pairs from a JOIN ON clause search condition.
     /// Only extracts equality comparisons (<c>=</c>) between column references connected by AND.
     /// </summary>
-    private static List<ColumnPair> ExtractColumnPairs(
+    private static List<MatchedColumnPair> ExtractColumnPairs(
         BooleanExpression? condition,
-        string leftAliasOrName,
-        string rightAliasOrName)
+        ISet<string> leftAliases,
+        ISet<string> rightAliases)
     {
-        var pairs = new List<ColumnPair>();
-        CollectEqualityPairs(condition, leftAliasOrName, rightAliasOrName, pairs);
+        var pairs = new List<MatchedColumnPair>();
+        CollectEqualityPairs(condition, leftAliases, rightAliases, pairs);
         return pairs;
     }
 
     private static void CollectEqualityPairs(
         BooleanExpression? expression,
-        string leftAlias,
-        string rightAlias,
-        List<ColumnPair> pairs)
+        ISet<string> leftAliases,
+        ISet<string> rightAliases,
+        List<MatchedColumnPair> pairs)
     {
         switch (expression)
         {
@@ -73,7 +89,7 @@ internal static class RelationExtractor
                 if (comp.FirstExpression is ColumnReferenceExpression leftCol &&
                     comp.SecondExpression is ColumnReferenceExpression rightCol)
                 {
-                    var pair = MatchColumnPair(leftCol, rightCol, leftAlias, rightAlias);
+                    var pair = MatchColumnPair(leftCol, rightCol, leftAliases, rightAliases);
                     if (pair is not null)
                     {
                         pairs.Add(pair);
@@ -83,12 +99,12 @@ internal static class RelationExtractor
                 break;
 
             case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } binary:
-                CollectEqualityPairs(binary.FirstExpression, leftAlias, rightAlias, pairs);
-                CollectEqualityPairs(binary.SecondExpression, leftAlias, rightAlias, pairs);
+                CollectEqualityPairs(binary.FirstExpression, leftAliases, rightAliases, pairs);
+                CollectEqualityPairs(binary.SecondExpression, leftAliases, rightAliases, pairs);
                 break;
 
             case BooleanParenthesisExpression paren:
-                CollectEqualityPairs(paren.Expression, leftAlias, rightAlias, pairs);
+                CollectEqualityPairs(paren.Expression, leftAliases, rightAliases, pairs);
                 break;
         }
     }
@@ -96,11 +112,11 @@ internal static class RelationExtractor
     /// <summary>
     /// Matches a pair of column references to the left and right tables based on their table qualifiers.
     /// </summary>
-    private static ColumnPair? MatchColumnPair(
+    private static MatchedColumnPair? MatchColumnPair(
         ColumnReferenceExpression col1,
         ColumnReferenceExpression col2,
-        string leftAlias,
-        string rightAlias)
+        ISet<string> leftAliases,
+        ISet<string> rightAliases)
     {
         var qualifier1 = GetTableQualifier(col1);
         var qualifier2 = GetTableQualifier(col2);
@@ -113,29 +129,78 @@ internal static class RelationExtractor
         }
 
         // col1 is left, col2 is right
-        if (IsMatch(qualifier1, leftAlias) && IsMatch(qualifier2, rightAlias))
+        if (IsInAliasSet(qualifier1, leftAliases) && IsInAliasSet(qualifier2, rightAliases))
         {
-            return new ColumnPair(colName1, colName2);
+            return new MatchedColumnPair(qualifier1!, colName1, qualifier2!, colName2);
         }
 
         // col1 is right, col2 is left (swapped)
-        if (IsMatch(qualifier1, rightAlias) && IsMatch(qualifier2, leftAlias))
+        if (IsInAliasSet(qualifier1, rightAliases) && IsInAliasSet(qualifier2, leftAliases))
         {
-            return new ColumnPair(colName2, colName1);
+            return new MatchedColumnPair(qualifier2!, colName2, qualifier1!, colName1);
         }
 
         // If no qualifiers, use positional heuristic
-        if (qualifier1 is null && qualifier2 is null)
+        if (qualifier1 is null && qualifier2 is null &&
+            TryGetSingleAlias(leftAliases, out var leftAlias) &&
+            TryGetSingleAlias(rightAliases, out var rightAlias))
         {
-            return new ColumnPair(colName1, colName2);
+            return new MatchedColumnPair(leftAlias, colName1, rightAlias, colName2);
         }
 
         return null;
     }
 
-    private static bool IsMatch(string? qualifier, string aliasOrName) =>
+    private static bool IsInAliasSet(string? qualifier, ISet<string> aliases) =>
         qualifier is not null &&
-        string.Equals(qualifier, aliasOrName, StringComparison.OrdinalIgnoreCase);
+        aliases.Contains(qualifier);
+
+    private static bool TryGetSingleAlias(ISet<string> aliases, out string alias)
+    {
+        if (aliases.Count == 1)
+        {
+            alias = aliases.First();
+            return true;
+        }
+
+        alias = string.Empty;
+        return false;
+    }
+
+    private static JoinExtractionResult BuildJoinExtractionResult(
+        IReadOnlyList<NamedTableRef> leftTables,
+        IReadOnlyList<NamedTableRef> rightTables,
+        IReadOnlyList<MatchedColumnPair> matchedPairs)
+    {
+        if (matchedPairs.Count == 0)
+        {
+            // Preserve previous fallback behavior when ON-clause columns cannot be mapped.
+            return new JoinExtractionResult(
+                leftTables[^1],
+                rightTables[^1],
+                []);
+        }
+
+        var bestAliasPair = matchedPairs
+            .GroupBy(static p => (p.LeftAlias, p.RightAlias))
+            .OrderByDescending(static g => g.Count())
+            .ThenBy(static g => g.Key.LeftAlias, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(static g => g.Key.RightAlias, StringComparer.OrdinalIgnoreCase)
+            .First();
+
+        var left = leftTables.FirstOrDefault(t =>
+            string.Equals(t.AliasOrName, bestAliasPair.Key.LeftAlias, StringComparison.OrdinalIgnoreCase))
+            ?? leftTables[^1];
+        var right = rightTables.FirstOrDefault(t =>
+            string.Equals(t.AliasOrName, bestAliasPair.Key.RightAlias, StringComparison.OrdinalIgnoreCase))
+            ?? rightTables[^1];
+
+        var pairs = bestAliasPair
+            .Select(static p => new ColumnPair(p.LeftColumn, p.RightColumn))
+            .ToList();
+
+        return new JoinExtractionResult(left, right, pairs);
+    }
 
     private static string? GetTableQualifier(ColumnReferenceExpression colRef)
     {
@@ -172,24 +237,31 @@ internal static class RelationExtractor
 
         public override void ExplicitVisit(QualifiedJoin node)
         {
-            // Resolve left and right table references
-            var left = ResolveNamedTable(node.FirstTableReference);
-            var right = ResolveNamedTable(node.SecondTableReference);
+            var leftTables = CollectNamedTables(node.FirstTableReference);
+            var rightTables = CollectNamedTables(node.SecondTableReference);
 
             // Only process when both sides are named tables
-            if (left is not null && right is not null)
+            if (leftTables.Count > 0 && rightTables.Count > 0)
             {
+                var leftAliases = leftTables
+                    .Select(static t => t.AliasOrName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var rightAliases = rightTables
+                    .Select(static t => t.AliasOrName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var matchedPairs = ExtractColumnPairs(node.SearchCondition, leftAliases, rightAliases);
+                var extraction = BuildJoinExtractionResult(leftTables, rightTables, matchedPairs);
+
                 var joinType = JoinTypeNames.GetValueOrDefault(node.QualifiedJoinType, "INNER");
-                var columnPairs = ExtractColumnPairs(
-                    node.SearchCondition, left.Value.AliasOrName, right.Value.AliasOrName);
 
                 Joins.Add(new RawJoinInfo(
-                    left.Value.Schema,
-                    left.Value.Table,
-                    right.Value.Schema,
-                    right.Value.Table,
+                    extraction.LeftTable.Schema,
+                    extraction.LeftTable.Table,
+                    extraction.RightTable.Schema,
+                    extraction.RightTable.Table,
                     joinType,
-                    columnPairs,
+                    extraction.ColumnPairs,
                     _sourceFile
                 ));
             }
@@ -203,16 +275,18 @@ internal static class RelationExtractor
             // Handle CROSS JOIN (unqualified)
             if (node.UnqualifiedJoinType == UnqualifiedJoinType.CrossJoin)
             {
-                var left = ResolveNamedTable(node.FirstTableReference);
-                var right = ResolveNamedTable(node.SecondTableReference);
+                var leftTables = CollectNamedTables(node.FirstTableReference);
+                var rightTables = CollectNamedTables(node.SecondTableReference);
 
-                if (left is not null && right is not null)
+                if (leftTables.Count > 0 && rightTables.Count > 0)
                 {
+                    var left = leftTables[^1];
+                    var right = rightTables[^1];
                     Joins.Add(new RawJoinInfo(
-                        left.Value.Schema,
-                        left.Value.Table,
-                        right.Value.Schema,
-                        right.Value.Table,
+                        left.Schema,
+                        left.Table,
+                        right.Schema,
+                        right.Table,
                         "CROSS",
                         [],
                         _sourceFile
@@ -223,4 +297,17 @@ internal static class RelationExtractor
             base.ExplicitVisit(node);
         }
     }
+
+    private sealed record NamedTableRef(string Schema, string Table, string AliasOrName);
+
+    private sealed record MatchedColumnPair(
+        string LeftAlias,
+        string LeftColumn,
+        string RightAlias,
+        string RightColumn);
+
+    private sealed record JoinExtractionResult(
+        NamedTableRef LeftTable,
+        NamedTableRef RightTable,
+        IReadOnlyList<ColumnPair> ColumnPairs);
 }

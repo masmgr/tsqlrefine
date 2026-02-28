@@ -57,6 +57,23 @@ public sealed class RelationAggregatorTests
     }
 
     [Fact]
+    public void Aggregate_SwappedLeftRight_AlignsJoinDirection()
+    {
+        var rawJoins = new[]
+        {
+            new RawJoinInfo("dbo", "Users", "dbo", "Orders", "LEFT", [new ColumnPair("Id", "UserId")], "file1.sql"),
+            new RawJoinInfo("dbo", "Orders", "dbo", "Users", "RIGHT", [new ColumnPair("UserId", "Id")], "file2.sql"),
+        };
+
+        var profile = RelationAggregator.Aggregate(rawJoins, 2);
+
+        Assert.Single(profile.Relations);
+        Assert.Single(profile.Relations[0].Patterns);
+        Assert.Equal("RIGHT", profile.Relations[0].Patterns[0].JoinType);
+        Assert.Equal(2, profile.Relations[0].Patterns[0].OccurrenceCount);
+    }
+
+    [Fact]
     public void Aggregate_MultipleFiles_AggregatesAcross()
     {
         var rawJoins = new[]

@@ -102,12 +102,21 @@ internal static class RelationAggregator
         var swappedPairs = raw.ColumnPairs
             .Select(cp => new ColumnPair(cp.RightColumn, cp.LeftColumn))
             .ToList();
+        var swappedJoinType = SwapJoinDirection(raw.JoinType);
 
         return new CanonicalJoin(
             raw.RightSchema, raw.RightTable,
             raw.LeftSchema, raw.LeftTable,
-            raw.JoinType, swappedPairs, raw.SourceFile);
+            swappedJoinType, swappedPairs, raw.SourceFile);
     }
+
+    private static string SwapJoinDirection(string joinType) =>
+        joinType.ToUpperInvariant() switch
+        {
+            "LEFT" => "RIGHT",
+            "RIGHT" => "LEFT",
+            _ => joinType,
+        };
 
     private static string BuildPatternKey(string joinType, IReadOnlyList<ColumnPair> columnPairs)
     {
