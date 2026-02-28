@@ -192,4 +192,74 @@ public sealed class UnresolvedColumnReferenceRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    [Fact]
+    public void Analyze_OrderByMissingColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT u.Id FROM dbo.Users AS u ORDER BY u.BadCol;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_OrderByValidColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = "SELECT u.Id FROM dbo.Users AS u ORDER BY u.Name;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupByMissingColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT u.Name FROM dbo.Users AS u GROUP BY u.BadCol;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_GroupByValidColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = "SELECT u.Name FROM dbo.Users AS u GROUP BY u.Name;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_OrderByUnqualifiedMissingColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Id FROM dbo.Users ORDER BY BadCol;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_GroupByUnqualifiedMissingColumn_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Name FROM dbo.Users GROUP BY BadCol;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
 }

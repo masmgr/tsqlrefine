@@ -44,6 +44,7 @@
     { "id": "aggregate-in-where-clause" },
     { "id": "having-column-mismatch" },
     { "id": "insert-column-not-in-table" },
-    { "id": "update-column-not-in-table" }
+    { "id": "update-column-not-in-table" },
+    { "id": "delete-column-not-in-table" }
   ]
 }
