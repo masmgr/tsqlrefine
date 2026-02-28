@@ -19,17 +19,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 138
+- **Total Rules**: 139
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
   - Essential (pragmatic): 32 rules
-  - Recommended (recommended): 49 rules
+  - Recommended (recommended): 50 rules
   - Thorough (strict-logic): 20 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 23 rules (17%)
-  - Warning: 76 rules (55%)
+  - Warning: 77 rules (55%)
   - Information: 39 rules (28%)
 
 ## Importance Tiers
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 49 | 95 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 115 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 138 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 50 | 96 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 20 | 116 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 139 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -57,7 +57,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
-| **Schema** | 19 | Enforces database schema best practices |
+| **Schema** | 20 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -154,7 +154,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**49 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**50 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
 #### Correctness (10 rules)
 
@@ -206,7 +206,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md) | Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements. | Information | No |
 | [set-xact-abort](transactions/set-xact-abort.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 
-#### Schema (8 rules)
+#### Schema (9 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -218,6 +218,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md) | Detects JOINs where the ON columns match a foreign key relationship but the joined table differs from the FK target. | Warning | No |
 | [unresolved-column-reference](schema/unresolved-column-reference.md) | Detects references to columns that do not exist in the schema snapshot. | Warning | No |
 | [unresolved-table-reference](schema/unresolved-table-reference.md) | Detects references to tables or views that do not exist in the schema snapshot. | Warning | No |
+| [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md) | Detects UPDATE...FROM...JOIN where the join may produce multiple rows per target row, causing non-deterministic updates. | Warning | No |
 
 #### Style (6 rules)
 
@@ -349,7 +350,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (76 rules)
+### Warning (77 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -427,6 +428,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [unreachable-case-when](correctness/unreachable-case-when.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
+- [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
 
 ### Information (39 rules)
 

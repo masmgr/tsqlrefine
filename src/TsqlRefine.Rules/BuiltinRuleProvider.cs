@@ -122,6 +122,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new IndexColumnNotInTableRule(),
         new ImplicitConversionInPredicateSchemaRule(),
         new JoinForeignKeyMismatchRule(),
+        new UpdateJoinCardinalityMismatchRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
