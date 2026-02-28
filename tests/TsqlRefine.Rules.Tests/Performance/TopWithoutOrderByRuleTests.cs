@@ -1,11 +1,27 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Performance;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Performance;
 
 public sealed class TopWithoutOrderByRuleTests
 {
+    private static SchemaProvider CreateSchema() =>
+        new(TestSchemaBuilder.Create()
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Name", "nvarchar", maxLength: 100)
+                .AddColumn("Email", "nvarchar", maxLength: 200)
+                .WithPrimaryKey(true, "Id")
+                .AddUniqueConstraint("UQ_Users_Email", "Email"))
+            .AddTable("dbo", "OrderDetails", t => t
+                .AddColumn("OrderId", "int")
+                .AddColumn("ProductId", "int")
+                .AddColumn("Quantity", "int")
+                .WithPrimaryKey(true, "OrderId", "ProductId"))
+            .Build());
     [Theory]
     [InlineData("SELECT TOP 10 * FROM users;")]
     [InlineData("SELECT TOP 5 id, name FROM orders;")]
@@ -185,5 +201,115 @@ SELECT TOP 5 * FROM orders;";
         Assert.Contains("ORDER BY", rule.Metadata.Description);
     }
 
+    // --- Schema-aware unique column suppression tests ---
 
+    [Fact]
+    public void Analyze_WhereOnPrimaryKey_WithSchema_Suppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE Id = @id;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnUniqueConstraint_WithSchema_Suppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE Email = @email;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnNonUniqueColumn_WithSchema_StillFlags()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE Name = @name;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("top-without-order-by", diagnostics[0].Data?.RuleId);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnCompositePK_AllCovered_Suppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.OrderDetails WHERE OrderId = @orderId AND ProductId = @productId;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnCompositePK_PartialCovered_StillFlags()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.OrderDetails WHERE OrderId = @orderId;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereWithOrCondition_NotSuppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE Id = 1 OR Id = 2;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NoSchema_StillFlags()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE Id = @id;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        // No schema → no suppression → still flags
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnAliasedTable_WithSchema_Suppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users u WHERE u.Id = @id;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhereOnPK_WithParenthesizedCondition_Suppressed()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 * FROM dbo.Users WHERE (Id = @id);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
 }
