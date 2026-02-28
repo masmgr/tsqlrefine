@@ -111,7 +111,8 @@
     { "id": "unresolved-column-reference" },
     { "id": "insert-column-not-in-table" },
     { "id": "update-column-not-in-table" },
-    { "id": "implicit-conversion-in-predicate-schema" }
+    { "id": "implicit-conversion-in-predicate-schema" },
+    { "id": "join-foreign-key-mismatch" }
   ]
 }
 
