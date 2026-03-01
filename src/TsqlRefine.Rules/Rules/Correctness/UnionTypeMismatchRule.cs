@@ -1,10 +1,12 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
 /// <summary>
-/// Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation.
+/// Detects UNION/UNION ALL where corresponding columns have obviously different types, which may cause implicit conversion or data truncation.
+/// When schema information is available, resolves column reference types for more comprehensive detection.
 /// </summary>
 public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
 {
@@ -12,17 +14,17 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
         RuleId: "union-type-mismatch",
         Description: "Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation.",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Warning,
+        DefaultSeverity: RuleSeverity.Error,
         Fixable: false
     );
 
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
-        new UnionTypeMismatchVisitor();
+        new UnionTypeMismatchVisitor(context.Schema);
 
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class UnionTypeMismatchVisitor : DiagnosticVisitorBase
+    private sealed class UnionTypeMismatchVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
         public override void ExplicitVisit(BinaryQueryExpression node)
         {
@@ -46,10 +48,30 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
 
             var count = Math.Min(leftColumns.Count, rightColumns.Count);
 
+            // Build alias maps lazily (only when needed for column refs)
+            AliasMap? leftAliasMap = null;
+            AliasMap? rightAliasMap = null;
+
             for (var i = 0; i < count; i++)
             {
                 var leftType = GetLiteralCategory(leftColumns[i]);
                 var rightType = GetLiteralCategory(rightColumns[i]);
+
+                // Try schema resolution when literal detection returns null
+                if (schema is not null)
+                {
+                    if (leftType is null)
+                    {
+                        leftAliasMap ??= BuildAliasMapForLeg(node.FirstQueryExpression);
+                        leftType = ResolveColumnCategory(leftColumns[i], leftAliasMap);
+                    }
+
+                    if (rightType is null)
+                    {
+                        rightAliasMap ??= BuildAliasMapForLeg(node.SecondQueryExpression);
+                        rightType = ResolveColumnCategory(rightColumns[i], rightAliasMap);
+                    }
+                }
 
                 if (leftType is not null && rightType is not null && leftType != rightType)
                 {
@@ -62,6 +84,150 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
                     );
                 }
             }
+        }
+
+        private AliasMap? BuildAliasMapForLeg(QueryExpression? queryExpression)
+        {
+            var spec = GetQuerySpecification(queryExpression);
+            if (spec?.FromClause?.TableReferences is { Count: > 0 } tableRefs)
+            {
+                return AliasMapBuilder.Build(tableRefs, schema!);
+            }
+
+            return null;
+        }
+
+        private static QuerySpecification? GetQuerySpecification(QueryExpression? queryExpression)
+        {
+            return queryExpression switch
+            {
+                QuerySpecification spec => spec,
+                QueryParenthesisExpression paren => GetQuerySpecification(paren.QueryExpression),
+                BinaryQueryExpression bqe => GetQuerySpecification(bqe.SecondQueryExpression),
+                _ => null
+            };
+        }
+
+        private string? ResolveColumnCategory(SelectElement element, AliasMap? aliasMap)
+        {
+            if (aliasMap is null)
+            {
+                return null;
+            }
+
+            var expression = element is SelectScalarExpression scalar ? scalar.Expression : null;
+
+            // Unwrap parenthesized expressions
+            while (expression is ParenthesisExpression paren)
+            {
+                expression = paren.Expression;
+            }
+
+            if (expression is not ColumnReferenceExpression colRef
+                || colRef.ColumnType == ColumnType.Wildcard)
+            {
+                return null;
+            }
+
+            var resolved = ResolveColumn(colRef, aliasMap);
+            return resolved is null ? null : MapSchemaTypeCategory(resolved.Column.Type.Category);
+        }
+
+        private ResolvedColumn? ResolveColumn(ColumnReferenceExpression colRef, AliasMap aliasMap)
+        {
+            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
+            if (identifiers is null or { Count: 0 })
+            {
+                return null;
+            }
+
+            if (identifiers.Count >= 2)
+            {
+                var columnName = identifiers[^1].Value;
+
+                if (!TryResolveQualifiedTable(identifiers, aliasMap, out var resolvedTable)
+                    || resolvedTable is null)
+                {
+                    return null;
+                }
+
+                return schema!.ResolveColumn(resolvedTable, columnName);
+            }
+
+            // Unqualified column — search all tables in the alias map
+            var unqualifiedName = identifiers[0].Value;
+            foreach (var table in aliasMap.AllTables)
+            {
+                var resolved = schema!.ResolveColumn(table, unqualifiedName);
+                if (resolved is not null)
+                {
+                    return resolved;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryResolveQualifiedTable(
+            IList<Identifier> identifiers,
+            AliasMap aliasMap,
+            out ResolvedTable? resolvedTable)
+        {
+            foreach (var key in BuildQualifierLookupKeys(identifiers))
+            {
+                if (aliasMap.TryResolve(key, out resolvedTable))
+                {
+                    return true;
+                }
+            }
+
+            resolvedTable = null;
+            return false;
+        }
+
+        private static IEnumerable<string> BuildQualifierLookupKeys(IList<Identifier> identifiers)
+        {
+            var qualifierCount = identifiers.Count - 1;
+            if (qualifierCount <= 0)
+            {
+                yield break;
+            }
+
+            var parts = new string[qualifierCount];
+            for (var i = 0; i < qualifierCount; i++)
+            {
+                parts[i] = identifiers[i].Value;
+            }
+
+            if (parts.Length == 1)
+            {
+                yield return parts[0];
+                yield break;
+            }
+
+            yield return string.Join(".", parts);
+
+            if (parts.Length >= 2)
+            {
+                yield return $"{parts[^2]}.{parts[^1]}";
+            }
+
+            yield return parts[^1];
+        }
+
+        private static string? MapSchemaTypeCategory(SchemaTypeCategory category)
+        {
+            return category switch
+            {
+                SchemaTypeCategory.ExactNumeric => "numeric",
+                SchemaTypeCategory.ApproximateNumeric => "numeric",
+                SchemaTypeCategory.AnsiString => "string",
+                SchemaTypeCategory.UnicodeString => "string",
+                SchemaTypeCategory.DateTime => "datetime",
+                SchemaTypeCategory.Binary => "binary",
+                SchemaTypeCategory.UniqueIdentifier => "uniqueidentifier",
+                _ => null
+            };
         }
 
         private static IList<SelectElement>? GetSelectElements(QueryExpression? queryExpression)
