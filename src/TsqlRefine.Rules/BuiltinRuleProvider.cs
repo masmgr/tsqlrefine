@@ -118,6 +118,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UnresolvedColumnReferenceRule(),
         new InsertColumnNotInTableRule(),
         new UpdateColumnNotInTableRule(),
+        new DeleteColumnNotInTableRule(),
+        new IndexColumnNotInTableRule(),
         new ImplicitConversionInPredicateSchemaRule(),
         new JoinForeignKeyMismatchRule(),
 

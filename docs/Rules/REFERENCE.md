@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 136
+- **Total Rules**: 138
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
-  - Essential (pragmatic): 31 rules
-  - Recommended (recommended): 48 rules
+  - Essential (pragmatic): 32 rules
+  - Recommended (recommended): 49 rules
   - Thorough (strict-logic): 20 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 20 rules (15%)
-  - Warning: 77 rules (57%)
-  - Information: 39 rules (29%)
+  - Error: 23 rules (17%)
+  - Warning: 76 rules (55%)
+  - Information: 39 rules (28%)
 
 ## Importance Tiers
 
@@ -43,10 +43,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 31 | 45 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 48 | 93 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 113 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 136 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 49 | 95 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 20 | 115 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 138 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -57,7 +57,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
-| **Schema** | 17 | Enforces database schema best practices |
+| **Schema** | 19 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -98,7 +98,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Essential (pragmatic)
 
-**31 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
+**32 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
 
 #### Correctness (22 rules)
 
@@ -124,7 +124,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [semantic/data-type-length](correctness/semantic-data-type-length.md) | Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY). | Error | **Yes** |
 | [semantic/join-condition-always-true](correctness/semantic-join-condition-always-true.md) | Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons. | Warning | No |
 | [semantic/left-join-filtered-by-where](correctness/semantic-left-join-filtered-by-where.md) | Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN. | Warning | No |
-| [union-type-mismatch](correctness/union-type-mismatch.md) | Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation. | Warning | No |
+| [union-type-mismatch](correctness/union-type-mismatch.md) | Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation. | Error | No |
 | [unreachable-case-when](correctness/unreachable-case-when.md) | Detects duplicate WHEN conditions in CASE expressions that make later branches unreachable. | Warning | No |
 
 #### Performance (1 rules)
@@ -139,11 +139,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
 
-#### Schema (7 rules)
+#### Schema (8 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-deprecated-types](schema/avoid-deprecated-types.md) | Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead. | Warning | No |
+| [delete-column-not-in-table](schema/delete-column-not-in-table.md) | Detects DELETE statements whose WHERE clause references columns not found in the target table. | Error | No |
 | [duplicate-column-definition](schema/duplicate-column-definition.md) | Detects duplicate column names in CREATE TABLE definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-table-function-column](schema/duplicate-table-function-column.md) | Detects duplicate column names in table-valued function definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-table-variable-column](schema/duplicate-table-variable-column.md) | Detects duplicate column names in DECLARE @table TABLE variable definitions; duplicate columns always cause a runtime error. | Error | No |
@@ -153,7 +154,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**48 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**49 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
 #### Correctness (10 rules)
 
@@ -205,7 +206,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md) | Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements. | Information | No |
 | [set-xact-abort](transactions/set-xact-abort.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 
-#### Schema (7 rules)
+#### Schema (8 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -213,6 +214,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [duplicate-index-column](schema/duplicate-index-column.md) | Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition. | Warning | No |
 | [duplicate-index-definition](schema/duplicate-index-definition.md) | Detects multiple indexes or unique constraints within a table that have the exact same column composition. | Warning | No |
 | [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md) | Detects implicit type conversions on columns in predicates using schema type information. | Warning | No |
+| [index-column-not-in-table](schema/index-column-not-in-table.md) | Detects index definitions that reference columns not found in the target table. | Error | No |
 | [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md) | Detects JOINs where the ON columns match a foreign key relationship but the joined table differs from the FK target. | Warning | No |
 | [unresolved-column-reference](schema/unresolved-column-reference.md) | Detects references to columns that do not exist in the schema snapshot. | Warning | No |
 | [unresolved-table-reference](schema/unresolved-table-reference.md) | Detects references to tables or views that do not exist in the schema snapshot. | Warning | No |
@@ -321,7 +323,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (20 rules)
+### Error (23 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -329,12 +331,14 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
 - [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md)
 - [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md)
+- [delete-column-not-in-table](schema/delete-column-not-in-table.md)
 - [dml-without-where](safety/dml-without-where.md)
 - [duplicate-column-definition](schema/duplicate-column-definition.md)
 - [duplicate-insert-column](correctness/duplicate-insert-column.md)
 - [duplicate-table-function-column](schema/duplicate-table-function-column.md)
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
+- [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
@@ -342,9 +346,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md)
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
+- [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (77 rules)
+### Warning (76 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -419,7 +424,6 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
-- [union-type-mismatch](correctness/union-type-mismatch.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
