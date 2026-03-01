@@ -1,12 +1,29 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
 public sealed class AvoidNotInWithNullRuleTests
 {
     private readonly AvoidNotInWithNullRule _rule = new();
+
+    private static SchemaProvider CreateSchema() =>
+        new(TestSchemaBuilder.Create()
+            .AddTable("dbo", "Orders", t => t
+                .AddColumn("OrderId", "int")
+                .AddColumn("CustomerId", "int")
+                .AddColumn("Status", "varchar", maxLength: 50, nullable: true))
+            .AddTable("dbo", "Blacklist", t => t
+                .AddColumn("CustomerId", "int"))
+            .AddTable("dbo", "Customers", t => t
+                .AddColumn("CustomerId", "int", nullable: true)
+                .AddColumn("IsActive", "bit"))
+            .AddTable("dbo", "NullableList", t => t
+                .AddColumn("CustomerId", "int", nullable: true))
+            .Build());
 
     [Fact]
     public void Metadata_HasCorrectProperties()
@@ -169,5 +186,93 @@ public sealed class AvoidNotInWithNullRuleTests
         var fixes = _rule.GetFixes(context, diagnostic);
 
         Assert.Empty(fixes);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_NoSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Blacklist);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_SchemaColumnNotNullable_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Blacklist);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_SchemaColumnNullable_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Customers);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_AliasedTableNotNullable_NoDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT b.CustomerId FROM dbo.Blacklist AS b);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_ExpressionInSelect_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT ISNULL(CustomerId, 0) FROM dbo.NullableList);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_TempTable_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM #TempBlacklist);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_UnknownTable_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.UnknownTable);";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_MultipleNotInSubqueries_MixedNullability_ReturnsDiagnosticForNullableOnly()
+    {
+        const string sql = @"
+            SELECT *
+            FROM dbo.Orders
+            WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Blacklist)
+              AND CustomerId NOT IN (SELECT CustomerId FROM dbo.NullableList);
+        ";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
     }
 }
