@@ -111,4 +111,21 @@ public sealed class UpdateColumnNotInTableRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    [Fact]
+    public void Analyze_AliasTargetUpdateFromClause_ValidatesTargetColumns()
+    {
+        const string sql = """
+            UPDATE u
+            SET BadColumn = 1
+            FROM dbo.Users AS u;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("update-column-not-in-table", diagnostics[0].Code);
+        Assert.Contains("BadColumn", diagnostics[0].Message);
+    }
 }
