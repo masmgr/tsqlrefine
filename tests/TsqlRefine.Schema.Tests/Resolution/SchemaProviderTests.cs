@@ -354,4 +354,397 @@ public class SchemaProviderTests
         var provider = CreateProvider();
         Assert.Throws<ArgumentNullException>(() => provider.GetColumns(null!));
     }
+
+    // --- ER Information: Helper to create a provider with constraints ---
+
+    private static SchemaProvider CreateErProvider()
+    {
+        var snapshot = TestSchemaBuilder.Create("TestDb")
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int", isIdentity: true)
+                .AddColumn("Name", "nvarchar", maxLength: 100)
+                .AddColumn("Email", "nvarchar", maxLength: 256, nullable: true)
+                .WithPrimaryKey(true, "Id")
+                .AddUniqueConstraint("UQ_Users_Email", "Email"))
+            .AddTable("dbo", "Orders", t => t
+                .AddColumn("OrderId", "int", isIdentity: true)
+                .AddColumn("UserId", "int")
+                .AddColumn("Amount", "decimal", precision: 18, scale: 2)
+                .WithPrimaryKey(true, "OrderId")
+                .AddForeignKey("FK_Orders_Users", ["UserId"], "dbo", "Users", ["Id"]))
+            .AddTable("dbo", "OrderItems", t => t
+                .AddColumn("OrderId", "int")
+                .AddColumn("ProductId", "int")
+                .AddColumn("Quantity", "int")
+                .WithPrimaryKey(true, "OrderId", "ProductId")
+                .AddForeignKey("FK_OrderItems_Orders", ["OrderId"], "dbo", "Orders", ["OrderId"])
+                .AddForeignKey("FK_OrderItems_Products", ["ProductId"], "dbo", "Products", ["ProductId"]))
+            .AddTable("dbo", "Products", t => t
+                .AddColumn("ProductId", "int", isIdentity: true)
+                .AddColumn("Sku", "varchar", maxLength: 50)
+                .WithPrimaryKey(true, "ProductId")
+                .AddIndex("IX_Products_Sku", isUnique: true, isClustered: false, "Sku"))
+            .AddTable("dbo", "NoPkTable", t => t
+                .AddColumn("Col1", "int")
+                .AddColumn("Col2", "varchar", maxLength: 50))
+            .Build();
+
+        return new SchemaProvider(snapshot);
+    }
+
+    // --- GetPrimaryKey ---
+
+    [Fact]
+    public void GetPrimaryKey_TableWithPk_ReturnsPk()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var pk = provider.GetPrimaryKey(table);
+
+        Assert.NotNull(pk);
+        Assert.Single(pk!.Columns);
+        Assert.Equal("Id", pk.Columns[0]);
+        Assert.True(pk.IsClustered);
+    }
+
+    [Fact]
+    public void GetPrimaryKey_CompositePk_ReturnsAllColumns()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "OrderItems")!;
+        var pk = provider.GetPrimaryKey(table);
+
+        Assert.NotNull(pk);
+        Assert.Equal(2, pk!.Columns.Count);
+        Assert.Equal("OrderId", pk.Columns[0]);
+        Assert.Equal("ProductId", pk.Columns[1]);
+    }
+
+    [Fact]
+    public void GetPrimaryKey_NoPk_ReturnsNull()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "NoPkTable")!;
+        var pk = provider.GetPrimaryKey(table);
+
+        Assert.Null(pk);
+    }
+
+    [Fact]
+    public void GetPrimaryKey_NonExistentTable_ReturnsNull()
+    {
+        var provider = CreateErProvider();
+        var fakeTable = new ResolvedTable("TestDb", "dbo", "FakeTable", false);
+        var pk = provider.GetPrimaryKey(fakeTable);
+
+        Assert.Null(pk);
+    }
+
+    // --- GetUniqueConstraints ---
+
+    [Fact]
+    public void GetUniqueConstraints_WithUniqueConstraint_ReturnsConstraints()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var ucs = provider.GetUniqueConstraints(table);
+
+        Assert.Single(ucs);
+        Assert.Equal("UQ_Users_Email", ucs[0].Name);
+        Assert.Single(ucs[0].Columns);
+        Assert.Equal("Email", ucs[0].Columns[0]);
+    }
+
+    [Fact]
+    public void GetUniqueConstraints_WithUniqueIndex_IncludesIndex()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Products")!;
+        var ucs = provider.GetUniqueConstraints(table);
+
+        Assert.Single(ucs);
+        Assert.Equal("IX_Products_Sku", ucs[0].Name);
+        Assert.Equal("Sku", ucs[0].Columns[0]);
+    }
+
+    [Fact]
+    public void GetUniqueConstraints_NoConstraints_ReturnsEmpty()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "NoPkTable")!;
+        var ucs = provider.GetUniqueConstraints(table);
+
+        Assert.Empty(ucs);
+    }
+
+    [Fact]
+    public void GetUniqueConstraints_NonExistentTable_ReturnsEmpty()
+    {
+        var provider = CreateErProvider();
+        var fakeTable = new ResolvedTable("TestDb", "dbo", "FakeTable", false);
+        var ucs = provider.GetUniqueConstraints(fakeTable);
+
+        Assert.Empty(ucs);
+    }
+
+    // --- GetForeignKeys ---
+
+    [Fact]
+    public void GetForeignKeys_TableWithFk_ReturnsFks()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Orders")!;
+        var fks = provider.GetForeignKeys(table);
+
+        Assert.Single(fks);
+        Assert.Equal("FK_Orders_Users", fks[0].Name);
+        Assert.Equal("UserId", fks[0].SourceColumns[0]);
+        Assert.Equal("Users", fks[0].TargetTable.TableName);
+        Assert.Equal("Id", fks[0].TargetColumns[0]);
+    }
+
+    [Fact]
+    public void GetForeignKeys_MultipleFks_ReturnsAll()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "OrderItems")!;
+        var fks = provider.GetForeignKeys(table);
+
+        Assert.Equal(2, fks.Count);
+        Assert.Contains(fks, fk => fk.Name == "FK_OrderItems_Orders");
+        Assert.Contains(fks, fk => fk.Name == "FK_OrderItems_Products");
+    }
+
+    [Fact]
+    public void GetForeignKeys_NoFks_ReturnsEmpty()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var fks = provider.GetForeignKeys(table);
+
+        Assert.Empty(fks);
+    }
+
+    [Fact]
+    public void GetForeignKeys_SourceTableIsCorrect()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Orders")!;
+        var fks = provider.GetForeignKeys(table);
+
+        Assert.Single(fks);
+        Assert.Equal("Orders", fks[0].SourceTable.TableName);
+    }
+
+    // --- GetReferencingForeignKeys ---
+
+    [Fact]
+    public void GetReferencingForeignKeys_ReferencedTable_ReturnsFks()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var refs = provider.GetReferencingForeignKeys(table);
+
+        Assert.Single(refs);
+        Assert.Equal("FK_Orders_Users", refs[0].Name);
+        Assert.Equal("Orders", refs[0].SourceTable.TableName);
+    }
+
+    [Fact]
+    public void GetReferencingForeignKeys_MultipleReferences_ReturnsAll()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Orders")!;
+        var refs = provider.GetReferencingForeignKeys(table);
+
+        Assert.Single(refs);
+        Assert.Equal("FK_OrderItems_Orders", refs[0].Name);
+    }
+
+    [Fact]
+    public void GetReferencingForeignKeys_NotReferenced_ReturnsEmpty()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "NoPkTable")!;
+        var refs = provider.GetReferencingForeignKeys(table);
+
+        Assert.Empty(refs);
+    }
+
+    [Fact]
+    public void GetReferencingForeignKeys_TargetTableIsCorrect()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var refs = provider.GetReferencingForeignKeys(table);
+
+        Assert.Single(refs);
+        Assert.Equal("Users", refs[0].TargetTable.TableName);
+    }
+
+    // --- IsUniqueColumnSet ---
+
+    [Fact]
+    public void IsUniqueColumnSet_PkColumn_ReturnsTrue()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.True(provider.IsUniqueColumnSet(table, ["Id"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_CompositePk_ReturnsTrue()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "OrderItems")!;
+
+        Assert.True(provider.IsUniqueColumnSet(table, ["OrderId", "ProductId"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_PartialCompositePk_ReturnsFalse()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "OrderItems")!;
+
+        Assert.False(provider.IsUniqueColumnSet(table, ["OrderId"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_UniqueConstraintColumn_ReturnsTrue()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.True(provider.IsUniqueColumnSet(table, ["Email"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_UniqueIndexColumn_ReturnsTrue()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Products")!;
+
+        Assert.True(provider.IsUniqueColumnSet(table, ["Sku"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_NonUniqueColumn_ReturnsFalse()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.False(provider.IsUniqueColumnSet(table, ["Name"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_SupersetOfPk_ReturnsTrue()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        // PK is [Id], so [Id, Name] is a superset and still unique
+        Assert.True(provider.IsUniqueColumnSet(table, ["Id", "Name"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_EmptyColumns_ReturnsFalse()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.False(provider.IsUniqueColumnSet(table, []));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_NoPk_NoConstraints_ReturnsFalse()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "NoPkTable")!;
+
+        Assert.False(provider.IsUniqueColumnSet(table, ["Col1"]));
+    }
+
+    [Fact]
+    public void IsUniqueColumnSet_CaseInsensitive()
+    {
+        var provider = CreateErProvider();
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.True(provider.IsUniqueColumnSet(table, ["id"]));
+        Assert.True(provider.IsUniqueColumnSet(table, ["ID"]));
+    }
+
+    // --- EstimateJoinCardinality ---
+
+    [Fact]
+    public void EstimateJoinCardinality_OneToOne_BothUnique()
+    {
+        var provider = CreateErProvider();
+        var users = provider.ResolveTable(null, null, "Users")!;
+        var orders = provider.ResolveTable(null, null, "Orders")!;
+
+        // Users.Id (PK) joined with Orders.OrderId (PK) → 1:1
+        var cardinality = provider.EstimateJoinCardinality(
+            users, ["Id"], orders, ["OrderId"]);
+
+        Assert.Equal(JoinCardinality.OneToOne, cardinality);
+    }
+
+    [Fact]
+    public void EstimateJoinCardinality_OneToMany_LeftUnique()
+    {
+        var provider = CreateErProvider();
+        var users = provider.ResolveTable(null, null, "Users")!;
+        var orders = provider.ResolveTable(null, null, "Orders")!;
+
+        // Users.Id (PK, unique) joined with Orders.UserId (non-unique) → 1:N
+        var cardinality = provider.EstimateJoinCardinality(
+            users, ["Id"], orders, ["UserId"]);
+
+        Assert.Equal(JoinCardinality.OneToMany, cardinality);
+    }
+
+    [Fact]
+    public void EstimateJoinCardinality_ManyToOne_RightUnique()
+    {
+        var provider = CreateErProvider();
+        var orders = provider.ResolveTable(null, null, "Orders")!;
+        var users = provider.ResolveTable(null, null, "Users")!;
+
+        // Orders.UserId (non-unique) joined with Users.Id (PK) → N:1
+        var cardinality = provider.EstimateJoinCardinality(
+            orders, ["UserId"], users, ["Id"]);
+
+        Assert.Equal(JoinCardinality.ManyToOne, cardinality);
+    }
+
+    [Fact]
+    public void EstimateJoinCardinality_ManyToMany_NeitherUnique()
+    {
+        var provider = CreateErProvider();
+        var orders = provider.ResolveTable(null, null, "Orders")!;
+        var noPk = provider.ResolveTable(null, null, "NoPkTable")!;
+
+        // Both non-unique → N:M
+        var cardinality = provider.EstimateJoinCardinality(
+            orders, ["UserId"], noPk, ["Col1"]);
+
+        Assert.Equal(JoinCardinality.ManyToMany, cardinality);
+    }
+
+    [Fact]
+    public void EstimateJoinCardinality_CompositeKey_OneToMany()
+    {
+        var provider = CreateErProvider();
+        var orderItems = provider.ResolveTable(null, null, "OrderItems")!;
+        var orders = provider.ResolveTable(null, null, "Orders")!;
+
+        // OrderItems.OrderId (partial composite PK, non-unique) → Orders.OrderId (PK) → N:1
+        var cardinality = provider.EstimateJoinCardinality(
+            orderItems, ["OrderId"], orders, ["OrderId"]);
+
+        Assert.Equal(JoinCardinality.ManyToOne, cardinality);
+    }
 }

@@ -44,4 +44,28 @@ internal static class DtoMappers
     /// </summary>
     internal static SchemaSnapshotMetadata ToDto(this SnapshotMetadata metadata) =>
         new(metadata.GeneratedAt, metadata.ServerName, metadata.DatabaseName, metadata.CompatLevel, metadata.ContentHash);
+
+    /// <summary>
+    /// Converts a <see cref="PrimaryKeyInfo"/> to a <see cref="SchemaPrimaryKeyInfo"/>.
+    /// </summary>
+    internal static SchemaPrimaryKeyInfo ToDto(this PrimaryKeyInfo pk) =>
+        new(pk.Columns, pk.IsClustered);
+
+    /// <summary>
+    /// Converts a <see cref="UniqueConstraintInfo"/> to a <see cref="SchemaUniqueConstraintInfo"/>.
+    /// </summary>
+    internal static SchemaUniqueConstraintInfo ToDto(this UniqueConstraintInfo uc) =>
+        new(uc.Name, uc.Columns);
+
+    /// <summary>
+    /// Converts a unique <see cref="IndexInfo"/> to a <see cref="SchemaUniqueConstraintInfo"/>.
+    /// </summary>
+    internal static SchemaUniqueConstraintInfo ToUniqueDto(this IndexInfo index) =>
+        new(index.Name, index.Columns);
+
+    /// <summary>
+    /// Converts a <see cref="ForeignKeyInfo"/> to a <see cref="SchemaForeignKeyInfo"/>.
+    /// </summary>
+    internal static SchemaForeignKeyInfo ToDto(this ForeignKeyInfo fk, ResolvedTable sourceTable, ResolvedTable targetTable) =>
+        new(fk.Name, sourceTable, fk.SourceColumns, targetTable, fk.TargetColumns);
 }
