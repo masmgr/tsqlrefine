@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-01
+
+### Fixed
+
+- `insert-column-count-mismatch`: diagnostic highlight narrowed from entire `InsertStatement` to first token range
+- `prefer-try-convert-patterns`: diagnostic highlight narrowed from entire `SearchedCaseExpression` to `CASE` keyword
+- `insert-select-column-name-mismatch`: diagnostic highlight narrowed from entire `InsertStatement` to first mismatched INSERT column
+- `avoid-between-for-datetime-range`: diagnostic highlight narrowed from entire ternary expression to `BETWEEN` keyword
+
 ## [1.1.0] - 2026-02-18
 
 ### Added
@@ -205,7 +214,8 @@ First stable release.
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/masmgr/tsqlrefine/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/masmgr/tsqlrefine/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/masmgr/tsqlrefine/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/masmgr/tsqlrefine/compare/v0.6.0...v1.0.0
