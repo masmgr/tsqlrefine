@@ -19,17 +19,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 134
+- **Total Rules**: 135
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
   - Essential (pragmatic): 31 rules
-  - Recommended (recommended): 46 rules
+  - Recommended (recommended): 47 rules
   - Thorough (strict-logic): 20 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 20 rules (15%)
-  - Warning: 75 rules (56%)
+  - Warning: 76 rules (56%)
   - Information: 39 rules (29%)
 
 ## Importance Tiers
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 31 | 45 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 46 | 91 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 111 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 134 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 47 | 92 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 20 | 112 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 135 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -57,7 +57,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
-| **Schema** | 15 | Enforces database schema best practices |
+| **Schema** | 16 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -153,7 +153,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**46 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**47 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
 #### Correctness (10 rules)
 
@@ -205,13 +205,14 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md) | Files should start with SET TRANSACTION ISOLATION LEVEL within the first 10 statements. | Information | No |
 | [set-xact-abort](transactions/set-xact-abort.md) | Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work. | Warning | No |
 
-#### Schema (5 rules)
+#### Schema (6 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md) | Detects duplicate columns within a single FOREIGN KEY constraint definition. | Warning | No |
 | [duplicate-index-column](schema/duplicate-index-column.md) | Detects duplicate columns within a single index, PRIMARY KEY, or UNIQUE constraint definition. | Warning | No |
 | [duplicate-index-definition](schema/duplicate-index-definition.md) | Detects multiple indexes or unique constraints within a table that have the exact same column composition. | Warning | No |
+| [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md) | Detects implicit type conversions on columns in predicates using schema type information. | Warning | No |
 | [unresolved-column-reference](schema/unresolved-column-reference.md) | Detects references to columns that do not exist in the schema snapshot. | Warning | No |
 | [unresolved-table-reference](schema/unresolved-table-reference.md) | Detects references to tables or views that do not exist in the schema snapshot. | Warning | No |
 
@@ -342,7 +343,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (75 rules)
+### Warning (76 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -380,6 +381,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
 - [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
 - [having-column-mismatch](correctness/having-column-mismatch.md)
+- [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
 - [nested-block-comments](style/nested-block-comments.md)
 - [order-by-in-subquery](correctness/order-by-in-subquery.md)

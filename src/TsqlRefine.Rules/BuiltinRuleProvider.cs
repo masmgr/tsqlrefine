@@ -118,6 +118,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UnresolvedColumnReferenceRule(),
         new InsertColumnNotInTableRule(),
         new UpdateColumnNotInTableRule(),
+        new ImplicitConversionInPredicateSchemaRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
