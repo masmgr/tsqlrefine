@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema", "TsqlRe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema.Tests", "..\tests\TsqlRefine.Schema.Tests\TsqlRefine.Schema.Tests.csproj", "{6C700921-6AD8-4DD4-9A25-9F78DCF17D95}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema.SqlServer", "TsqlRefine.Schema.SqlServer\TsqlRefine.Schema.SqlServer.csproj", "{7952E765-BF74-4803-879F-CFF3D678160E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -181,6 +183,18 @@ Global
 		{6C700921-6AD8-4DD4-9A25-9F78DCF17D95}.Release|x64.Build.0 = Release|Any CPU
 		{6C700921-6AD8-4DD4-9A25-9F78DCF17D95}.Release|x86.ActiveCfg = Release|Any CPU
 		{6C700921-6AD8-4DD4-9A25-9F78DCF17D95}.Release|x86.Build.0 = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|x64.Build.0 = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Debug|x86.Build.0 = Debug|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x64.ActiveCfg = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x64.Build.0 = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x86.ActiveCfg = Release|Any CPU
+		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

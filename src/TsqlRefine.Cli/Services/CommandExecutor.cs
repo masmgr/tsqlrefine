@@ -8,6 +8,8 @@ using TsqlRefine.Core.Model;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Snapshot;
+using TsqlRefine.Schema.SqlServer;
 
 namespace TsqlRefine.Cli.Services;
 
@@ -442,7 +444,6 @@ public sealed class CommandExecutor
 
     /// <summary>
     /// Executes the 'schema snapshot' command to generate a schema snapshot from a database.
-    /// The actual generation logic is in TsqlRefine.Schema.SqlServer (added in Step 5).
     /// </summary>
     public static async Task<int> ExecuteSchemaSnapshotAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
@@ -458,9 +459,59 @@ public sealed class CommandExecutor
             return ExitCodes.ConfigError;
         }
 
-        // Step 5 will provide the actual implementation via TsqlRefine.Schema.SqlServer
-        await stderr.WriteLineAsync("Error: schema snapshot generation requires TsqlRefine.Schema.SqlServer. This feature is not yet available.");
-        return ExitCodes.Fatal;
+        var includeSchemas = ParseCommaSeparated(args.SchemaIncludeSchemas);
+        var excludeSchemas = ParseCommaSeparated(args.SchemaExcludeSchemas);
+
+        var options = new SchemaSnapshotOptions(
+            IncludeSchemas: includeSchemas,
+            ExcludeSchemas: excludeSchemas,
+            CompatLevel: args.CompatLevel ?? 150
+        );
+
+        try
+        {
+            if (!args.Quiet)
+            {
+                await stderr.WriteLineAsync("Connecting to database...");
+            }
+
+            var snapshot = await SchemaSnapshotGenerator.GenerateAsync(
+                args.SchemaConnectionString, options);
+
+            var json = SchemaSnapshotSerializer.Serialize(snapshot);
+            var outputPath = Path.GetFullPath(args.SchemaOutput);
+
+            var dir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+
+            var tableCount = snapshot.Databases.Sum(db => db.Tables.Count);
+            var viewCount = snapshot.Databases.Sum(db => db.Views.Count);
+            await stdout.WriteLineAsync($"Schema snapshot written to {outputPath}");
+            await stdout.WriteLineAsync(
+                $"  Database: {snapshot.Metadata.DatabaseName} ({tableCount} tables, {viewCount} views)");
+
+            return 0;
+        }
+        catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
+        {
+            await stderr.WriteLineAsync($"Error: Failed to connect to database. {ex.Message}");
+            return ExitCodes.Fatal;
+        }
+    }
+
+    private static string[]? ParseCommaSeparated(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private static EngineOptions CreateEngineOptions(
