@@ -15,7 +15,7 @@ public abstract class SchemaAwareVisitorRuleBase : DiagnosticVisitorRuleBase, IR
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.Schema is null)
+        if (context.SchemaContext is null)
         {
             return [];
         }

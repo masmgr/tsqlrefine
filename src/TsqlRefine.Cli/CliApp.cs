@@ -109,6 +109,7 @@ public static class CliApp
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
                 "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
                 "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
+                "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),
                 _ => await UnknownCommandAsync(command, stderr)
             };
         }

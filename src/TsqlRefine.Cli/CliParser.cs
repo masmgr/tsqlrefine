@@ -205,6 +205,18 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> SchemaOutputDir = new("--output-dir")
+        {
+            Description = "Output directory for schema.json and relations.json",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaRelationsOutput = new("--relations-output")
+        {
+            Description = "Output path for relations profile (overrides --output-dir for relations.json)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -365,7 +377,23 @@ public static class CliParser
         var schemaCommand = new Command("schema", "Schema management commands");
         schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
         schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaBuildCommand());
         return schemaCommand;
+    }
+
+    private static Command BuildSchemaBuildCommand()
+    {
+        var command = new Command("build", "Generate schema snapshot and collect JOIN relations in one step")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.ConnectionString);
+        command.Options.Add(Options.SchemaOutputDir);
+        command.Options.Add(Options.SchemaRelationsOutput);
+        command.Options.Add(Options.IncludeSchema);
+        command.Options.Add(Options.ExcludeSchema);
+        command.Options.Add(Options.Quiet);
+        return command;
     }
 
     private static Command BuildSchemaCollectRelationsCommand()
@@ -498,7 +526,9 @@ public static class CliParser
             SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
             SchemaOutput: GetSchemaOutput(parseResult),
             SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
-            SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema")
+            SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
+            SchemaOutputDir: GetOptionValue<string?>(parseResult, "--output-dir"),
+            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output")
         );
     }
 
