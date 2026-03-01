@@ -174,6 +174,12 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> RelationsProfile = new("--relations-profile")
+        {
+            Description = "Relations profile file path for JOIN pattern deviation analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Schema snapshot options
         public static readonly Option<string?> ConnectionString = new("--connection-string")
         {
@@ -257,6 +263,7 @@ public static class CliParser
     private static Command WithSchemaOption(this Command command)
     {
         command.Options.Add(Options.Schema);
+        command.Options.Add(Options.RelationsProfile);
         return command;
     }
 
@@ -487,6 +494,7 @@ public static class CliParser
             MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
             AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
             SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
+            RelationsProfilePath: GetOptionValue<string?>(parseResult, "--relations-profile"),
             SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
             SchemaOutput: GetSchemaOutput(parseResult),
             SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),

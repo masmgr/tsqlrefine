@@ -263,9 +263,10 @@ public sealed class CommandExecutor
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schema = ConfigLoader.LoadSchema(args, config, stderr);
+        var relationDeviations = ConfigLoader.LoadRelationDeviations(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schema);
+        var options = CreateEngineOptions(args, config, ruleset, schema, relationDeviations);
         var result = engine.Run(command, read.Inputs, options);
         var diagnosticsSummary = SummarizeDiagnostics(result.Files);
 
@@ -385,9 +386,10 @@ public sealed class CommandExecutor
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schema = ConfigLoader.LoadSchema(args, config, stderr);
+        var relationDeviations = ConfigLoader.LoadRelationDeviations(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schema);
+        var options = CreateEngineOptions(args, config, ruleset, schema, relationDeviations);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -563,14 +565,16 @@ public sealed class CommandExecutor
     }
 
     private static EngineOptions CreateEngineOptions(
-        CliArgs args, TsqlRefineConfig config, Ruleset? ruleset, ISchemaProvider? schema = null)
+        CliArgs args, TsqlRefineConfig config, Ruleset? ruleset,
+        ISchemaProvider? schema = null, IRelationDeviationProvider? relationDeviations = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset,
-            Schema: schema
+            Schema: schema,
+            RelationDeviations: relationDeviations
         );
     }
 

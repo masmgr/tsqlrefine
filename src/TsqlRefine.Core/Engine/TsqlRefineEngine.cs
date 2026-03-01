@@ -237,7 +237,8 @@ public sealed class TsqlRefineEngine
             Ast: analysis.Ast,
             Tokens: analysis.Tokens,
             Settings: ruleSettings,
-            Schema: options.Schema
+            Schema: options.Schema,
+            RelationDeviations: options.RelationDeviations
         );
     }
 
