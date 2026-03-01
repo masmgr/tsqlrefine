@@ -42,6 +42,8 @@
     { "id": "require-parameterized-sp-executesql" },
     { "id": "group-by-column-mismatch" },
     { "id": "aggregate-in-where-clause" },
-    { "id": "having-column-mismatch" }
+    { "id": "having-column-mismatch" },
+    { "id": "insert-column-not-in-table" },
+    { "id": "update-column-not-in-table" }
   ]
 }
