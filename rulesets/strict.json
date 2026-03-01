@@ -138,7 +138,8 @@
     { "id": "index-column-not-in-table" },
     { "id": "implicit-conversion-in-predicate-schema" },
     { "id": "join-foreign-key-mismatch" },
-    { "id": "update-join-cardinality-mismatch" }
+    { "id": "update-join-cardinality-mismatch" },
+    { "id": "join-column-deviation" }
   ]
 }
 
