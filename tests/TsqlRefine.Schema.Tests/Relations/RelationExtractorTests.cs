@@ -72,6 +72,27 @@ public sealed class RelationExtractorTests
     }
 
     [Fact]
+    public void Extract_NestedJoin_UsesReferencedLeftTableFromOuterOnClause()
+    {
+        var joins = ExtractFromSql("""
+            SELECT *
+            FROM dbo.Users u
+            INNER JOIN dbo.Orders o ON u.Id = o.UserId
+            INNER JOIN dbo.Payments p ON u.Id = p.UserId
+            """);
+
+        Assert.Equal(2, joins.Count);
+
+        var outerJoin = joins.Single(j =>
+            string.Equals(j.RightTable, "Payments", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal("Users", outerJoin.LeftTable);
+        Assert.Single(outerJoin.ColumnPairs);
+        Assert.Equal("Id", outerJoin.ColumnPairs[0].LeftColumn);
+        Assert.Equal("UserId", outerJoin.ColumnPairs[0].RightColumn);
+    }
+
+    [Fact]
     public void Extract_MultiColumnOn_ReturnsMultipleColumnPairs()
     {
         var joins = ExtractFromSql(
