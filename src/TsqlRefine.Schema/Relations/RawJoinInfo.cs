@@ -10,5 +10,6 @@ internal sealed record RawJoinInfo(
     string RightTable,
     string JoinType,
     IReadOnlyList<ColumnPair> ColumnPairs,
-    string SourceFile
+    string SourceFile,
+    JoinShape ShapeFlags
 );

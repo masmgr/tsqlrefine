@@ -37,15 +37,15 @@ internal static class RelationAggregator
         {
             var first = joins[0];
 
-            // Group by pattern (join type + column pairs)
+            // Group by pattern (join type + column pairs + shape flags)
             var patternGroups = new Dictionary<string, PatternAccumulator>(StringComparer.Ordinal);
 
             foreach (var join in joins)
             {
-                var patternKey = BuildPatternKey(join.JoinType, join.ColumnPairs);
+                var patternKey = BuildPatternKey(join.JoinType, join.ColumnPairs, join.ShapeFlags);
                 if (!patternGroups.TryGetValue(patternKey, out var acc))
                 {
-                    acc = new PatternAccumulator(join.JoinType, join.ColumnPairs);
+                    acc = new PatternAccumulator(join.JoinType, join.ColumnPairs, join.ShapeFlags);
                     patternGroups[patternKey] = acc;
                 }
 
@@ -60,7 +60,8 @@ internal static class RelationAggregator
                     p.JoinType,
                     p.ColumnPairs,
                     p.Count,
-                    p.SourceFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList()))
+                    p.SourceFiles.OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList(),
+                    p.ShapeFlags))
                 .ToList();
 
             relations.Add(new TableRelation(
@@ -95,7 +96,7 @@ internal static class RelationAggregator
             return new CanonicalJoin(
                 raw.LeftSchema, raw.LeftTable,
                 raw.RightSchema, raw.RightTable,
-                raw.JoinType, raw.ColumnPairs, raw.SourceFile);
+                raw.JoinType, raw.ColumnPairs, raw.SourceFile, raw.ShapeFlags);
         }
 
         // Swap tables and column pair sides
@@ -107,7 +108,7 @@ internal static class RelationAggregator
         return new CanonicalJoin(
             raw.RightSchema, raw.RightTable,
             raw.LeftSchema, raw.LeftTable,
-            swappedJoinType, swappedPairs, raw.SourceFile);
+            swappedJoinType, swappedPairs, raw.SourceFile, raw.ShapeFlags);
     }
 
     private static string SwapJoinDirection(string joinType) =>
@@ -118,14 +119,15 @@ internal static class RelationAggregator
             _ => joinType,
         };
 
-    private static string BuildPatternKey(string joinType, IReadOnlyList<ColumnPair> columnPairs)
+    private static string BuildPatternKey(
+        string joinType, IReadOnlyList<ColumnPair> columnPairs, JoinShape shapeFlags)
     {
         var sortedPairs = columnPairs
             .OrderBy(cp => cp.LeftColumn, StringComparer.OrdinalIgnoreCase)
             .ThenBy(cp => cp.RightColumn, StringComparer.OrdinalIgnoreCase)
             .Select(cp => $"{cp.LeftColumn}={cp.RightColumn}");
 
-        return $"{joinType}:{string.Join(",", sortedPairs)}";
+        return $"{joinType}:{string.Join(",", sortedPairs)}|{(int)shapeFlags}";
     }
 
     private sealed record CanonicalJoin(
@@ -135,12 +137,15 @@ internal static class RelationAggregator
         string RightTable,
         string JoinType,
         IReadOnlyList<ColumnPair> ColumnPairs,
-        string SourceFile);
+        string SourceFile,
+        JoinShape ShapeFlags);
 
-    private sealed class PatternAccumulator(string joinType, IReadOnlyList<ColumnPair> columnPairs)
+    private sealed class PatternAccumulator(
+        string joinType, IReadOnlyList<ColumnPair> columnPairs, JoinShape shapeFlags)
     {
         public string JoinType { get; } = joinType;
         public IReadOnlyList<ColumnPair> ColumnPairs { get; } = columnPairs;
+        public JoinShape ShapeFlags { get; } = shapeFlags;
         public int Count { get; set; }
         public HashSet<string> SourceFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
