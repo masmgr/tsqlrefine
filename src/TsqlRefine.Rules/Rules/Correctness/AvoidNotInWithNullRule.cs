@@ -79,7 +79,17 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
             var resolved = ResolveColumn(colRef, aliasMap);
 
-            return resolved is { Column.IsNullable: false };
+            if (resolved is not { Column.IsNullable: false })
+            {
+                return false;
+            }
+
+            var columnQualifier = ColumnReferenceHelpers.GetTableQualifier(colRef);
+            return !HasNullIntroducingJoinForColumnSource(
+                tableRefs,
+                aliasMap,
+                resolved.Table,
+                columnQualifier);
         }
 
         private ResolvedColumn? ResolveColumn(ColumnReferenceExpression colRef, AliasMap aliasMap)
@@ -163,5 +173,169 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
 
             yield return parts[^1];
         }
+
+        private static bool HasNullIntroducingJoinForColumnSource(
+            IList<TableReference> tableRefs,
+            AliasMap aliasMap,
+            ResolvedTable columnTable,
+            string? qualifier)
+        {
+            foreach (var tableRef in tableRefs)
+            {
+                if (HasNullIntroducingJoinForColumnSource(
+                    tableRef,
+                    aliasMap,
+                    columnTable,
+                    qualifier))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasNullIntroducingJoinForColumnSource(
+            TableReference tableRef,
+            AliasMap aliasMap,
+            ResolvedTable columnTable,
+            string? qualifier)
+        {
+            switch (tableRef)
+            {
+                case QualifiedJoin qualifiedJoin:
+                    if (IsNullIntroducingForColumnSource(qualifiedJoin, aliasMap, columnTable, qualifier))
+                    {
+                        return true;
+                    }
+
+                    return HasNullIntroducingJoinForColumnSource(
+                               qualifiedJoin.FirstTableReference,
+                               aliasMap,
+                               columnTable,
+                               qualifier)
+                           || HasNullIntroducingJoinForColumnSource(
+                               qualifiedJoin.SecondTableReference,
+                               aliasMap,
+                               columnTable,
+                               qualifier);
+
+                case JoinTableReference join:
+                    return HasNullIntroducingJoinForColumnSource(
+                               join.FirstTableReference,
+                               aliasMap,
+                               columnTable,
+                               qualifier)
+                           || HasNullIntroducingJoinForColumnSource(
+                               join.SecondTableReference,
+                               aliasMap,
+                               columnTable,
+                               qualifier);
+
+                case JoinParenthesisTableReference joinParen when joinParen.Join is not null:
+                    return HasNullIntroducingJoinForColumnSource(
+                        joinParen.Join,
+                        aliasMap,
+                        columnTable,
+                        qualifier);
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsNullIntroducingForColumnSource(
+            QualifiedJoin join,
+            AliasMap aliasMap,
+            ResolvedTable columnTable,
+            string? qualifier)
+        {
+            return join.QualifiedJoinType switch
+            {
+                QualifiedJoinType.LeftOuter => SideContainsColumnSource(
+                    join.SecondTableReference,
+                    aliasMap,
+                    columnTable,
+                    qualifier),
+                QualifiedJoinType.RightOuter => SideContainsColumnSource(
+                    join.FirstTableReference,
+                    aliasMap,
+                    columnTable,
+                    qualifier),
+                QualifiedJoinType.FullOuter => SideContainsColumnSource(
+                                                   join.FirstTableReference,
+                                                   aliasMap,
+                                                   columnTable,
+                                                   qualifier)
+                                               || SideContainsColumnSource(
+                                                   join.SecondTableReference,
+                                                   aliasMap,
+                                                   columnTable,
+                                                   qualifier),
+                _ => false
+            };
+        }
+
+        private static bool SideContainsColumnSource(
+            TableReference side,
+            AliasMap aliasMap,
+            ResolvedTable columnTable,
+            string? qualifier)
+        {
+            var aliases = CollectSideAliases(side);
+            if (aliases.Count == 0)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(qualifier))
+            {
+                return aliases.Contains(qualifier);
+            }
+
+            foreach (var alias in aliases)
+            {
+                if (aliasMap.TryResolve(alias, out var resolved) &&
+                    resolved is not null &&
+                    TablesAreEqual(resolved, columnTable))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static HashSet<string> CollectSideAliases(TableReference side)
+        {
+            var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            CollectSideAliasesCore(side, aliases);
+            return aliases;
+        }
+
+        private static void CollectSideAliasesCore(TableReference tableRef, HashSet<string> aliases)
+        {
+            switch (tableRef)
+            {
+                case JoinTableReference join:
+                    CollectSideAliasesCore(join.FirstTableReference, aliases);
+                    CollectSideAliasesCore(join.SecondTableReference, aliases);
+                    return;
+                case JoinParenthesisTableReference joinParen when joinParen.Join is not null:
+                    CollectSideAliasesCore(joinParen.Join, aliases);
+                    return;
+            }
+
+            var alias = TableReferenceHelpers.GetAliasOrTableName(tableRef);
+            if (!string.IsNullOrWhiteSpace(alias))
+            {
+                aliases.Add(alias);
+            }
+        }
+
+        private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b) =>
+            string.Equals(a.DatabaseName, b.DatabaseName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
     }
 }

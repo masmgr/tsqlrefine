@@ -228,6 +228,19 @@ SELECT TOP 5 * FROM orders;";
     }
 
     [Fact]
+    public void Analyze_JoinQuery_FilterOnUniqueDimension_StillFlags()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var sql = "SELECT TOP 1 od.OrderId FROM dbo.OrderDetails od INNER JOIN dbo.Users u ON u.Id = od.OrderId WHERE u.Id = @id;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("top-without-order-by", diagnostics[0].Data?.RuleId);
+    }
+
+    [Fact]
     public void Analyze_WhereOnNonUniqueColumn_WithSchema_StillFlags()
     {
         var rule = new TopWithoutOrderByRule();

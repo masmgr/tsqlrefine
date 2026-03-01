@@ -61,6 +61,13 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
                 return false;
             }
 
+            // Suppress only for simple single-table queries.
+            // In joined queries, uniqueness on one side does not guarantee a single-row result set.
+            if (tableRefs.Count != 1 || tableRefs[0] is not NamedTableReference)
+            {
+                return false;
+            }
+
             var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
             var equalityColumns = CollectEqualityColumns(node.WhereClause.SearchCondition);
 
@@ -69,18 +76,15 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
                 return false;
             }
 
-            // Check each resolved table: do the equality columns cover a unique key?
-            foreach (var resolvedTable in aliasMap.AllTables)
+            if (aliasMap.AllTables.Count != 1)
             {
-                var columnsForTable = GetColumnsForTable(equalityColumns, resolvedTable, aliasMap);
-                if (columnsForTable.Count > 0 &&
-                    schema.IsUniqueColumnSet(resolvedTable, columnsForTable))
-                {
-                    return true;
-                }
+                return false;
             }
 
-            return false;
+            var resolvedTable = aliasMap.AllTables[0];
+            var columnsForTable = GetColumnsForTable(equalityColumns, resolvedTable, aliasMap);
+            return columnsForTable.Count > 0 &&
+                   schema.IsUniqueColumnSet(resolvedTable, columnsForTable);
         }
 
         /// <summary>
