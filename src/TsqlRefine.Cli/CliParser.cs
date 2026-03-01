@@ -357,7 +357,19 @@ public static class CliParser
     {
         var schemaCommand = new Command("schema", "Schema management commands");
         schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
         return schemaCommand;
+    }
+
+    private static Command BuildSchemaCollectRelationsCommand()
+    {
+        var command = new Command("collect-relations", "Collect JOIN relation patterns from SQL files")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.Quiet);
+        return command;
     }
 
     private static Command BuildSchemaSnapshotCommand()
