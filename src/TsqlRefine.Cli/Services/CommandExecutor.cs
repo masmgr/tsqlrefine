@@ -259,9 +259,10 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schema = ConfigLoader.LoadSchema(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset);
+        var options = CreateEngineOptions(args, config, ruleset, schema);
         var result = engine.Run(command, read.Inputs, options);
         var diagnosticsSummary = SummarizeDiagnostics(result.Files);
 
@@ -380,9 +381,10 @@ public sealed class CommandExecutor
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schema = ConfigLoader.LoadSchema(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset);
+        var options = CreateEngineOptions(args, config, ruleset, schema);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -438,13 +440,38 @@ public sealed class CommandExecutor
         return HasParseErrors(result.Files) ? ExitCodes.AnalysisError : 0;
     }
 
-    private static EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
+    /// <summary>
+    /// Executes the 'schema snapshot' command to generate a schema snapshot from a database.
+    /// The actual generation logic is in TsqlRefine.Schema.SqlServer (added in Step 5).
+    /// </summary>
+    public static async Task<int> ExecuteSchemaSnapshotAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
+        {
+            await stderr.WriteLineAsync("Error: --connection-string is required for schema snapshot.");
+            return ExitCodes.ConfigError;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.SchemaOutput))
+        {
+            await stderr.WriteLineAsync("Error: --output is required for schema snapshot.");
+            return ExitCodes.ConfigError;
+        }
+
+        // Step 5 will provide the actual implementation via TsqlRefine.Schema.SqlServer
+        await stderr.WriteLineAsync("Error: schema snapshot generation requires TsqlRefine.Schema.SqlServer. This feature is not yet available.");
+        return ExitCodes.Fatal;
+    }
+
+    private static EngineOptions CreateEngineOptions(
+        CliArgs args, TsqlRefineConfig config, Ruleset? ruleset, ISchemaProvider? schema = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
-            Ruleset: ruleset
+            Ruleset: ruleset,
+            Schema: schema
         );
     }
 

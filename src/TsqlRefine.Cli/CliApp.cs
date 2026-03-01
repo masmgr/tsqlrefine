@@ -107,6 +107,7 @@ public static class CliApp
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
+                "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
                 _ => await UnknownCommandAsync(command, stderr)
             };
         }

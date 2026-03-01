@@ -167,6 +167,38 @@ public static class CliParser
             Recursive = true
         };
 
+        // Schema options
+        public static readonly Option<string?> Schema = new("--schema")
+        {
+            Description = "Schema snapshot file path for schema-aware analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        // Schema snapshot options
+        public static readonly Option<string?> ConnectionString = new("--connection-string")
+        {
+            Description = "SQL Server connection string",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaOutput = new("--output")
+        {
+            Description = "Output file path for schema snapshot",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> IncludeSchema = new("--include-schema")
+        {
+            Description = "Comma-separated schema names to include",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ExcludeSchema = new("--exclude-schema")
+        {
+            Description = "Comma-separated schema names to exclude",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -222,6 +254,12 @@ public static class CliParser
         return command;
     }
 
+    private static Command WithSchemaOption(this Command command)
+    {
+        command.Options.Add(Options.Schema);
+        return command;
+    }
+
     private static Command WithPathsArgument(this Command command)
     {
         command.Arguments.Add(Options.CreatePathsArgument());
@@ -239,6 +277,7 @@ public static class CliParser
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithRuleOptions()
+            .WithSchemaOption()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
@@ -264,6 +303,7 @@ public static class CliParser
             .WithCompatLevelOption()
             .WithRuleOptions()
             .WithRuleIdOption()
+            .WithSchemaOption()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
@@ -313,6 +353,25 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildSchemaCommand()
+    {
+        var schemaCommand = new Command("schema", "Schema management commands");
+        schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
+        return schemaCommand;
+    }
+
+    private static Command BuildSchemaSnapshotCommand()
+    {
+        var command = new Command("snapshot", "Generate a schema snapshot from a database");
+        command.Options.Add(Options.ConnectionString);
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.IncludeSchema);
+        command.Options.Add(Options.ExcludeSchema);
+        command.Options.Add(Options.CompatLevel);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
     // =================================================================
     // Root Command
     // =================================================================
@@ -334,6 +393,7 @@ public static class CliParser
         root.WithOutputOption();
         root.WithCompatLevelOption();
         root.WithRuleOptions();
+        root.WithSchemaOption();
         root.WithPathsArgument();
         root.Options.Add(Options.Verbose);
         root.Options.Add(Options.Quiet);
@@ -347,6 +407,7 @@ public static class CliParser
         root.Subcommands.Add(BuildPrintFormatConfigCommand());
         root.Subcommands.Add(BuildListRulesCommand());
         root.Subcommands.Add(BuildListPluginsCommand());
+        root.Subcommands.Add(BuildSchemaCommand());
 
         return root;
     }
@@ -412,7 +473,12 @@ public static class CliParser
             Paths: GetPaths(parseResult),
             RuleId: GetOptionValue<string?>(parseResult, "--rule"),
             MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
-            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins")
+            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
+            SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
+            SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
+            SchemaOutput: GetSchemaOutput(parseResult),
+            SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
+            SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema")
         );
     }
 
@@ -428,7 +494,17 @@ public static class CliParser
             return ("", false);
         }
 
-        return (parseResult.CommandResult.Command.Name, true);
+        // Handle nested commands (e.g., "schema snapshot" → "schema snapshot")
+        var parts = new List<string>();
+        var current = parseResult.CommandResult;
+        while (current is not null && current.Command is not RootCommand)
+        {
+            parts.Add(current.Command.Name);
+            current = current.Parent as CommandResult;
+        }
+
+        parts.Reverse();
+        return (string.Join(" ", parts), true);
     }
 
     private static T? GetOptionValue<T>(ParseResult parseResult, string optionName)
@@ -463,6 +539,23 @@ public static class CliParser
         }
 
         return [];
+    }
+
+    private static string? GetSchemaOutput(ParseResult parseResult)
+    {
+        // Schema snapshot uses its own --output option (Options.SchemaOutput)
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.SchemaOutput)
+        {
+            var optionResult = parseResult.GetResult(typedOption);
+            if (optionResult is not null)
+            {
+                return parseResult.GetValue(typedOption);
+            }
+        }
+
+        return null;
     }
 
     private const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024; // 10 MB

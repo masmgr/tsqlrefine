@@ -201,6 +201,26 @@
         }
       },
       "additionalProperties": false
+    },
+    "schema": {
+      "type": "object",
+      "description": "Schema-aware analysis settings for validating against database schema snapshots. When configured, enables rules that verify table/column references and detect implicit type conversions.",
+      "properties": {
+        "snapshotPath": {
+          "type": "string",
+          "description": "Path to schema snapshot JSON file. Relative paths are resolved from the config file directory.",
+          "examples": [
+            "schema.json",
+            "../schemas/production.json"
+          ]
+        },
+        "defaultSchema": {
+          "type": "string",
+          "description": "Default schema for unqualified table references. Default: dbo",
+          "default": "dbo"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

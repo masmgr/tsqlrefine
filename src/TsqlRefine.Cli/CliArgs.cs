@@ -33,6 +33,11 @@ namespace TsqlRefine.Cli;
 /// <param name="RuleId">Specific rule ID to run (for single-rule mode).</param>
 /// <param name="MaxFileSize">Maximum file size in bytes (0 = unlimited).</param>
 /// <param name="AllowPlugins">Whether to allow loading plugin DLLs from configuration.</param>
+/// <param name="SchemaPath">Path to schema snapshot file for schema-aware analysis.</param>
+/// <param name="SchemaConnectionString">Connection string for schema snapshot generation.</param>
+/// <param name="SchemaOutput">Output path for schema snapshot generation.</param>
+/// <param name="SchemaIncludeSchemas">Comma-separated schema names to include in snapshot generation.</param>
+/// <param name="SchemaExcludeSchemas">Comma-separated schema names to exclude from snapshot generation.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -60,5 +65,10 @@ public sealed record CliArgs(
     IReadOnlyList<string> Paths,
     string? RuleId,
     long MaxFileSize,
-    bool AllowPlugins
+    bool AllowPlugins,
+    string? SchemaPath = null,
+    string? SchemaConnectionString = null,
+    string? SchemaOutput = null,
+    string? SchemaIncludeSchemas = null,
+    string? SchemaExcludeSchemas = null
 );

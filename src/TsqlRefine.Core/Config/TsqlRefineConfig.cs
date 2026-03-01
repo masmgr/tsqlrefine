@@ -79,6 +79,16 @@ public sealed record FormattingConfig(
 );
 
 /// <summary>
+/// Schema-aware analysis configuration.
+/// </summary>
+/// <param name="SnapshotPath">Path to schema snapshot JSON file. Relative paths are resolved from the config file directory.</param>
+/// <param name="DefaultSchema">Default schema for unqualified table references. Default is "dbo".</param>
+public sealed record SchemaConfig(
+    string? SnapshotPath = null,
+    string DefaultSchema = "dbo"
+);
+
+/// <summary>
 /// Main configuration for TsqlRefine behavior and analysis options.
 /// </summary>
 /// <param name="CompatLevel">SQL Server compatibility level (100-160). Default is 150 (SQL Server 2019).</param>
@@ -88,13 +98,15 @@ public sealed record FormattingConfig(
 /// <param name="Formatting">Formatting configuration options.</param>
 /// <param name="Rules">Per-rule severity overrides. Keys are rule IDs, values are severity strings
 /// ("error", "warning", "info", "inherit", "none").</param>
+/// <param name="Schema">Schema-aware analysis settings.</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,
     string? Preset = null,
     IReadOnlyList<PluginConfig>? Plugins = null,
     FormattingConfig? Formatting = null,
-    IReadOnlyDictionary<string, string>? Rules = null
+    IReadOnlyDictionary<string, string>? Rules = null,
+    SchemaConfig? Schema = null
 )
 {
     /// <summary>
@@ -212,6 +224,11 @@ public sealed record TsqlRefineConfig(
                     return $"Invalid severity '{severity}' for rule '{ruleId}'. Valid values: error, warning, info, inherit, none.";
                 }
             }
+        }
+
+        if (Schema is not null && string.IsNullOrWhiteSpace(Schema.DefaultSchema))
+        {
+            return "Invalid schema.defaultSchema: must not be empty.";
         }
 
         return null;
