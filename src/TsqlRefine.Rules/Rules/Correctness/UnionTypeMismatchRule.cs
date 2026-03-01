@@ -173,7 +173,7 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
             AliasMap aliasMap,
             out ResolvedTable? resolvedTable)
         {
-            foreach (var key in BuildQualifierLookupKeys(identifiers))
+            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
             {
                 if (aliasMap.TryResolve(key, out resolvedTable))
                 {
@@ -183,36 +183,6 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
 
             resolvedTable = null;
             return false;
-        }
-
-        private static IEnumerable<string> BuildQualifierLookupKeys(IList<Identifier> identifiers)
-        {
-            var qualifierCount = identifiers.Count - 1;
-            if (qualifierCount <= 0)
-            {
-                yield break;
-            }
-
-            var parts = new string[qualifierCount];
-            for (var i = 0; i < qualifierCount; i++)
-            {
-                parts[i] = identifiers[i].Value;
-            }
-
-            if (parts.Length == 1)
-            {
-                yield return parts[0];
-                yield break;
-            }
-
-            yield return string.Join(".", parts);
-
-            if (parts.Length >= 2)
-            {
-                yield return $"{parts[^2]}.{parts[^1]}";
-            }
-
-            yield return parts[^1];
         }
 
         private static string? MapSchemaTypeCategory(SchemaTypeCategory category)
