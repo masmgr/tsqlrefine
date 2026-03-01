@@ -136,7 +136,9 @@ public static class DeviationAnalyzer
         JoinShape flag,
         StructuralDiff diff)
     {
-        if (patternFlags.HasFlag(flag) != dominantFlags.HasFlag(flag))
+        var patternHasFlag = (patternFlags & flag) != 0;
+        var dominantHasFlag = (dominantFlags & flag) != 0;
+        if (patternHasFlag != dominantHasFlag)
         {
             diffs.Add(diff);
         }

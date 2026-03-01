@@ -50,6 +50,19 @@ public static class SchemaSnapshotSerializer
     }
 
     /// <summary>
+    /// Deserializes a <see cref="SchemaSnapshot"/> from a UTF-8 JSON stream.
+    /// </summary>
+    /// <param name="utf8Json">The UTF-8 stream to deserialize.</param>
+    /// <returns>The deserialized snapshot.</returns>
+    /// <exception cref="JsonException">If the JSON is invalid or cannot be deserialized.</exception>
+    public static SchemaSnapshot Deserialize(Stream utf8Json)
+    {
+        ArgumentNullException.ThrowIfNull(utf8Json);
+        return JsonSerializer.Deserialize<SchemaSnapshot>(utf8Json, DeserializerOptions)
+            ?? throw new JsonException("Failed to deserialize schema snapshot: result was null.");
+    }
+
+    /// <summary>
     /// Computes a SHA-256 hash of the database content (excluding metadata) for change detection.
     /// </summary>
     /// <param name="databases">The database schemas to hash.</param>

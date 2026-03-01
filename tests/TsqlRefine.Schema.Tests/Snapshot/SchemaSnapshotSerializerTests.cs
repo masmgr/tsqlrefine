@@ -1,3 +1,4 @@
+using System.Text;
 using TsqlRefine.Schema.Model;
 using TsqlRefine.Schema.Snapshot;
 using TsqlRefine.Schema.Tests.Helpers;
@@ -223,6 +224,23 @@ public class SchemaSnapshotSerializerTests
     }
 
     [Fact]
+    public void Deserialize_Stream_ValidJson_ReturnsSnapshot()
+    {
+        var snapshot = TestSchemaBuilder.Create("TestDb")
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int"))
+            .Build();
+        var json = SchemaSnapshotSerializer.Serialize(snapshot);
+
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        var deserialized = SchemaSnapshotSerializer.Deserialize(stream);
+
+        Assert.Equal(snapshot.Metadata.DatabaseName, deserialized.Metadata.DatabaseName);
+        Assert.Single(deserialized.Databases);
+        Assert.Single(deserialized.Databases[0].Tables);
+    }
+
+    [Fact]
     public void Serialize_NullSnapshot_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
@@ -233,6 +251,6 @@ public class SchemaSnapshotSerializerTests
     public void Deserialize_NullJson_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            SchemaSnapshotSerializer.Deserialize(null!));
+            SchemaSnapshotSerializer.Deserialize((string)null!));
     }
 }

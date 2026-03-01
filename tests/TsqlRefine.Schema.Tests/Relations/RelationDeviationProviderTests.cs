@@ -100,6 +100,20 @@ public sealed class RelationDeviationProviderTests
     }
 
     [Fact]
+    public void GetTablePairSummary_CaseInsensitiveLookup_ReturnsSummary()
+    {
+        var profile = BuildProfile(
+            ("dbo", "A", "dbo", "B", "INNER", 50, JoinShape.None, ["Id", "AId"]));
+
+        var provider = RelationDeviationProvider.FromProfile(profile);
+        var summary = provider.GetTablePairSummary("DBO", "a", "dbo", "b");
+
+        Assert.NotNull(summary);
+        Assert.Equal("A", summary!.LeftTable);
+        Assert.Equal("B", summary.RightTable);
+    }
+
+    [Fact]
     public void GetTablePairSummary_NonExistent_ReturnsNull()
     {
         var profile = BuildProfile(

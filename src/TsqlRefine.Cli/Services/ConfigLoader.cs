@@ -532,8 +532,8 @@ public sealed class ConfigLoader
 
         try
         {
-            var json = File.ReadAllText(snapshotPath);
-            var snapshot = SchemaSnapshotSerializer.Deserialize(json);
+            using var stream = File.OpenRead(snapshotPath);
+            var snapshot = SchemaSnapshotSerializer.Deserialize(stream);
             var defaultSchema = config.Schema?.DefaultSchema ?? "dbo";
             var provider = new SchemaProvider(snapshot, defaultSchema);
 
@@ -609,8 +609,8 @@ public sealed class ConfigLoader
 
         try
         {
-            var json = File.ReadAllText(profilePath);
-            var profile = Schema.Relations.RelationProfileSerializer.Deserialize(json);
+            using var stream = File.OpenRead(profilePath);
+            var profile = Schema.Relations.RelationProfileSerializer.Deserialize(stream);
             var provider = Schema.Relations.RelationDeviationProvider.FromProfile(profile);
 
             if (stderr is not null && !args.Quiet)

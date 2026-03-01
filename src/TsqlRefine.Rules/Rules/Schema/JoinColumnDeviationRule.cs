@@ -46,6 +46,15 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             string JoinType,
             IReadOnlyList<string> SortedPairDescriptions);
 
+        private readonly record struct DeviationMatchCacheKey(
+            RelationTablePairSummary Summary,
+            string JoinType,
+            string PairSignature);
+
+        private readonly record struct DeviationMatchResult(
+            RelationPatternDeviation? Match,
+            bool IsAmbiguous);
+
         private AliasMap? _currentAliasMap;
         private Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache =
             new(ReferenceEqualityComparer.Instance);
@@ -57,6 +66,8 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             new(ReferenceEqualityComparer.Instance);
         private Dictionary<RelationTablePairSummary, string> _dominantInfoCache =
             new(ReferenceEqualityComparer.Instance);
+        private Dictionary<DeviationMatchCacheKey, DeviationMatchResult> _deviationMatchCache =
+            new(DeviationMatchCacheKeyComparer.Instance);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
@@ -66,15 +77,11 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 var previousResolvedColumnCache = _resolvedColumnCache;
                 var previousColumnExistsCache = _columnExistsCache;
                 var previousUnqualifiedColumnResolutionCache = _unqualifiedColumnResolutionCache;
-                var previousSortedDeviationPairsCache = _sortedDeviationPairsCache;
-                var previousDominantInfoCache = _dominantInfoCache;
 
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
                 _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(ReferenceEqualityComparer.Instance);
                 _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
                 _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(StringComparer.OrdinalIgnoreCase);
-                _sortedDeviationPairsCache = new Dictionary<RelationPatternDeviation, IReadOnlyList<string>>(ReferenceEqualityComparer.Instance);
-                _dominantInfoCache = new Dictionary<RelationTablePairSummary, string>(ReferenceEqualityComparer.Instance);
 
                 node.FromClause.Accept(this);
 
@@ -82,8 +89,6 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 _resolvedColumnCache = previousResolvedColumnCache;
                 _columnExistsCache = previousColumnExistsCache;
                 _unqualifiedColumnResolutionCache = previousUnqualifiedColumnResolutionCache;
-                _sortedDeviationPairsCache = previousSortedDeviationPairsCache;
-                _dominantInfoCache = previousDominantInfoCache;
                 return;
             }
 
@@ -119,20 +124,20 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 return;
             }
 
-            var matches = FindMatchingDeviations(summary, pattern.JoinType, pattern.SortedPairDescriptions);
-            if (matches.Count == 0)
+            var match = FindMatchingDeviation(summary, pattern.JoinType, pattern.SortedPairDescriptions);
+            if (match.Match is null)
             {
+                if (match.IsAmbiguous)
+                {
+                    // Ambiguous match — skip to avoid false positives.
+                    return;
+                }
+
                 ReportUnseenPattern(node.SearchCondition!, pattern, summary);
                 return;
             }
 
-            if (matches.Count > 1)
-            {
-                // Ambiguous match — skip to avoid false positives.
-                return;
-            }
-
-            var deviation = matches[0];
+            var deviation = match.Match;
             if (IsWarnableLevel(deviation.Level))
             {
                 ReportRarePattern(node.SearchCondition!, pattern, summary, deviation);
@@ -261,13 +266,20 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 or RelationDeviationLevel.VeryRare
                 or RelationDeviationLevel.Structural;
 
-        private List<RelationPatternDeviation> FindMatchingDeviations(
+        private DeviationMatchResult FindMatchingDeviation(
             RelationTablePairSummary summary,
             string joinType,
             IReadOnlyList<string> sortedDescriptions)
         {
-            var matches = new List<RelationPatternDeviation>();
+            var pairSignature = BuildPairSignature(sortedDescriptions);
+            var cacheKey = new DeviationMatchCacheKey(summary, joinType, pairSignature);
+            if (_deviationMatchCache.TryGetValue(cacheKey, out var cached))
+            {
+                return cached;
+            }
 
+            RelationPatternDeviation? firstMatch = null;
+            var matchCount = 0;
             foreach (var deviation in summary.Deviations)
             {
                 if (!string.Equals(deviation.JoinType, joinType, StringComparison.OrdinalIgnoreCase))
@@ -275,13 +287,28 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                     continue;
                 }
 
-                if (HasSameSortedPairDescriptions(GetSortedDeviationPairs(deviation), sortedDescriptions))
+                if (!HasSameSortedPairDescriptions(GetSortedDeviationPairs(deviation), sortedDescriptions))
                 {
-                    matches.Add(deviation);
+                    continue;
                 }
+
+                matchCount++;
+                if (matchCount == 1)
+                {
+                    firstMatch = deviation;
+                    continue;
+                }
+
+                cached = new DeviationMatchResult(Match: null, IsAmbiguous: true);
+                _deviationMatchCache[cacheKey] = cached;
+                return cached;
             }
 
-            return matches;
+            cached = matchCount == 1
+                ? new DeviationMatchResult(firstMatch, IsAmbiguous: false)
+                : new DeviationMatchResult(Match: null, IsAmbiguous: false);
+            _deviationMatchCache[cacheKey] = cached;
+            return cached;
         }
 
         private static bool HasSameSortedPairDescriptions(
@@ -303,6 +330,14 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             return true;
         }
+
+        private static string BuildPairSignature(IReadOnlyList<string> sortedDescriptions) =>
+            sortedDescriptions.Count switch
+            {
+                0 => string.Empty,
+                1 => sortedDescriptions[0],
+                _ => string.Join('\u001F', sortedDescriptions),
+            };
 
         private IReadOnlyList<string> GetSortedDeviationPairs(RelationPatternDeviation deviation)
         {
@@ -675,6 +710,25 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
                 hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
                 hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
+                return hash.ToHashCode();
+            }
+        }
+
+        private sealed class DeviationMatchCacheKeyComparer : IEqualityComparer<DeviationMatchCacheKey>
+        {
+            public static DeviationMatchCacheKeyComparer Instance { get; } = new();
+
+            public bool Equals(DeviationMatchCacheKey x, DeviationMatchCacheKey y) =>
+                ReferenceEquals(x.Summary, y.Summary)
+                && string.Equals(x.JoinType, y.JoinType, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(x.PairSignature, y.PairSignature, StringComparison.OrdinalIgnoreCase);
+
+            public int GetHashCode(DeviationMatchCacheKey obj)
+            {
+                var hash = new HashCode();
+                hash.Add(ReferenceEqualityComparer.Instance.GetHashCode(obj.Summary));
+                hash.Add(obj.JoinType, StringComparer.OrdinalIgnoreCase);
+                hash.Add(obj.PairSignature, StringComparer.OrdinalIgnoreCase);
                 return hash.ToHashCode();
             }
         }

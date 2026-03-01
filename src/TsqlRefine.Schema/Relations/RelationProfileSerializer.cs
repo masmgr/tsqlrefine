@@ -44,6 +44,16 @@ public static class RelationProfileSerializer
     }
 
     /// <summary>
+    /// Deserializes a <see cref="RelationProfile"/> from a UTF-8 JSON stream.
+    /// </summary>
+    public static RelationProfile Deserialize(Stream utf8Json)
+    {
+        ArgumentNullException.ThrowIfNull(utf8Json);
+        return JsonSerializer.Deserialize<RelationProfile>(utf8Json, DeserializerOptions)
+            ?? throw new JsonException("Failed to deserialize relation profile: result was null.");
+    }
+
+    /// <summary>
     /// Computes a SHA-256 hash of the relation content (excluding metadata) for change detection.
     /// </summary>
     public static string ComputeContentHash(IReadOnlyList<TableRelation> relations)
