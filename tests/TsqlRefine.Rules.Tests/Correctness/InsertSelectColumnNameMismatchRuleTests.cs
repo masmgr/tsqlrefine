@@ -119,6 +119,26 @@ public sealed class InsertSelectColumnNameMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenColumnNamesMismatch_ReportsAtFirstMismatchedInsertColumn()
+    {
+        var rule = new InsertSelectColumnNameMismatchRule();
+        // "INSERT INTO Users (Id, Name) SELECT Name, Id FROM Users_Staging;"
+        //                    ^^ -- position 19, length 2 ("Id" is first mismatch)
+        const string sql = "INSERT INTO Users (Id, Name) SELECT Name, Id FROM Users_Staging;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context)
+            .Where(d => d.Data?.RuleId == "insert-select-column-name-mismatch")
+            .ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostic.Range.Start.Line);
+        Assert.Equal(19, diagnostic.Range.Start.Character); // 'I' of 'Id'
+        Assert.Equal(0, diagnostic.Range.End.Line);
+        Assert.Equal(21, diagnostic.Range.End.Character);   // after 'd' of 'Id'
+    }
+
+    [Fact]
     public void Metadata_HasCorrectValues()
     {
         var rule = new InsertSelectColumnNameMismatchRule();

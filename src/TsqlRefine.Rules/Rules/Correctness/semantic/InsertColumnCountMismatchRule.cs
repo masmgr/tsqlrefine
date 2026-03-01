@@ -61,7 +61,7 @@ public sealed class InsertColumnCountMismatchRule : DiagnosticVisitorRuleBase
             if (mismatchedCount.HasValue)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: $"Column count mismatch in INSERT statement. Target has {targetColumnCount} column(s), but SELECT provides {mismatchedCount.Value} column(s).",
                     code: RuleId,
                     category: Category,
@@ -78,7 +78,7 @@ public sealed class InsertColumnCountMismatchRule : DiagnosticVisitorRuleBase
                 if (valueCount != targetColumnCount)
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        range: ScriptDomHelpers.GetFirstTokenRange(node),
                         message: $"Column count mismatch in INSERT statement. Target has {targetColumnCount} column(s), but VALUES provides {valueCount} value(s).",
                         code: RuleId,
                         category: Category,

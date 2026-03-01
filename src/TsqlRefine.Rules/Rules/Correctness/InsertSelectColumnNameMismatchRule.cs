@@ -65,7 +65,7 @@ public sealed class InsertSelectColumnNameMismatchRule : DiagnosticVisitorRuleBa
                 if (!string.Equals(targetNames[i], selectNames[i], StringComparison.OrdinalIgnoreCase))
                 {
                     AddDiagnostic(
-                        fragment: node,
+                        fragment: insertSpec.Columns[i],
                         message: "INSERT target column names do not match SELECT output column names. This may indicate a swapped column order.",
                         code: "insert-select-column-name-mismatch",
                         category: "Correctness",
