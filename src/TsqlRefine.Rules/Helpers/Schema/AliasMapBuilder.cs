@@ -122,9 +122,14 @@ public static class AliasMapBuilder
             var dbName = schemaObject.DatabaseIdentifier?.Value;
 
             var resolved = schema.ResolveTable(dbName, schemaName, tableName);
-            var key = namedTable.Alias?.Value ?? tableName;
+            AddLookupKeys(
+                map,
+                tableName,
+                schemaName,
+                dbName,
+                namedTable.Alias?.Value,
+                resolved);
 
-            map.TryAdd(key, resolved);
             if (resolved is not null)
             {
                 allTables.Add(resolved);
@@ -138,6 +143,34 @@ public static class AliasMapBuilder
             {
                 map.TryAdd(alias, null);
             }
+        }
+    }
+
+    private static void AddLookupKeys(
+        Dictionary<string, ResolvedTable?> map,
+        string tableName,
+        string? schemaName,
+        string? dbName,
+        string? alias,
+        ResolvedTable? resolved)
+    {
+        if (!string.IsNullOrWhiteSpace(alias))
+        {
+            // When an alias exists, column qualifiers must use the alias.
+            map.TryAdd(alias, resolved);
+            return;
+        }
+
+        map.TryAdd(tableName, resolved);
+
+        if (!string.IsNullOrWhiteSpace(schemaName))
+        {
+            map.TryAdd($"{schemaName}.{tableName}", resolved);
+        }
+
+        if (!string.IsNullOrWhiteSpace(dbName) && !string.IsNullOrWhiteSpace(schemaName))
+        {
+            map.TryAdd($"{dbName}.{schemaName}.{tableName}", resolved);
         }
     }
 }
