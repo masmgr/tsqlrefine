@@ -20,7 +20,11 @@ public sealed class ImplicitConversionInPredicateSchemaRuleTests
                 .AddColumn("Id", "int")
                 .AddColumn("UserId", "int")
                 .AddColumn("Total", "decimal", precision: 18, scale: 2)
-                .AddColumn("OrderDate", "datetime2"))
+                .AddColumn("OrderDate", "datetime2")
+                .AddColumn("Code", "int"))
+            .AddTable("sales", "Orders", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Code", "varchar", maxLength: 20))
             .Build());
 
     [Theory]
@@ -215,5 +219,23 @@ public sealed class ImplicitConversionInPredicateSchemaRuleTests
 
         Assert.Equal(2, diagnostics.Length);
         Assert.All(diagnostics, d => Assert.Equal("implicit-conversion-in-predicate-schema", d.Code));
+    }
+
+    [Fact]
+    public void Analyze_SchemaQualifiedColumn_UsesQualifiedTableType()
+    {
+        const string sql = """
+            SELECT sales.Orders.Code
+            FROM dbo.Orders
+            INNER JOIN sales.Orders ON dbo.Orders.Id = sales.Orders.Id
+            WHERE sales.Orders.Code = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("implicit-conversion-in-predicate-schema", diagnostics[0].Code);
+        Assert.Contains("sales.Orders.Code", diagnostics[0].Message);
     }
 }

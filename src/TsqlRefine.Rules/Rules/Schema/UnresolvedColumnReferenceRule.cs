@@ -91,13 +91,11 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
             if (identifiers.Count >= 2)
             {
-                // Qualified: alias.column or schema.table.column
-                var tableAlias = identifiers[identifiers.Count - 2].Value;
                 var columnName = identifiers[identifiers.Count - 1].Value;
 
-                if (!_currentAliasMap.TryResolve(tableAlias, out var resolvedTable))
+                if (!TryResolveQualifiedTable(identifiers, out var resolvedTable))
                 {
-                    // Table alias not in scope — skip (may be outer scope)
+                    // Qualifier not in current scope — skip (may be outer scope)
                     base.ExplicitVisit(node);
                     return;
                 }
@@ -160,6 +158,58 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private bool TryResolveQualifiedTable(IList<Identifier> identifiers, out ResolvedTable? resolvedTable)
+        {
+            if (_currentAliasMap is null)
+            {
+                resolvedTable = null;
+                return false;
+            }
+
+            foreach (var key in BuildQualifierLookupKeys(identifiers))
+            {
+                if (_currentAliasMap.TryResolve(key, out resolvedTable))
+                {
+                    return true;
+                }
+            }
+
+            resolvedTable = null;
+            return false;
+        }
+
+        private static IEnumerable<string> BuildQualifierLookupKeys(IList<Identifier> identifiers)
+        {
+            var qualifierCount = identifiers.Count - 1;
+            if (qualifierCount <= 0)
+            {
+                yield break;
+            }
+
+            var parts = new string[qualifierCount];
+            for (var i = 0; i < qualifierCount; i++)
+            {
+                parts[i] = identifiers[i].Value;
+            }
+
+            if (parts.Length == 1)
+            {
+                yield return parts[0];
+                yield break;
+            }
+
+            // Prefer fully-qualified lookup first.
+            yield return string.Join(".", parts);
+
+            // Fallbacks for cases where the FROM clause omitted database/schema qualifiers.
+            if (parts.Length >= 2)
+            {
+                yield return $"{parts[^2]}.{parts[^1]}";
+            }
+
+            yield return parts[^1];
         }
     }
 }
