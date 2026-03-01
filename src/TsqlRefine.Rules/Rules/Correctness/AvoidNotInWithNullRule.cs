@@ -132,16 +132,7 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             AliasMap aliasMap,
             out ResolvedTable? resolvedTable)
         {
-            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
-            {
-                if (aliasMap.TryResolve(key, out resolvedTable))
-                {
-                    return true;
-                }
-            }
-
-            resolvedTable = null;
-            return false;
+            return QualifierLookupKeyBuilder.TryResolve(aliasMap, identifiers, out resolvedTable);
         }
 
         private static bool HasNullIntroducingJoinForColumnSource(
@@ -267,7 +258,7 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             {
                 if (aliasMap.TryResolve(alias, out var resolved) &&
                     resolved is not null &&
-                    TablesAreEqual(resolved, columnTable))
+                    ResolvedTableComparers.TablesAreEqual(resolved, columnTable))
                 {
                     return true;
                 }
@@ -303,9 +294,5 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             }
         }
 
-        private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b) =>
-            string.Equals(a.DatabaseName, b.DatabaseName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
     }
 }

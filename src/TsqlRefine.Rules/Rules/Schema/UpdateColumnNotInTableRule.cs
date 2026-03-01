@@ -34,7 +34,7 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
             var schemaObject = target.SchemaObject;
             var tableName = schemaObject.BaseIdentifier?.Value;
-            if (tableName is null || tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;

@@ -173,16 +173,7 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
             AliasMap aliasMap,
             out ResolvedTable? resolvedTable)
         {
-            foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
-            {
-                if (aliasMap.TryResolve(key, out resolvedTable))
-                {
-                    return true;
-                }
-            }
-
-            resolvedTable = null;
-            return false;
+            return QualifierLookupKeyBuilder.TryResolve(aliasMap, identifiers, out resolvedTable);
         }
 
         private static string? MapSchemaTypeCategory(SchemaTypeCategory category)

@@ -30,7 +30,7 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
         private Dictionary<ColumnReferenceExpression, SchemaTypeInfo?> _columnTypeCache =
             new(ReferenceEqualityComparer.Instance);
         private Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?> _tableColumnTypeCache =
-            new(ResolvedTableColumnKeyComparer.Instance);
+            new(ResolvedTableComparers.TableColumnKeyComparer.Instance);
         private Dictionary<string, SchemaTypeInfo?> _unqualifiedColumnTypeCache =
             new(StringComparer.OrdinalIgnoreCase);
 
@@ -47,7 +47,7 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
                 _expressionTypeCache = new Dictionary<ScalarExpression, SchemaTypeInfo?>(ReferenceEqualityComparer.Instance);
                 _columnTypeCache = new Dictionary<ColumnReferenceExpression, SchemaTypeInfo?>(ReferenceEqualityComparer.Instance);
-                _tableColumnTypeCache = new Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?>(ResolvedTableColumnKeyComparer.Instance);
+                _tableColumnTypeCache = new Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?>(ResolvedTableComparers.TableColumnKeyComparer.Instance);
                 _unqualifiedColumnTypeCache = new Dictionary<string, SchemaTypeInfo?>(StringComparer.OrdinalIgnoreCase);
 
                 node.WhereClause?.Accept(this);
@@ -226,16 +226,23 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
             return resolved;
         }
 
+        private static readonly SchemaTypeInfo IntType = new("int", SchemaTypeCategory.ExactNumeric);
+        private static readonly SchemaTypeInfo DecimalType = new("decimal", SchemaTypeCategory.ExactNumeric);
+        private static readonly SchemaTypeInfo FloatType = new("float", SchemaTypeCategory.ApproximateNumeric);
+        private static readonly SchemaTypeInfo MoneyType = new("money", SchemaTypeCategory.ExactNumeric);
+        private static readonly SchemaTypeInfo NVarcharType = new("nvarchar", SchemaTypeCategory.UnicodeString);
+        private static readonly SchemaTypeInfo VarcharType = new("varchar", SchemaTypeCategory.AnsiString);
+
         private static SchemaTypeInfo? InferLiteralType(ScalarExpression expression)
         {
             return expression switch
             {
-                IntegerLiteral => new SchemaTypeInfo("int", SchemaTypeCategory.ExactNumeric),
-                NumericLiteral => new SchemaTypeInfo("decimal", SchemaTypeCategory.ExactNumeric),
-                RealLiteral => new SchemaTypeInfo("float", SchemaTypeCategory.ApproximateNumeric),
-                MoneyLiteral => new SchemaTypeInfo("money", SchemaTypeCategory.ExactNumeric),
-                StringLiteral s when s.IsNational => new SchemaTypeInfo("nvarchar", SchemaTypeCategory.UnicodeString),
-                StringLiteral => new SchemaTypeInfo("varchar", SchemaTypeCategory.AnsiString),
+                IntegerLiteral => IntType,
+                NumericLiteral => DecimalType,
+                RealLiteral => FloatType,
+                MoneyLiteral => MoneyType,
+                StringLiteral s when s.IsNational => NVarcharType,
+                StringLiteral => VarcharType,
                 _ => null
             };
         }
@@ -251,25 +258,5 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
             return string.Join(".", identifiers.Select(i => i.Value));
         }
 
-        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
-        {
-            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
-
-            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
-                string.Equals(x.Table.DatabaseName, y.Table.DatabaseName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.Table.SchemaName, y.Table.SchemaName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.Table.TableName, y.Table.TableName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
-
-            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
-            {
-                var hash = new HashCode();
-                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
-                return hash.ToHashCode();
-            }
-        }
     }
 }

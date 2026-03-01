@@ -512,50 +512,6 @@ public sealed class ConfigLoader
     }
 
     /// <summary>
-    /// Loads a schema provider from a snapshot file specified by CLI args or configuration.
-    /// CLI --schema takes precedence over config schema.snapshotPath.
-    /// </summary>
-    /// <returns>An <see cref="ISchemaProvider"/> instance, or null if no schema is configured.</returns>
-    public static ISchemaProvider? LoadSchema(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
-    {
-        var (snapshotPath, source) = ResolveSchemaPath(args, config);
-
-        if (snapshotPath is null)
-        {
-            return null;
-        }
-
-        if (!File.Exists(snapshotPath))
-        {
-            throw new ConfigException($"Schema snapshot file not found: {snapshotPath}");
-        }
-
-        try
-        {
-            using var stream = File.OpenRead(snapshotPath);
-            var snapshot = SchemaSnapshotSerializer.Deserialize(stream);
-            var defaultSchema = config.Schema?.DefaultSchema ?? "dbo";
-            var provider = new SchemaProvider(snapshot, defaultSchema);
-
-            if (stderr is not null && !args.Quiet)
-            {
-                var tableCount = snapshot.Databases.Sum(db => db.Tables.Count + db.Views.Count);
-                stderr.WriteLine($"Schema loaded: {snapshot.Metadata.DatabaseName} ({tableCount} tables/views) [from {source}]");
-            }
-
-            return provider;
-        }
-        catch (JsonException ex)
-        {
-            throw new ConfigException($"Failed to parse schema snapshot: {ex.Message}");
-        }
-        catch (IOException ex)
-        {
-            throw new ConfigException($"Failed to read schema snapshot: {ex.Message}");
-        }
-    }
-
-    /// <summary>
     /// Loads a unified <see cref="ISchemaContext"/> combining schema snapshot and optional relations profile.
     /// CLI args take precedence over config file settings.
     /// </summary>
@@ -675,51 +631,6 @@ public sealed class ConfigLoader
         }
 
         return (null, "none");
-    }
-
-    /// <summary>
-    /// Loads a relation deviation provider from a relations profile file specified by CLI args or configuration.
-    /// CLI --relations-profile takes precedence over config schema.relationsProfilePath.
-    /// </summary>
-    /// <returns>An <see cref="IRelationDeviationProvider"/> instance, or null if no relations profile is configured.</returns>
-    public static IRelationDeviationProvider? LoadRelationDeviations(
-        CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
-    {
-        var (profilePath, source) = ResolveRelationsProfilePath(args, config);
-
-        if (profilePath is null)
-        {
-            return null;
-        }
-
-        if (!File.Exists(profilePath))
-        {
-            throw new ConfigException($"Relations profile file not found: {profilePath}");
-        }
-
-        try
-        {
-            using var stream = File.OpenRead(profilePath);
-            var profile = Schema.Relations.RelationProfileSerializer.Deserialize(stream);
-            var provider = Schema.Relations.RelationDeviationProvider.FromProfile(profile);
-
-            if (stderr is not null && !args.Quiet)
-            {
-                stderr.WriteLine(
-                    $"Relations profile loaded: {profile.Relations.Count} table pairs, " +
-                    $"{profile.Metadata.TotalJoinCount} joins [from {source}]");
-            }
-
-            return provider;
-        }
-        catch (JsonException ex)
-        {
-            throw new ConfigException($"Failed to parse relations profile: {ex.Message}");
-        }
-        catch (IOException ex)
-        {
-            throw new ConfigException($"Failed to read relations profile: {ex.Message}");
-        }
     }
 
     /// <summary>

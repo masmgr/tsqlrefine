@@ -24,7 +24,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
     {
         private AliasMap? _currentAliasMap;
         private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
-            new(ResolvedTableColumnKeyComparer.Instance);
+            new(ResolvedTableComparers.TableColumnKeyComparer.Instance);
         private Dictionary<string, IReadOnlyList<ResolvedTable>> _unqualifiedColumnMatchesCache =
             new(StringComparer.OrdinalIgnoreCase);
 
@@ -37,7 +37,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 var previousUnqualifiedColumnMatchesCache = _unqualifiedColumnMatchesCache;
 
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
-                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
+                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableComparers.TableColumnKeyComparer.Instance);
                 _unqualifiedColumnMatchesCache = new Dictionary<string, IReadOnlyList<ResolvedTable>>(StringComparer.OrdinalIgnoreCase);
 
                 // Visit SELECT list, WHERE, etc. with the alias map in scope
@@ -213,25 +213,5 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             return cached;
         }
 
-        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
-        {
-            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
-
-            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
-                string.Equals(x.Table.DatabaseName, y.Table.DatabaseName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.Table.SchemaName, y.Table.SchemaName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.Table.TableName, y.Table.TableName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
-
-            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
-            {
-                var hash = new HashCode();
-                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
-                return hash.ToHashCode();
-            }
-        }
     }
 }

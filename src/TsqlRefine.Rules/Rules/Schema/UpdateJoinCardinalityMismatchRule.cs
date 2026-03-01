@@ -23,14 +23,8 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
 
     private sealed class UpdateJoinCardinalityVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
-        private AliasMap? _currentAliasMap;
+        private SchemaColumnResolver? _resolver;
         private ResolvedTable? _currentTarget;
-        private Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache =
-            new(ReferenceEqualityComparer.Instance);
-        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
-            new(ResolvedTableColumnKeyComparer.Instance);
-        private Dictionary<string, (ResolvedTable Table, string ColumnName)?> _unqualifiedColumnResolutionCache =
-            new(StringComparer.OrdinalIgnoreCase);
 
         public override void ExplicitVisit(UpdateStatement node)
         {
@@ -49,7 +43,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             }
 
             var tableName = target.SchemaObject.BaseIdentifier?.Value;
-            if (tableName is null || tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -68,28 +62,19 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
                 return;
             }
 
-            var previousMap = _currentAliasMap;
+            var previousResolver = _resolver;
             var previousTarget = _currentTarget;
-            var previousResolvedColumnCache = _resolvedColumnCache;
-            var previousColumnExistsCache = _columnExistsCache;
-            var previousUnqualifiedColumnResolutionCache = _unqualifiedColumnResolutionCache;
 
-            _currentAliasMap = aliasMap;
+            _resolver = new SchemaColumnResolver(schema, aliasMap);
             _currentTarget = resolvedTarget;
-            _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(ReferenceEqualityComparer.Instance);
-            _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
-            _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var tableRef in tableRefs)
             {
                 TraverseJoins(tableRef);
             }
 
-            _currentAliasMap = previousMap;
+            _resolver = previousResolver;
             _currentTarget = previousTarget;
-            _resolvedColumnCache = previousResolvedColumnCache;
-            _columnExistsCache = previousColumnExistsCache;
-            _unqualifiedColumnResolutionCache = previousUnqualifiedColumnResolutionCache;
 
             base.ExplicitVisit(node);
         }
@@ -121,7 +106,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
 
         private void CheckJoinCardinality(QualifiedJoin joinNode)
         {
-            var pairs = ExtractEqualityPairs(joinNode.SearchCondition);
+            var pairs = JoinEqualityPairCollector.Extract(joinNode.SearchCondition);
             if (pairs.Count == 0)
             {
                 return;
@@ -131,10 +116,10 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             var joinedColumns = new List<string>();
             ResolvedTable? joinedTable = null;
 
-            foreach (var (leftCol, rightCol) in pairs)
+            foreach (var (leftCol, rightCol, _) in pairs)
             {
-                var leftResolved = ResolveColumnToTable(leftCol);
-                var rightResolved = ResolveColumnToTable(rightCol);
+                var leftResolved = _resolver!.ResolveColumnToTable(leftCol);
+                var rightResolved = _resolver.ResolveColumnToTable(rightCol);
                 if (leftResolved is null || rightResolved is null)
                 {
                     continue;
@@ -143,9 +128,9 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
                 var (leftTable, leftColName) = leftResolved.Value;
                 var (rightTable, rightColName) = rightResolved.Value;
 
-                if (TablesAreEqual(leftTable, _currentTarget!))
+                if (ResolvedTableComparers.TablesAreEqual(leftTable, _currentTarget!))
                 {
-                    if (joinedTable is not null && !TablesAreEqual(rightTable, joinedTable))
+                    if (joinedTable is not null && !ResolvedTableComparers.TablesAreEqual(rightTable, joinedTable))
                     {
                         continue;
                     }
@@ -154,9 +139,9 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
                     joinedColumns.Add(rightColName);
                     joinedTable ??= rightTable;
                 }
-                else if (TablesAreEqual(rightTable, _currentTarget!))
+                else if (ResolvedTableComparers.TablesAreEqual(rightTable, _currentTarget!))
                 {
-                    if (joinedTable is not null && !TablesAreEqual(leftTable, joinedTable))
+                    if (joinedTable is not null && !ResolvedTableComparers.TablesAreEqual(leftTable, joinedTable))
                     {
                         continue;
                     }
@@ -205,129 +190,6 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             }
 
             return schema.ResolveTable(null, null, tableName);
-        }
-
-        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTable(ColumnReferenceExpression colRef)
-        {
-            if (_resolvedColumnCache.TryGetValue(colRef, out var cached))
-            {
-                return cached;
-            }
-
-            var resolved = ResolveColumnToTableCore(colRef);
-            _resolvedColumnCache[colRef] = resolved;
-            return resolved;
-        }
-
-        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTableCore(ColumnReferenceExpression colRef)
-        {
-            if (_currentAliasMap is null || colRef.ColumnType == ColumnType.Wildcard)
-            {
-                return null;
-            }
-
-            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null or { Count: 0 })
-            {
-                return null;
-            }
-
-            var columnName = identifiers[identifiers.Count - 1].Value;
-
-            if (identifiers.Count >= 2)
-            {
-                if (QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out var resolved))
-                {
-                    return resolved is null ? null : (resolved, columnName);
-                }
-
-                return null;
-            }
-
-            if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
-            {
-                return unqualifiedCached;
-            }
-
-            foreach (var table in _currentAliasMap.AllTables)
-            {
-                if (ColumnExists(table, columnName))
-                {
-                    var result = (table, columnName);
-                    _unqualifiedColumnResolutionCache[columnName] = result;
-                    return result;
-                }
-            }
-
-            _unqualifiedColumnResolutionCache[columnName] = null;
-            return null;
-        }
-
-        private bool ColumnExists(ResolvedTable table, string columnName)
-        {
-            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
-            {
-                return exists;
-            }
-
-            exists = schema.ResolveColumn(table, columnName) is not null;
-            _columnExistsCache[(table, columnName)] = exists;
-            return exists;
-        }
-
-        private static List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right)> ExtractEqualityPairs(
-            BooleanExpression condition)
-        {
-            var results = new List<(ColumnReferenceExpression, ColumnReferenceExpression)>();
-            CollectEqualityPairs(condition, results);
-            return results;
-        }
-
-        private static void CollectEqualityPairs(
-            BooleanExpression condition,
-            List<(ColumnReferenceExpression, ColumnReferenceExpression)> results)
-        {
-            switch (condition)
-            {
-                case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison
-                    when comparison.FirstExpression is ColumnReferenceExpression leftCol
-                      && comparison.SecondExpression is ColumnReferenceExpression rightCol:
-                    results.Add((leftCol, rightCol));
-                    break;
-
-                case BooleanBinaryExpression binary:
-                    CollectEqualityPairs(binary.FirstExpression, results);
-                    CollectEqualityPairs(binary.SecondExpression, results);
-                    break;
-
-                case BooleanParenthesisExpression paren:
-                    CollectEqualityPairs(paren.Expression, results);
-                    break;
-            }
-        }
-
-        private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b) =>
-            string.Equals(a.DatabaseName, b.DatabaseName, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
-
-        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
-        {
-            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
-
-            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
-                TablesAreEqual(x.Table, y.Table)
-                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
-
-            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
-            {
-                var hash = new HashCode();
-                hash.Add(obj.Table.DatabaseName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
-                return hash.ToHashCode();
-            }
         }
     }
 }

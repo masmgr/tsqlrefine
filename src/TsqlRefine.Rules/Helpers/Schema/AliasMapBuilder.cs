@@ -66,31 +66,10 @@ public static class AliasMapBuilder
     }
 
     /// <summary>
-    /// Builds an alias map for CTE names, registering them as unresolvable.
+    /// Determines if a table name refers to a temporary table (#) or table variable (@).
     /// </summary>
-    /// <param name="cteNames">The CTE names to register.</param>
-    /// <param name="existing">An existing alias map to extend, or null.</param>
-    /// <returns>A new alias map with CTE names registered as unresolvable.</returns>
-    public static AliasMap WithCteNames(IEnumerable<string> cteNames, AliasMap? existing = null)
-    {
-        var map = new Dictionary<string, ResolvedTable?>(StringComparer.OrdinalIgnoreCase);
-        var allTables = new List<ResolvedTable>();
-
-        if (existing is not null)
-        {
-            foreach (var table in existing.AllTables)
-            {
-                allTables.Add(table);
-            }
-        }
-
-        foreach (var cteName in cteNames)
-        {
-            map.TryAdd(cteName, null); // null = unresolvable
-        }
-
-        return new AliasMap(map, allTables);
-    }
+    public static bool IsTemporaryOrVariable(string tableName) =>
+        tableName.StartsWith('#') || tableName.StartsWith('@');
 
     private static void ProcessTableReference(
         TableReference tableRef,
@@ -120,7 +99,7 @@ public static class AliasMapBuilder
             }
 
             // Skip temp tables and table variables
-            if (tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (IsTemporaryOrVariable(tableName))
             {
                 var alias = namedTable.Alias?.Value ?? tableName;
                 map.TryAdd(alias, null); // unresolvable

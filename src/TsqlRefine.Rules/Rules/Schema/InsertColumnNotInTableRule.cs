@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
@@ -33,7 +34,7 @@ public sealed class InsertColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
             var schemaObject = target.SchemaObject;
             var tableName = schemaObject.BaseIdentifier?.Value;
-            if (tableName is null || tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;

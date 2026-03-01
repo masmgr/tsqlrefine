@@ -1,5 +1,6 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
@@ -39,7 +40,7 @@ public sealed class IndexColumnNotInTableRule : DiagnosticVisitorRuleBase
             }
 
             var tableName = onName.BaseIdentifier?.Value;
-            if (tableName is null || tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -72,7 +73,7 @@ public sealed class IndexColumnNotInTableRule : DiagnosticVisitorRuleBase
             }
 
             var tableNameValue = node.SchemaObjectName?.BaseIdentifier?.Value;
-            if (tableNameValue is null || tableNameValue.StartsWith('#') || tableNameValue.StartsWith('@'))
+            if (tableNameValue is null || AliasMapBuilder.IsTemporaryOrVariable(tableNameValue))
             {
                 base.ExplicitVisit(node);
                 return;

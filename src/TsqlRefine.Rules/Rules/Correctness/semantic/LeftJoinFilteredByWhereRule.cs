@@ -200,7 +200,7 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
             var leftFks = schema!.GetForeignKeys(resolvedLeftTable);
             foreach (var fk in leftFks)
             {
-                if (TablesAreEqual(fk.TargetTable, rightTable) && JoinColumnsMatchFk(pairs, fk, resolvedLeftTable, rightTable, aliasMap))
+                if (ResolvedTableComparers.TablesAreEqual(fk.TargetTable, rightTable) && JoinColumnsMatchFk(pairs, fk, resolvedLeftTable, rightTable, aliasMap))
                 {
                     return true;
                 }
@@ -210,7 +210,7 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
             var rightFks = schema.GetForeignKeys(rightTable);
             foreach (var fk in rightFks)
             {
-                if (TablesAreEqual(fk.TargetTable, resolvedLeftTable) && JoinColumnsMatchFk(pairs, fk, rightTable, resolvedLeftTable, aliasMap))
+                if (ResolvedTableComparers.TablesAreEqual(fk.TargetTable, resolvedLeftTable) && JoinColumnsMatchFk(pairs, fk, rightTable, resolvedLeftTable, aliasMap))
                 {
                     return true;
                 }
@@ -274,14 +274,14 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
                 aliasMap.TryResolve(rightQ, out var rightResolved);
 
                 string? sourceCol = null, targetCol = null;
-                if (leftResolved is not null && TablesAreEqual(leftResolved, sourceTable)
-                    && rightResolved is not null && TablesAreEqual(rightResolved, targetTable))
+                if (leftResolved is not null && ResolvedTableComparers.TablesAreEqual(leftResolved, sourceTable)
+                    && rightResolved is not null && ResolvedTableComparers.TablesAreEqual(rightResolved, targetTable))
                 {
                     sourceCol = leftC;
                     targetCol = rightC;
                 }
-                else if (rightResolved is not null && TablesAreEqual(rightResolved, sourceTable)
-                         && leftResolved is not null && TablesAreEqual(leftResolved, targetTable))
+                else if (rightResolved is not null && ResolvedTableComparers.TablesAreEqual(rightResolved, sourceTable)
+                         && leftResolved is not null && ResolvedTableComparers.TablesAreEqual(leftResolved, targetTable))
                 {
                     sourceCol = rightC;
                     targetCol = leftC;
@@ -309,12 +309,6 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
             }
 
             return true;
-        }
-
-        private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b)
-        {
-            return string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
         }
 
         // --- Filtered table/column collection methods ---

@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Schema;
 
@@ -77,7 +78,7 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
             }
 
             // Skip temp tables and table variables
-            if (tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;

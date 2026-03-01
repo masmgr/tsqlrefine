@@ -34,7 +34,7 @@ public sealed class DeleteColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
             var schemaObject = target.SchemaObject;
             var tableName = schemaObject.BaseIdentifier?.Value;
-            if (tableName is null || tableName.StartsWith('#') || tableName.StartsWith('@'))
+            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -143,31 +143,25 @@ public sealed class DeleteColumnNotInTableRule : SchemaAwareVisitorRuleBase
         {
             var columnName = identifiers[identifiers.Count - 1].Value;
 
-            if (aliasMap is not null)
+            if (aliasMap is not null && QualifierLookupKeyBuilder.TryResolve(aliasMap, identifiers, out var resolvedTable))
             {
-                foreach (var key in QualifierLookupKeyBuilder.Build(identifiers))
+                if (resolvedTable is null)
                 {
-                    if (aliasMap.TryResolve(key, out var resolvedTable))
-                    {
-                        if (resolvedTable is null)
-                        {
-                            // Unresolvable (CTE, derived table, temp table)
-                            return;
-                        }
-
-                        if (schema.ResolveColumn(resolvedTable, columnName) is null)
-                        {
-                            AddDiagnostic(
-                                fragment: node,
-                                message: $"Column '{columnName}' not found in '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
-                                code: "delete-column-not-in-table",
-                                category: "Schema",
-                                fixable: false);
-                        }
-
-                        return;
-                    }
+                    // Unresolvable (CTE, derived table, temp table)
+                    return;
                 }
+
+                if (schema.ResolveColumn(resolvedTable, columnName) is null)
+                {
+                    AddDiagnostic(
+                        fragment: node,
+                        message: $"Column '{columnName}' not found in '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
+                        code: "delete-column-not-in-table",
+                        category: "Schema",
+                        fixable: false);
+                }
+
+                return;
             }
 
             // No alias map or qualifier not found — check against target table

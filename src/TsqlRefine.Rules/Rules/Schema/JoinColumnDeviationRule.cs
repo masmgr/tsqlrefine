@@ -30,10 +30,6 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         ISchemaProvider schema,
         IRelationDeviationProvider deviations) : DiagnosticVisitorBase
     {
-        private readonly record struct RawColumnPair(
-            ColumnReferenceExpression Left,
-            ColumnReferenceExpression Right);
-
         private readonly record struct ResolvedColumnPair(
             string LeftColumn,
             string RightColumn);
@@ -55,13 +51,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             RelationPatternDeviation? Match,
             bool IsAmbiguous);
 
-        private AliasMap? _currentAliasMap;
-        private Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache =
-            new(ReferenceEqualityComparer.Instance);
-        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
-            new(ResolvedTableColumnKeyComparer.Instance);
-        private Dictionary<string, (ResolvedTable Table, string ColumnName)?> _unqualifiedColumnResolutionCache =
-            new(StringComparer.OrdinalIgnoreCase);
+        private SchemaColumnResolver? _resolver;
         private Dictionary<RelationPatternDeviation, IReadOnlyList<string>> _sortedDeviationPairsCache =
             new(ReferenceEqualityComparer.Instance);
         private Dictionary<RelationTablePairSummary, string> _dominantInfoCache =
@@ -73,22 +63,12 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         {
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
-                var previousMap = _currentAliasMap;
-                var previousResolvedColumnCache = _resolvedColumnCache;
-                var previousColumnExistsCache = _columnExistsCache;
-                var previousUnqualifiedColumnResolutionCache = _unqualifiedColumnResolutionCache;
+                var previousResolver = _resolver;
 
-                _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
-                _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(ReferenceEqualityComparer.Instance);
-                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableColumnKeyComparer.Instance);
-                _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(StringComparer.OrdinalIgnoreCase);
-
+                _resolver = new SchemaColumnResolver(schema, AliasMapBuilder.Build(tableRefs, schema));
                 node.FromClause.Accept(this);
 
-                _currentAliasMap = previousMap;
-                _resolvedColumnCache = previousResolvedColumnCache;
-                _columnExistsCache = previousColumnExistsCache;
-                _unqualifiedColumnResolutionCache = previousUnqualifiedColumnResolutionCache;
+                _resolver = previousResolver;
                 return;
             }
 
@@ -97,7 +77,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         public override void ExplicitVisit(QualifiedJoin node)
         {
-            if (_currentAliasMap is not null && node.SearchCondition is not null)
+            if (_resolver is not null && node.SearchCondition is not null)
             {
                 CheckJoinColumnDeviation(node);
             }
@@ -154,7 +134,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 return false;
             }
 
-            var rawPairs = ExtractEqualityPairs(node.SearchCondition);
+            var rawPairs = JoinEqualityPairCollector.Extract(node.SearchCondition);
             if (rawPairs.Count == 0)
             {
                 return false;
@@ -424,132 +404,30 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         private static string BuildTableKey(ResolvedTable table) =>
             $"{table.SchemaName}.{table.TableName}";
 
-        private static List<RawColumnPair> ExtractEqualityPairs(BooleanExpression? condition)
-        {
-            var results = new List<RawColumnPair>();
-            CollectEqualityPairs(condition, results);
-            return results;
-        }
-
-        private static void CollectEqualityPairs(
-            BooleanExpression? condition,
-            List<RawColumnPair> results)
-        {
-            switch (condition)
-            {
-                case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comparison
-                    when comparison.FirstExpression is ColumnReferenceExpression leftCol
-                      && comparison.SecondExpression is ColumnReferenceExpression rightCol:
-                    results.Add(new RawColumnPair(leftCol, rightCol));
-                    break;
-
-                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } binary:
-                    CollectEqualityPairs(binary.FirstExpression, results);
-                    CollectEqualityPairs(binary.SecondExpression, results);
-                    break;
-
-                case BooleanParenthesisExpression paren:
-                    CollectEqualityPairs(paren.Expression, results);
-                    break;
-            }
-        }
-
-        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTable(ColumnReferenceExpression colRef)
-        {
-            if (_resolvedColumnCache.TryGetValue(colRef, out var cached))
-            {
-                return cached;
-            }
-
-            var resolved = ResolveColumnToTableCore(colRef);
-            _resolvedColumnCache[colRef] = resolved;
-            return resolved;
-        }
-
-        private (ResolvedTable Table, string ColumnName)? ResolveColumnToTableCore(ColumnReferenceExpression colRef)
-        {
-            if (_currentAliasMap is null || colRef.ColumnType == ColumnType.Wildcard)
-            {
-                return null;
-            }
-
-            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null or { Count: 0 })
-            {
-                return null;
-            }
-
-            var columnName = identifiers[identifiers.Count - 1].Value;
-
-            if (identifiers.Count >= 2)
-            {
-                if (QualifierLookupKeyBuilder.TryResolve(_currentAliasMap, identifiers, out var resolved))
-                {
-                    return resolved is null ? null : (resolved, columnName);
-                }
-
-                return null;
-            }
-
-            if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
-            {
-                return unqualifiedCached;
-            }
-
-            foreach (var table in _currentAliasMap.AllTables)
-            {
-                if (ColumnExists(table, columnName))
-                {
-                    var result = (table, columnName);
-                    _unqualifiedColumnResolutionCache[columnName] = result;
-                    return result;
-                }
-            }
-
-            _unqualifiedColumnResolutionCache[columnName] = null;
-            return null;
-        }
-
-        private bool ColumnExists(ResolvedTable table, string columnName)
-        {
-            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
-            {
-                return exists;
-            }
-
-            exists = schema.ResolveColumn(table, columnName) is not null;
-            _columnExistsCache[(table, columnName)] = exists;
-            return exists;
-        }
-
-        /// <summary>
-        /// Orients column pairs so Left belongs to leftTable and Right to rightTable,
-        /// regardless of the order they appear in the ON clause.
-        /// </summary>
         private List<ResolvedColumnPair> OrientColumnPairs(
-            IReadOnlyList<RawColumnPair> rawPairs,
+            List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right, BooleanComparisonExpression Node)> rawPairs,
             ResolvedTable leftTable,
             ResolvedTable rightTable)
         {
             var result = new List<ResolvedColumnPair>();
-            foreach (var pair in rawPairs)
+            foreach (var (left, right, _) in rawPairs)
             {
-                var resolved1 = ResolveColumnToTable(pair.Left);
-                var resolved2 = ResolveColumnToTable(pair.Right);
+                var resolved1 = _resolver!.ResolveColumnToTable(left);
+                var resolved2 = _resolver.ResolveColumnToTable(right);
                 if (resolved1 is null || resolved2 is null)
                 {
                     continue;
                 }
 
-                if (TablesAreEqual(resolved1.Value.Table, leftTable) &&
-                    TablesAreEqual(resolved2.Value.Table, rightTable))
+                if (ResolvedTableComparers.TablesAreEqual(resolved1.Value.Table, leftTable) &&
+                    ResolvedTableComparers.TablesAreEqual(resolved2.Value.Table, rightTable))
                 {
                     result.Add(new ResolvedColumnPair(
                         resolved1.Value.ColumnName,
                         resolved2.Value.ColumnName));
                 }
-                else if (TablesAreEqual(resolved1.Value.Table, rightTable) &&
-                         TablesAreEqual(resolved2.Value.Table, leftTable))
+                else if (ResolvedTableComparers.TablesAreEqual(resolved1.Value.Table, rightTable) &&
+                         ResolvedTableComparers.TablesAreEqual(resolved2.Value.Table, leftTable))
                 {
                     result.Add(new ResolvedColumnPair(
                         resolved2.Value.ColumnName,
@@ -562,7 +440,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
         private ResolvedTable? ResolveSideTableFromPairs(
             TableReference tableRef,
-            IReadOnlyList<RawColumnPair> rawPairs)
+            List<(ColumnReferenceExpression Left, ColumnReferenceExpression Right, BooleanComparisonExpression Node)> rawPairs)
         {
             var candidates = ResolveNamedTables(tableRef);
             if (candidates.Count == 0)
@@ -577,15 +455,15 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             var referenced = new List<ResolvedTable>();
 
-            foreach (var pair in rawPairs)
+            foreach (var (left, right, _) in rawPairs)
             {
-                var leftResolved = ResolveColumnToTable(pair.Left);
+                var leftResolved = _resolver!.ResolveColumnToTable(left);
                 if (leftResolved is not null)
                 {
                     TryAddReferencedCandidate(referenced, candidates, leftResolved.Value.Table);
                 }
 
-                var rightResolved = ResolveColumnToTable(pair.Right);
+                var rightResolved = _resolver.ResolveColumnToTable(right);
                 if (rightResolved is not null)
                 {
                     TryAddReferencedCandidate(referenced, candidates, rightResolved.Value.Table);
@@ -599,7 +477,6 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
 
             if (referenced.Count > 1)
             {
-                // Ambiguous side resolution in nested joins — skip to avoid false positives.
                 return null;
             }
 
@@ -620,7 +497,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 case NamedTableReference named:
                     var alias = named.Alias?.Value ?? named.SchemaObject.BaseIdentifier?.Value;
                     if (alias is not null &&
-                        _currentAliasMap?.TryResolve(alias, out var resolved) == true &&
+                        _resolver?.AliasMap.TryResolve(alias, out var resolved) == true &&
                         resolved is not null)
                     {
                         TryAddUniqueTable(tables, resolved);
@@ -646,7 +523,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         {
             foreach (var candidate in candidates)
             {
-                if (TablesAreEqual(candidate, table))
+                if (ResolvedTableComparers.TablesAreEqual(candidate, table))
                 {
                     TryAddUniqueTable(referenced, candidate);
                     return;
@@ -658,7 +535,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
         {
             for (var i = 0; i < tables.Count; i++)
             {
-                if (TablesAreEqual(tables[i], table))
+                if (ResolvedTableComparers.TablesAreEqual(tables[i], table))
                 {
                     return;
                 }
@@ -673,14 +550,13 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             {
                 var alias = named.Alias?.Value
                     ?? named.SchemaObject.BaseIdentifier?.Value;
-                if (alias is not null && _currentAliasMap?.TryResolve(alias, out var resolved) == true)
+                if (alias is not null && _resolver?.AliasMap.TryResolve(alias, out var resolved) == true)
                 {
                     return resolved;
                 }
             }
             else if (tableRef is JoinTableReference join)
             {
-                // For nested JOINs, prefer the rightmost (second) table.
                 return ResolveFallbackSideTable(join.SecondTableReference)
                     ?? ResolveFallbackSideTable(join.FirstTableReference);
             }
@@ -690,28 +566,6 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
             }
 
             return null;
-        }
-
-        private static bool TablesAreEqual(ResolvedTable a, ResolvedTable b) =>
-            string.Equals(a.SchemaName, b.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(a.TableName, b.TableName, StringComparison.OrdinalIgnoreCase);
-
-        private sealed class ResolvedTableColumnKeyComparer : IEqualityComparer<(ResolvedTable Table, string ColumnName)>
-        {
-            public static ResolvedTableColumnKeyComparer Instance { get; } = new();
-
-            public bool Equals((ResolvedTable Table, string ColumnName) x, (ResolvedTable Table, string ColumnName) y) =>
-                TablesAreEqual(x.Table, y.Table)
-                && string.Equals(x.ColumnName, y.ColumnName, StringComparison.OrdinalIgnoreCase);
-
-            public int GetHashCode((ResolvedTable Table, string ColumnName) obj)
-            {
-                var hash = new HashCode();
-                hash.Add(obj.Table.SchemaName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.Table.TableName, StringComparer.OrdinalIgnoreCase);
-                hash.Add(obj.ColumnName, StringComparer.OrdinalIgnoreCase);
-                return hash.ToHashCode();
-            }
         }
 
         private sealed class DeviationMatchCacheKeyComparer : IEqualityComparer<DeviationMatchCacheKey>
