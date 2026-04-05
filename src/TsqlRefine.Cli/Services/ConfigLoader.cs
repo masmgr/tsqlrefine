@@ -335,17 +335,26 @@ public sealed class ConfigLoader
         var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var loaded = PluginLoader.Load(plugins, baseDirectory);
-
-        if (stderr is not null)
+        try
         {
-            PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
-        }
-
-        foreach (var p in loaded)
-        {
-            foreach (var provider in p.Providers)
+            if (stderr is not null)
             {
-                rules.AddRange(provider.GetRules());
+                PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
+            }
+
+            foreach (var p in loaded)
+            {
+                foreach (var provider in p.Providers)
+                {
+                    rules.AddRange(provider.GetRules());
+                }
+            }
+        }
+        finally
+        {
+            foreach (var p in loaded)
+            {
+                p.Dispose();
             }
         }
 

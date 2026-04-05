@@ -1,3 +1,5 @@
+using TsqlRefine.Cli.Tests.Helpers;
+
 namespace TsqlRefine.Cli.Tests;
 
 /// <summary>
@@ -30,17 +32,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -69,17 +61,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -104,17 +86,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -140,17 +112,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -179,17 +141,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -220,17 +172,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -257,17 +199,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -295,17 +227,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -334,17 +256,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 
@@ -370,17 +282,7 @@ public sealed class CliInitTests
         }
         finally
         {
-            Directory.SetCurrentDirectory(originalDir);
-            await Task.Delay(100);
-            try
-            {
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
-            }
-            catch (IOException)
-            {
-                // Ignore cleanup errors
-            }
+            await TempDirectoryCleanup.CleanupAsync(originalDir, tempDir);
         }
     }
 }

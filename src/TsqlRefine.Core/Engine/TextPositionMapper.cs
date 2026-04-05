@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Core.Engine;
@@ -68,6 +70,9 @@ internal static class TextPositionMapper
     /// </summary>
     public static bool TryGetOffset(LineMap lineMap, Position position, out int offset)
     {
+        Debug.Assert(lineMap.LineStarts.Count == lineMap.LineLengths.Count,
+            "LineStarts and LineLengths must have the same count.");
+
         offset = 0;
         if (position.Line < 0 || position.Character < 0)
         {

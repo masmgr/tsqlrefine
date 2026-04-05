@@ -244,7 +244,17 @@ public sealed class CommandExecutor
         var plugins = ConfigLoader.ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
-        await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+        try
+        {
+            await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+        }
+        finally
+        {
+            foreach (var p in loaded)
+            {
+                p.Dispose();
+            }
+        }
 
         return 0;
     }
@@ -380,7 +390,7 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
 
-        // --rule オプションのバリデーション（存在確認 + Fixable 確認）
+        // Validate --rule option (existence check + fixable check)
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
