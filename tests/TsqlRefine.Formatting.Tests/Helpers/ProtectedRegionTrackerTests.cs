@@ -4,7 +4,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class ProtectedRegionTrackerTests
+public sealed class ProtectedRegionTrackerTests
 {
     #region IsInProtectedRegion - Initial State
 

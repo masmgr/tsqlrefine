@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class CommaStyleTransformerTests
+public sealed class CommaStyleTransformerTests
 {
     #region ToLeadingCommas - Basic Cases
 

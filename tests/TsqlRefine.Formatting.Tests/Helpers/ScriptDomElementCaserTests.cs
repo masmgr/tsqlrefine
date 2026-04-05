@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class ScriptDomElementCaserTests
+public sealed class ScriptDomElementCaserTests
 {
     [Fact]
     public void Apply_KeywordElementCasing_Upper_UppercasesKeywords()

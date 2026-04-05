@@ -5,7 +5,7 @@ using TsqlRefine.Schema.TypeSystem;
 
 namespace TsqlRefine.Schema.Tests.Model;
 
-public class SchemaModelTests
+public sealed class SchemaModelTests
 {
     [Fact]
     public void ColumnSchema_RecordEquality_Works()

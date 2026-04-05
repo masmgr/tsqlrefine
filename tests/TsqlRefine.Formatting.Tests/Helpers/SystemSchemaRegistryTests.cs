@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class SystemSchemaRegistryTests
+public sealed class SystemSchemaRegistryTests
 {
     #region IsSystemSchema
 

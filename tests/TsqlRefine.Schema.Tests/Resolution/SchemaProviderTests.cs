@@ -4,7 +4,7 @@ using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Schema.Tests.Resolution;
 
-public class SchemaProviderTests
+public sealed class SchemaProviderTests
 {
     private static SchemaProvider CreateProvider()
     {

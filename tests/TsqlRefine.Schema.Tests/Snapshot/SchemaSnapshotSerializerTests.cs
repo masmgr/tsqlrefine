@@ -6,7 +6,7 @@ using TsqlRefine.Schema.TypeSystem;
 
 namespace TsqlRefine.Schema.Tests.Snapshot;
 
-public class SchemaSnapshotSerializerTests
+public sealed class SchemaSnapshotSerializerTests
 {
     [Fact]
     public void RoundTrip_MinimalSnapshot_Preserves()

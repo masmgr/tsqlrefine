@@ -4,7 +4,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class ScriptDomTokenHelperTests
+public sealed class ScriptDomTokenHelperTests
 {
     [Fact]
     public void BuildNonTriviaNeighborIndexes_MatchesIndividualBuilders()

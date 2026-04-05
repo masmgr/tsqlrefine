@@ -1,6 +1,6 @@
 namespace TsqlRefine.Cli.Tests;
 
-public class CliVersionTests
+public sealed class CliVersionTests
 {
     [Fact]
     public async Task Version_WhenRequested_ShowsVersionNumber()

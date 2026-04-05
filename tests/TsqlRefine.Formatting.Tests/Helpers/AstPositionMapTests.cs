@@ -4,7 +4,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class AstPositionMapTests
+public sealed class AstPositionMapTests
 {
     private static TSqlFragment? ParseSql(string sql)
     {

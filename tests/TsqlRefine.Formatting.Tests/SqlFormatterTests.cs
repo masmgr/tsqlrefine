@@ -2,7 +2,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests;
 
-public class SqlFormatterTests
+public sealed class SqlFormatterTests
 {
     [Fact]
     public void Format_EmptyString_WithDefaultOptions_ReturnsCRLF()

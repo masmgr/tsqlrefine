@@ -2,7 +2,7 @@ using TsqlRefine.Schema.TypeSystem;
 
 namespace TsqlRefine.Schema.Tests.TypeSystem;
 
-public class TypeCategoryMapperTests
+public sealed class TypeCategoryMapperTests
 {
     [Theory]
     [InlineData("int", TypeCategory.ExactNumeric)]

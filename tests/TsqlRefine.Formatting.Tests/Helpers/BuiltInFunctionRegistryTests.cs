@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class BuiltInFunctionRegistryTests
+public sealed class BuiltInFunctionRegistryTests
 {
     #region IsBuiltInFunction
 

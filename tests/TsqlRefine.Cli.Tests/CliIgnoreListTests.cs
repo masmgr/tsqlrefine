@@ -1,6 +1,6 @@
 namespace TsqlRefine.Cli.Tests;
 
-public class CliIgnoreListTests
+public sealed class CliIgnoreListTests
 {
     [Fact]
     public async Task IgnoreList_WithComments_IgnoresCommentLines()

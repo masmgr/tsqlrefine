@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class WhitespaceNormalizerTests
+public sealed class WhitespaceNormalizerTests
 {
     // Default options have InsertFinalNewline=true and TrimTrailingWhitespace=true
     // Use LF explicitly for predictable test behavior
