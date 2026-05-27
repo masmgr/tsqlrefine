@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using TsqlRefine.Core.Config;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginSdk;
 
@@ -434,17 +435,6 @@ public static class CliParser
         root.Options.Add(Options.Utf8);
         root.Options.Add(Options.AllowPlugins);
 
-        // Root command supports lint options for default command behavior
-        // (tsqlrefine *.sql == tsqlrefine lint *.sql)
-        root.WithInputOptions();
-        root.WithOutputOption();
-        root.WithCompatLevelOption();
-        root.WithRuleOptions();
-        root.WithSchemaOption();
-        root.WithPathsArgument();
-        root.Options.Add(Options.Verbose);
-        root.Options.Add(Options.Quiet);
-
         // Subcommands
         root.Subcommands.Add(BuildLintCommand());
         root.Subcommands.Add(BuildFormatCommand());
@@ -504,10 +494,10 @@ public static class CliParser
             Output: GetOptionValue<string?>(parseResult, "--output") ?? "text",
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
-            CompatLevel: ParseInt(GetOptionValue<string?>(parseResult, "--compat-level")),
+            CompatLevel: ParseCompatLevel(GetOptionValue<string?>(parseResult, "--compat-level")),
             RulesetPath: GetOptionValue<string?>(parseResult, "--ruleset"),
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
-            IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
+            IndentSize: ParsePositiveInt(GetOptionValue<string?>(parseResult, "--indent-size"), "--indent-size"),
             LineEnding: ParseLineEnding(GetOptionValue<string?>(parseResult, "--line-ending")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
             Quiet: GetOptionValue<bool>(parseResult, "--quiet"),
@@ -620,8 +610,40 @@ public static class CliParser
             $"Invalid --max-file-size value: '{s}'. Expected a positive integer (MB).");
     }
 
-    private static int? ParseInt(string? s) =>
-        int.TryParse(s, out var value) ? value : null;
+    private static int? ParsePositiveInt(string? s, string optionName)
+    {
+        if (s is null)
+        {
+            return null;
+        }
+
+        if (int.TryParse(s, out var value) && value > 0)
+        {
+            return value;
+        }
+
+        throw new ConfigException($"Invalid {optionName} value: '{s}'. Expected a positive integer.");
+    }
+
+    private static int? ParseCompatLevel(string? s)
+    {
+        if (s is null)
+        {
+            return null;
+        }
+
+        if (!int.TryParse(s, out var value))
+        {
+            throw new ConfigException($"Invalid --compat-level value: '{s}'. Expected one of: {FormatCompatLevels()}.");
+        }
+
+        if (!TsqlRefineConfig.ValidCompatLevels.Contains(value))
+        {
+            throw new ConfigException($"Invalid --compat-level value: '{s}'. Expected one of: {FormatCompatLevels()}.");
+        }
+
+        return value;
+    }
 
     private static DiagnosticSeverity? ParseSeverity(string? s) =>
         s?.ToLowerInvariant() switch
@@ -630,7 +652,9 @@ public static class CliParser
             "warning" => DiagnosticSeverity.Warning,
             "info" => DiagnosticSeverity.Information,
             "hint" => DiagnosticSeverity.Hint,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --severity value: '{s}'. Expected one of: error, warning, info, hint.")
         };
 
     private static IndentStyle? ParseIndentStyle(string? s) =>
@@ -638,7 +662,9 @@ public static class CliParser
         {
             "tabs" => IndentStyle.Tabs,
             "spaces" => IndentStyle.Spaces,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --indent-style value: '{s}'. Expected one of: tabs, spaces.")
         };
 
     private static LineEnding? ParseLineEnding(string? s) =>
@@ -647,6 +673,11 @@ public static class CliParser
             "auto" => LineEnding.Auto,
             "lf" => LineEnding.Lf,
             "crlf" => LineEnding.CrLf,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --line-ending value: '{s}'. Expected one of: auto, lf, crlf.")
         };
+
+    private static string FormatCompatLevels() =>
+        string.Join(", ", TsqlRefineConfig.ValidCompatLevels.OrderBy(x => x));
 }

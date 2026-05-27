@@ -79,11 +79,16 @@ public static class CliApp
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        // Default to lint when no subcommand is specified
-        var command = parsed.IsExplicitCommand ? parsed.Command : "lint";
+        var command = parsed.Command;
 
         try
         {
+            if (!parsed.IsExplicitCommand)
+            {
+                throw new ConfigException(
+                    "A subcommand is required. Run 'tsqlrefine --help' for available commands.");
+            }
+
             ValidateOptions(parsed);
             WarnConflictingOptions(parsed, stderr);
 

@@ -193,22 +193,20 @@ public sealed class CliLintTests
     }
 
     [Fact]
-    public async Task DefaultCommand_WithoutLint_RunsLint()
+    public async Task DefaultCommand_WithoutLint_ReturnsConfigError()
     {
         var stdin = new StringReader("SELECT * FROM t;");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
-        // No "lint" subcommand - should default to lint
         var code = await CliApp.RunAsync(new[] { "--stdin" }, stdin, stdout, stderr);
 
-        Assert.Equal(ExitCodes.Violations, code);
-        var output = stdout.ToString();
-        Assert.Contains("avoid-select-star", output);
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("subcommand is required", stderr.ToString());
     }
 
     [Fact]
-    public async Task DefaultCommand_WithJsonOutput_RunsLint()
+    public async Task DefaultCommand_WithJsonOutput_ReturnsConfigError()
     {
         var stdin = new StringReader("SELECT * FROM t;");
         var stdout = new StringWriter();
@@ -216,10 +214,8 @@ public sealed class CliLintTests
 
         var code = await CliApp.RunAsync(new[] { "--stdin", "--output", "json" }, stdin, stdout, stderr);
 
-        Assert.Equal(ExitCodes.Violations, code);
-        using var doc = JsonDocument.Parse(stdout.ToString());
-        Assert.Equal("tsqlrefine", doc.RootElement.GetProperty("tool").GetString());
-        Assert.Equal("lint", doc.RootElement.GetProperty("command").GetString());
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("subcommand is required", stderr.ToString());
     }
 
     [Fact]

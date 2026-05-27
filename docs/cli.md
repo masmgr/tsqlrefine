@@ -12,7 +12,7 @@ Basic format:
 tsqlrefine <command> [options] [paths...]
 ```
 
-- If `<command>` is omitted, `lint` is assumed
+- `<command>` is required
 - `paths...` can be a mix of `file.sql` / `dir`
 - Standard input is accepted via `-` or `--stdin` (pure SQL only)
 
@@ -20,7 +20,7 @@ Commands:
 
 | Command | Description |
 |----------|------|
-| `lint` | Rule-based diagnostics (static analysis) **[default]** |
+| `lint` | Rule-based diagnostics (static analysis) |
 | `format` | Minimal formatting only (outputs SQL text) |
 | `fix` | Diagnostics + auto-fix within "safe scope" |
 | `init` | Generate default configuration file |
@@ -70,15 +70,6 @@ tsqlrefine lint [options] [paths...]
 | `--verbose` | Show detailed information (execution time) |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
-
-##### Default Command Behavior
-
-When no subcommand is specified, `lint` is assumed. The following are equivalent:
-
-```bash
-tsqlrefine lint --stdin --output json
-tsqlrefine --stdin --output json
-```
 
 ##### Summary Output
 

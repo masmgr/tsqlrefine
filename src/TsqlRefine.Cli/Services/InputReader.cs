@@ -56,7 +56,8 @@ public sealed class InputReader
         }
 
         var ignoreList = ignorePatterns as IReadOnlyList<string> ?? ignorePatterns.ToArray();
-        foreach (var path in ExpandPaths(paths, ignoreList))
+        var ignoreBaseDirectory = ResolveIgnoreBaseDirectory(args.IgnoreListPath);
+        foreach (var path in ExpandPaths(paths, ignoreList, ignoreBaseDirectory))
         {
             if (!File.Exists(path))
             {
@@ -100,7 +101,10 @@ public sealed class InputReader
         return new ReadInputsResult(inputs, encodings);
     }
 
-    private IEnumerable<string> ExpandPaths(IEnumerable<string> paths, IReadOnlyList<string> ignorePatterns)
+    private IEnumerable<string> ExpandPaths(
+        IEnumerable<string> paths,
+        IReadOnlyList<string> ignorePatterns,
+        string ignoreBaseDirectory)
     {
         foreach (var path in paths)
         {
@@ -124,23 +128,33 @@ public sealed class InputReader
             }
 
             // For individual files, check if they match ignore patterns
-            if (!ShouldIgnoreFile(path, ignorePatterns))
+            if (!ShouldIgnoreFile(path, ignorePatterns, ignoreBaseDirectory))
                 yield return path;
         }
     }
 
-    private bool ShouldIgnoreFile(string filePath, IReadOnlyList<string> ignorePatterns)
+    private bool ShouldIgnoreFile(
+        string filePath,
+        IReadOnlyList<string> ignorePatterns,
+        string ignoreBaseDirectory)
     {
         if (ignorePatterns.Count == 0)
             return false;
 
         var matcher = GetIgnoreMatcher(ignorePatterns);
         var fullPath = Path.GetFullPath(filePath);
-        var fileName = Path.GetFileName(fullPath);
-        var directoryPath = Path.GetDirectoryName(fullPath)!;
+        var candidatePaths = new[]
+        {
+            Path.GetFileName(fullPath),
+            GetRelativePathIfUnderBase(Directory.GetCurrentDirectory(), fullPath),
+            GetRelativePathIfUnderBase(ignoreBaseDirectory, fullPath)
+        };
 
-        var result = matcher.Match(directoryPath, [fileName]);
-        return result.HasMatches;
+        return candidatePaths
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Select(p => p!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Any(p => matcher.Match(ignoreBaseDirectory, [p]).HasMatches);
     }
 
     private Matcher GetIgnoreMatcher(IReadOnlyList<string> ignorePatterns)
@@ -187,5 +201,25 @@ public sealed class InputReader
     private static bool HasUtf8Bom(byte[] bytes)
     {
         return bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+    }
+
+    private static string ResolveIgnoreBaseDirectory(string? ignoreListPath)
+    {
+        if (string.IsNullOrWhiteSpace(ignoreListPath))
+        {
+            return Directory.GetCurrentDirectory();
+        }
+
+        var fullPath = Path.GetFullPath(ignoreListPath);
+        return Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
+    }
+
+    private static string? GetRelativePathIfUnderBase(string baseDirectory, string fullPath)
+    {
+        var fullBase = Path.GetFullPath(baseDirectory);
+        var relative = Path.GetRelativePath(fullBase, fullPath);
+        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
+            ? null
+            : relative;
     }
 }

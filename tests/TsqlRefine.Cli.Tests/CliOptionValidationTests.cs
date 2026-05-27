@@ -106,4 +106,45 @@ public sealed class CliOptionValidationTests
 
         Assert.Contains("Time:", stderr.ToString());
     }
+
+    [Theory]
+    [InlineData("--severity", "notice", "Invalid --severity")]
+    [InlineData("--compat-level", "999", "Invalid --compat-level")]
+    public async Task Lint_InvalidAnalysisOption_ReturnsConfigError(
+        string option,
+        string value,
+        string expectedMessage)
+    {
+        var stdin = new StringReader("SELECT 1;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", option, value],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains(expectedMessage, stderr.ToString());
+    }
+
+    [Theory]
+    [InlineData("--indent-style", "wide", "Invalid --indent-style")]
+    [InlineData("--line-ending", "native", "Invalid --line-ending")]
+    [InlineData("--indent-size", "0", "Invalid --indent-size")]
+    public async Task Format_InvalidFormattingOption_ReturnsConfigError(
+        string option,
+        string value,
+        string expectedMessage)
+    {
+        var stdin = new StringReader("SELECT 1;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["format", "--stdin", option, value],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains(expectedMessage, stderr.ToString());
+    }
 }

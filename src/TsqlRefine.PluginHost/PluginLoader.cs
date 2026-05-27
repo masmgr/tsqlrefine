@@ -332,7 +332,8 @@ public sealed class PluginLoader
                         ExceptionType: nameof(DllNotFoundException),
                         StackTrace: dllEx.StackTrace,
                         NativeDllProbeAttempts: probeAttempts,
-                        MissingNativeDll: missingDll)));
+                        MissingNativeDll: missingDll),
+                    loadContext));
             }
             catch (BadImageFormatException badImageEx)
             {
@@ -344,7 +345,8 @@ public sealed class PluginLoader
                         PluginLoadStatus.LoadError,
                         "Invalid assembly format (check architecture: x64/x86/arm64)",
                         ExceptionType: nameof(BadImageFormatException),
-                        StackTrace: badImageEx.StackTrace)));
+                        StackTrace: badImageEx.StackTrace),
+                    loadContext));
             }
             catch (FileLoadException fileLoadEx)
             {
@@ -356,7 +358,8 @@ public sealed class PluginLoader
                         PluginLoadStatus.LoadError,
                         $"Assembly load conflict: {fileLoadEx.Message}",
                         ExceptionType: nameof(FileLoadException),
-                        StackTrace: fileLoadEx.StackTrace)));
+                        StackTrace: fileLoadEx.StackTrace),
+                    loadContext));
             }
 #pragma warning disable CA1031 // Plugin load failures must not crash the core process.
             catch (Exception ex)
@@ -369,7 +372,8 @@ public sealed class PluginLoader
                         PluginLoadStatus.LoadError,
                         ex.Message,
                         ExceptionType: ex.GetType().Name,
-                        StackTrace: ex.StackTrace)));
+                        StackTrace: ex.StackTrace),
+                    loadContext));
             }
 #pragma warning restore CA1031
         }
