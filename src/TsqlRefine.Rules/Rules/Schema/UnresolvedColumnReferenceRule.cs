@@ -23,6 +23,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
     private sealed class UnresolvedColumnReferenceVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private AliasMap? _currentAliasMap;
+        private readonly List<AliasMap> _outerAliasMaps = [];
         private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
             new(ResolvedTableComparers.TableColumnKeyComparer.Instance);
         private Dictionary<string, IReadOnlyList<ResolvedTable>> _unqualifiedColumnMatchesCache =
@@ -40,19 +41,35 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableComparers.TableColumnKeyComparer.Instance);
                 _unqualifiedColumnMatchesCache = new Dictionary<string, IReadOnlyList<ResolvedTable>>(StringComparer.OrdinalIgnoreCase);
 
-                // Visit SELECT list, WHERE, etc. with the alias map in scope
-                VisitSelectElements(node.SelectElements);
-                node.WhereClause?.Accept(this);
-                node.HavingClause?.Accept(this);
-                node.OrderByClause?.Accept(this);
-                node.GroupByClause?.Accept(this);
+                if (previousMap is not null)
+                {
+                    _outerAliasMaps.Add(previousMap);
+                }
 
-                // Visit FROM clause for join conditions
-                node.FromClause.Accept(this);
+                try
+                {
+                    // Visit SELECT list, WHERE, etc. with the alias map in scope
+                    VisitSelectElements(node.SelectElements);
+                    node.WhereClause?.Accept(this);
+                    node.HavingClause?.Accept(this);
+                    node.OrderByClause?.Accept(this);
+                    node.GroupByClause?.Accept(this);
 
-                _currentAliasMap = previousMap;
-                _columnExistsCache = previousColumnExistsCache;
-                _unqualifiedColumnMatchesCache = previousUnqualifiedColumnMatchesCache;
+                    // Visit FROM clause for join conditions
+                    node.FromClause.Accept(this);
+                }
+                finally
+                {
+                    if (previousMap is not null)
+                    {
+                        _outerAliasMaps.RemoveAt(_outerAliasMaps.Count - 1);
+                    }
+
+                    _currentAliasMap = previousMap;
+                    _columnExistsCache = previousColumnExistsCache;
+                    _unqualifiedColumnMatchesCache = previousUnqualifiedColumnMatchesCache;
+                }
+
                 return; // We manually visited children
             }
 
@@ -137,6 +154,20 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
                 if (matches.Count == 0 && _currentAliasMap.AllTables.Count > 0)
                 {
+                    var outerMatches = FindTablesContainingColumnInNearestOuterScope(columnName);
+                    if (outerMatches.Count == 1)
+                    {
+                        base.ExplicitVisit(node);
+                        return;
+                    }
+
+                    if (outerMatches.Count > 1)
+                    {
+                        ReportAmbiguousColumn(node, columnName, outerMatches);
+                        base.ExplicitVisit(node);
+                        return;
+                    }
+
                     AddDiagnostic(
                         fragment: node,
                         message: $"Column '{columnName}' not found in any table in the current scope.",
@@ -147,15 +178,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 }
                 else if (matches.Count > 1)
                 {
-                    var tableNames = string.Join(", ",
-                        matches.Select(t => $"{t.SchemaName}.{t.TableName}"));
-                    AddDiagnostic(
-                        fragment: node,
-                        message: $"Ambiguous column reference '{columnName}' (found in: {tableNames}).",
-                        code: "unresolved-column-reference",
-                        category: "Schema",
-                        fixable: false
-                    );
+                    ReportAmbiguousColumn(node, columnName, matches);
                 }
             }
 
@@ -213,5 +236,42 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             return cached;
         }
 
+        private IReadOnlyList<ResolvedTable> FindTablesContainingColumnInNearestOuterScope(string columnName)
+        {
+            for (var i = _outerAliasMaps.Count - 1; i >= 0; i--)
+            {
+                var matches = new List<ResolvedTable>();
+                foreach (var table in _outerAliasMaps[i].AllTables)
+                {
+                    if (schema.ResolveColumn(table, columnName) is not null)
+                    {
+                        matches.Add(table);
+                    }
+                }
+
+                if (matches.Count > 0)
+                {
+                    return matches;
+                }
+            }
+
+            return Array.Empty<ResolvedTable>();
+        }
+
+        private void ReportAmbiguousColumn(
+            TSqlFragment fragment,
+            string columnName,
+            IReadOnlyList<ResolvedTable> matches)
+        {
+            var tableNames = string.Join(", ",
+                matches.Select(t => $"{t.SchemaName}.{t.TableName}"));
+            AddDiagnostic(
+                fragment: fragment,
+                message: $"Ambiguous column reference '{columnName}' (found in: {tableNames}).",
+                code: "unresolved-column-reference",
+                category: "Schema",
+                fixable: false
+            );
+        }
     }
 }

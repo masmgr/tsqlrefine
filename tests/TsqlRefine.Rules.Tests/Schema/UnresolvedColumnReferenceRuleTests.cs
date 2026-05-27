@@ -262,4 +262,23 @@ public sealed class UnresolvedColumnReferenceRuleTests
         Assert.Single(diagnostics);
         Assert.Contains("BadCol", diagnostics[0].Message);
     }
+
+    [Fact]
+    public void Analyze_CorrelatedSubqueryWithUnqualifiedOuterColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT u.Id
+            FROM dbo.Users AS u
+            WHERE EXISTS (
+                SELECT 1
+                FROM dbo.Orders AS o
+                WHERE Email = N'test'
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
 }

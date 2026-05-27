@@ -303,14 +303,15 @@ public sealed class HavingColumnMismatchRuleTests
     }
 
     [Fact]
-    public void Analyze_HavingWithWindowFunctionOrderByColumn_ReturnsEmpty()
+    public void Analyze_HavingWithWindowFunctionOrderByUngroupedColumn_ReturnsDiagnostic()
     {
         const string sql = "SELECT a, COUNT(*) FROM t GROUP BY a HAVING ROW_NUMBER() OVER(ORDER BY b) > 0;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
+        Assert.Contains("b", diagnostics[0].Message);
     }
 
     [Fact]

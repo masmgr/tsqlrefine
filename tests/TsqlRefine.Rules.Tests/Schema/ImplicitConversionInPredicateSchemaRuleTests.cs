@@ -194,6 +194,22 @@ public sealed class ImplicitConversionInPredicateSchemaRuleTests
     }
 
     [Fact]
+    public void Analyze_AmbiguousUnqualifiedColumn_DoesNotInferArbitraryType()
+    {
+        const string sql = """
+            SELECT Code
+            FROM dbo.Orders
+            INNER JOIN sales.Orders ON dbo.Orders.Id = sales.Orders.Id
+            WHERE Code = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_NvarcharColumnWithVarcharLiteral_NoDiagnostic()
     {
         // nvarchar column vs varchar literal — literal is converted, not column

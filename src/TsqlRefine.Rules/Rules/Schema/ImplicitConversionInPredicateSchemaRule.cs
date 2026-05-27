@@ -180,7 +180,7 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
             }
             else
             {
-                // Unqualified — search all tables, return first match
+                // Unqualified columns are only useful for type checks when they resolve uniquely.
                 var columnName = identifiers[0].Value;
 
                 if (_unqualifiedColumnTypeCache.TryGetValue(columnName, out var unqualifiedCached))
@@ -188,18 +188,25 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
                     return unqualifiedCached;
                 }
 
+                SchemaTypeInfo? match = null;
+                var matchCount = 0;
                 foreach (var table in _currentAliasMap.AllTables)
                 {
                     var resolved = ResolveColumnType(table, columnName);
                     if (resolved is not null)
                     {
-                        _unqualifiedColumnTypeCache[columnName] = resolved;
-                        return resolved;
+                        match = resolved;
+                        matchCount++;
+                        if (matchCount > 1)
+                        {
+                            _unqualifiedColumnTypeCache[columnName] = null;
+                            return null;
+                        }
                     }
                 }
 
-                _unqualifiedColumnTypeCache[columnName] = null;
-                return null;
+                _unqualifiedColumnTypeCache[columnName] = match;
+                return match;
             }
         }
 
