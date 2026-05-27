@@ -42,8 +42,11 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
             var schemaName = schemaObject.SchemaIdentifier?.Value;
             var dbName = schemaObject.DatabaseIdentifier?.Value;
+            var aliasMap = updateSpec.FromClause?.TableReferences is { Count: > 0 } tableRefs
+                ? AliasMapBuilder.Build(tableRefs, schema)
+                : null;
 
-            var resolvedTable = ResolveTargetTable(updateSpec, tableName, dbName, schemaName);
+            var resolvedTable = ResolveTargetTable(tableName, dbName, schemaName, aliasMap);
             if (resolvedTable is null)
             {
                 // Table not found — skip (reported by unresolved-table-reference)
@@ -63,9 +66,22 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
                 if (setClause is AssignmentSetClause assignment)
                 {
                     var colRef = assignment.Column;
-                    var columnName = colRef?.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
-                    if (columnName is null)
+                    var identifiers = colRef?.MultiPartIdentifier?.Identifiers;
+                    var columnName = identifiers?.LastOrDefault()?.Value;
+                    if (colRef is null || identifiers is null or { Count: 0 } || columnName is null)
                     {
+                        continue;
+                    }
+
+                    if (IsQualifiedForDifferentTable(identifiers, aliasMap, resolvedTable, out var qualifier))
+                    {
+                        AddDiagnostic(
+                            fragment: colRef,
+                            message: $"Column qualifier '{qualifier}' does not reference update target '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
+                            code: "update-column-not-in-table",
+                            category: "Schema",
+                            fixable: false
+                        );
                         continue;
                     }
 
@@ -73,7 +89,7 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
                     if (resolvedColumn is null)
                     {
                         AddDiagnostic(
-                            fragment: colRef!,
+                            fragment: colRef,
                             message: $"Column '{columnName}' not found in '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
                             code: "update-column-not-in-table",
                             category: "Schema",
@@ -87,10 +103,10 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
         }
 
         private ResolvedTable? ResolveTargetTable(
-            UpdateSpecification updateSpec,
             string tableName,
             string? dbName,
-            string? schemaName)
+            string? schemaName,
+            AliasMap? aliasMap)
         {
             // Qualified targets are direct table references.
             if (dbName is not null || schemaName is not null)
@@ -99,9 +115,8 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
             }
 
             // Unqualified targets in UPDATE ... FROM can be aliases.
-            if (updateSpec.FromClause?.TableReferences is { Count: > 0 } tableRefs)
+            if (aliasMap is not null)
             {
-                var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
                 if (aliasMap.TryResolve(tableName, out var mapped))
                 {
                     return mapped;
@@ -109,6 +124,24 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
             }
 
             return schema.ResolveTable(null, null, tableName);
+        }
+
+        private static bool IsQualifiedForDifferentTable(
+            IList<Identifier> identifiers,
+            AliasMap? aliasMap,
+            ResolvedTable targetTable,
+            out string qualifier)
+        {
+            qualifier = string.Empty;
+            if (identifiers.Count < 2 || aliasMap is null)
+            {
+                return false;
+            }
+
+            qualifier = string.Join(".", identifiers.Take(identifiers.Count - 1).Select(i => i.Value));
+            return QualifierLookupKeyBuilder.TryResolve(aliasMap, identifiers, out var resolvedTable)
+                && resolvedTable is not null
+                && !ResolvedTableComparers.TablesAreEqual(resolvedTable, targetTable);
         }
     }
 }

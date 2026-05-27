@@ -15,6 +15,10 @@ public sealed class UpdateColumnNotInTableRuleTests
                 .AddColumn("Id", "int")
                 .AddColumn("Name", "nvarchar", maxLength: 100)
                 .AddColumn("Email", "nvarchar", maxLength: 200))
+            .AddTable("dbo", "Orders", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("UserId", "int")
+                .AddColumn("Email", "nvarchar", maxLength: 200))
             .Build());
 
     [Theory]
@@ -127,5 +131,39 @@ public sealed class UpdateColumnNotInTableRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("update-column-not-in-table", diagnostics[0].Code);
         Assert.Contains("BadColumn", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_SetColumnQualifiedByNonTargetAlias_ReturnsDiagnostic()
+    {
+        const string sql = """
+            UPDATE u
+            SET o.Email = N'bad'
+            FROM dbo.Users AS u
+            INNER JOIN dbo.Orders AS o ON o.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("update-column-not-in-table", diagnostic.Code);
+        Assert.Contains("does not reference update target", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_SetColumnQualifiedByTargetAlias_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            UPDATE u
+            SET u.Email = N'ok'
+            FROM dbo.Users AS u
+            INNER JOIN dbo.Orders AS o ON o.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
     }
 }

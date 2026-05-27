@@ -66,6 +66,56 @@ public sealed class UnresolvedTableReferenceRuleTests
         Assert.Empty(diagnostics);
     }
 
+    [Fact]
+    public void Analyze_ChainedCteReferenceToPreviousCte_SkipsValidation()
+    {
+        const string sql = """
+            WITH cte1 AS (SELECT 1 AS Id),
+                 cte2 AS (SELECT Id FROM cte1)
+            SELECT Id FROM cte2;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CteForwardReference_ReturnsDiagnostic()
+    {
+        const string sql = """
+            WITH cte1 AS (SELECT Id FROM cte2),
+                 cte2 AS (SELECT 1 AS Id)
+            SELECT Id FROM cte1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("unresolved-table-reference", diagnostic.Code);
+        Assert.Contains("cte2", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_RecursiveCteSelfReference_SkipsValidation()
+    {
+        const string sql = """
+            WITH cte AS (
+                SELECT 1 AS Id
+                UNION ALL
+                SELECT Id + 1 FROM cte WHERE Id < 10
+            )
+            SELECT Id FROM cte;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM #TempTable;")]
     [InlineData("SELECT * FROM ##GlobalTemp;")]

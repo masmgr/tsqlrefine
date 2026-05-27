@@ -195,6 +195,17 @@ public sealed class JoinForeignKeyMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_AmbiguousUnqualifiedJoinColumn_ReturnsEmpty()
+    {
+        const string sql = "SELECT a.Name FROM dbo.TableA AS a INNER JOIN dbo.TableC AS c ON Id = a.ID_B;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_NoFromClause_ReturnsEmpty()
     {
         const string sql = "SELECT 1;";

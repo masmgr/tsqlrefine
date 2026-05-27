@@ -32,14 +32,17 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
         {
             VisitWithCteScope(
                 node.WithCtesAndXmlNamespaces,
-                () => base.ExplicitVisit(node));
+                () =>
+                {
+                    node.QueryExpression?.Accept(this);
+                });
         }
 
         public override void ExplicitVisit(InsertStatement node)
         {
             VisitWithCteScope(
                 node.WithCtesAndXmlNamespaces,
-                () => base.ExplicitVisit(node));
+                () => node.InsertSpecification?.Accept(this));
         }
 
         public override void ExplicitVisit(UpdateStatement node)
@@ -48,7 +51,7 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
                 node.WithCtesAndXmlNamespaces,
                 () => VisitWithDmlAliasScope(
                     node.UpdateSpecification?.FromClause?.TableReferences,
-                    () => base.ExplicitVisit(node)));
+                    () => node.UpdateSpecification?.Accept(this)));
         }
 
         public override void ExplicitVisit(DeleteStatement node)
@@ -57,14 +60,14 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
                 node.WithCtesAndXmlNamespaces,
                 () => VisitWithDmlAliasScope(
                     node.DeleteSpecification?.FromClause?.TableReferences,
-                    () => base.ExplicitVisit(node)));
+                    () => node.DeleteSpecification?.Accept(this)));
         }
 
         public override void ExplicitVisit(MergeStatement node)
         {
             VisitWithCteScope(
                 node.WithCtesAndXmlNamespaces,
-                () => base.ExplicitVisit(node));
+                () => node.MergeSpecification?.Accept(this));
         }
 
         public override void ExplicitVisit(NamedTableReference node)
@@ -159,18 +162,32 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
         private bool IsInDmlAliasScope(string tableName) =>
             _dmlAliasScopes.Any(scope => scope.Contains(tableName));
 
+        public override void ExplicitVisit(CommonTableExpression node)
+        {
+            if (_cteScopes.TryPeek(out var currentScope))
+            {
+                var cteName = node.ExpressionName?.Value;
+                if (!string.IsNullOrWhiteSpace(cteName))
+                {
+                    currentScope.Add(cteName);
+                }
+            }
+
+            base.ExplicitVisit(node);
+        }
+
         private void VisitWithCteScope(WithCtesAndXmlNamespaces? withCtes, Action visitAction)
         {
-            var cteNames = CollectCteNames(withCtes);
-            if (cteNames.Count == 0)
+            if (withCtes?.CommonTableExpressions is not { Count: > 0 })
             {
                 visitAction();
                 return;
             }
 
-            _cteScopes.Push(cteNames);
+            _cteScopes.Push(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             try
             {
+                ProcessCteDefinitions(withCtes.CommonTableExpressions);
                 visitAction();
             }
             finally
@@ -179,20 +196,21 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
             }
         }
 
-        private static HashSet<string> CollectCteNames(WithCtesAndXmlNamespaces? withCtes)
+        private void ProcessCteDefinitions(IList<CommonTableExpression> ctes)
         {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var cte in withCtes?.CommonTableExpressions ?? [])
+            foreach (var cte in ctes)
             {
-                var cteName = cte.ExpressionName?.Value;
-                if (!string.IsNullOrWhiteSpace(cteName))
+                if (_cteScopes.TryPeek(out var currentScope))
                 {
-                    names.Add(cteName);
+                    var cteName = cte.ExpressionName?.Value;
+                    if (!string.IsNullOrWhiteSpace(cteName))
+                    {
+                        currentScope.Add(cteName);
+                    }
                 }
-            }
 
-            return names;
+                cte.QueryExpression?.Accept(this);
+            }
         }
 
         private static HashSet<string> CollectExplicitAliases(IList<TableReference>? tableRefs)

@@ -87,17 +87,23 @@ internal sealed class SchemaColumnResolver
             return unqualifiedCached;
         }
 
+        (ResolvedTable Table, string ColumnName)? match = null;
+        var matchCount = 0;
         foreach (var table in AliasMap.AllTables)
         {
             if (ColumnExists(table, columnName))
             {
-                var result = (table, columnName);
-                _unqualifiedColumnResolutionCache[columnName] = result;
-                return result;
+                match = (table, columnName);
+                matchCount++;
+                if (matchCount > 1)
+                {
+                    _unqualifiedColumnResolutionCache[columnName] = null;
+                    return null;
+                }
             }
         }
 
-        _unqualifiedColumnResolutionCache[columnName] = null;
-        return null;
+        _unqualifiedColumnResolutionCache[columnName] = match;
+        return match;
     }
 }
