@@ -202,6 +202,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new OrderByInSubqueryRule(),
         new StuffWithoutOrderByRule(),
         new StringAggWithoutOrderByRule(),
+        new StringAggNvarcharMaxRule(),
         new BanQueryHintsRule(),
 
         // === Debug ===

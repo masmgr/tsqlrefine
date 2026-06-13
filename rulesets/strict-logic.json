@@ -41,6 +41,7 @@
     { "id": "avoid-top-in-dml" },
     { "id": "avoid-top-100-percent-order-by" },
     { "id": "string-agg-without-order-by" },
+    { "id": "string-agg-nvarchar-max" },
     { "id": "stuff-without-order-by" },
     { "id": "avoid-upper-lower-in-predicate" },
     { "id": "prefer-utc-datetime" },

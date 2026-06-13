@@ -19,17 +19,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 140
+- **Total Rules**: 141
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
   - Essential (pragmatic): 32 rules
-  - Recommended (recommended): 51 rules
+  - Recommended (recommended): 52 rules
   - Thorough (strict-logic): 20 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 23 rules (16%)
-  - Warning: 78 rules (56%)
+  - Warning: 79 rules (56%)
   - Information: 39 rules (28%)
 
 ## Importance Tiers
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 51 | 97 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 117 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 140 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 52 | 98 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 20 | 118 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 141 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,7 +54,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 5 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 38 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 39 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
@@ -154,9 +154,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**51 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**52 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
-#### Correctness (10 rules)
+#### Correctness (11 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -168,6 +168,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [semantic/join-table-not-referenced-in-on](correctness/semantic-join-table-not-referenced-in-on.md) | Detects JOIN operations where the joined table is not referenced in the ON clause. | Warning | No |
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
+| [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md) | Detects STRING_AGG whose first argument is not explicitly cast to NVARCHAR(MAX), which risks intermediate result truncation (8000-byte / 4000-char limit). | Warning | No |
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
 
@@ -351,7 +352,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (78 rules)
+### Warning (79 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -423,6 +424,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [set-concat-null-yields-null](transactions/set-concat-null-yields-null.md)
 - [set-quoted-identifier](transactions/set-quoted-identifier.md)
 - [set-xact-abort](transactions/set-xact-abort.md)
+- [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
