@@ -51,10 +51,14 @@ internal sealed class ProtectedRegionTracker
     /// <returns>True if characters were consumed; false if not in a protected region</returns>
     public bool TryConsume(string text, StringBuilder output, ref int index)
     {
-        return TryConsumeString(text, output, ref index) ||
-               TryConsumeDoubleQuote(text, output, ref index) ||
-               TryConsumeBracket(text, output, ref index) ||
-               TryConsumeBlockComment(text, output, ref index);
+        var startIndex = index;
+        if (TryConsumeWithoutOutput(text, ref index))
+        {
+            output.Append(text.AsSpan(startIndex, index - startIndex));
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -66,10 +70,14 @@ internal sealed class ProtectedRegionTracker
     /// <returns>True if a protected region was started; false otherwise</returns>
     public bool TryStartProtectedRegion(string text, StringBuilder output, ref int index)
     {
-        return TryStartBlockComment(text, output, ref index) ||
-               TryStartString(text, output, ref index) ||
-               TryStartDoubleQuote(text, output, ref index) ||
-               TryStartBracket(text, output, ref index);
+        var startIndex = index;
+        if (TryStartProtectedRegionWithoutOutput(text, ref index))
+        {
+            output.Append(text.AsSpan(startIndex, index - startIndex));
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -93,167 +101,6 @@ internal sealed class ProtectedRegionTracker
         }
 
         return false;
-    }
-
-    private bool TryConsumeString(string text, StringBuilder output, ref int index)
-    {
-        if (!_inString)
-        {
-            return false;
-        }
-
-        var c = text[index];
-        if (c == '\'')
-        {
-            // Handle escaped single quotes
-            if (index + 1 < text.Length && text[index + 1] == '\'')
-            {
-                output.Append("''");
-                index += 2;
-                return true;
-            }
-
-            output.Append(c);
-            _inString = false;
-            index++;
-            return true;
-        }
-
-        output.Append(c);
-        index++;
-        return true;
-    }
-
-    private bool TryConsumeDoubleQuote(string text, StringBuilder output, ref int index)
-    {
-        if (!_inDoubleQuote)
-        {
-            return false;
-        }
-
-        var c = text[index];
-        output.Append(c);
-        index++;
-        if (c == '"')
-        {
-            _inDoubleQuote = false;
-        }
-
-        return true;
-    }
-
-    private bool TryConsumeBracket(string text, StringBuilder output, ref int index)
-    {
-        if (!_inBracket)
-        {
-            return false;
-        }
-
-        var c = text[index];
-        if (c == ']')
-        {
-            // Handle escaped brackets
-            if (index + 1 < text.Length && text[index + 1] == ']')
-            {
-                output.Append("]]");
-                index += 2;
-                return true;
-            }
-
-            output.Append(c);
-            _inBracket = false;
-            index++;
-            return true;
-        }
-
-        output.Append(c);
-        index++;
-        return true;
-    }
-
-    private bool TryConsumeBlockComment(string text, StringBuilder output, ref int index)
-    {
-        if (_blockCommentDepth <= 0)
-        {
-            return false;
-        }
-
-        var c = text[index];
-        if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
-        {
-            _blockCommentDepth++;
-            output.Append("/*");
-            index += 2;
-            return true;
-        }
-
-        if (c == '*' && index + 1 < text.Length && text[index + 1] == '/')
-        {
-            output.Append("*/");
-            _blockCommentDepth--;
-            index += 2;
-            return true;
-        }
-
-        output.Append(c);
-        index++;
-        return true;
-    }
-
-    private bool TryStartBlockComment(string text, StringBuilder output, ref int index)
-    {
-        var c = text[index];
-        if (c == '/' && index + 1 < text.Length && text[index + 1] == '*')
-        {
-            _blockCommentDepth = 1;
-            output.Append("/*");
-            index += 2;
-            return true;
-        }
-
-        return false;
-    }
-
-    private bool TryStartString(string text, StringBuilder output, ref int index)
-    {
-        var c = text[index];
-        if (c != '\'')
-        {
-            return false;
-        }
-
-        _inString = true;
-        output.Append(c);
-        index++;
-        return true;
-    }
-
-    private bool TryStartDoubleQuote(string text, StringBuilder output, ref int index)
-    {
-        var c = text[index];
-        if (c != '"')
-        {
-            return false;
-        }
-
-        _inDoubleQuote = true;
-        output.Append(c);
-        index++;
-        return true;
-    }
-
-    private bool TryStartBracket(string text, StringBuilder output, ref int index)
-    {
-        var c = text[index];
-        if (c != '[')
-        {
-            return false;
-        }
-
-        _inBracket = true;
-        output.Append(c);
-        index++;
-        return true;
     }
 
     private bool TryConsumeWithoutOutput(string text, ref int index)
@@ -344,6 +191,13 @@ internal sealed class ProtectedRegionTracker
         var c = text[index];
         if (c == '"')
         {
+            // Handle escaped double quotes ("" inside a quoted identifier)
+            if (index + 1 < text.Length && text[index + 1] == '"')
+            {
+                index += 2;
+                return true;
+            }
+
             _inDoubleQuote = false;
         }
 

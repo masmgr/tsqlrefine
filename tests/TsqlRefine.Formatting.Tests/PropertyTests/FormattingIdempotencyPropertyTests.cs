@@ -25,6 +25,11 @@ public sealed class FormattingIdempotencyPropertyTests
         "SELECT {0} + 1, {0} - 1, {0} * 2, {0} / 2 FROM {1}",
         "SELECT {0} FROM {1} WHERE {0} BETWEEN 1 AND 10",
         "SELECT CAST({0} AS INT), CONVERT(VARCHAR(50), {0}) FROM {1}",
+        // Multi-line column list with a multi-line subquery column (exercises
+        // comma-style transformation across lines).
+        "SELECT {0},\r\n       (SELECT {0}\r\n        FROM {1}),\r\n       1\r\nFROM {1}",
+        // Quoted identifier containing an escaped double quote.
+        "SELECT \"a\"\"b\" FROM {1}",
     ];
 
     private static readonly string[] ColumnNames = ["Id", "Name", "Email", "CreatedAt", "IsActive", "Amount"];

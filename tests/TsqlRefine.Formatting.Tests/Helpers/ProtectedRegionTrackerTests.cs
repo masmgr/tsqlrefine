@@ -233,6 +233,27 @@ public sealed class ProtectedRegionTrackerTests
         Assert.Equal("\"", output.ToString());
     }
 
+    [Fact]
+    public void TryConsume_DoubleQuoteRegion_EscapedQuote_StaysInRegion()
+    {
+        var tracker = new ProtectedRegionTracker();
+        var output = new StringBuilder();
+        var text = "\"\"\"";
+        var index = 0;
+
+        // Start double quote region
+        tracker.TryStartProtectedRegion(text, output, ref index);
+        output.Clear();
+
+        // Consume escaped double quote ""
+        var result = tracker.TryConsume(text, output, ref index);
+
+        Assert.True(result);
+        Assert.True(tracker.IsInProtectedRegion());
+        Assert.Equal("\"\"", output.ToString());
+        Assert.Equal(3, index);
+    }
+
     #endregion
 
     #region TryConsume - Bracket Identifiers

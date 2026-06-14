@@ -179,9 +179,9 @@ public sealed class ScriptDomElementCaserTests
     }
 
     [Fact]
-    public void Apply_VariableCasing_Lower_LowercasesVariables()
+    public void Apply_VariableCasing_Lower_LowercasesUserVariables()
     {
-        var sql = "DECLARE @UserId INT; SELECT @@ROWCOUNT";
+        var sql = "DECLARE @UserId INT";
         var options = new FormattingOptions
         {
             VariableCasing = ElementCasing.Lower
@@ -189,14 +189,13 @@ public sealed class ScriptDomElementCaserTests
 
         var result = ScriptDomElementCaser.Apply(sql, options);
 
-        Assert.Contains("@userid", result.ToLowerInvariant());
-        Assert.Contains("@@rowcount", result.ToLowerInvariant());
+        Assert.Contains("@userid", result);
     }
 
     [Fact]
-    public void Apply_VariableCasing_Upper_UppercasesVariables()
+    public void Apply_VariableCasing_Upper_UppercasesUserVariables()
     {
-        var sql = "declare @userid int; select @@rowcount";
+        var sql = "declare @userid int";
         var options = new FormattingOptions
         {
             VariableCasing = ElementCasing.Upper
@@ -205,6 +204,22 @@ public sealed class ScriptDomElementCaserTests
         var result = ScriptDomElementCaser.Apply(sql, options);
 
         Assert.Contains("@USERID", result);
+    }
+
+    [Fact]
+    public void Apply_GlobalVariable_FollowsKeywordCasing_NotVariableCasing()
+    {
+        // @@ROWCOUNT and similar global/system variables are treated as keywords,
+        // so VariableCasing must not affect them.
+        var sql = "select @@rowcount";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            VariableCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
         Assert.Contains("@@ROWCOUNT", result);
     }
 
