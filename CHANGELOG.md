@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `multi-row-update-from` rule: detect non-deterministic `UPDATE ... FROM` that joins multiple rows to a single target row
+- `len-for-emptiness-check` rule: detect `LEN(col) = 0` / `LEN(col) > 0` patterns that should use `= ''` / `<> ''`
+- `string-agg-nvarchar-max` rule: detect `STRING_AGG` calls missing `NVARCHAR(MAX)` cast on the separator
+- `join-column-deviation` rule: detect JOIN column patterns that deviate from learned relation profiles
+- `update-join-cardinality-mismatch` rule: detect non-deterministic `UPDATE ... FROM ... JOIN` patterns
+- `delete-column-not-in-table` rule: detect column references in `DELETE ... FROM` that don't exist in the target table
+- `index-column-not-in-table` rule: detect columns in `CREATE INDEX` that don't exist in the target table
+- `join-foreign-key-mismatch` rule: detect `JOIN` conditions that don't match declared foreign-key relationships
+- `schema-aware-implicit-conversion` rule: detect implicit type conversions using schema column types
+- Schema-aware reference validation rules for column/table reference accuracy
+- `ISchemaContext` interface unifying schema and relation-deviation access (`ISchemaProvider` + `RelationDeviations`)
+- `SchemaContext` adapter class wrapping `ISchemaProvider` and optional `IRelationDeviationProvider`
+- `schema build` CLI command: generate `schema.json` + `relations.json` in one step via `--connection-string` + `--output-dir`
+- `schema collect-relations` CLI command: extract JOIN patterns from SQL files
+- `SchemaConfig.Path` shorthand in `tsqlrefine.json`: derives `schema.json` and `relations.json` from a single directory path
+- `schema.relationsProfilePath` config option for custom relation profile location
+- ER relationship query API on `ISchemaProvider`
+- Per-query caching and `TryResolve` helper in schema rules for repeated lookups
+- Plugin API bumped to v3 (schema provider integrated into analysis pipeline)
+- `TsqlRefine.Schema.SqlServer` project for SQL Server schema snapshot extraction
+
+### Changed
+
+- `union-type-mismatch` and `left-join-filtered-by-where` rules enhanced with schema awareness
+- `ConfigLoader` now exposes unified `LoadSchemaContext()` replacing separate `LoadSchema` + `LoadRelationDeviations` calls
+- `NameResolver` and `RelationDeviationProvider` use `FrozenDictionary` for hot-path lookups
+- `QualifierLookupKeyBuilder` extracted as shared helper from duplicate schema rule implementations
+- Schema lookup helpers unified via shared base to eliminate duplication across rules
+- Formatter: removed unused AST operator path, fixed protected-region edge cases
+- Multi-row update join diagnostic message clarified
+
+### Fixed
+
+- `semantic-schema-qualify`: false positive on CTE references
+- `avoid-not-in-with-null`: suppressed when schema proves column is NOT NULL
+- `top-without-order-by`: suppressed when `WHERE` clause filters on a unique column
+- `unresolved-table-reference`: CTE references and DML alias targets now correctly skipped
+- `update-column-not-in-table`: alias targets now resolved before schema lookup
+- Schema-qualified column references now resolved in column and implicit-conversion rules
+- Schema-aware suppression accuracy improved across three rules
+- Schema rule resolution edge cases for nested JOIN alias matching
+- Complex rule edge cases (multiple scenarios across schema and semantic rules)
+- CLI encoding issues on Windows non-UTF-8 consoles
+- CLI plugin validation errors on startup
+- CLI ignore-list handling edge cases
+- Plugin resources now properly disposed; added defensive null checks (CA1001/CA2000)
+- `ScriptDomTokenizer`: double-parse avoided by reusing fragment token stream
+
+### Dependencies
+
+- `SqlScriptDom` bumped to 180.18.1
+- `actions/checkout` bumped from 6.0.2 to 6.0.3
+- `actions/setup-dotnet` bumped from 5.2.0 to 5.3.0
+- `actions/upload-artifact` bumped from 7.0.0 to 7.0.1
+- `softprops/action-gh-release` bumped from 2.6.1 to 3.0.0
+
 ## [1.2.0] - 2026-03-01
 
 ### Fixed
