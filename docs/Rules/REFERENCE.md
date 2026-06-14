@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 141
+- **Total Rules**: 143
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
   - Critical (security-only): 14 rules
   - Essential (pragmatic): 32 rules
   - Recommended (recommended): 52 rules
-  - Thorough (strict-logic): 20 rules
+  - Thorough (strict-logic): 22 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 23 rules (16%)
-  - Warning: 79 rules (56%)
-  - Information: 39 rules (28%)
+  - Warning: 81 rules (57%)
+  - Information: 39 rules (27%)
 
 ## Importance Tiers
 
@@ -45,8 +45,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
 | **Recommended** | recommended | 52 | 98 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | 118 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 141 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Thorough** | strict-logic | 22 | 120 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 143 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,7 +54,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 5 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 39 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 41 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
@@ -235,7 +235,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**20 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**22 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -243,10 +243,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-#### Correctness (1 rules)
+#### Correctness (3 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
+| [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 
 #### Performance (10 rules)
@@ -352,7 +354,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (79 rules)
+### Warning (81 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -393,7 +395,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md)
 - [join-column-deviation](schema/join-column-deviation.md)
 - [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md)
+- [len-for-emptiness-check](correctness/len-for-emptiness-check.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
+- [multi-row-update-from](correctness/multi-row-update-from.md)
 - [nested-block-comments](style/nested-block-comments.md)
 - [order-by-in-subquery](correctness/order-by-in-subquery.md)
 - [prefer-utc-datetime](performance/prefer-utc-datetime.md)

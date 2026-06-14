@@ -117,6 +117,8 @@
     { "id": "implicit-conversion-in-predicate-schema" },
     { "id": "join-foreign-key-mismatch" },
     { "id": "update-join-cardinality-mismatch" },
+    { "id": "multi-row-update-from" },
+    { "id": "len-for-emptiness-check" },
     { "id": "join-column-deviation" }
   ]
 }

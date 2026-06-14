@@ -63,6 +63,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new GroupByColumnMismatchRule(),
         new AggregateInWhereClauseRule(),
         new HavingColumnMismatchRule(),
+        new MultiRowUpdateFromRule(),
+        new LenForEmptinessCheckRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
