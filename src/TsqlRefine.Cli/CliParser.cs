@@ -17,6 +17,15 @@ public static class CliParser
         "--version"
     };
 
+    private static readonly HashSet<string> OutputFormatCommands = new(StringComparer.Ordinal)
+    {
+        "lint",
+        "fix",
+        "list-rules",
+        "list-plugins",
+        "print-format-config"
+    };
+
     // =================================================================
     // Option Definitions
     // =================================================================
@@ -483,6 +492,11 @@ public static class CliParser
         var parseResult = Root.Parse(args ?? []);
         var (command, isExplicit) = GetCommandName(parseResult);
 
+        if (parseResult.Errors.Count > 0 && parseResult.CommandResult.Command is not RootCommand)
+        {
+            throw new ConfigException(string.Join(Environment.NewLine, parseResult.Errors.Select(e => e.Message)));
+        }
+
         return new CliArgs(
             Command: command,
             IsExplicitCommand: isExplicit,
@@ -491,7 +505,7 @@ public static class CliParser
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
             Utf8: GetOptionValue<bool>(parseResult, "--utf8"),
-            Output: GetOptionValue<string?>(parseResult, "--output") ?? "text",
+            Output: ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
             CompatLevel: ParseCompatLevel(GetOptionValue<string?>(parseResult, "--compat-level")),
@@ -507,7 +521,7 @@ public static class CliParser
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             EnabledOnly: GetOptionValue<bool>(parseResult, "--enabled-only"),
-            Paths: GetPaths(parseResult),
+            Paths: ValidatePathTokens(GetPaths(parseResult)),
             RuleId: GetOptionValue<string?>(parseResult, "--rule"),
             MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
             AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
@@ -581,6 +595,20 @@ public static class CliParser
         return [];
     }
 
+    private static List<string> ValidatePathTokens(List<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            if (path != "-" && path.Length > 0 && path[0] == '-')
+            {
+                throw new ConfigException(
+                    $"Unrecognized option or invalid path token: '{path}'. If this is a file path, prefix it with .\\ or an absolute path.");
+            }
+        }
+
+        return paths;
+    }
+
     private static string? GetSchemaOutput(ParseResult parseResult)
     {
         // Schema snapshot uses its own --output option (Options.SchemaOutput)
@@ -596,6 +624,27 @@ public static class CliParser
         }
 
         return null;
+    }
+
+    private static string ParseOutput(string command, string? value)
+    {
+        if (!OutputFormatCommands.Contains(command))
+        {
+            return "text";
+        }
+
+        if (value is null)
+        {
+            return "text";
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "text" => "text",
+            "json" => "json",
+            _ => throw new ConfigException(
+                $"Invalid --output value: '{value}'. Expected one of: text, json.")
+        };
     }
 
     private const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024; // 10 MB

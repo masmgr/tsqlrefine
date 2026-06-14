@@ -449,7 +449,7 @@ public sealed class CommandExecutor
             await stderr.WriteLineAsync($"Time: {elapsedText}");
         }
 
-        // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）
+        // The fix command succeeds when fixes are applied successfully; only parse errors fail it.
         return HasParseErrors(result.Files) ? ExitCodes.AnalysisError : 0;
     }
 

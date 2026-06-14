@@ -51,6 +51,50 @@ public sealed class CliOptionValidationTests
     }
 
     [Fact]
+    public async Task Lint_UnknownOption_ReturnsConfigError()
+    {
+        var stdin = new StringReader("SELECT 1;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", "--bogus"],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("--bogus", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task Lint_InvalidOutput_ReturnsConfigError()
+    {
+        var stdin = new StringReader("SELECT 1;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", "--output", "xml"],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("Invalid --output", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task ListRules_InvalidOutput_ReturnsConfigError()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["list-rules", "--output", "xml"],
+            TextReader.Null, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("Invalid --output", stderr.ToString());
+    }
+
+    [Fact]
     public async Task Fix_VerboseAndQuiet_ReturnsConfigError()
     {
         var stdin = new StringReader("SELECT 1;");

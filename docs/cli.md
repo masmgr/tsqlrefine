@@ -281,8 +281,8 @@ Unknown preset: 'foo'. Available presets: pragmatic, recommended, security-only,
 #### Encoding Detection (`--detect-encoding`)
 
 - BOM takes priority. If no BOM, estimation via `UTF.Unknown`
-- Without `--detect-encoding`, **reading** interprets as UTF-8
-- For `format` / `fix`, input file encoding (including BOM presence) is preserved regardless of `--detect-encoding`
+- Without `--detect-encoding`, `lint` file reads and stdin reads interpret content as UTF-8
+- For `format` / `fix` file inputs, text is decoded with the detected original encoding and written back with the same encoding (including BOM presence) regardless of `--detect-encoding`
 
 #### Formatting
 

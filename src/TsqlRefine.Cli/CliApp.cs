@@ -33,7 +33,16 @@ public static class CliApp
         {
             if (parsedArgs.DetectEncoding)
             {
-                var decoded = await CharsetDetection.ReadStreamAsync(stdin);
+                var decoded = await CharsetDetection.ReadStreamAsync(
+                    stdin,
+                    parsedArgs.MaxFileSize > 0 ? parsedArgs.MaxFileSize : null);
+                if (decoded is null)
+                {
+                    await stderr.WriteLineAsync(
+                        $"Stdin input exceeds maximum size of {parsedArgs.MaxFileSize / (1024 * 1024)} MB. Use --max-file-size to increase.");
+                    return ExitCodes.Fatal;
+                }
+
                 using var decodedReader = new StringReader(decoded.Text);
                 return await RunParsedAsync(parsedArgs, decodedReader, stdout, stderr);
             }

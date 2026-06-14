@@ -92,4 +92,30 @@ public sealed class InputSizeLimitTests
         var stderrOutput = stderr.ToString();
         Assert.Contains("exceeds maximum", stderrOutput);
     }
+
+    [Fact]
+    public async Task Lint_StdinDetectEncodingExceedsMaxSize_ReportsErrorBeforeDecode()
+    {
+        var largeContent = new string('X', 1_100_000);
+        using var stdin = new MemoryStream(Encoding.UTF8.GetBytes($"SELECT '{largeContent}';"));
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", "--detect-encoding", "--max-file-size", "1"],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.Fatal, code);
+        Assert.Contains("exceeds maximum", stderr.ToString());
+    }
+
+    [Fact]
+    public async Task ReadStreamAsync_WhenMaxBytesExceeded_ReturnsNull()
+    {
+        using var stdin = new MemoryStream(Encoding.UTF8.GetBytes("SELECT 1;"));
+
+        var decoded = await CharsetDetection.ReadStreamAsync(stdin, maxBytes: 4);
+
+        Assert.Null(decoded);
+    }
 }

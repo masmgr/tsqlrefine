@@ -84,9 +84,9 @@ public sealed class InputReader
             var decoded = CharsetDetection.Decode(bytes);
             encodings[path] = decoded.WriteEncoding;
 
-            if (args.DetectEncoding)
+            if (args.DetectEncoding || ShouldUseDetectedEncodingForWriteBack(args.Command))
             {
-                // Use detected encoding for content
+                // File write-back commands must avoid decoding with a different encoding than they write.
                 inputs.Add(new SqlInput(path, decoded.Text));
             }
             else
@@ -99,6 +99,11 @@ public sealed class InputReader
         }
 
         return new ReadInputsResult(inputs, encodings);
+    }
+
+    private static bool ShouldUseDetectedEncodingForWriteBack(string command)
+    {
+        return command is "format" or "fix";
     }
 
     private IEnumerable<string> ExpandPaths(

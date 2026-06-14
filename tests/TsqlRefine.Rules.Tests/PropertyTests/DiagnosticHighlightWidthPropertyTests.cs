@@ -12,7 +12,7 @@ namespace TsqlRefine.Rules.Tests.PropertyTests;
 /// </summary>
 public sealed class DiagnosticHighlightWidthPropertyTests
 {
-    // ---- 閾値 ----
+    // ---- Thresholds ----
 
     /// <summary>Maximum allowed line span (End.Line - Start.Line). 0 = single-line only.</summary>
     private const int MaxLineSpan = 0;
@@ -20,19 +20,18 @@ public sealed class DiagnosticHighlightWidthPropertyTests
     /// <summary>Maximum character width for single-line diagnostics.</summary>
     private const int MaxSingleLineWidth = 60;
 
-    // ---- ルール ----
+    // ---- Rules ----
 
     private static readonly IReadOnlyList<IRule> AllRules = new BuiltinRuleProvider().GetRules();
 
-    // ---- 既知の「広すぎる」ルール（将来修正予定）----
-    // 修正が完了したらここから削除すること。
-    // KnownWideHighlightRules_StillProduceWideHighlights テストが
-    // 修正済みなのに残留していることを検出する。
+    // ---- Known rules with overly wide highlights to fix later ----
+    // Remove entries after their highlight ranges are narrowed.
+    // KnownWideHighlightRules_StillProduceWideHighlights detects stale exemptions.
     private static readonly FrozenSet<string> KnownWideHighlightRules = FrozenSet.ToFrozenSet(
         Array.Empty<string>(),
         StringComparer.OrdinalIgnoreCase);
 
-    // ---- 各ルールをトリガーする最小 SQL ----
+    // ---- Minimal SQL that triggers each rule ----
 
     private static readonly Dictionary<string, string> TriggerSqlByRule =
         new(StringComparer.OrdinalIgnoreCase)
@@ -96,7 +95,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
             ["avoid-print-statement"] = "PRINT 'debug';",
         };
 
-    // ---- Theory データ ----
+    // ---- Theory data ----
 
     public static TheoryData<string, string> RuleData()
     {
@@ -109,7 +108,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
         return data;
     }
 
-    // ---- テスト1: 各ルールの診断ハイライト幅を検証 ----
+    // ---- Test 1: Verify diagnostic highlight width for each rule ----
 
     [Theory]
     [MemberData(nameof(RuleData))]
@@ -117,7 +116,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
     {
         if (KnownWideHighlightRules.Contains(ruleId))
         {
-            // 既知の問題ルールはスキップ（将来修正予定）
+            // Skip known issues until their highlight ranges are narrowed.
             return;
         }
 
@@ -126,7 +125,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
 
         if (rule is null)
         {
-            // ルールIDが存在しない場合はテストデータ側の問題
+            // A missing rule ID indicates invalid test data.
             Assert.Fail($"Rule '{ruleId}' not found in BuiltinRuleProvider. Check TriggerSqlByRule entries.");
             return;
         }
@@ -136,7 +135,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
 
         if (diagnostics.Count == 0)
         {
-            // SQL がルールをトリガーしていない → テストデータを見直す必要がある
+            // No diagnostics means the trigger SQL needs to be updated.
             Assert.Fail(
                 $"Rule '{ruleId}' produced no diagnostics for SQL: '{sql}'. " +
                 $"Update TriggerSqlByRule with SQL that actually triggers this rule.");
@@ -162,7 +161,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
         }
     }
 
-    // ---- テスト2: KnownWideHighlightRules の ID が実在するか確認 ----
+    // ---- Test 2: Verify KnownWideHighlightRules IDs exist ----
 
     [Fact]
     public void KnownWideHighlightRules_AllExistAsBuiltinRules()
@@ -180,7 +179,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
         }
     }
 
-    // ---- テスト3: exempt ルールが本当に広いハイライトを出しているか確認 ----
+    // ---- Test 3: Verify exempt rules still produce wide highlights ----
 
     [Fact]
     public void KnownWideHighlightRules_StillProduceWideHighlights()
@@ -192,12 +191,12 @@ public sealed class DiagnosticHighlightWidthPropertyTests
 
             if (rule is null)
             {
-                continue; // テスト2で別途検出される
+                continue; // Test 2 catches this separately.
             }
 
             if (!TriggerSqlByRule.TryGetValue(ruleId, out var sql) || string.IsNullOrEmpty(sql))
             {
-                continue; // SQL 未登録はスキップ
+                continue; // Skip rules without trigger SQL.
             }
 
             var context = RuleTestContext.CreateContext(sql);
@@ -205,7 +204,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
 
             if (diagnostics.Count == 0)
             {
-                continue; // 診断なし → 幅の検証不能
+                continue; // No diagnostics means width cannot be verified.
             }
 
             var hasWide = diagnostics.Any(d =>

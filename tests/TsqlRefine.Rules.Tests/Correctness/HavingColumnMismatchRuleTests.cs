@@ -340,7 +340,7 @@ public sealed class HavingColumnMismatchRuleTests
     [Fact]
     public void Analyze_NoGroupByWithHaving_ReturnsEmpty()
     {
-        // GROUP BY なしの HAVING は別のエラー（8121）— このルールのスコープ外
+        // HAVING without GROUP BY is SQL Server error 8121, outside this rule's scope.
         const string sql = "SELECT COUNT(*) FROM t HAVING COUNT(*) > 5;";
         var context = RuleTestContext.CreateContext(sql);
 

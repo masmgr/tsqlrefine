@@ -308,6 +308,9 @@ public sealed class ConfigLoader
     {
         var rules = new List<IRule>();
         rules.AddRange(new BuiltinRuleProvider().GetRules());
+        var knownRuleIds = new HashSet<string>(
+            rules.Select(r => r.Metadata.RuleId),
+            StringComparer.OrdinalIgnoreCase);
 
         var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
 
@@ -344,10 +347,7 @@ public sealed class ConfigLoader
 
             foreach (var p in loaded)
             {
-                foreach (var provider in p.Providers)
-                {
-                    rules.AddRange(provider.GetRules());
-                }
+                TryAppendPluginRules(rules, p, knownRuleIds, stderr, args.Quiet);
             }
         }
         finally
@@ -359,6 +359,64 @@ public sealed class ConfigLoader
         }
 
         return rules;
+    }
+
+    internal static bool TryAppendPluginRules(
+        IList<IRule> rules,
+        LoadedPlugin plugin,
+        ISet<string> knownRuleIds,
+        TextWriter? stderr,
+        bool quiet)
+    {
+        if (plugin.Diagnostic.Status != PluginLoadStatus.Success)
+        {
+            return false;
+        }
+
+        var pluginRules = new List<IRule>();
+        foreach (var provider in plugin.Providers)
+        {
+            pluginRules.AddRange(provider.GetRules());
+        }
+
+        var duplicateRuleIds = FindDuplicatePluginRuleIds(knownRuleIds, pluginRules);
+        if (duplicateRuleIds.Count > 0)
+        {
+            if (!quiet)
+            {
+                stderr?.WriteLine(
+                    $"Warning: plugin '{plugin.Path}' disabled because it declares duplicate rule ID(s): {string.Join(", ", duplicateRuleIds)}.");
+            }
+
+            return false;
+        }
+
+        foreach (var rule in pluginRules)
+        {
+            rules.Add(rule);
+            knownRuleIds.Add(rule.Metadata.RuleId);
+        }
+
+        return true;
+    }
+
+    internal static IReadOnlyList<string> FindDuplicatePluginRuleIds(
+        ISet<string> knownRuleIds,
+        IReadOnlyList<IRule> pluginRules)
+    {
+        var duplicateRuleIds = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pluginRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rule in pluginRules)
+        {
+            var ruleId = rule.Metadata.RuleId;
+            if (knownRuleIds.Contains(ruleId) || !pluginRuleIds.Add(ruleId))
+            {
+                duplicateRuleIds.Add(ruleId);
+            }
+        }
+
+        return duplicateRuleIds.ToArray();
     }
 
     /// <summary>
