@@ -87,6 +87,10 @@ public sealed class MultiRowUpdateFromRule : IRule
 
         private static JoinTableReference? FindFirstJoin(TableReference tableRef)
         {
+            // Parenthesized JOINs are only wrappers, so unwrap them before choosing
+            // the single JOIN node to report. Once a real JOIN is found, stop here
+            // intentionally: this rule reports once per UPDATE statement and does
+            // not walk nested FirstTableReference JOINs looking for an earlier node.
             if (tableRef is JoinParenthesisTableReference { Join: not null } joinParenthesis)
             {
                 return FindFirstJoin(joinParenthesis.Join);
