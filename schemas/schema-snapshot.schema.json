@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/schema-snapshot.schema.json",
+  "title": "TsqlRefine Schema Snapshot",
+  "description": "Schema snapshot format for tsqlrefine schema-aware static analysis.",
+  "type": "object",
+  "required": ["metadata", "databases"],
+  "properties": {
+    "metadata": {
+      "$ref": "#/$defs/snapshotMetadata"
+    },
+    "databases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/databaseSchema"
+      }
+    }
+  },
+  "$defs": {
+    "snapshotMetadata": {
+      "type": "object",
+      "required": ["generatedAt", "serverName", "databaseName", "compatLevel", "contentHash"],
+      "properties": {
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the snapshot was generated."
+        },
+        "serverName": {
+          "type": "string",
+          "description": "The SQL Server instance name."
+        },
+        "databaseName": {
+          "type": "string",
+          "description": "The database name."
+        },
+        "compatLevel": {
+          "type": "integer",
+          "description": "The SQL Server compatibility level."
+        },
+        "contentHash": {
+          "type": "string",
+          "description": "SHA-256 hash of the serialized snapshot content."
+        }
+      },
+      "additionalProperties": false
+    },
+    "databaseSchema": {
+      "type": "object",
+      "required": ["name", "tables", "views"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The database name."
+        },
+        "tables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tableSchema"
+          }
+        },
+        "views": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tableSchema"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tableSchema": {
+      "type": "object",
+      "required": ["schemaName", "name", "columns"],
+      "properties": {
+        "schemaName": {
+          "type": "string",
+          "description": "The schema name (e.g., 'dbo')."
+        },
+        "name": {
+          "type": "string",
+          "description": "The table or view name."
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/columnSchema"
+          }
+        },
+        "primaryKey": {
+          "$ref": "#/$defs/primaryKeyInfo"
+        },
+        "uniqueConstraints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uniqueConstraintInfo"
+          }
+        },
+        "foreignKeys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/foreignKeyInfo"
+          }
+        },
+        "indexes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/indexInfo"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "columnSchema": {
+      "type": "object",
+      "required": ["name", "type", "isNullable"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The column name."
+        },
+        "type": {
+          "$ref": "#/$defs/sqlTypeInfo"
+        },
+        "isNullable": {
+          "type": "boolean"
+        },
+        "isIdentity": {
+          "type": "boolean"
+        },
+        "isComputed": {
+          "type": "boolean"
+        },
+        "defaultExpression": {
+          "type": "string"
+        },
+        "collation": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "sqlTypeInfo": {
+      "type": "object",
+      "required": ["typeName", "category"],
+      "properties": {
+        "typeName": {
+          "type": "string",
+          "description": "The SQL Server type name (e.g., 'int', 'nvarchar')."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "exactNumeric",
+            "approximateNumeric",
+            "ansiString",
+            "unicodeString",
+            "dateTime",
+            "binary",
+            "uniqueIdentifier",
+            "xml",
+            "spatial",
+            "other"
+          ]
+        },
+        "maxLength": {
+          "type": "integer",
+          "description": "Maximum length in bytes. -1 indicates MAX."
+        },
+        "precision": {
+          "type": "integer"
+        },
+        "scale": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "primaryKeyInfo": {
+      "type": "object",
+      "required": ["columns", "isClustered"],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isClustered": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "uniqueConstraintInfo": {
+      "type": "object",
+      "required": ["name", "columns"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "foreignKeyInfo": {
+      "type": "object",
+      "required": ["name", "sourceColumns", "targetSchema", "targetTable", "targetColumns"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "sourceColumns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "targetSchema": {
+          "type": "string"
+        },
+        "targetTable": {
+          "type": "string"
+        },
+        "targetColumns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "indexInfo": {
+      "type": "object",
+      "required": ["name", "columns", "isUnique", "isClustered"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "isUnique": {
+          "type": "boolean"
+        },
+        "isClustered": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

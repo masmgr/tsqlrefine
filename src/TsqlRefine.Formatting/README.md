@@ -18,13 +18,19 @@ Minimal SQL formatter for T-SQL code.
 
 ## Helper Classes
 
-| Helper | Purpose | Lines |
-|--------|---------|-------|
-| `CasingHelpers` | Common casing utilities (PascalCase, camelCase, etc.) | ~75 |
-| `ScriptDomKeywordCaser` | Applies keyword/identifier casing using ScriptDom | ~175 |
-| `WhitespaceNormalizer` | Normalizes indentation and line breaks | ~200 |
-| `CommaStyleTransformer` | Transforms comma placement (trailing ↔ leading) | ~90 |
-| `ProtectedRegionTracker` | State machine for strings/comments/brackets | ~230 |
+| Helper | Purpose |
+|--------|---------|
+| `CasingHelpers` | Common casing utilities (Upper/Lower/Pascal) |
+| `ScriptDomElementCaser` | Applies granular element casing using ScriptDom tokens |
+| `SqlElementCategorizer` | Categorizes tokens into keyword/function/data type/schema/table/column/variable |
+| `KeywordSpaceNormalizer` | Collapses spacing between compound keyword pairs |
+| `WhitespaceNormalizer` | Normalizes indentation and line breaks |
+| `BlankLineNormalizer` | Limits consecutive blank lines, trims leading blanks |
+| `InlineSpaceNormalizer` | Space after commas, trims space before commas |
+| `FunctionParenSpaceNormalizer` | Removes space before a function's opening paren |
+| `OperatorSpaceNormalizer` | Operator spacing (heuristic-based) |
+| `CommaStyleTransformer` | Transforms comma placement (trailing ↔ leading) |
+| `ProtectedRegionTracker` | State machine for strings/comments/brackets |
 
 All helpers are **public** and available to external plugins.
 
@@ -33,20 +39,14 @@ All helpers are **public** and available to external plugins.
 ```
 SQL Input
     ↓
-1. Keyword/Identifier Casing (ScriptDomKeywordCaser)
-    - Uses TSqlParser appropriate for compat level (100-160)
-    - Applies KeywordCasing (Upper/Lower/Pascal/Preserve)
-    - Applies IdentifierCasing (Upper/Lower/Pascal/Camel/Preserve)
-    ↓
-2. Whitespace Normalization (WhitespaceNormalizer)
-    - Normalizes line breaks (CRLF → LF)
-    - Normalizes indentation (respects .editorconfig)
-    - Trims trailing whitespace (optional)
-    - Inserts final newline (optional)
-    ↓
-3. Comma Style Transformation (CommaStyleTransformer, optional)
-    - Transforms trailing commas to leading (if enabled)
-    - Currently naive implementation (line-based)
+1. KeywordSpaceNormalizer    - Compound keyword spacing (safe pairs only)
+2. ScriptDomElementCaser     - Granular element casing (per element type)
+3. WhitespaceNormalizer      - Indentation, line breaks, trailing whitespace, final newline
+4. BlankLineNormalizer       - Consecutive blank line limiting, leading blank trimming
+5. InlineSpaceNormalizer     - Space after commas
+6. FunctionParenSpaceNormalizer - Remove space before opening paren of a call
+7. OperatorSpaceNormalizer   - Operator spacing (heuristic-based)
+8. CommaStyleTransformer     - Comma style transformation (optional, line-based)
     ↓
 Formatted SQL Output
 ```
@@ -68,8 +68,8 @@ var formatted = SqlFormatter.Format(sql);
 ```csharp
 var options = new FormattingOptions
 {
-    KeywordCasing = KeywordCasing.Lower,
-    IdentifierCasing = IdentifierCasing.Pascal,
+    KeywordElementCasing = ElementCasing.Lower,
+    DataTypeCasing = ElementCasing.Lower,
     IndentStyle = IndentStyle.Tabs,
     IndentSize = 4,
     TrimTrailingWhitespace = true,
@@ -82,15 +82,12 @@ var formatted = SqlFormatter.Format(sql, options);
 ### Using Helpers Directly
 
 ```csharp
-using TsqlRefine.Formatting.Helpers;
+using TsqlRefine.Formatting.Helpers.Casing;
+using TsqlRefine.Formatting.Helpers.Whitespace;
+using TsqlRefine.Formatting.Helpers.Transformation;
 
-// Apply only keyword casing
-var cased = ScriptDomKeywordCaser.Apply(
-    sql,
-    KeywordCasing.Upper,
-    IdentifierCasing.Preserve,
-    compatLevel: 150
-);
+// Apply only granular element casing
+var cased = ScriptDomElementCaser.Apply(sql, options, compatLevel: 150);
 
 // Apply only whitespace normalization
 var normalized = WhitespaceNormalizer.Normalize(sql, options);

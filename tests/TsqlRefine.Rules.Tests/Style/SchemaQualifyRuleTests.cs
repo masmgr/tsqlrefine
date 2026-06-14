@@ -108,6 +108,47 @@ public sealed class SchemaQualifyRuleTests
     }
 
     [Fact]
+    public void Analyze_CteReference_NoDiagnostics()
+    {
+        // Arrange: CTE names cannot be schema-qualified (dbo.cte is invalid SQL)
+        var sql = "WITH cte AS (SELECT 1 AS x) SELECT x FROM cte;";
+
+        // Act
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_MultipleCteReferences_NoDiagnostics()
+    {
+        // Arrange
+        var sql = "WITH a AS (SELECT 1 AS x), b AS (SELECT 2 AS y) SELECT a.x, b.y FROM a JOIN b ON a.x = b.y;";
+
+        // Act
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        // Assert
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CteWithUnqualifiedBaseTable_ReturnsDiagnosticForBaseTableOnly()
+    {
+        // Arrange: the base table inside the CTE body is still flagged, but the CTE reference is not
+        var sql = "WITH cte AS (SELECT id FROM Users) SELECT id FROM cte;";
+
+        // Act
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        // Assert
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Equal("semantic-schema-qualify", diagnostic.Code);
+        Assert.Contains("Users", diagnostic.Message);
+    }
+
+    [Fact]
     public void Analyze_JoinWithMixedSchemaQualification_ReturnsDiagnosticForUnqualified()
     {
         // Arrange

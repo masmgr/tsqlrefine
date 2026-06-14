@@ -110,11 +110,6 @@ public sealed class CliEncodingTests
     [Fact]
     public async Task Format_WithoutDetectEncoding_PreservesOriginalEncoding()
     {
-        // This test verifies that:
-        // - Without --detect-encoding, content is read as UTF-8 (may garble non-UTF-8 content)
-        // - But the original file encoding is preserved for writing
-        // So Shift-JIS file stays Shift-JIS, even though content interpretation may differ
-
         Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         var shiftJis = Encoding.GetEncoding(932);
 
@@ -124,8 +119,7 @@ public sealed class CliEncodingTests
         try
         {
             var sqlPath = Path.Combine(tempDir, "no-detect.sql");
-            // Use ASCII-only content to avoid encoding interpretation issues
-            var input = "select 1 -- comment\n";
+            var input = "select 1 -- 日本語\n";
             await File.WriteAllBytesAsync(sqlPath, shiftJis.GetBytes(input));
 
             var stdout = new StringWriter();
@@ -136,21 +130,15 @@ public sealed class CliEncodingTests
 
             Assert.Equal(0, code);
             Assert.Equal(string.Empty, stdout.ToString());
-            // stderr should contain the change log
             Assert.Contains("Formatted:", stderr.ToString());
 
-            // Verify file is still encoded with Shift-JIS
             var actualBytes = await File.ReadAllBytesAsync(sqlPath);
             var decoded = shiftJis.GetString(actualBytes);
 
-            // Verify formatting was applied (SELECT should be uppercase)
             Assert.Contains("SELECT 1", decoded);
-            Assert.Contains("-- comment", decoded);
-
-            // The file should be written with Shift-JIS encoding (same as original)
-            // For ASCII content, Shift-JIS and UTF-8 produce the same bytes
-            // So we verify by checking the formatted content is correct
-            Assert.Equal("SELECT 1 -- comment\n", decoded);
+            Assert.Contains("-- 日本語", decoded);
+            Assert.Equal("SELECT 1 -- 日本語\n", decoded);
+            Assert.NotEqual(Encoding.UTF8.GetBytes(decoded), actualBytes);
         }
         finally
         {

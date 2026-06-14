@@ -149,7 +149,14 @@ public static class SqlElementCategorizer
         var text = token.Text;
         var tokenCategory = TokenTypeCategoryCache.GetValueOrDefault(token.TokenType, TokenTypeCategory.Other);
 
-        // 1. Variables (@var, @@var)
+        // 1a. Global/system variables (@@ROWCOUNT, @@IDENTITY, etc.) are treated as
+        // keywords, not user variables, so they follow keyword casing.
+        if (text.StartsWith("@@", StringComparison.Ordinal))
+        {
+            return ElementCategory.Keyword;
+        }
+
+        // 1b. User variables (@var)
         if (tokenCategory == TokenTypeCategory.Variable || text.StartsWith('@'))
         {
             return ElementCategory.Variable;

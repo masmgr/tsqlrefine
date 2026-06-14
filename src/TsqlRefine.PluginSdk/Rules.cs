@@ -153,13 +153,26 @@ public sealed class ScriptDomAst
 /// <param name="Ast">The parsed syntax tree and raw SQL.</param>
 /// <param name="Tokens">Flat token stream for pattern matching.</param>
 /// <param name="Settings">Per-rule configuration settings.</param>
+/// <param name="SchemaContext">Optional unified schema context for schema-aware analysis. Null when no schema snapshot is loaded.</param>
 public sealed record RuleContext(
     string FilePath,
     int CompatLevel,
     ScriptDomAst Ast,
     IReadOnlyList<Token> Tokens,
-    RuleSettings Settings
-);
+    RuleSettings Settings,
+    ISchemaContext? SchemaContext = null
+)
+{
+    /// <summary>
+    /// Gets the schema provider. Shorthand for <see cref="SchemaContext"/>.
+    /// </summary>
+    public ISchemaProvider? Schema => SchemaContext;
+
+    /// <summary>
+    /// Gets the relation deviation provider. Shorthand for <see cref="SchemaContext"/>.<see cref="ISchemaContext.RelationDeviations"/>.
+    /// </summary>
+    public IRelationDeviationProvider? RelationDeviations => SchemaContext?.RelationDeviations;
+}
 
 /// <summary>
 /// Interface that all rules must implement.

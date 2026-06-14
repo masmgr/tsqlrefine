@@ -24,8 +24,31 @@ internal static class CharsetDetection
 
     public static async Task<DecodedText> ReadStreamAsync(Stream stream, CancellationToken cancellationToken = default)
     {
+        var decoded = await ReadStreamAsync(stream, null, cancellationToken);
+        return decoded ?? Decode([]);
+    }
+
+    public static async Task<DecodedText?> ReadStreamAsync(
+        Stream stream,
+        long? maxBytes,
+        CancellationToken cancellationToken = default)
+    {
         using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms, cancellationToken);
+        var buffer = new byte[81920];
+        long totalBytes = 0;
+
+        int bytesRead;
+        while ((bytesRead = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+        {
+            totalBytes += bytesRead;
+            if (maxBytes is > 0 && totalBytes > maxBytes.Value)
+            {
+                return null;
+            }
+
+            ms.Write(buffer, 0, bytesRead);
+        }
+
         return Decode(ms.ToArray());
     }
 

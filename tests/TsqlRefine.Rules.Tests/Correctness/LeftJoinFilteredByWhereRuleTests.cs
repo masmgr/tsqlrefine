@@ -1,11 +1,33 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness.Semantic;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
 public sealed class LeftJoinFilteredByWhereRuleTests
 {
+    private static SchemaProvider CreateSchema() =>
+        new(TestSchemaBuilder.Create()
+            .AddTable("dbo", "Orders", t => t
+                .AddColumn("OrderId", "int")
+                .WithPrimaryKey(true, "OrderId")
+                .AddColumn("CustomerId", "int")
+                .AddColumn("Status", "varchar", maxLength: 50)
+                .AddForeignKey("FK_Orders_Customers", ["CustomerId"], "dbo", "Customers", ["CustomerId"]))
+            .AddTable("dbo", "Customers", t => t
+                .AddColumn("CustomerId", "int")
+                .WithPrimaryKey(true, "CustomerId")
+                .AddColumn("Name", "nvarchar", maxLength: 200)
+                .AddColumn("Email", "varchar", maxLength: 200, nullable: true))
+            .AddTable("dbo", "OrderDetails", t => t
+                .AddColumn("DetailId", "int")
+                .WithPrimaryKey(true, "DetailId")
+                .AddColumn("OrderId", "int")
+                .AddColumn("Quantity", "int")
+                .AddColumn("Discount", "decimal", precision: 5, scale: 2, nullable: true))
+            .Build());
     [Theory]
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.status = 1")]  // filters right-side
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.id IN (1,2,3)")]  // IN clause on right-side
@@ -154,5 +176,113 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         Assert.Contains("LEFT JOIN", rule.Metadata.Description, StringComparison.OrdinalIgnoreCase);
     }
 
+    // --- Schema-aware tests ---
 
+    [Fact]
+    public void Analyze_WithSchema_NotNullColumnFiltered_ReturnsDefinitiveMessage()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.Customers c ON o.CustomerId = c.CustomerId WHERE c.Name = 'Test'";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("definitively", diagnostics[0].Message);
+        Assert.Contains("NOT NULL", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_NullableColumnFiltered_ReturnsStandardMessage()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.Customers c ON o.CustomerId = c.CustomerId WHERE c.Email = 'test@example.com'";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.DoesNotContain("definitively", diagnostics[0].Message);
+        Assert.Contains("Consider using INNER JOIN instead", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_FkRelationshipAndNotNull_MentionsForeignKey()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.Customers c ON o.CustomerId = c.CustomerId WHERE c.Name = 'Test'";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("foreign key", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_NoFkButNotNull_ReturnsDefinitiveWithoutFk()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        // OrderDetails has no FK to Customers, joining on non-FK columns
+        const string sql = "SELECT * FROM dbo.Customers c LEFT JOIN dbo.OrderDetails d ON c.CustomerId = d.DetailId WHERE d.Quantity > 5";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("definitively", diagnostics[0].Message);
+        Assert.DoesNotContain("foreign key", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_NoSchema_RightSideFiltered_ReturnsGenericMessage()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.Customers c ON o.CustomerId = c.CustomerId WHERE c.Name = 'Test'";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("Consider using INNER JOIN instead", diagnostics[0].Message);
+        Assert.DoesNotContain("definitively", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_IsNotNullOnRightSide_ReturnsEmpty()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.Customers c ON o.CustomerId = c.CustomerId WHERE c.CustomerId IS NOT NULL";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_UnresolvableRightTable_ReturnsGenericMessage()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.UnknownTable u ON o.OrderId = u.OrderId WHERE u.Status = 1";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("Consider using INNER JOIN instead", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_WithSchema_NullableColumnBetween_ReturnsStandardMessage()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM dbo.Orders o LEFT JOIN dbo.OrderDetails d ON o.OrderId = d.OrderId WHERE d.Discount BETWEEN 0.1 AND 0.5";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = rule.Analyze(context).Where(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where").ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.DoesNotContain("definitively", diagnostics[0].Message);
+    }
 }

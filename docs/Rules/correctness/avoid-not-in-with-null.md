@@ -45,6 +45,36 @@ EXCEPT
 SELECT CustomerId FROM dbo.Blacklist;
 ```
 
+## Schema-Aware Suppression
+
+When a schema snapshot is available (via `--schema` CLI option or configuration), this rule performs additional analysis. If the subquery's SELECT column is provably `NOT NULL` according to the schema, the warning is suppressed because the NULL problem cannot occur.
+
+### Requirements for suppression
+
+All of the following must be true:
+
+- Schema information is loaded
+- The subquery has exactly one SELECT column
+- The SELECT column is a simple column reference (not an expression)
+- The column's table can be resolved in the schema
+- The column is defined as `NOT NULL` in the schema
+
+If any condition is not met, the warning is emitted as usual.
+
+### Example
+
+```sql
+-- Given: dbo.Blacklist.CustomerId is NOT NULL in the schema
+-- This NOT IN is safe and the warning is suppressed
+SELECT * FROM dbo.Orders
+WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Blacklist);
+
+-- Given: dbo.NullableList.CustomerId allows NULL in the schema
+-- This NOT IN is still flagged
+SELECT * FROM dbo.Orders
+WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.NullableList);
+```
+
 ## Configuration
 
 To disable this rule:

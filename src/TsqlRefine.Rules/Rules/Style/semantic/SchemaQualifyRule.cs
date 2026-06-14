@@ -24,6 +24,33 @@ public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
 
     private sealed class SchemaQualifyVisitor : DiagnosticVisitorBase
     {
+        private readonly Stack<HashSet<string>> _cteScopes = new();
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            VisitWithCteScope(node.WithCtesAndXmlNamespaces, () => node.QueryExpression?.Accept(this));
+        }
+
+        public override void ExplicitVisit(InsertStatement node)
+        {
+            VisitWithCteScope(node.WithCtesAndXmlNamespaces, () => node.InsertSpecification?.Accept(this));
+        }
+
+        public override void ExplicitVisit(UpdateStatement node)
+        {
+            VisitWithCteScope(node.WithCtesAndXmlNamespaces, () => node.UpdateSpecification?.Accept(this));
+        }
+
+        public override void ExplicitVisit(DeleteStatement node)
+        {
+            VisitWithCteScope(node.WithCtesAndXmlNamespaces, () => node.DeleteSpecification?.Accept(this));
+        }
+
+        public override void ExplicitVisit(MergeStatement node)
+        {
+            VisitWithCteScope(node.WithCtesAndXmlNamespaces, () => node.MergeSpecification?.Accept(this));
+        }
+
         public override void ExplicitVisit(NamedTableReference node)
         {
             var schemaObject = node.SchemaObject;
@@ -51,6 +78,13 @@ public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
                 return;
             }
 
+            // Skip CTE references (cannot be schema-qualified)
+            if (IsInCteScope(tableName))
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
             // Report unqualified table reference
             AddDiagnostic(
                 fragment: schemaObject,
@@ -61,6 +95,39 @@ public sealed class SchemaQualifyRule : DiagnosticVisitorRuleBase
             );
 
             base.ExplicitVisit(node);
+        }
+
+        private bool IsInCteScope(string tableName) =>
+            _cteScopes.Any(scope => scope.Contains(tableName));
+
+        private void VisitWithCteScope(WithCtesAndXmlNamespaces? withCtes, Action visitAction)
+        {
+            if (withCtes?.CommonTableExpressions is not { Count: > 0 } ctes)
+            {
+                visitAction();
+                return;
+            }
+
+            _cteScopes.Push(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            try
+            {
+                foreach (var cte in ctes)
+                {
+                    var cteName = cte.ExpressionName?.Value;
+                    if (!string.IsNullOrWhiteSpace(cteName) && _cteScopes.TryPeek(out var scope))
+                    {
+                        scope.Add(cteName);
+                    }
+
+                    cte.QueryExpression?.Accept(this);
+                }
+
+                visitAction();
+            }
+            finally
+            {
+                _cteScopes.Pop();
+            }
         }
     }
 }

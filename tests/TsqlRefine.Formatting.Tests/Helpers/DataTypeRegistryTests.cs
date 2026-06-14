@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class DataTypeRegistryTests
+public sealed class DataTypeRegistryTests
 {
     #region IsDataType
 

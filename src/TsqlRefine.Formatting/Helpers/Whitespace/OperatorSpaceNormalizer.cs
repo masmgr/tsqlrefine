@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using System.Text;
 using TsqlRefine.Formatting.Helpers.Protection;
-using TsqlRefine.Formatting.Helpers.Transformation;
 
 namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
@@ -48,16 +47,6 @@ public static class OperatorSpaceNormalizer
     /// <param name="options">Formatting options</param>
     /// <returns>SQL text with normalized operator spacing</returns>
     public static string Normalize(string input, FormattingOptions options)
-        => Normalize(input, options, positionMap: null);
-
-    /// <summary>
-    /// Normalizes operator spacing in SQL text with optional AST-based context.
-    /// </summary>
-    /// <param name="input">SQL text to normalize</param>
-    /// <param name="options">Formatting options</param>
-    /// <param name="positionMap">Optional AST position map for accurate operator context detection</param>
-    /// <returns>SQL text with normalized operator spacing</returns>
-    public static string Normalize(string input, FormattingOptions options, AstPositionMap? positionMap)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -76,10 +65,10 @@ public static class OperatorSpaceNormalizer
         var tracker = new ProtectedRegionTracker();
         return LineEndingHelpers.TransformLines(
             input,
-            (line, lineIndex) => NormalizeLine(line, tracker, positionMap, lineNumber: lineIndex + 1));
+            (line, _) => NormalizeLine(line, tracker));
     }
 
-    private static string NormalizeLine(string line, ProtectedRegionTracker tracker, AstPositionMap? positionMap, int lineNumber)
+    private static string NormalizeLine(string line, ProtectedRegionTracker tracker)
     {
         if (string.IsNullOrEmpty(line))
         {
@@ -140,8 +129,7 @@ public static class OperatorSpaceNormalizer
             var c = line[index];
 
             // Try compound operators first (<>, !=, <=, >=, &=, |=, ^=)
-            // Column is 1-based in ScriptDom
-            if (TryProcessCompoundOperator(line, output, ref index, positionMap, lineNumber))
+            if (TryProcessCompoundOperator(line, output, ref index))
             {
                 continue;
             }
@@ -149,7 +137,7 @@ public static class OperatorSpaceNormalizer
             // Try single-char operators (=, <, >, +, -, *, /, %, &, |, ^)
             if (SingleCharOperators.Contains(c))
             {
-                ProcessSingleOperator(line, output, ref index, positionMap, lineNumber);
+                ProcessSingleOperator(line, output, ref index);
                 continue;
             }
 
@@ -161,7 +149,7 @@ public static class OperatorSpaceNormalizer
         return output.ToString();
     }
 
-    private static bool TryProcessCompoundOperator(string line, StringBuilder output, ref int index, AstPositionMap? positionMap, int lineNumber)
+    private static bool TryProcessCompoundOperator(string line, StringBuilder output, ref int index)
     {
         if (index + 1 >= line.Length)
         {
@@ -195,11 +183,9 @@ public static class OperatorSpaceNormalizer
         return true;
     }
 
-    private static void ProcessSingleOperator(string line, StringBuilder output, ref int index, AstPositionMap? positionMap, int lineNumber)
+    private static void ProcessSingleOperator(string line, StringBuilder output, ref int index)
     {
         var c = line[index];
-        // Column is 1-based in ScriptDom
-        var column = index + 1;
 
         // Check for scientific notation: digit followed by e/E followed by +/-
         if (c is '+' or '-' && ScientificNotationChecker.IsSign(line, index))
@@ -209,56 +195,11 @@ public static class OperatorSpaceNormalizer
             return;
         }
 
-        // Check AST-based context if available
-        if (positionMap is not null)
-        {
-            var astContext = positionMap.GetContext(lineNumber, column);
-            if (astContext != AstPositionMap.OperatorContext.Unknown)
-            {
-                ProcessOperatorWithAstContext(line, output, ref index, c, astContext);
-                return;
-            }
-        }
-
-        // Fall back to heuristic-based detection
         ProcessOperatorWithHeuristics(line, output, ref index, c);
     }
 
     /// <summary>
-    /// Process operator using AST-determined context.
-    /// </summary>
-    private static void ProcessOperatorWithAstContext(string line, StringBuilder output, ref int index, char c, AstPositionMap.OperatorContext context)
-    {
-        switch (context)
-        {
-            case AstPositionMap.OperatorContext.UnarySign:
-                // Unary operator - no space before
-                output.Append(c);
-                index++;
-                break;
-
-            case AstPositionMap.OperatorContext.SelectStar:
-            case AstPositionMap.OperatorContext.QualifiedStar:
-            case AstPositionMap.OperatorContext.FunctionStar:
-                // Asterisk in non-multiplication context - no spacing
-                output.Append(c);
-                index++;
-                break;
-
-            case AstPositionMap.OperatorContext.BinaryArithmetic:
-            case AstPositionMap.OperatorContext.Comparison:
-            default:
-                // Binary operator - ensure spacing
-                EnsureSpaceBefore(output);
-                output.Append(c);
-                index++;
-                EnsureSpaceAfter(line, output, ref index);
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Process operator using heuristic-based context detection (original logic).
+    /// Process operator using heuristic-based context detection.
     /// </summary>
     private static void ProcessOperatorWithHeuristics(string line, StringBuilder output, ref int index, char c)
     {

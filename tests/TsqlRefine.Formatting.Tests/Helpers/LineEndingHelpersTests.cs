@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class LineEndingHelpersTests
+public sealed class LineEndingHelpersTests
 {
     #region DetectLineEnding
 

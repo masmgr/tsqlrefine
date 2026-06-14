@@ -12,7 +12,7 @@ Basic format:
 tsqlrefine <command> [options] [paths...]
 ```
 
-- If `<command>` is omitted, `lint` is assumed
+- `<command>` is required
 - `paths...` can be a mix of `file.sql` / `dir`
 - Standard input is accepted via `-` or `--stdin` (pure SQL only)
 
@@ -20,7 +20,7 @@ Commands:
 
 | Command | Description |
 |----------|------|
-| `lint` | Rule-based diagnostics (static analysis) **[default]** |
+| `lint` | Rule-based diagnostics (static analysis) |
 | `format` | Minimal formatting only (outputs SQL text) |
 | `fix` | Diagnostics + auto-fix within "safe scope" |
 | `init` | Generate default configuration file |
@@ -70,15 +70,6 @@ tsqlrefine lint [options] [paths...]
 | `--verbose` | Show detailed information (execution time) |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
-
-##### Default Command Behavior
-
-When no subcommand is specified, `lint` is assumed. The following are equivalent:
-
-```bash
-tsqlrefine lint --stdin --output json
-tsqlrefine --stdin --output json
-```
 
 ##### Summary Output
 
@@ -290,8 +281,8 @@ Unknown preset: 'foo'. Available presets: pragmatic, recommended, security-only,
 #### Encoding Detection (`--detect-encoding`)
 
 - BOM takes priority. If no BOM, estimation via `UTF.Unknown`
-- Without `--detect-encoding`, **reading** interprets as UTF-8
-- For `format` / `fix`, input file encoding (including BOM presence) is preserved regardless of `--detect-encoding`
+- Without `--detect-encoding`, `lint` file reads and stdin reads interpret content as UTF-8
+- For `format` / `fix` file inputs, text is decoded with the detected original encoding and written back with the same encoding (including BOM presence) regardless of `--detect-encoding`
 
 #### Formatting
 

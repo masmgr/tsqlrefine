@@ -1,11 +1,30 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Resolution;
 
 namespace TsqlRefine.Rules.Tests.Helpers;
 
 internal static class RuleTestContext
 {
     public static RuleContext CreateContext(string sql, int compatLevel = 150)
+    {
+        return CreateContext(sql, schema: null, compatLevel: compatLevel);
+    }
+
+    public static RuleContext CreateContext(string sql, ISchemaProvider? schema, int compatLevel = 150)
+    {
+        return CreateContext(sql, schema, relationDeviations: null, compatLevel: compatLevel);
+    }
+
+    public static RuleContext CreateContext(string sql, ISchemaProvider? schema, IRelationDeviationProvider? relationDeviations, int compatLevel = 150)
+    {
+        var schemaContext = schema is ISchemaContext ctx ? ctx
+            : schema is not null ? new SchemaContext(schema, relationDeviations)
+            : null;
+        return CreateContext(sql, schemaContext, compatLevel);
+    }
+
+    public static RuleContext CreateContext(string sql, ISchemaContext? schemaContext, int compatLevel = 150)
     {
         var parser = new TSql150Parser(initialQuotedIdentifiers: true);
 
@@ -23,7 +42,8 @@ internal static class RuleTestContext
             CompatLevel: compatLevel,
             Ast: ast,
             Tokens: tokens,
-            Settings: new RuleSettings()
+            Settings: new RuleSettings(),
+            SchemaContext: schemaContext
         );
     }
 

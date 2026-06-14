@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class FunctionParenSpaceNormalizerTests
+public sealed class FunctionParenSpaceNormalizerTests
 {
     private readonly FormattingOptions _defaultOptions = new();
 

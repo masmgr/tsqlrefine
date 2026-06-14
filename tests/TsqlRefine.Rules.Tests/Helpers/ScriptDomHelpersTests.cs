@@ -222,13 +222,11 @@ WHERE active = 0;";
     }
 
     /// <summary>
-    /// SQL Server 2022 extended TRIM syntax: TRIM(characters FROM string)
-    /// Note: ScriptDom 170.157.0 does not yet support this syntax, even with TSql170Parser.
-    /// This test documents the current parser limitation.
-    /// When ScriptDom adds support, change Assert.NotEmpty to Assert.Empty.
+    /// SQL Server 2022 extended TRIM syntax: TRIM(characters FROM string).
+    /// ScriptDom 180.18.1 parses this syntax successfully with TSql170Parser.
     /// </summary>
     [Fact]
-    public void Parse_TrimWithCharacterSpecifier_SqlServer2022_NotYetSupportedByScriptDom()
+    public void Parse_TrimWithCharacterSpecifier_SqlServer2022_IsSupportedByScriptDom()
     {
         // Arrange - SQL Server 2022 extended TRIM syntax with character specifier
         // NCHAR(12288) is a full-width space (ideographic space)
@@ -244,9 +242,7 @@ END";
         // Act
         var fragment = parser.Parse(new System.IO.StringReader(sql), out var errors);
 
-        // Assert - ScriptDom 170.157.0 does not yet support TRIM(expr FROM expr) syntax
-        // When ScriptDom adds support, change this to Assert.Empty(errors)
-        Assert.NotEmpty(errors);
-        Assert.Contains(errors, e => e.Message.Contains("TRIM"));
+        Assert.NotNull(fragment);
+        Assert.Empty(errors);
     }
 }

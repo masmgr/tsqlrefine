@@ -28,14 +28,16 @@ Development patterns for the TsqlRefine.Formatting project - SQL formatter imple
 
 ## Formatter Pipeline
 
-`SqlFormatter.Format()` orchestrates a 6-step pipeline:
+`SqlFormatter.Format()` orchestrates an 8-step pipeline:
 
 1. **KeywordSpaceNormalizer** - Compound keyword spacing (ScriptDom token-based, safe pairs only)
 2. **ScriptDomElementCaser** - Granular element casing (keywords, functions, data types, schemas, tables, columns, variables)
 3. **WhitespaceNormalizer** - Indentation and whitespace (respects .editorconfig)
-4. **InlineSpaceNormalizer** - Inline spacing (space after commas, remove trailing space before commas)
-5. **OperatorSpaceNormalizer** - Operator spacing (space around binary operators, preserves alignment)
-6. **CommaStyleTransformer** - Comma style transformation (trailing to leading, optional)
+4. **BlankLineNormalizer** - Consecutive blank line limiting and leading blank trimming
+5. **InlineSpaceNormalizer** - Inline spacing (space after commas, remove trailing space before commas)
+6. **FunctionParenSpaceNormalizer** - Remove space between function name and opening parenthesis
+7. **OperatorSpaceNormalizer** - Operator spacing (space around binary operators, preserves alignment)
+8. **CommaStyleTransformer** - Comma style transformation (trailing to leading/trailing, optional)
 
 Each pass is independently testable with single responsibility.
 

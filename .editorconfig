@@ -43,6 +43,12 @@ dotnet_diagnostic.CA1502.severity = warning
 # CA1852: Seal internal types
 dotnet_diagnostic.CA1852.severity = warning
 
+# CA1001: Types that own disposable fields should be disposable
+dotnet_diagnostic.CA1001.severity = warning
+
+# CA2000: Dispose objects before losing scope
+dotnet_diagnostic.CA2000.severity = warning
+
 # CS1591: Missing XML comment for publicly visible type or member
 # Required for IDE0005 (GenerateDocumentationFile=true), suppress globally
 dotnet_diagnostic.CS1591.severity = none
@@ -110,6 +116,8 @@ dotnet_diagnostic.CA1805.severity = suggestion
 dotnet_diagnostic.CA1859.severity = suggestion
 # CA1711: xUnit collection fixture classes use 'Collection' suffix by convention
 dotnet_diagnostic.CA1711.severity = suggestion
+# CA2000: StringWriter/MemoryStream in tests are short-lived and GC-collected
+dotnet_diagnostic.CA2000.severity = suggestion
 
 [*.md]
 trim_trailing_whitespace = false

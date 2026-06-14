@@ -1,6 +1,6 @@
 namespace TsqlRefine.Cli.Tests;
 
-public class FormatterOptionsTests
+public sealed class FormatterOptionsTests
 {
     [Fact]
     public async Task Format_WithKeywordCasingLower_ProducesLowercaseKeywords()

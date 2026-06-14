@@ -250,14 +250,15 @@ public sealed class GroupByColumnMismatchRuleTests
     }
 
     [Fact]
-    public void Analyze_WindowFunction_ReturnsEmpty()
+    public void Analyze_WindowFunctionOrderByUngroupedColumn_ReturnsDiagnostic()
     {
         const string sql = "SELECT a, ROW_NUMBER() OVER(ORDER BY b) FROM t GROUP BY a;";
         var context = RuleTestContext.CreateContext(sql);
 
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
+        Assert.Contains("b", diagnostics[0].Message);
     }
 
     [Fact]

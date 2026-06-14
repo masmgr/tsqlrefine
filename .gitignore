@@ -25,6 +25,8 @@ bld/
 [Ll]ogs/
 
 # .NET Core
+.appdata/
+.dotnet/
 project.lock.json
 project.fragment.lock.json
 artifacts/
@@ -33,6 +35,7 @@ artifacts/
 ScaffoldingReadMe.txt
 
 # NuGet Packages
+.nuget/
 *.nupkg
 # NuGet Symbol Packages
 *.snupkg

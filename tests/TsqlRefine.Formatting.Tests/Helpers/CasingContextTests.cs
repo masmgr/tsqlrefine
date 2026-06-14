@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class CasingContextTests
+public sealed class CasingContextTests
 {
     #region Initial State
 

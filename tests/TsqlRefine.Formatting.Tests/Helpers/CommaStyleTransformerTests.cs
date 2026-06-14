@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class CommaStyleTransformerTests
+public sealed class CommaStyleTransformerTests
 {
     #region ToLeadingCommas - Basic Cases
 
@@ -135,6 +135,40 @@ public class CommaStyleTransformerTests
         var result = CommaStyleTransformer.ToLeadingCommas(input);
         // Empty next line gets the comma
         Assert.Contains(",", result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_MultilineSubqueryColumn_DoesNotCorruptSubquery()
+    {
+        // A column that is itself a multi-line subquery. The trailing comma after
+        // the closing paren is a real column separator and must move to the next
+        // column line; the subquery body lines must be left intact.
+        var input =
+            "SELECT a,\n" +
+            "       (SELECT x\n" +
+            "        FROM t),\n" +
+            "       b";
+        var result = CommaStyleTransformer.ToLeadingCommas(input);
+
+        // The two real column separators become leading commas.
+        Assert.Contains("\n       , (SELECT x", result);
+        Assert.Contains("\n       , b", result);
+        // Subquery body line must be untouched (no spurious leading comma).
+        Assert.Contains("        FROM t)", result);
+        Assert.DoesNotContain(", FROM t", result);
+    }
+
+    [Fact]
+    public void ToLeadingCommas_MultilineSubqueryColumn_IsIdempotent()
+    {
+        var input =
+            "SELECT a,\n" +
+            "       (SELECT x\n" +
+            "        FROM t),\n" +
+            "       b";
+        var once = CommaStyleTransformer.ToLeadingCommas(input);
+        var twice = CommaStyleTransformer.ToLeadingCommas(once);
+        Assert.Equal(once, twice);
     }
 
     #endregion

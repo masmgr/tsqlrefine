@@ -1,6 +1,6 @@
 namespace TsqlRefine.Cli.Tests;
 
-public class CliIgnoreListTests
+public sealed class CliIgnoreListTests
 {
     [Fact]
     public async Task IgnoreList_WithComments_IgnoresCommentLines()
@@ -146,6 +146,40 @@ public class CliIgnoreListTests
 
             // Should succeed, ignoring bin/** files
             Assert.True(code == 0 || code == ExitCodes.Violations);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task IgnoreList_WithExplicitIgnoredFile_SkipsFile()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var ignoreFile = Path.Combine(tempDir, "test.ignore");
+            await File.WriteAllTextAsync(ignoreFile, "bin/");
+
+            var binDir = Path.Combine(tempDir, "bin");
+            Directory.CreateDirectory(binDir);
+            var ignoredFile = Path.Combine(binDir, "ignored.sql");
+            await File.WriteAllTextAsync(ignoredFile, "select * from t");
+
+            var stdin = new StringReader("");
+            var stdout = new StringWriter();
+            var stderr = new StringWriter();
+
+            var code = await CliApp.RunAsync(
+                new[] { "lint", "--ignorelist", ignoreFile, ignoredFile },
+                stdin, stdout, stderr);
+
+            Assert.Equal(ExitCodes.Fatal, code);
+            Assert.DoesNotContain("avoid-select-star", stdout.ToString());
+            Assert.Contains("No input", stderr.ToString());
         }
         finally
         {

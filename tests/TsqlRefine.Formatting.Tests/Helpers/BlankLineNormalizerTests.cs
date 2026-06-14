@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class BlankLineNormalizerTests
+public sealed class BlankLineNormalizerTests
 {
     // Use LF explicitly for predictable test behavior, disable other normalizer features
     private static FormattingOptions MakeOptions(

@@ -3,7 +3,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.Helpers;
 
-public class CasingHelpersTests
+public sealed class CasingHelpersTests
 {
     #region ElementCasing.Upper
 

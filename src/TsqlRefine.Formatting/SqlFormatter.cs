@@ -1,4 +1,3 @@
-using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.Formatting.Helpers.Casing;
 using TsqlRefine.Formatting.Helpers.Transformation;
 using TsqlRefine.Formatting.Helpers.Whitespace;
@@ -29,16 +28,6 @@ public static class SqlFormatter
     /// <param name="options">Formatting options. If null, defaults are used.</param>
     /// <returns>The formatted SQL code, or empty string if input is null/empty.</returns>
     public static string Format(string sql, FormattingOptions? options = null)
-        => Format(sql, options, ast: null);
-
-    /// <summary>
-    /// Formats SQL code according to the specified options, using AST for more accurate formatting.
-    /// </summary>
-    /// <param name="sql">The SQL code to format. Can be null or empty.</param>
-    /// <param name="options">Formatting options. If null, defaults are used.</param>
-    /// <param name="ast">Optional parsed AST fragment for accurate operator context detection.</param>
-    /// <returns>The formatted SQL code, or empty string if input is null/empty.</returns>
-    public static string Format(string sql, FormattingOptions? options, TSqlFragment? ast)
     {
         options ??= new FormattingOptions();
 
@@ -53,9 +42,6 @@ public static class SqlFormatter
 
         // Strip standalone CR characters (\r not followed by \n) before any normalizer runs
         sql = LineEndingHelpers.StripStandaloneCr(sql);
-
-        // Build AST position map for operator context detection (if AST provided)
-        var positionMap = AstPositionMap.Build(ast);
 
         // Apply keyword space normalization (collapse multi-space between compound keyword pairs)
         var keywordNormalized = KeywordSpaceNormalizer.Normalize(sql, options);
@@ -74,8 +60,8 @@ public static class SqlFormatter
         // Apply function-parenthesis spacing normalization
         var functionNormalized = FunctionParenSpaceNormalizer.Normalize(inlineNormalized, options);
 
-        // Apply operator spacing normalization with AST context
-        var operatorNormalized = OperatorSpaceNormalizer.Normalize(functionNormalized, options, positionMap);
+        // Apply operator spacing normalization
+        var operatorNormalized = OperatorSpaceNormalizer.Normalize(functionNormalized, options);
 
         // Apply comma style transformation
         if (options.CommaStyle == CommaStyle.Leading)

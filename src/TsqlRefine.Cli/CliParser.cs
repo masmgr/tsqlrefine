@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using TsqlRefine.Core.Config;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginSdk;
 
@@ -14,6 +15,15 @@ public static class CliParser
     {
         "--help", "-h", "-?", "/?",
         "--version"
+    };
+
+    private static readonly HashSet<string> OutputFormatCommands = new(StringComparer.Ordinal)
+    {
+        "lint",
+        "fix",
+        "list-rules",
+        "list-plugins",
+        "print-format-config"
     };
 
     // =================================================================
@@ -167,6 +177,56 @@ public static class CliParser
             Recursive = true
         };
 
+        // Schema options
+        public static readonly Option<string?> Schema = new("--schema")
+        {
+            Description = "Schema snapshot file path for schema-aware analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> RelationsProfile = new("--relations-profile")
+        {
+            Description = "Relations profile file path for JOIN pattern deviation analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        // Schema snapshot options
+        public static readonly Option<string?> ConnectionString = new("--connection-string")
+        {
+            Description = "SQL Server connection string",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaOutput = new("--output")
+        {
+            Description = "Output file path for schema snapshot",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> IncludeSchema = new("--include-schema")
+        {
+            Description = "Comma-separated schema names to include",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ExcludeSchema = new("--exclude-schema")
+        {
+            Description = "Comma-separated schema names to exclude",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> SchemaOutputDir = new("--output-dir")
+        {
+            Description = "Output directory for schema.json and relations.json",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaRelationsOutput = new("--relations-output")
+        {
+            Description = "Output path for relations profile (overrides --output-dir for relations.json)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -222,6 +282,13 @@ public static class CliParser
         return command;
     }
 
+    private static Command WithSchemaOption(this Command command)
+    {
+        command.Options.Add(Options.Schema);
+        command.Options.Add(Options.RelationsProfile);
+        return command;
+    }
+
     private static Command WithPathsArgument(this Command command)
     {
         command.Arguments.Add(Options.CreatePathsArgument());
@@ -239,6 +306,7 @@ public static class CliParser
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithRuleOptions()
+            .WithSchemaOption()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
@@ -264,6 +332,7 @@ public static class CliParser
             .WithCompatLevelOption()
             .WithRuleOptions()
             .WithRuleIdOption()
+            .WithSchemaOption()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
@@ -313,6 +382,53 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildSchemaCommand()
+    {
+        var schemaCommand = new Command("schema", "Schema management commands");
+        schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaBuildCommand());
+        return schemaCommand;
+    }
+
+    private static Command BuildSchemaBuildCommand()
+    {
+        var command = new Command("build", "Generate schema snapshot and collect JOIN relations in one step")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.ConnectionString);
+        command.Options.Add(Options.SchemaOutputDir);
+        command.Options.Add(Options.SchemaRelationsOutput);
+        command.Options.Add(Options.IncludeSchema);
+        command.Options.Add(Options.ExcludeSchema);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildSchemaCollectRelationsCommand()
+    {
+        var command = new Command("collect-relations", "Collect JOIN relation patterns from SQL files")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildSchemaSnapshotCommand()
+    {
+        var command = new Command("snapshot", "Generate a schema snapshot from a database");
+        command.Options.Add(Options.ConnectionString);
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.IncludeSchema);
+        command.Options.Add(Options.ExcludeSchema);
+        command.Options.Add(Options.CompatLevel);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
     // =================================================================
     // Root Command
     // =================================================================
@@ -328,16 +444,6 @@ public static class CliParser
         root.Options.Add(Options.Utf8);
         root.Options.Add(Options.AllowPlugins);
 
-        // Root command supports lint options for default command behavior
-        // (tsqlrefine *.sql == tsqlrefine lint *.sql)
-        root.WithInputOptions();
-        root.WithOutputOption();
-        root.WithCompatLevelOption();
-        root.WithRuleOptions();
-        root.WithPathsArgument();
-        root.Options.Add(Options.Verbose);
-        root.Options.Add(Options.Quiet);
-
         // Subcommands
         root.Subcommands.Add(BuildLintCommand());
         root.Subcommands.Add(BuildFormatCommand());
@@ -347,6 +453,7 @@ public static class CliParser
         root.Subcommands.Add(BuildPrintFormatConfigCommand());
         root.Subcommands.Add(BuildListRulesCommand());
         root.Subcommands.Add(BuildListPluginsCommand());
+        root.Subcommands.Add(BuildSchemaCommand());
 
         return root;
     }
@@ -385,6 +492,11 @@ public static class CliParser
         var parseResult = Root.Parse(args ?? []);
         var (command, isExplicit) = GetCommandName(parseResult);
 
+        if (parseResult.Errors.Count > 0 && parseResult.CommandResult.Command is not RootCommand)
+        {
+            throw new ConfigException(string.Join(Environment.NewLine, parseResult.Errors.Select(e => e.Message)));
+        }
+
         return new CliArgs(
             Command: command,
             IsExplicitCommand: isExplicit,
@@ -393,13 +505,13 @@ public static class CliParser
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
             Utf8: GetOptionValue<bool>(parseResult, "--utf8"),
-            Output: GetOptionValue<string?>(parseResult, "--output") ?? "text",
+            Output: ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
-            CompatLevel: ParseInt(GetOptionValue<string?>(parseResult, "--compat-level")),
+            CompatLevel: ParseCompatLevel(GetOptionValue<string?>(parseResult, "--compat-level")),
             RulesetPath: GetOptionValue<string?>(parseResult, "--ruleset"),
             IndentStyle: ParseIndentStyle(GetOptionValue<string?>(parseResult, "--indent-style")),
-            IndentSize: ParseInt(GetOptionValue<string?>(parseResult, "--indent-size")),
+            IndentSize: ParsePositiveInt(GetOptionValue<string?>(parseResult, "--indent-size"), "--indent-size"),
             LineEnding: ParseLineEnding(GetOptionValue<string?>(parseResult, "--line-ending")),
             Verbose: GetOptionValue<bool>(parseResult, "--verbose"),
             Quiet: GetOptionValue<bool>(parseResult, "--quiet"),
@@ -409,10 +521,18 @@ public static class CliParser
             Category: GetOptionValue<string?>(parseResult, "--category"),
             FixableOnly: GetOptionValue<bool>(parseResult, "--fixable"),
             EnabledOnly: GetOptionValue<bool>(parseResult, "--enabled-only"),
-            Paths: GetPaths(parseResult),
+            Paths: ValidatePathTokens(GetPaths(parseResult)),
             RuleId: GetOptionValue<string?>(parseResult, "--rule"),
             MaxFileSize: ParseMaxFileSize(GetOptionValue<string?>(parseResult, "--max-file-size")),
-            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins")
+            AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
+            SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
+            RelationsProfilePath: GetOptionValue<string?>(parseResult, "--relations-profile"),
+            SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
+            SchemaOutput: GetSchemaOutput(parseResult),
+            SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
+            SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
+            SchemaOutputDir: GetOptionValue<string?>(parseResult, "--output-dir"),
+            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output")
         );
     }
 
@@ -428,7 +548,17 @@ public static class CliParser
             return ("", false);
         }
 
-        return (parseResult.CommandResult.Command.Name, true);
+        // Handle nested commands (e.g., "schema snapshot" → "schema snapshot")
+        var parts = new List<string>();
+        var current = parseResult.CommandResult;
+        while (current is not null && current.Command is not RootCommand)
+        {
+            parts.Add(current.Command.Name);
+            current = current.Parent as CommandResult;
+        }
+
+        parts.Reverse();
+        return (string.Join(" ", parts), true);
     }
 
     private static T? GetOptionValue<T>(ParseResult parseResult, string optionName)
@@ -465,6 +595,58 @@ public static class CliParser
         return [];
     }
 
+    private static List<string> ValidatePathTokens(List<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            if (path != "-" && path.Length > 0 && path[0] == '-')
+            {
+                throw new ConfigException(
+                    $"Unrecognized option or invalid path token: '{path}'. If this is a file path, prefix it with .\\ or an absolute path.");
+            }
+        }
+
+        return paths;
+    }
+
+    private static string? GetSchemaOutput(ParseResult parseResult)
+    {
+        // Schema snapshot uses its own --output option (Options.SchemaOutput)
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.SchemaOutput)
+        {
+            var optionResult = parseResult.GetResult(typedOption);
+            if (optionResult is not null)
+            {
+                return parseResult.GetValue(typedOption);
+            }
+        }
+
+        return null;
+    }
+
+    private static string ParseOutput(string command, string? value)
+    {
+        if (!OutputFormatCommands.Contains(command))
+        {
+            return "text";
+        }
+
+        if (value is null)
+        {
+            return "text";
+        }
+
+        return value.ToLowerInvariant() switch
+        {
+            "text" => "text",
+            "json" => "json",
+            _ => throw new ConfigException(
+                $"Invalid --output value: '{value}'. Expected one of: text, json.")
+        };
+    }
+
     private const long DefaultMaxFileSizeBytes = 10L * 1024 * 1024; // 10 MB
 
     private static long ParseMaxFileSize(string? s)
@@ -477,8 +659,40 @@ public static class CliParser
             $"Invalid --max-file-size value: '{s}'. Expected a positive integer (MB).");
     }
 
-    private static int? ParseInt(string? s) =>
-        int.TryParse(s, out var value) ? value : null;
+    private static int? ParsePositiveInt(string? s, string optionName)
+    {
+        if (s is null)
+        {
+            return null;
+        }
+
+        if (int.TryParse(s, out var value) && value > 0)
+        {
+            return value;
+        }
+
+        throw new ConfigException($"Invalid {optionName} value: '{s}'. Expected a positive integer.");
+    }
+
+    private static int? ParseCompatLevel(string? s)
+    {
+        if (s is null)
+        {
+            return null;
+        }
+
+        if (!int.TryParse(s, out var value))
+        {
+            throw new ConfigException($"Invalid --compat-level value: '{s}'. Expected one of: {FormatCompatLevels()}.");
+        }
+
+        if (!TsqlRefineConfig.ValidCompatLevels.Contains(value))
+        {
+            throw new ConfigException($"Invalid --compat-level value: '{s}'. Expected one of: {FormatCompatLevels()}.");
+        }
+
+        return value;
+    }
 
     private static DiagnosticSeverity? ParseSeverity(string? s) =>
         s?.ToLowerInvariant() switch
@@ -487,7 +701,9 @@ public static class CliParser
             "warning" => DiagnosticSeverity.Warning,
             "info" => DiagnosticSeverity.Information,
             "hint" => DiagnosticSeverity.Hint,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --severity value: '{s}'. Expected one of: error, warning, info, hint.")
         };
 
     private static IndentStyle? ParseIndentStyle(string? s) =>
@@ -495,7 +711,9 @@ public static class CliParser
         {
             "tabs" => IndentStyle.Tabs,
             "spaces" => IndentStyle.Spaces,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --indent-style value: '{s}'. Expected one of: tabs, spaces.")
         };
 
     private static LineEnding? ParseLineEnding(string? s) =>
@@ -504,6 +722,11 @@ public static class CliParser
             "auto" => LineEnding.Auto,
             "lf" => LineEnding.Lf,
             "crlf" => LineEnding.CrLf,
-            _ => null
+            null => null,
+            _ => throw new ConfigException(
+                $"Invalid --line-ending value: '{s}'. Expected one of: auto, lf, crlf.")
         };
+
+    private static string FormatCompatLevels() =>
+        string.Join(", ", TsqlRefineConfig.ValidCompatLevels.OrderBy(x => x));
 }

@@ -27,3 +27,13 @@ WHERE CustomerId IN (SELECT CustomerId FROM dbo.Customers);
 -- GOOD: NOT IN with value list (no subquery)
 SELECT * FROM dbo.Orders
 WHERE Status NOT IN ('Cancelled', 'Refunded');
+
+-- GOOD (with schema): NOT IN with subquery where the column is NOT NULL
+-- When schema information is available and the subquery column is NOT NULL,
+-- this warning is suppressed because NULLs cannot appear in the result.
+SELECT * FROM dbo.Orders
+WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.Blacklist);
+
+-- BAD (with schema): NOT IN with subquery where the column IS nullable
+SELECT * FROM dbo.Orders
+WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.NullableList);

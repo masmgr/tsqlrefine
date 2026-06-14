@@ -33,7 +33,16 @@ public static class CliApp
         {
             if (parsedArgs.DetectEncoding)
             {
-                var decoded = await CharsetDetection.ReadStreamAsync(stdin);
+                var decoded = await CharsetDetection.ReadStreamAsync(
+                    stdin,
+                    parsedArgs.MaxFileSize > 0 ? parsedArgs.MaxFileSize : null);
+                if (decoded is null)
+                {
+                    await stderr.WriteLineAsync(
+                        $"Stdin input exceeds maximum size of {parsedArgs.MaxFileSize / (1024 * 1024)} MB. Use --max-file-size to increase.");
+                    return ExitCodes.Fatal;
+                }
+
                 using var decodedReader = new StringReader(decoded.Text);
                 return await RunParsedAsync(parsedArgs, decodedReader, stdout, stderr);
             }
@@ -79,11 +88,16 @@ public static class CliApp
 
     private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
-        // Default to lint when no subcommand is specified
-        var command = parsed.IsExplicitCommand ? parsed.Command : "lint";
+        var command = parsed.Command;
 
         try
         {
+            if (!parsed.IsExplicitCommand)
+            {
+                throw new ConfigException(
+                    "A subcommand is required. Run 'tsqlrefine --help' for available commands.");
+            }
+
             ValidateOptions(parsed);
             WarnConflictingOptions(parsed, stderr);
 
@@ -107,6 +121,9 @@ public static class CliApp
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
+                "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
+                "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
+                "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),
                 _ => await UnknownCommandAsync(command, stderr)
             };
         }

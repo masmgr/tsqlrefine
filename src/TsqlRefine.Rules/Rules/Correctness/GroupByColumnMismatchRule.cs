@@ -155,7 +155,7 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
         {
             if (expression is FunctionCall func)
             {
-                if (IsAggregateOrWindowFunction(func))
+                if (IsAggregateFunction(func))
                 {
                     return true;
                 }
@@ -164,8 +164,8 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             return false;
         }
 
-        private static bool IsAggregateOrWindowFunction(FunctionCall func) =>
-            func.OverClause != null || AggregateFunctionHelpers.IsAggregateFunction(func);
+        private static bool IsAggregateFunction(FunctionCall func) =>
+            func.OverClause is null && AggregateFunctionHelpers.IsAggregateFunction(func);
 
         private static void CollectColumnReferences(
             ScalarExpression? expression,
@@ -187,11 +187,11 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
                     return;
 
                 case FunctionCall func:
-                    if (IsAggregateOrWindowFunction(func))
+                    if (IsAggregateFunction(func))
                     {
-                        // Window/aggregate function internals have independent semantics for this rule.
                         return;
                     }
+
                     if (func.Parameters != null)
                     {
                         foreach (var param in func.Parameters)
@@ -199,6 +199,8 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
                             CollectColumnReferences(param, result, groupByExpressions);
                         }
                     }
+
+                    CollectColumnReferencesFromOverClause(func.OverClause, result, groupByExpressions);
                     return;
 
                 case BinaryExpression binary:
@@ -265,6 +267,30 @@ public sealed class GroupByColumnMismatchRule : DiagnosticVisitorRuleBase
             }
 
             // For literals and other leaf expressions, no column references to collect
+        }
+
+        private static void CollectColumnReferencesFromOverClause(
+            OverClause? overClause,
+            List<ColumnReferenceExpression> result,
+            List<ScalarExpression> groupByExpressions)
+        {
+            if (overClause is null)
+            {
+                return;
+            }
+
+            foreach (var partition in overClause.Partitions)
+            {
+                CollectColumnReferences(partition, result, groupByExpressions);
+            }
+
+            if (overClause.OrderByClause is not null)
+            {
+                foreach (var orderByElement in overClause.OrderByClause.OrderByElements)
+                {
+                    CollectColumnReferences(orderByElement.Expression, result, groupByExpressions);
+                }
+            }
         }
 
         private static void CollectColumnReferencesFromBooleanExpression(

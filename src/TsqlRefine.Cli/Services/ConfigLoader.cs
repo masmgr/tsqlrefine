@@ -1,9 +1,12 @@
 using System.Collections.Frozen;
 using System.Text;
+using System.Text.Json;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Snapshot;
 
 namespace TsqlRefine.Cli.Services;
 
@@ -305,6 +308,9 @@ public sealed class ConfigLoader
     {
         var rules = new List<IRule>();
         rules.AddRange(new BuiltinRuleProvider().GetRules());
+        var knownRuleIds = new HashSet<string>(
+            rules.Select(r => r.Metadata.RuleId),
+            StringComparer.OrdinalIgnoreCase);
 
         var pluginConfigs = config.Plugins ?? Array.Empty<PluginConfig>();
 
@@ -332,21 +338,85 @@ public sealed class ConfigLoader
         var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var loaded = PluginLoader.Load(plugins, baseDirectory);
-
-        if (stderr is not null)
+        try
         {
-            PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
-        }
-
-        foreach (var p in loaded)
-        {
-            foreach (var provider in p.Providers)
+            if (stderr is not null)
             {
-                rules.AddRange(provider.GetRules());
+                PluginDiagnostics.WriteFailedPluginWarnings(loaded, stderr);
+            }
+
+            foreach (var p in loaded)
+            {
+                TryAppendPluginRules(rules, p, knownRuleIds, stderr, args.Quiet);
+            }
+        }
+        finally
+        {
+            foreach (var p in loaded)
+            {
+                p.Dispose();
             }
         }
 
         return rules;
+    }
+
+    internal static bool TryAppendPluginRules(
+        IList<IRule> rules,
+        LoadedPlugin plugin,
+        ISet<string> knownRuleIds,
+        TextWriter? stderr,
+        bool quiet)
+    {
+        if (plugin.Diagnostic.Status != PluginLoadStatus.Success)
+        {
+            return false;
+        }
+
+        var pluginRules = new List<IRule>();
+        foreach (var provider in plugin.Providers)
+        {
+            pluginRules.AddRange(provider.GetRules());
+        }
+
+        var duplicateRuleIds = FindDuplicatePluginRuleIds(knownRuleIds, pluginRules);
+        if (duplicateRuleIds.Count > 0)
+        {
+            if (!quiet)
+            {
+                stderr?.WriteLine(
+                    $"Warning: plugin '{plugin.Path}' disabled because it declares duplicate rule ID(s): {string.Join(", ", duplicateRuleIds)}.");
+            }
+
+            return false;
+        }
+
+        foreach (var rule in pluginRules)
+        {
+            rules.Add(rule);
+            knownRuleIds.Add(rule.Metadata.RuleId);
+        }
+
+        return true;
+    }
+
+    internal static IReadOnlyList<string> FindDuplicatePluginRuleIds(
+        ISet<string> knownRuleIds,
+        IReadOnlyList<IRule> pluginRules)
+    {
+        var duplicateRuleIds = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pluginRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rule in pluginRules)
+        {
+            var ruleId = rule.Metadata.RuleId;
+            if (knownRuleIds.Contains(ruleId) || !pluginRuleIds.Add(ruleId))
+            {
+                duplicateRuleIds.Add(ruleId);
+            }
+        }
+
+        return duplicateRuleIds.ToArray();
     }
 
     /// <summary>
@@ -506,5 +576,169 @@ public sealed class ConfigLoader
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Loads a unified <see cref="ISchemaContext"/> combining schema snapshot and optional relations profile.
+    /// CLI args take precedence over config file settings.
+    /// </summary>
+    /// <returns>An <see cref="ISchemaContext"/> instance, or null if no schema is configured.</returns>
+    public static ISchemaContext? LoadSchemaContext(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    {
+        var (snapshotPath, schemaSource) = ResolveSchemaPath(args, config);
+
+        if (snapshotPath is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(snapshotPath))
+        {
+            throw new ConfigException($"Schema snapshot file not found: {snapshotPath}");
+        }
+
+        SchemaProvider provider;
+        int tableCount;
+        string databaseName;
+        try
+        {
+            using var stream = File.OpenRead(snapshotPath);
+            var snapshot = SchemaSnapshotSerializer.Deserialize(stream);
+            var defaultSchema = config.Schema?.DefaultSchema ?? "dbo";
+            provider = new SchemaProvider(snapshot, defaultSchema);
+            tableCount = snapshot.Databases.Sum(db => db.Tables.Count + db.Views.Count);
+            databaseName = snapshot.Metadata.DatabaseName;
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException($"Failed to parse schema snapshot: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw new ConfigException($"Failed to read schema snapshot: {ex.Message}");
+        }
+
+        if (stderr is not null && !args.Quiet)
+        {
+            stderr.WriteLine($"Schema loaded: {databaseName} ({tableCount} tables/views) [from {schemaSource}]");
+        }
+
+        // Load optional relation deviations
+        IRelationDeviationProvider? deviations = null;
+        var (profilePath, profileSource) = ResolveRelationsProfilePath(args, config);
+        if (profilePath is not null)
+        {
+            if (!File.Exists(profilePath))
+            {
+                throw new ConfigException($"Relations profile file not found: {profilePath}");
+            }
+
+            try
+            {
+                using var profileStream = File.OpenRead(profilePath);
+                var profile = Schema.Relations.RelationProfileSerializer.Deserialize(profileStream);
+                deviations = Schema.Relations.RelationDeviationProvider.FromProfile(profile);
+
+                if (stderr is not null && !args.Quiet)
+                {
+                    stderr.WriteLine(
+                        $"Relations profile loaded: {profile.Relations.Count} table pairs, " +
+                        $"{profile.Metadata.TotalJoinCount} joins [from {profileSource}]");
+                }
+            }
+            catch (JsonException ex)
+            {
+                throw new ConfigException($"Failed to parse relations profile: {ex.Message}");
+            }
+            catch (IOException ex)
+            {
+                throw new ConfigException($"Failed to read relations profile: {ex.Message}");
+            }
+        }
+
+        return new SchemaContext(provider, deviations);
+    }
+
+    /// <summary>
+    /// Resolves the schema snapshot path from CLI args and config, returning
+    /// the absolute path and a human-readable source label.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveSchemaPath(CliArgs args, TsqlRefineConfig config)
+    {
+        // CLI --schema takes precedence (resolved from CWD)
+        if (!string.IsNullOrWhiteSpace(args.SchemaPath))
+        {
+            var resolved = Path.IsPathRooted(args.SchemaPath)
+                ? args.SchemaPath
+                : Path.GetFullPath(args.SchemaPath);
+            return (resolved, "--schema");
+        }
+
+        var configPath = ResolveConfigPath(args);
+        var configDir = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
+
+        // Config schema.snapshotPath (explicit path, overrides schema.path)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.SnapshotPath))
+        {
+            var resolved = Path.IsPathRooted(config.Schema.SnapshotPath)
+                ? config.Schema.SnapshotPath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.SnapshotPath));
+            return (resolved, "config");
+        }
+
+        // Config schema.path (directory shorthand: derives schema.json path)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.Path))
+        {
+            var schemaDir = Path.IsPathRooted(config.Schema.Path)
+                ? config.Schema.Path
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
+            return (Path.Combine(schemaDir, "schema.json"), "config (schema.path)");
+        }
+
+        return (null, "none");
+    }
+
+    /// <summary>
+    /// Resolves the relations profile path from CLI args and config, returning
+    /// the absolute path and a human-readable source label.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveRelationsProfilePath(
+        CliArgs args, TsqlRefineConfig config)
+    {
+        // CLI --relations-profile takes precedence (resolved from CWD)
+        if (!string.IsNullOrWhiteSpace(args.RelationsProfilePath))
+        {
+            var resolved = Path.IsPathRooted(args.RelationsProfilePath)
+                ? args.RelationsProfilePath
+                : Path.GetFullPath(args.RelationsProfilePath);
+            return (resolved, "--relations-profile");
+        }
+
+        var configPath = ResolveConfigPath(args);
+        var configDir = configPath is not null
+            ? Path.GetDirectoryName(Path.GetFullPath(configPath))!
+            : Directory.GetCurrentDirectory();
+
+        // Config schema.relationsProfilePath (explicit path, overrides schema.path)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.RelationsProfilePath))
+        {
+            var resolved = Path.IsPathRooted(config.Schema.RelationsProfilePath)
+                ? config.Schema.RelationsProfilePath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.RelationsProfilePath));
+            return (resolved, "config");
+        }
+
+        // Config schema.path (directory shorthand: derives relations.json path)
+        if (!string.IsNullOrWhiteSpace(config.Schema?.Path))
+        {
+            var schemaDir = Path.IsPathRooted(config.Schema.Path)
+                ? config.Schema.Path
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
+            return (Path.Combine(schemaDir, "relations.json"), "config (schema.path)");
+        }
+
+        return (null, "none");
     }
 }

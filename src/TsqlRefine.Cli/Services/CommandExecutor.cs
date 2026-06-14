@@ -8,6 +8,9 @@ using TsqlRefine.Core.Model;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Relations;
+using TsqlRefine.Schema.Snapshot;
+using TsqlRefine.Schema.SqlServer;
 
 namespace TsqlRefine.Cli.Services;
 
@@ -241,7 +244,17 @@ public sealed class CommandExecutor
         var plugins = ConfigLoader.ResolvePluginDescriptors(pluginConfigs, baseDirectory);
 
         var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
-        await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+        try
+        {
+            await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);
+        }
+        finally
+        {
+            foreach (var p in loaded)
+            {
+                p.Dispose();
+            }
+        }
 
         return 0;
     }
@@ -259,9 +272,10 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
         var result = engine.Run(command, read.Inputs, options);
         var diagnosticsSummary = SummarizeDiagnostics(result.Files);
 
@@ -376,13 +390,14 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var rules = ConfigLoader.LoadRules(args, config, stderr);
 
-        // --rule オプションのバリデーション（存在確認 + Fixable 確認）
+        // Validate --rule option (existence check + fixable check)
         ConfigLoader.ValidateRuleIdForFix(args, rules);
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -434,17 +449,192 @@ public sealed class CommandExecutor
             await stderr.WriteLineAsync($"Time: {elapsedText}");
         }
 
-        // fix コマンドは修正の適用に問題がなければ成功（パースエラーのみ失敗扱い）
+        // The fix command succeeds when fixes are applied successfully; only parse errors fail it.
         return HasParseErrors(result.Files) ? ExitCodes.AnalysisError : 0;
     }
 
-    private static EngineOptions CreateEngineOptions(CliArgs args, TsqlRefineConfig config, Ruleset? ruleset)
+    /// <summary>
+    /// Executes the 'schema snapshot' command to generate a schema snapshot from a database.
+    /// </summary>
+    public static async Task<int> ExecuteSchemaSnapshotAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
+        {
+            await stderr.WriteLineAsync("Error: --connection-string is required for schema snapshot.");
+            return ExitCodes.ConfigError;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.SchemaOutput))
+        {
+            await stderr.WriteLineAsync("Error: --output is required for schema snapshot.");
+            return ExitCodes.ConfigError;
+        }
+
+        var includeSchemas = ParseCommaSeparated(args.SchemaIncludeSchemas);
+        var excludeSchemas = ParseCommaSeparated(args.SchemaExcludeSchemas);
+
+        var options = new SchemaSnapshotOptions(
+            IncludeSchemas: includeSchemas,
+            ExcludeSchemas: excludeSchemas,
+            CompatLevel: args.CompatLevel ?? 150
+        );
+
+        try
+        {
+            if (!args.Quiet)
+            {
+                await stderr.WriteLineAsync("Connecting to database...");
+            }
+
+            var snapshot = await SchemaSnapshotGenerator.GenerateAsync(
+                args.SchemaConnectionString, options);
+
+            var json = SchemaSnapshotSerializer.Serialize(snapshot);
+            var outputPath = Path.GetFullPath(args.SchemaOutput);
+
+            var dir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+
+            var tableCount = snapshot.Databases.Sum(db => db.Tables.Count);
+            var viewCount = snapshot.Databases.Sum(db => db.Views.Count);
+            await stdout.WriteLineAsync($"Schema snapshot written to {outputPath}");
+            await stdout.WriteLineAsync(
+                $"  Database: {snapshot.Metadata.DatabaseName} ({tableCount} tables, {viewCount} views)");
+
+            return 0;
+        }
+        catch (Exception ex) when (ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
+        {
+            await stderr.WriteLineAsync($"Error: Failed to connect to database. {ex.Message}");
+            return ExitCodes.Fatal;
+        }
+    }
+
+    /// <summary>
+    /// Executes the 'schema build' command: generates a schema snapshot and collects JOIN relations in one step.
+    /// </summary>
+    public async Task<int> ExecuteSchemaBuildAsync(
+        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
+        {
+            await stderr.WriteLineAsync("Error: --connection-string is required for schema build.");
+            return ExitCodes.ConfigError;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.SchemaOutputDir))
+        {
+            await stderr.WriteLineAsync("Error: --output-dir is required for schema build.");
+            return ExitCodes.ConfigError;
+        }
+
+        var outputDir = Path.GetFullPath(args.SchemaOutputDir);
+        Directory.CreateDirectory(outputDir);
+
+        var schemaOutputPath = Path.Combine(outputDir, "schema.json");
+        var relationsOutputPath = !string.IsNullOrWhiteSpace(args.SchemaRelationsOutput)
+            ? Path.GetFullPath(args.SchemaRelationsOutput)
+            : Path.Combine(outputDir, "relations.json");
+
+        // Step 1: Generate schema snapshot
+        var snapshotArgs = args with { SchemaOutput = schemaOutputPath };
+        var snapshotResult = await ExecuteSchemaSnapshotAsync(snapshotArgs, stdout, stderr);
+        if (snapshotResult != 0)
+        {
+            return snapshotResult;
+        }
+
+        // Step 2: Collect relations (only if SQL file paths were provided)
+        if (args.Paths.Count > 0 || args.Stdin)
+        {
+            var relationsArgs = args with { SchemaOutput = relationsOutputPath };
+            var relationsResult = await ExecuteSchemaCollectRelationsAsync(relationsArgs, stdin, stdout, stderr);
+            if (relationsResult != 0)
+            {
+                return relationsResult;
+            }
+        }
+        else if (!args.Quiet)
+        {
+            await stderr.WriteLineAsync("No SQL files specified; skipping relations collection.");
+            await stderr.WriteLineAsync($"Run: tsqlrefine schema collect-relations --output {relationsOutputPath} <sql-files>");
+        }
+
+        return 0;
+    }
+
+    /// <summary>
+    /// Executes the 'schema collect-relations' command to collect JOIN patterns from SQL files.
+    /// </summary>
+    public async Task<int> ExecuteSchemaCollectRelationsAsync(
+        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaOutput))
+        {
+            await stderr.WriteLineAsync("Error: --output is required for collect-relations.");
+            return ExitCodes.ConfigError;
+        }
+
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var compatLevel = args.CompatLevel ?? 150;
+
+        if (!args.Quiet)
+        {
+            await stderr.WriteLineAsync($"Collecting JOIN patterns from {read.Inputs.Count} file(s)...");
+        }
+
+        var inputs = read.Inputs.Select(i => (i.Text, i.FilePath));
+        var profile = RelationCollector.Collect(inputs, compatLevel);
+
+        var json = RelationProfileSerializer.Serialize(profile);
+        var outputPath = Path.GetFullPath(args.SchemaOutput);
+
+        var dir = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+
+        await stdout.WriteLineAsync($"Relation profile written to {outputPath}");
+        await stdout.WriteLineAsync(
+            $"  {read.Inputs.Count} files analyzed, {profile.Relations.Count} table relations, "
+            + $"{profile.Metadata.TotalJoinCount} total JOIN occurrences");
+
+        return 0;
+    }
+
+    private static string[]? ParseCommaSeparated(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static EngineOptions CreateEngineOptions(
+        CliArgs args, TsqlRefineConfig config, Ruleset? ruleset,
+        ISchemaContext? schemaContext = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
-            Ruleset: ruleset
+            Ruleset: ruleset,
+            SchemaContext: schemaContext
         );
     }
 

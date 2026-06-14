@@ -90,14 +90,14 @@ public sealed class CliFixTests
     [Fact]
     public async Task Fix_WhenUnfixableViolationsRemain_Exit0()
     {
-        // SELECT * は avoid-select-star ルールに違反するが、このルールは Fixable=false
+        // SELECT * violates avoid-select-star, but this rule is not fixable.
         var stdin = new StringReader("SELECT * FROM dbo.users;");
         var stdout = new StringWriter();
         var stderr = new StringWriter();
 
         var code = await CliApp.RunAsync(["fix", "--stdin"], stdin, stdout, stderr);
 
-        // 修正できない違反が残っていても、fix コマンド自体は成功扱い
+        // The fix command succeeds even if unfixable violations remain.
         Assert.Equal(0, code);
     }
 }

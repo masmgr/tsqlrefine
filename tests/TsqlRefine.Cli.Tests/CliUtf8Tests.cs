@@ -35,11 +35,12 @@ public sealed class CliUtf8Tests
     }
 
     [Fact]
-    public void Parse_Utf8WithDefaultCommand_SetsUtf8True()
+    public void Parse_Utf8WithoutCommand_SetsUtf8True()
     {
-        var args = CliParser.Parse(["--stdin", "--utf8"]);
+        var args = CliParser.Parse(["--utf8"]);
 
         Assert.True(args.Utf8);
+        Assert.False(args.IsExplicitCommand);
     }
 
     [Fact]

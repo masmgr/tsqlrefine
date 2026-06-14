@@ -79,7 +79,7 @@ public sealed class Ruleset
     }
 
     /// <summary>
-    /// 指定したルールIDのみを有効にするホワイトリストルールセットを作成する。
+    /// Creates a whitelist ruleset that enables only the specified rule ID.
     /// </summary>
     public static Ruleset CreateSingleRuleWhitelist(string ruleId)
     {

@@ -2,7 +2,7 @@ using Xunit;
 
 namespace TsqlRefine.Formatting.Tests;
 
-public class SqlFormatterTests
+public sealed class SqlFormatterTests
 {
     [Fact]
     public void Format_EmptyString_WithDefaultOptions_ReturnsCRLF()
@@ -190,7 +190,6 @@ order by o.total desc";
     }
 
     // Tests for preservation of specific elements
-    // これらの要素が保持されることを確認するテスト群
 
     [Fact]
     public void Format_PreservesLineComments()

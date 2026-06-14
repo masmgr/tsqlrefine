@@ -63,6 +63,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new GroupByColumnMismatchRule(),
         new AggregateInWhereClauseRule(),
         new HavingColumnMismatchRule(),
+        new MultiRowUpdateFromRule(),
+        new LenForEmptinessCheckRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -114,6 +116,16 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DuplicateTableFunctionColumnRule(),
         new DuplicateTableVariableColumnRule(),
         new AvoidDeprecatedTypesRule(),
+        new UnresolvedTableReferenceRule(),
+        new UnresolvedColumnReferenceRule(),
+        new InsertColumnNotInTableRule(),
+        new UpdateColumnNotInTableRule(),
+        new DeleteColumnNotInTableRule(),
+        new IndexColumnNotInTableRule(),
+        new ImplicitConversionInPredicateSchemaRule(),
+        new JoinForeignKeyMismatchRule(),
+        new UpdateJoinCardinalityMismatchRule(),
+        new JoinColumnDeviationRule(),
 
         // === Style ===
         new SemicolonTerminationRule(),
@@ -192,6 +204,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new OrderByInSubqueryRule(),
         new StuffWithoutOrderByRule(),
         new StringAggWithoutOrderByRule(),
+        new StringAggNvarcharMaxRule(),
         new BanQueryHintsRule(),
 
         // === Debug ===

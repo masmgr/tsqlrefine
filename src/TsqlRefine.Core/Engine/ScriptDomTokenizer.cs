@@ -27,8 +27,16 @@ internal static class ScriptDomTokenizer
             using var parseReader = new StringReader(text);
             var fragment = parser.Parse(parseReader, out IList<ParseError> parseErrors);
 
-            using var tokenReader = new StringReader(text);
-            var tokenStream = parser.GetTokenStream(tokenReader, out IList<ParseError> tokenErrors);
+            // Parse already builds the token stream as fragment.ScriptTokenStream.
+            // Reuse it instead of re-parsing via GetTokenStream (which doubles parse cost).
+            // Fall back to a dedicated tokenization pass only when the parser produced no usable stream.
+            IList<ParseError> tokenErrors = Array.Empty<ParseError>();
+            var tokenStream = fragment?.ScriptTokenStream;
+            if (tokenStream is null || tokenStream.Count == 0)
+            {
+                using var tokenReader = new StringReader(text);
+                tokenStream = parser.GetTokenStream(tokenReader, out tokenErrors);
+            }
 
             var tokens = MapTokens(tokenStream);
             var ast = new ScriptDomAst(text, fragment, parseErrors.ToArray(), tokenErrors.ToArray());

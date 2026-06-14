@@ -44,7 +44,7 @@ public sealed class CliRuleOptionTests
     [Fact]
     public async Task Fix_WithNonFixableRule_ReturnsConfigError()
     {
-        // avoid-select-star は Fixable: false
+        // avoid-select-star is not fixable.
         var stdin = new StringReader("SELECT * FROM users;");
         var stdout = new StringWriter();
         var stderr = new StringWriter();

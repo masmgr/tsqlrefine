@@ -2,6 +2,7 @@ using System.Text;
 using TsqlRefine.Cli.Services;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
+using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Cli.Tests;
 
@@ -400,5 +401,97 @@ public sealed class PluginSecurityTests
             if (Directory.Exists(otherDir))
                 Directory.Delete(otherDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void TryAppendPluginRules_WhenRuleIdDuplicatesExistingRule_DisablesPlugin()
+    {
+        var existingRules = new List<IRule> { new TestRule("duplicate-rule") };
+        var knownRuleIds = new HashSet<string>(
+            existingRules.Select(r => r.Metadata.RuleId),
+            StringComparer.OrdinalIgnoreCase);
+        var plugin = CreateLoadedPlugin("plugin.dll", new TestRule("duplicate-rule"));
+        var stderr = new StringWriter();
+
+        var added = ConfigLoader.TryAppendPluginRules(
+            existingRules, plugin, knownRuleIds, stderr, quiet: false);
+
+        Assert.False(added);
+        Assert.Single(existingRules);
+        Assert.Contains("duplicate-rule", stderr.ToString());
+    }
+
+    [Fact]
+    public void TryAppendPluginRules_WhenRuleIdDuplicatesWithinPlugin_DisablesPlugin()
+    {
+        var existingRules = new List<IRule>();
+        var knownRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var plugin = CreateLoadedPlugin(
+            "plugin.dll",
+            new TestRule("plugin-rule"),
+            new TestRule("PLUGIN-RULE"));
+        var stderr = new StringWriter();
+
+        var added = ConfigLoader.TryAppendPluginRules(
+            existingRules, plugin, knownRuleIds, stderr, quiet: false);
+
+        Assert.False(added);
+        Assert.Empty(existingRules);
+        Assert.Contains("plugin-rule", stderr.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TryAppendPluginRules_WhenRuleIdsAreUnique_AddsPluginRules()
+    {
+        var existingRules = new List<IRule> { new TestRule("existing-rule") };
+        var knownRuleIds = new HashSet<string>(
+            existingRules.Select(r => r.Metadata.RuleId),
+            StringComparer.OrdinalIgnoreCase);
+        var plugin = CreateLoadedPlugin(
+            "plugin.dll",
+            new TestRule("plugin-rule-1"),
+            new TestRule("plugin-rule-2"));
+        var stderr = new StringWriter();
+
+        var added = ConfigLoader.TryAppendPluginRules(
+            existingRules, plugin, knownRuleIds, stderr, quiet: false);
+
+        Assert.True(added);
+        Assert.Equal(3, existingRules.Count);
+        Assert.Contains("plugin-rule-1", knownRuleIds);
+        Assert.Contains("plugin-rule-2", knownRuleIds);
+        Assert.Equal(string.Empty, stderr.ToString());
+    }
+
+    private static LoadedPlugin CreateLoadedPlugin(string path, params IRule[] rules)
+    {
+        return new LoadedPlugin(
+            path,
+            enabled: true,
+            providers: [new TestRuleProvider(rules)],
+            diagnostic: new PluginLoadDiagnostic(PluginLoadStatus.Success));
+    }
+
+    private sealed class TestRuleProvider(IReadOnlyList<IRule> rules) : IRuleProvider
+    {
+        public string Name => "Test Provider";
+
+        public int PluginApiVersion => PluginApi.CurrentVersion;
+
+        public IReadOnlyList<IRule> GetRules() => rules;
+    }
+
+    private sealed class TestRule(string ruleId) : IRule
+    {
+        public RuleMetadata Metadata { get; } = new(
+            ruleId,
+            "Test rule",
+            "Test",
+            RuleSeverity.Information,
+            Fixable: false);
+
+        public IEnumerable<Diagnostic> Analyze(RuleContext context) => [];
+
+        public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) => [];
     }
 }
