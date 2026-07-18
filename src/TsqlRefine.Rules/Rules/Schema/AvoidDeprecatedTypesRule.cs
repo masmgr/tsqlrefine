@@ -5,7 +5,7 @@ using TsqlRefine.PluginSdk;
 namespace TsqlRefine.Rules.Rules.Schema;
 
 /// <summary>
-/// Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead.
+/// Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types.
 /// </summary>
 public sealed class AvoidDeprecatedTypesRule : DiagnosticVisitorRuleBase
 {
@@ -15,11 +15,12 @@ public sealed class AvoidDeprecatedTypesRule : DiagnosticVisitorRuleBase
             [SqlDataTypeOption.Text] = "VARCHAR(MAX)",
             [SqlDataTypeOption.NText] = "NVARCHAR(MAX)",
             [SqlDataTypeOption.Image] = "VARBINARY(MAX)",
+            [SqlDataTypeOption.Timestamp] = "ROWVERSION",
         }.ToFrozenDictionary();
 
     public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-deprecated-types",
-        Description: "Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead.",
+        Description: "Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types and recommends modern replacements.",
         Category: "Schema",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
