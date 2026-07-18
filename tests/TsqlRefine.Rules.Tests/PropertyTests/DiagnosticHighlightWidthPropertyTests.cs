@@ -45,6 +45,9 @@ public sealed class DiagnosticHighlightWidthPropertyTests
             ["avoid-not-in-with-null"] = "SELECT id FROM t WHERE id NOT IN (SELECT id FROM s WHERE id IS NULL);",
             ["avoid-between-for-datetime-range"] = "SELECT id FROM t WHERE created_time BETWEEN '2024-01-01' AND '2024-12-31';",
             ["aggregate-in-where-clause"] = "SELECT id FROM t WHERE COUNT(*) > 1;",
+            ["avoid-max-plus-one-key-generation"] = "SET @id = (SELECT MAX(id) + 1 FROM t);",
+            ["string-assignment-length-mismatch"] = "DECLARE @v varchar(1); SET @v = 'ab';",
+            ["mixed-string-length-functions-in-loop"] = "WHILE DATALENGTH(@v)>0 SET @v=RIGHT(@v,LEN(@v)-1);",
 
             // Performance
             ["avoid-select-star"] = "SELECT * FROM t;",

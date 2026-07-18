@@ -65,6 +65,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new HavingColumnMismatchRule(),
         new MultiRowUpdateFromRule(),
         new LenForEmptinessCheckRule(),
+        new AvoidMaxPlusOneKeyGenerationRule(),
+        new StringAssignmentLengthMismatchRule(),
+        new MixedStringLengthFunctionsInLoopRule(),
         new RequireSemicolonBeforeThrowRule(),
 
         // === Correctness (Semantic) ===
