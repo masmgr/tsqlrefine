@@ -6,48 +6,5 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Files should start with SET NOCOUNT ON within the first 10 statements.
 /// </summary>
-public sealed class SetNocountRule : IRule
-{
-    public RuleMetadata Metadata { get; } = new(
-        RuleId: "set-nocount",
-        Description: "Files should start with SET NOCOUNT ON within the first 10 statements.",
-        Category: "Transactions",
-        DefaultSeverity: RuleSeverity.Information,
-        Fixable: false
-    );
-
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-
-        if (context.Ast.Fragment is not TSqlScript script)
-        {
-            yield break;
-        }
-
-        if (!ScriptStatementAnalysisHelpers.ShouldEnforcePreambleChecks(script))
-        {
-            yield break;
-        }
-
-        const int maxStatementsToCheck = 10;
-        var foundNocountOn = ScriptStatementAnalysisHelpers.AnyInFirstStatements(
-            script,
-            maxStatementsToCheck,
-            static statement => statement is PredicateSetStatement
-            {
-                IsOn: true,
-                Options: SetOptions.NoCount
-            });
-
-        if (!foundNocountOn)
-        {
-            yield return ScriptStatementAnalysisHelpers.CreateFileStartDiagnostic(
-                Metadata,
-                "File should start with 'SET NOCOUNT ON' within the first 10 statements.");
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        RuleHelpers.NoFixes(context, diagnostic);
-}
+public sealed class SetNocountRule() : SetOptionPreambleRuleBase(
+    "set-nocount", "NOCOUNT", RuleSeverity.Information, SetOptions.NoCount);
