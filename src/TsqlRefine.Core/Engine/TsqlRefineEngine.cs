@@ -18,7 +18,11 @@ public sealed class TsqlRefineEngine
         _rules = rules?.ToArray() ?? Array.Empty<IRule>();
     }
 
-    public LintResult Run(string command, IEnumerable<SqlInput> inputs, EngineOptions options)
+    public LintResult Run(
+        string command,
+        IEnumerable<SqlInput> inputs,
+        EngineOptions options,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(inputs);
@@ -27,9 +31,25 @@ public sealed class TsqlRefineEngine
         var activeRules = GetActiveRules(options);
         var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
         var files = new FileResult[inputList.Count];
-        for (var i = 0; i < inputList.Count; i++)
+        if (inputList.Count < 2)
         {
-            files[i] = AnalyzeFile(inputList[i], activeRules, options);
+            for (var i = 0; i < inputList.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                files[i] = AnalyzeFile(inputList[i], activeRules, options);
+            }
+        }
+        else
+        {
+            Parallel.For(
+                0,
+                inputList.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken
+                },
+                index => files[index] = AnalyzeFile(inputList[index], activeRules, options));
         }
         return new LintResult(
             Tool: "tsqlrefine",
@@ -39,7 +59,10 @@ public sealed class TsqlRefineEngine
         );
     }
 
-    public FixResult Fix(IEnumerable<SqlInput> inputs, EngineOptions options)
+    public FixResult Fix(
+        IEnumerable<SqlInput> inputs,
+        EngineOptions options,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(options);
@@ -47,9 +70,25 @@ public sealed class TsqlRefineEngine
         var activeRules = GetActiveRules(options);
         var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
         var files = new FixedFileResult[inputList.Count];
-        for (var i = 0; i < inputList.Count; i++)
+        if (inputList.Count < 2)
         {
-            files[i] = FixFile(inputList[i], activeRules, options);
+            for (var i = 0; i < inputList.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                files[i] = FixFile(inputList[i], activeRules, options);
+            }
+        }
+        else
+        {
+            Parallel.For(
+                0,
+                inputList.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken
+                },
+                index => files[index] = FixFile(inputList[index], activeRules, options));
         }
         return new FixResult(
             Tool: "tsqlrefine",

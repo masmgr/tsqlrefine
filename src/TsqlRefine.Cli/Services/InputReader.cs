@@ -57,6 +57,7 @@ public sealed class InputReader
 
         var ignoreList = ignorePatterns as IReadOnlyList<string> ?? ignorePatterns.ToArray();
         var ignoreBaseDirectory = ResolveIgnoreBaseDirectory(args.IgnoreListPath);
+        var readablePaths = new List<string>();
         foreach (var path in ExpandPaths(paths, ignoreList, ignoreBaseDirectory))
         {
             if (!File.Exists(path))
@@ -77,25 +78,33 @@ public sealed class InputReader
                 }
             }
 
-            // Read bytes once
-            var bytes = await File.ReadAllBytesAsync(path);
+            readablePaths.Add(path);
+        }
 
-            // Always detect encoding for write-back purposes
-            var decoded = CharsetDetection.Decode(bytes);
-            encodings[path] = decoded.WriteEncoding;
+        var slots = new (SqlInput Input, Encoding WriteEncoding)?[readablePaths.Count];
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, readablePaths.Count),
+            async (index, cancellationToken) =>
+            {
+                var path = readablePaths[index];
+                var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
+                var decoded = CharsetDetection.Decode(bytes);
+                var utf8Offset = HasUtf8Bom(bytes) ? 3 : 0;
+                var sql = args.DetectEncoding || ShouldUseDetectedEncodingForWriteBack(args.Command)
+                    ? decoded.Text
+                    : Encoding.UTF8.GetString(bytes, utf8Offset, bytes.Length - utf8Offset);
+                slots[index] = (new SqlInput(path, sql), decoded.WriteEncoding);
+            });
 
-            if (args.DetectEncoding || ShouldUseDetectedEncodingForWriteBack(args.Command))
+        foreach (var slot in slots)
+        {
+            if (slot is not { } value)
             {
-                // File write-back commands must avoid decoding with a different encoding than they write.
-                inputs.Add(new SqlInput(path, decoded.Text));
+                continue;
             }
-            else
-            {
-                // Decode as UTF-8 (default behavior), skipping BOM if present
-                var offset = HasUtf8Bom(bytes) ? 3 : 0;
-                var sql = Encoding.UTF8.GetString(bytes, offset, bytes.Length - offset);
-                inputs.Add(new SqlInput(path, sql));
-            }
+
+            inputs.Add(value.Input);
+            encodings[value.Input.FilePath] = value.WriteEncoding;
         }
 
         return new ReadInputsResult(inputs, encodings);

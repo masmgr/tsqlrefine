@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Schema.Model;
 
@@ -11,13 +12,13 @@ public sealed class SchemaProvider : ISchemaProvider
 {
     private readonly NameResolver _resolver;
     private readonly SchemaSnapshotMetadata _metadata;
-    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaUniqueConstraintInfo>> _uniqueConstraintsCache =
+    private readonly ConcurrentDictionary<ResolvedTable, IReadOnlyList<SchemaUniqueConstraintInfo>> _uniqueConstraintsCache =
         new(ResolvedTableKeyComparer.Instance);
-    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _foreignKeysCache =
+    private readonly ConcurrentDictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _foreignKeysCache =
         new(ResolvedTableKeyComparer.Instance);
-    private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _referencingForeignKeysCache =
+    private readonly ConcurrentDictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _referencingForeignKeysCache =
         new(ResolvedTableKeyComparer.Instance);
-    private readonly Dictionary<ResolvedTable, TableUniquenessLookup?> _uniquenessLookupCache =
+    private readonly ConcurrentDictionary<ResolvedTable, Lazy<TableUniquenessLookup?>> _uniquenessLookupCache =
         new(ResolvedTableKeyComparer.Instance);
 
     /// <summary>
@@ -73,15 +74,14 @@ public sealed class SchemaProvider : ISchemaProvider
     public IReadOnlyList<SchemaUniqueConstraintInfo> GetUniqueConstraints(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
-        if (_uniqueConstraintsCache.TryGetValue(table, out var cached))
-        {
-            return cached;
-        }
+        return _uniqueConstraintsCache.GetOrAdd(table, CreateUniqueConstraints);
+    }
 
+    private IReadOnlyList<SchemaUniqueConstraintInfo> CreateUniqueConstraints(ResolvedTable table)
+    {
         var tableSchema = _resolver.GetTableSchema(table);
         if (tableSchema is null)
         {
-            _uniqueConstraintsCache[table] = [];
             return [];
         }
 
@@ -106,24 +106,21 @@ public sealed class SchemaProvider : ISchemaProvider
             }
         }
 
-        cached = result.Count == 0 ? [] : result;
-        _uniqueConstraintsCache[table] = cached;
-        return cached;
+        return result.Count == 0 ? [] : result;
     }
 
     /// <inheritdoc />
     public IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
-        if (_foreignKeysCache.TryGetValue(table, out var cached))
-        {
-            return cached;
-        }
+        return _foreignKeysCache.GetOrAdd(table, CreateForeignKeys);
+    }
 
+    private IReadOnlyList<SchemaForeignKeyInfo> CreateForeignKeys(ResolvedTable table)
+    {
         var tableSchema = _resolver.GetTableSchema(table);
         if (tableSchema?.ForeignKeys is null)
         {
-            _foreignKeysCache[table] = [];
             return [];
         }
 
@@ -139,24 +136,21 @@ public sealed class SchemaProvider : ISchemaProvider
             result.Add(fk.ToDto(table, targetTable));
         }
 
-        cached = result.Count == 0 ? [] : result;
-        _foreignKeysCache[table] = cached;
-        return cached;
+        return result.Count == 0 ? [] : result;
     }
 
     /// <inheritdoc />
     public IReadOnlyList<SchemaForeignKeyInfo> GetReferencingForeignKeys(ResolvedTable table)
     {
         ArgumentNullException.ThrowIfNull(table);
-        if (_referencingForeignKeysCache.TryGetValue(table, out var cached))
-        {
-            return cached;
-        }
+        return _referencingForeignKeysCache.GetOrAdd(table, CreateReferencingForeignKeys);
+    }
 
+    private IReadOnlyList<SchemaForeignKeyInfo> CreateReferencingForeignKeys(ResolvedTable table)
+    {
         var refs = _resolver.GetReferencingForeignKeys(table);
         if (refs.Count == 0)
         {
-            _referencingForeignKeysCache[table] = [];
             return [];
         }
 
@@ -172,9 +166,7 @@ public sealed class SchemaProvider : ISchemaProvider
             result.Add(fk.ToDto(sourceTable, table));
         }
 
-        cached = result.Count == 0 ? [] : result;
-        _referencingForeignKeysCache[table] = cached;
-        return cached;
+        return result.Count == 0 ? [] : result;
     }
 
     /// <inheritdoc />
@@ -231,15 +223,19 @@ public sealed class SchemaProvider : ISchemaProvider
 
     private TableUniquenessLookup? GetOrCreateUniquenessLookup(ResolvedTable table)
     {
-        if (_uniquenessLookupCache.TryGetValue(table, out var cached))
-        {
-            return cached;
-        }
+        return _uniquenessLookupCache.GetOrAdd(
+            table,
+            static (key, provider) => new Lazy<TableUniquenessLookup?>(
+                () => provider.CreateUniquenessLookup(key),
+                LazyThreadSafetyMode.ExecutionAndPublication),
+            this).Value;
+    }
 
+    private TableUniquenessLookup? CreateUniquenessLookup(ResolvedTable table)
+    {
         var tableSchema = _resolver.GetTableSchema(table);
         if (tableSchema is null)
         {
-            _uniquenessLookupCache[table] = null;
             return null;
         }
 
@@ -269,11 +265,9 @@ public sealed class SchemaProvider : ISchemaProvider
             }
         }
 
-        cached = uniqueColumnSets.Count == 0
+        return uniqueColumnSets.Count == 0
             ? null
             : new TableUniquenessLookup(uniqueColumnSets);
-        _uniquenessLookupCache[table] = cached;
-        return cached;
     }
 
     private static HashSet<string> ToCaseInsensitiveSet(IReadOnlyList<string> columns)
