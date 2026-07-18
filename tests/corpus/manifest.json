@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "sql/project/classic-schema-and-query.sql",
+      "project": "tsqlrefine",
+      "authors": "tsqlrefine contributors",
+      "sourceUrl": "https://github.com/masmgr/tsqlrefine",
+      "revision": "repository",
+      "license": "MIT",
+      "modified": false,
+      "sha256": "4a3d7a25bd629c7d860b963a20c74ff95f26dd3b9df6f7ed83e13ef8cba623b7",
+      "minCompatLevel": 110
+    },
+    {
+      "path": "sql/project/modern-features.sql",
+      "project": "tsqlrefine",
+      "authors": "tsqlrefine contributors",
+      "sourceUrl": "https://github.com/masmgr/tsqlrefine",
+      "revision": "repository",
+      "license": "MIT",
+      "modified": false,
+      "sha256": "d8c8ffeea0ea8cb6004191bebb8753229b7fc2435857a5bd5d7d38cc906a7b0c",
+      "minCompatLevel": 140
+    }
+  ]
+}

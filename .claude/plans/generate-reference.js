@@ -32,7 +32,7 @@ function findRuleFiles(dir) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       results = results.concat(findRuleFiles(full));
-    } else if (entry.name.endsWith('Rule.cs')) {
+    } else if (entry.name.endsWith('.cs')) {
       results.push(full);
     }
   }
@@ -64,9 +64,10 @@ const rules = [];
 
 for (const filePath of ruleFiles) {
   const content = fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const metaStart = content.match(/RuleMetadata\s+Metadata\s*\{[^}]*\}\s*=\s*new\s*\(/);
-  if (!metaStart) continue;
+  const metadataPattern = /RuleMetadata\s+Metadata\s*\{[^}]*\}\s*=\s*new\s*\(/g;
+  const metadataMatches = [...content.matchAll(metadataPattern)];
 
+  for (const metaStart of metadataMatches) {
   const openParenIdx = metaStart.index + metaStart[0].length - 1;
   const block = extractBalancedParens(content, openParenIdx);
   if (!block) continue;
@@ -148,6 +149,22 @@ for (const filePath of ruleFiles) {
     fixable,
     docLink,
   });
+  }
+
+  const preambleMatch = content.match(/SetOptionPreambleRuleBase\(\s*(?:ruleId:\s*)?"([^"]+)",\s*(?:optionDisplayName:\s*)?"([^"]+)",\s*(?:defaultSeverity:\s*)?RuleSeverity\.(\w+)/s);
+  if (preambleMatch) {
+    const [, ruleId, optionDisplayName, severity] = preambleMatch;
+    rules.push({
+      tier: tierMap.get(ruleId) || 'UNASSIGNED',
+      category: 'Transactions',
+      ruleId,
+      displayName: ruleId,
+      description: `Files should start with SET ${optionDisplayName} ON within the first 10 statements.`,
+      severity,
+      fixable: false,
+      docLink: `transactions/${ruleId}.md`,
+    });
+  }
 }
 
 // Sort by tier, category, ruleId

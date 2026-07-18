@@ -73,8 +73,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md) | Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks. | Warning | No |
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection | Warning | No |
-| [avoid-hardcoded-password](security/avoid-hardcoded-password.md) | Detects hardcoded passwords in login DDL and ad hoc data-source connection strings. | Warning | No |
 | [avoid-execute-as](security/avoid-execute-as.md) | Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation. | Warning | No |
+| [avoid-hardcoded-password](security/avoid-hardcoded-password.md) | Detects hardcoded passwords in login DDL and ad hoc data-source connection strings. | Warning | No |
 | [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
 | [require-parameterized-sp-executesql](security/require-parameterized-sp-executesql.md) | Detects sp_executesql calls without proper parameterization or with string concatenation. | Warning | No |
 
@@ -162,8 +162,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
-| [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md) | Detects MAX(...) plus a positive integer in assignments or DML values, which is unsafe for key generation. | Warning | No |
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
+| [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md) | Detects MAX(...) plus a positive integer in assignments or DML values, which is unsafe for key generation. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
@@ -253,7 +253,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
-| [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that measure remaining data with DATALENGTH but advance string slicing with LEN for the same variable. | Warning | No |
+| [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that use DATALENGTH for termination but LEN to advance the same string variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 
