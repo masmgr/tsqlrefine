@@ -93,6 +93,12 @@ public sealed record RuleContext(
 
 ## 5. Loading Specification
 
+> **Security warning:** Plugins are trusted code, not sandboxed extensions. A plugin DLL
+> runs with the same operating-system permissions as `tsqlrefine` and can execute arbitrary
+> code. `AssemblyLoadContext` isolates assembly loading but does not provide a security
+> boundary. Load only DLLs you trust, and inspect a repository's discovered configuration
+> before using `--allow-plugins`.
+
 Plugins are specified in the configuration file.
 
 Example:
@@ -116,6 +122,10 @@ Plugin paths can be specified in two forms:
   3. `HOME/.tsqlrefine/plugins/`
 
 The filename-only form is useful for sharing plugins across projects — place the DLL in `~/.tsqlrefine/plugins/` and reference it by name alone.
+
+Resolved plugin files are accepted only when they remain inside one of these known search
+directories. Absolute paths, UNC paths, and relative paths that escape their base directory
+are rejected.
 
 ### Load process
 

@@ -242,8 +242,12 @@ public sealed class CommandExecutor
             : Directory.GetCurrentDirectory();
 
         var plugins = ConfigLoader.ResolvePluginDescriptors(pluginConfigs, baseDirectory);
+        var pluginSearchDirectories = ConfigLoader.GetPluginSearchDirectories(baseDirectory);
 
-        var (loaded, _) = PluginLoader.LoadWithSummary(plugins, baseDirectory);
+        var (loaded, _) = PluginLoader.LoadWithSummary(
+            plugins,
+            baseDirectory,
+            pluginSearchDirectories);
         try
         {
             await PluginDiagnostics.WritePluginSummaryAsync(loaded, args.Verbose, stdout);

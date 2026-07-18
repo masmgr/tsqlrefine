@@ -336,8 +336,9 @@ public sealed class ConfigLoader
             : Directory.GetCurrentDirectory();
 
         var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
+        var pluginSearchDirectories = GetPluginSearchDirectories(baseDirectory);
 
-        var loaded = PluginLoader.Load(plugins, baseDirectory);
+        var loaded = PluginLoader.Load(plugins, baseDirectory, pluginSearchDirectories);
         try
         {
             if (stderr is not null)
@@ -539,6 +540,31 @@ public sealed class ConfigLoader
         }
 
         return descriptors;
+    }
+
+    /// <summary>
+    /// Returns the trusted directories used for filename-only plugin resolution.
+    /// </summary>
+    internal static IReadOnlyList<string> GetPluginSearchDirectories(
+        string baseDirectory,
+        string? cwd = null,
+        string? homePath = null)
+    {
+        cwd ??= Directory.GetCurrentDirectory();
+        homePath ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        var directories = new List<string>
+        {
+            Path.GetFullPath(baseDirectory),
+            Path.GetFullPath(Path.Combine(cwd, ConfigDirName, "plugins"))
+        };
+
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            directories.Add(Path.GetFullPath(Path.Combine(homePath, ConfigDirName, "plugins")));
+        }
+
+        return directories;
     }
 
     private static bool IsFilenameOnly(string path)
