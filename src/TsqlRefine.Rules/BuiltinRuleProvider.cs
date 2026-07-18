@@ -83,6 +83,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DisallowSelectDistinctRule(),
         new LikeLeadingWildcardRule(),
         new PreferExistsOverInSubqueryRule(),
+        new RedundantSemiJoinRule(),
         new AvoidOptionalParameterPatternRule(),
         new AvoidScalarUdfInQueryRule(),
         new AvoidCorrelatedScalarSubqueryInSelectRule(),

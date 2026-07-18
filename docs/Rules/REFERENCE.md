@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 145
-- **Fixable Rules**: 14 (10%)
+- **Total Rules**: 149
+- **Fixable Rules**: 14 (9%)
 - **By Importance Tier**:
   - Critical (security-only): 16 rules
   - Essential (pragmatic): 32 rules
-  - Recommended (recommended): 52 rules
-  - Thorough (strict-logic): 22 rules
+  - Recommended (recommended): 55 rules
+  - Thorough (strict-logic): 23 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 24 rules (17%)
-  - Warning: 82 rules (57%)
-  - Information: 39 rules (27%)
+  - Error: 24 rules (16%)
+  - Warning: 85 rules (57%)
+  - Information: 40 rules (27%)
 
 ## Importance Tiers
 
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 16 | 16 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 32 | 48 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 52 | 100 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 22 | 122 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 145 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 55 | 103 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 23 | 126 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 149 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,8 +54,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 6 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 42 | Detects code that may produce incorrect results or runtime errors |
-| **Performance** | 23 | Flags patterns that can cause performance issues |
+| **Correctness** | 45 | Detects code that may produce incorrect results or runtime errors |
+| **Performance** | 24 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
@@ -156,12 +156,13 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**52 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**55 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
-#### Correctness (11 rules)
+#### Correctness (13 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md) | Detects MAX(...) plus a positive integer in assignments or DML values, which is unsafe for key generation. | Warning | No |
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
@@ -172,9 +173,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 | [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md) | Detects STRING_AGG whose first argument is not explicitly cast to NVARCHAR(MAX), which risks intermediate result truncation (8000-byte / 4000-char limit). | Warning | No |
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
+| [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md) | Detects string assignments whose statically known maximum length exceeds the destination capacity. | Warning | No |
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
 
-#### Performance (12 rules)
+#### Performance (13 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -190,6 +192,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-top-in-dml](performance/avoid-top-in-dml.md) | Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy. | Warning | No |
 | [like-leading-wildcard](performance/like-leading-wildcard.md) | Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans. | Warning | No |
 | [prefer-exists-over-in-subquery](performance/prefer-exists-over-in-subquery.md) | Detects WHERE column IN (SELECT ...) patterns and recommends using EXISTS instead for better performance with large datasets. | Information | No |
+| [redundant-semi-join](performance/redundant-semi-join.md) | Detects IN or EXISTS predicates that duplicate an existing INNER JOIN to the same table and key. | Information | No |
 
 #### Transactions (13 rules)
 
@@ -237,7 +240,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**22 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**23 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -245,11 +248,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-#### Correctness (3 rules)
+#### Correctness (4 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
+| [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that measure remaining data with DATALENGTH but advance string slicing with LEN for the same variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 
@@ -357,7 +361,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (82 rules)
+### Warning (85 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -373,6 +377,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-hardcoded-password](security/avoid-hardcoded-password.md)
 - [avoid-heap-table](schema/avoid-heap-table.md)
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
+- [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md)
 - [avoid-merge](safety/avoid-merge.md)
 - [avoid-nolock](correctness/avoid-nolock.md)
 - [avoid-non-sargable-predicate](performance/avoid-non-sargable-predicate.md)
@@ -401,6 +406,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md)
 - [len-for-emptiness-check](correctness/len-for-emptiness-check.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
+- [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md)
 - [multi-row-update-from](correctness/multi-row-update-from.md)
 - [nested-block-comments](style/nested-block-comments.md)
 - [order-by-in-subquery](correctness/order-by-in-subquery.md)
@@ -434,6 +440,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [set-xact-abort](transactions/set-xact-abort.md)
 - [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
+- [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
@@ -442,7 +449,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
 
-### Information (39 rules)
+### Information (40 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -471,6 +478,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [prefer-try-convert-patterns](style/prefer-try-convert-patterns.md)
 - [prefer-unicode-string-literals](style/prefer-unicode-string-literals.md)
 - [qualified-select-columns](style/qualified-select-columns.md)
+- [redundant-semi-join](performance/redundant-semi-join.md)
 - [require-as-for-column-alias](style/require-as-for-column-alias.md)
 - [require-as-for-table-alias](style/require-as-for-table-alias.md)
 - [require-begin-end-strict](style/require-begin-end-strict.md)

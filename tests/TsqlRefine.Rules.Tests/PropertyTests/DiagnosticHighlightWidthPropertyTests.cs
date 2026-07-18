@@ -58,6 +58,7 @@ public sealed class DiagnosticHighlightWidthPropertyTests
             ["avoid-scalar-udf-in-query"] = "SELECT dbo.MyFunc(id) FROM t;",
             ["avoid-correlated-subquery-in-select"] = "SELECT (SELECT TOP 1 name FROM s WHERE s.id = t.id) FROM t;",
             ["avoid-or-on-different-columns"] = "SELECT id FROM t WHERE a = 1 OR b = 2;",
+            ["redundant-semi-join"] = "SELECT a.id FROM a JOIN b ON b.id=a.id WHERE a.id IN(SELECT x.id FROM b x);",
 
             // Safety
             ["dml-without-where"] = "DELETE FROM t;",

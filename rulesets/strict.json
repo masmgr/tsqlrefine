@@ -136,6 +136,7 @@
     { "id": "avoid-max-plus-one-key-generation" },
     { "id": "string-assignment-length-mismatch" },
     { "id": "mixed-string-length-functions-in-loop" },
+    { "id": "redundant-semi-join" },
     { "id": "unresolved-table-reference" },
     { "id": "unresolved-column-reference" },
     { "id": "insert-column-not-in-table" },

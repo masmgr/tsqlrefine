@@ -17,6 +17,24 @@ public sealed class CliPresetTests
     }
 
     [Fact]
+    public async Task Lint_WithPresetRecommended_ReportsRedundantSemiJoin()
+    {
+        const string sql = "SELECT v.Id FROM dbo.Facts AS v INNER JOIN dbo.Base AS b ON b.Id = v.Id WHERE v.Id IN (SELECT x.Id FROM dbo.Base AS x);";
+        var stdin = new StringReader(sql);
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", "--preset", "recommended", "--severity", "info"],
+            stdin,
+            stdout,
+            stderr);
+
+        Assert.Equal(ExitCodes.Violations, code);
+        Assert.Contains("redundant-semi-join", stdout.ToString());
+    }
+
+    [Fact]
     public async Task Lint_WithNonexistentPreset_ReturnsConfigError()
     {
         var stdin = new StringReader("SELECT 1;");
