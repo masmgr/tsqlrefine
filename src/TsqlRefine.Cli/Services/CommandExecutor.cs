@@ -460,7 +460,8 @@ public sealed class CommandExecutor
     {
         if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
         {
-            await stderr.WriteLineAsync("Error: --connection-string is required for schema snapshot.");
+            await stderr.WriteLineAsync(
+                $"Error: --connection-string or {CliParser.ConnectionStringEnvironmentVariable} is required for schema snapshot.");
             return ExitCodes.ConfigError;
         }
 
@@ -523,7 +524,8 @@ public sealed class CommandExecutor
     {
         if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
         {
-            await stderr.WriteLineAsync("Error: --connection-string is required for schema build.");
+            await stderr.WriteLineAsync(
+                $"Error: --connection-string or {CliParser.ConnectionStringEnvironmentVariable} is required for schema build.");
             return ExitCodes.ConfigError;
         }
 

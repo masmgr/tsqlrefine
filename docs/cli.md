@@ -28,6 +28,9 @@ Commands:
 | `print-format-config` | Output effective formatting options |
 | `list-rules` | List available rules (loaded) |
 | `list-plugins` | List loaded plugins (Rule plugins only) |
+| `schema snapshot` | Generate a schema snapshot from SQL Server |
+| `schema collect-relations` | Collect JOIN relation patterns from SQL files |
+| `schema build` | Generate a snapshot and collect relations in one step |
 
 ---
 
@@ -259,6 +262,36 @@ tsqlrefine list-plugins [options]
 |------------|------|
 | `--output <text\|json>` | Output format (default: `text`) |
 | `--verbose` | Display detailed information |
+
+#### schema snapshot
+
+```
+tsqlrefine schema snapshot [options]
+```
+
+| Option | Description |
+|------------|------|
+| `--connection-string <value>` | SQL Server connection string. Overrides `TSQLREFINE_CONNECTION_STRING` |
+| `--output <path>` | Required output path for the schema snapshot |
+| `--include-schema <names>` | Comma-separated schemas to include |
+| `--exclude-schema <names>` | Comma-separated schemas to exclude |
+| `--compat-level <100-160>` | SQL Server compatibility level |
+| `-q, --quiet` | Suppress informational stderr output |
+
+#### schema build
+
+```
+tsqlrefine schema build [options] [paths...]
+```
+
+`schema build` accepts `--connection-string` and the schema filters above, plus
+`--output-dir`, `--relations-output`, and the standard SQL input options. It uses
+`TSQLREFINE_CONNECTION_STRING` when `--connection-string` is omitted.
+
+> **Security note:** Avoid placing password-bearing connection strings directly on the
+> command line because process listings, shell history, and CI logs may expose them.
+> Prefer setting `TSQLREFINE_CONNECTION_STRING` through your shell or CI secret store.
+> The command-line option takes precedence when both are provided.
 
 ### 2.3 Option Details
 

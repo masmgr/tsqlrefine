@@ -129,6 +129,20 @@ tsqlrefine format --write path/to/dir
 - Whitespace normalization
 - Trailing whitespace removal
 
+### Schema Snapshots
+
+Schema-aware rules can use a snapshot generated from SQL Server. To keep credentials out
+of process listings, shell history, and CI logs, prefer the environment variable over a
+password-bearing command-line argument:
+
+```bash
+export TSQLREFINE_CONNECTION_STRING='Server=localhost;Database=app;User ID=...;Password=...'
+tsqlrefine schema snapshot --output .tsqlrefine/schema.json
+```
+
+`--connection-string` remains available and takes precedence over
+`TSQLREFINE_CONNECTION_STRING` when both are supplied.
+
 ## Installation
 
 ### .NET Global Tool (Recommended)

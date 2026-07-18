@@ -11,6 +11,8 @@ namespace TsqlRefine.Cli;
 /// </summary>
 public static class CliParser
 {
+    public const string ConnectionStringEnvironmentVariable = "TSQLREFINE_CONNECTION_STRING";
+
     private static readonly HashSet<string> HelpVersionTokens = new(StringComparer.Ordinal)
     {
         "--help", "-h", "-?", "/?",
@@ -193,7 +195,7 @@ public static class CliParser
         // Schema snapshot options
         public static readonly Option<string?> ConnectionString = new("--connection-string")
         {
-            Description = "SQL Server connection string",
+            Description = $"SQL Server connection string (or set {ConnectionStringEnvironmentVariable})",
             Arity = ArgumentArity.ExactlyOne
         };
 
@@ -527,7 +529,8 @@ public static class CliParser
             AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
             SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
             RelationsProfilePath: GetOptionValue<string?>(parseResult, "--relations-profile"),
-            SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
+            SchemaConnectionString: ResolveSchemaConnectionString(
+                GetOptionValue<string?>(parseResult, "--connection-string")),
             SchemaOutput: GetSchemaOutput(parseResult),
             SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
             SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
@@ -539,6 +542,11 @@ public static class CliParser
     // =================================================================
     // Parse Helpers
     // =================================================================
+
+    private static string? ResolveSchemaConnectionString(string? commandLineValue)
+        => !string.IsNullOrWhiteSpace(commandLineValue)
+            ? commandLineValue
+            : Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
 
     private static (string Command, bool IsExplicit) GetCommandName(ParseResult parseResult)
     {
