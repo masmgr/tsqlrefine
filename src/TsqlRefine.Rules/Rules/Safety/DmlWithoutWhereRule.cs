@@ -66,11 +66,6 @@ public sealed class DmlWithoutWhereRule : DiagnosticVisitorRuleBase
                 return;
             }
 
-            if (IsTargetUsingAlias(target, fromClause))
-            {
-                return;
-            }
-
             if (HasInnerJoin(fromClause))
             {
                 return;
@@ -101,58 +96,6 @@ public sealed class DmlWithoutWhereRule : DiagnosticVisitorRuleBase
             }
 
             return false;
-        }
-
-        private static bool IsTargetUsingAlias(TableReference? target, FromClause? fromClause)
-        {
-            if (target is not NamedTableReference targetTable || fromClause?.TableReferences is null)
-            {
-                return false;
-            }
-
-            var targetName = targetTable.SchemaObject?.BaseIdentifier?.Value;
-            if (targetName is null)
-            {
-                return false;
-            }
-
-            // Collect only explicit aliases (not table names) from FROM clause
-            var explicitAliases = CollectExplicitAliases(fromClause.TableReferences);
-
-            // If target name matches an explicit alias defined in FROM clause, it's using an alias
-            return explicitAliases.Contains(targetName) && targetTable.Alias is null;
-        }
-
-        private static HashSet<string> CollectExplicitAliases(IList<TableReference> tableRefs)
-        {
-            var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            CollectExplicitAliasesCore(tableRefs, aliases);
-            return aliases;
-        }
-
-        private static void CollectExplicitAliasesCore(IList<TableReference> tableRefs, HashSet<string> aliases)
-        {
-            foreach (var tableRef in tableRefs)
-            {
-                if (tableRef is JoinTableReference join)
-                {
-                    CollectExplicitAliasesCore([join.FirstTableReference], aliases);
-                    CollectExplicitAliasesCore([join.SecondTableReference], aliases);
-                }
-                else if (tableRef is NamedTableReference namedTable && namedTable.Alias?.Value is not null)
-                {
-                    // Only add explicit aliases, not table names
-                    aliases.Add(namedTable.Alias.Value);
-                }
-                else if (tableRef is VariableTableReference varTable && varTable.Alias?.Value is not null)
-                {
-                    aliases.Add(varTable.Alias.Value);
-                }
-                else if (tableRef is QueryDerivedTable derivedTable && derivedTable.Alias?.Value is not null)
-                {
-                    aliases.Add(derivedTable.Alias.Value);
-                }
-            }
         }
 
         private static bool HasInnerJoin(FromClause? fromClause)
