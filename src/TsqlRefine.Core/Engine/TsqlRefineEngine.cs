@@ -276,7 +276,8 @@ public sealed class TsqlRefineEngine
             Ast: analysis.Ast,
             Tokens: analysis.Tokens,
             Settings: ruleSettings,
-            SchemaContext: options.SchemaContext
+            SchemaContext: options.SchemaContext,
+            ObjectCatalog: options.ObjectCatalog
         );
     }
 

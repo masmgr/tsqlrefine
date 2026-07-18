@@ -35,12 +35,14 @@ namespace TsqlRefine.Cli;
 /// <param name="AllowPlugins">Whether to allow loading plugin DLLs from configuration.</param>
 /// <param name="SchemaPath">Path to schema snapshot file for schema-aware analysis.</param>
 /// <param name="RelationsProfilePath">Path to relations profile JSON file for JOIN pattern deviation analysis.</param>
+/// <param name="ObjectsCatalogPath">Path to object catalog JSON file for cross-object analysis.</param>
 /// <param name="SchemaConnectionString">Connection string for schema snapshot generation.</param>
 /// <param name="SchemaOutput">Output path for schema snapshot generation.</param>
 /// <param name="SchemaIncludeSchemas">Comma-separated schema names to include in snapshot generation.</param>
 /// <param name="SchemaExcludeSchemas">Comma-separated schema names to exclude from snapshot generation.</param>
 /// <param name="SchemaOutputDir">Output directory for 'schema build' command (writes schema.json and relations.json).</param>
 /// <param name="SchemaRelationsOutput">Output path for relations profile in 'schema build' command (overrides SchemaOutputDir for relations.json).</param>
+/// <param name="SchemaObjectsOutput">Output path for object catalog in 'schema build' command (overrides SchemaOutputDir for objects.json).</param>
 /// <param name="BaselinePath">Path to a baseline JSON file.</param>
 /// <param name="BaselineOutput">Output path for the 'baseline create' command.</param>
 /// <param name="BaselineRoot">Root directory used to normalize baseline file paths.</param>
@@ -76,12 +78,14 @@ public sealed record CliArgs(
     bool AllowPlugins,
     string? SchemaPath = null,
     string? RelationsProfilePath = null,
+    string? ObjectsCatalogPath = null,
     string? SchemaConnectionString = null,
     string? SchemaOutput = null,
     string? SchemaIncludeSchemas = null,
     string? SchemaExcludeSchemas = null,
     string? SchemaOutputDir = null,
     string? SchemaRelationsOutput = null,
+    string? SchemaObjectsOutput = null,
     string? BaselinePath = null,
     string? BaselineOutput = null,
     string? BaselineRoot = null,

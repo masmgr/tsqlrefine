@@ -221,6 +221,12 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> ObjectsCatalog = new("--objects-catalog")
+        {
+            Description = "Object catalog file path for cross-object analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Schema snapshot options
         public static readonly Option<string?> ConnectionString = new("--connection-string")
         {
@@ -248,13 +254,19 @@ public static class CliParser
 
         public static readonly Option<string?> SchemaOutputDir = new("--output-dir")
         {
-            Description = "Output directory for schema.json and relations.json",
+            Description = "Output directory for schema.json, relations.json, and objects.json",
             Arity = ArgumentArity.ExactlyOne
         };
 
         public static readonly Option<string?> SchemaRelationsOutput = new("--relations-output")
         {
             Description = "Output path for relations profile (overrides --output-dir for relations.json)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> SchemaObjectsOutput = new("--objects-output")
+        {
+            Description = "Output path for object catalog (overrides --output-dir for objects.json)",
             Arity = ArgumentArity.ZeroOrOne
         };
 
@@ -317,6 +329,7 @@ public static class CliParser
     {
         command.Options.Add(Options.Schema);
         command.Options.Add(Options.RelationsProfile);
+        command.Options.Add(Options.ObjectsCatalog);
         return command;
     }
 
@@ -421,6 +434,7 @@ public static class CliParser
         var schemaCommand = new Command("schema", "Schema management commands");
         schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
         schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaCollectObjectsCommand());
         schemaCommand.Subcommands.Add(BuildSchemaBuildCommand());
         return schemaCommand;
     }
@@ -464,13 +478,14 @@ public static class CliParser
 
     private static Command BuildSchemaBuildCommand()
     {
-        var command = new Command("build", "Generate schema snapshot and collect JOIN relations in one step")
+        var command = new Command("build", "Generate schema snapshot, JOIN relations, and object catalog in one step")
             .WithInputOptions()
             .WithCompatLevelOption()
             .WithPathsArgument();
         command.Options.Add(Options.ConnectionString);
         command.Options.Add(Options.SchemaOutputDir);
         command.Options.Add(Options.SchemaRelationsOutput);
+        command.Options.Add(Options.SchemaObjectsOutput);
         command.Options.Add(Options.IncludeSchema);
         command.Options.Add(Options.ExcludeSchema);
         command.Options.Add(Options.Quiet);
@@ -480,6 +495,17 @@ public static class CliParser
     private static Command BuildSchemaCollectRelationsCommand()
     {
         var command = new Command("collect-relations", "Collect JOIN relation patterns from SQL files")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildSchemaCollectObjectsCommand()
+    {
+        var command = new Command("collect-objects", "Collect SQL object definitions and references from SQL files")
             .WithInputOptions()
             .WithCompatLevelOption()
             .WithPathsArgument();
@@ -599,6 +625,7 @@ public static class CliParser
             AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
             SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
             RelationsProfilePath: GetOptionValue<string?>(parseResult, "--relations-profile"),
+            ObjectsCatalogPath: GetOptionValue<string?>(parseResult, "--objects-catalog"),
             SchemaConnectionString: ResolveSchemaConnectionString(
                 GetOptionValue<string?>(parseResult, "--connection-string")),
             SchemaOutput: GetSchemaOutput(parseResult),
@@ -606,6 +633,7 @@ public static class CliParser
             SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
             SchemaOutputDir: GetOptionValue<string?>(parseResult, "--output-dir"),
             SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output"),
+            SchemaObjectsOutput: GetOptionValue<string?>(parseResult, "--objects-output"),
             BaselinePath: GetOptionValue<string?>(parseResult, "--baseline"),
             BaselineOutput: GetBaselineOutput(parseResult),
             BaselineRoot: GetOptionValue<string?>(parseResult, "--root"),

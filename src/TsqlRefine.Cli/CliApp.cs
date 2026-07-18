@@ -125,6 +125,7 @@ public static class CliApp
                 "baseline trim" => await commandExecutor.ExecuteBaselineTrimAsync(parsed, stdin, stdout, stderr),
                 "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
                 "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
+                "schema collect-objects" => await commandExecutor.ExecuteSchemaCollectObjectsAsync(parsed, stdin, stdout, stderr),
                 "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),
                 _ => await UnknownCommandAsync(command, stderr)
             };

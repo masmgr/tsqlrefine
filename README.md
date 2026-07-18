@@ -161,6 +161,16 @@ tsqlrefine schema snapshot --output .tsqlrefine/schema.json
 `--connection-string` remains available and takes precedence over
 `TSQLREFINE_CONNECTION_STRING` when both are supplied.
 
+For cross-object analysis, collect procedure, function, and view signatures from the SQL source:
+
+```bash
+tsqlrefine schema collect-objects --output .tsqlrefine/objects.json sql/
+tsqlrefine lint --objects-catalog .tsqlrefine/objects.json sql/
+```
+
+`schema build --output-dir .tsqlrefine/schema sql/` generates `schema.json`, `relations.json`,
+and `objects.json` together.
+
 ## Installation
 
 ### .NET Global Tool (Recommended)

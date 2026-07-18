@@ -5,6 +5,7 @@ using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules;
+using TsqlRefine.Schema.Catalog;
 using TsqlRefine.Schema.Resolution;
 using TsqlRefine.Schema.Snapshot;
 
@@ -786,6 +787,85 @@ public sealed class ConfigLoader
                 ? config.Schema.Path
                 : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
             return (Path.Combine(schemaDir, "relations.json"), "config (schema.path)");
+        }
+
+        return (null, "none");
+    }
+
+    /// <summary>
+    /// Loads the independently configured object catalog, if available.
+    /// </summary>
+    public static IObjectCatalogProvider? LoadObjectCatalog(
+        CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    {
+        var (catalogPath, source) = ResolveObjectCatalogPath(args, config);
+        if (catalogPath is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(catalogPath))
+        {
+            if (source == "config (schema.path)")
+            {
+                return null;
+            }
+            throw new ConfigException($"Object catalog file not found: {catalogPath}");
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(catalogPath);
+            var catalog = ObjectCatalogSerializer.Deserialize(stream);
+            var provider = new ObjectCatalogProvider(catalog);
+            if (stderr is not null && !args.Quiet)
+            {
+                stderr.WriteLine(
+                    $"Object catalog loaded: {catalog.Objects.Count} objects, "
+                    + $"{catalog.References.Count} references [from {source}]");
+            }
+            return provider;
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException($"Failed to parse object catalog: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw new ConfigException($"Failed to read object catalog: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves the object catalog path independently from the schema snapshot path.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveObjectCatalogPath(
+        CliArgs args, TsqlRefineConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(args.ObjectsCatalogPath))
+        {
+            return (Path.GetFullPath(args.ObjectsCatalogPath), "--objects-catalog");
+        }
+
+        var configPath = ResolveConfigPath(args);
+        var configDir = configPath is null
+            ? Directory.GetCurrentDirectory()
+            : Path.GetDirectoryName(Path.GetFullPath(configPath))!;
+
+        if (!string.IsNullOrWhiteSpace(config.Schema?.ObjectsCatalogPath))
+        {
+            var resolved = Path.IsPathRooted(config.Schema.ObjectsCatalogPath)
+                ? config.Schema.ObjectsCatalogPath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.ObjectsCatalogPath));
+            return (resolved, "config");
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.Schema?.Path))
+        {
+            var schemaDir = Path.IsPathRooted(config.Schema.Path)
+                ? config.Schema.Path
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
+            return (Path.Combine(schemaDir, "objects.json"), "config (schema.path)");
         }
 
         return (null, "none");

@@ -154,13 +154,15 @@ public sealed class ScriptDomAst
 /// <param name="Tokens">Flat token stream for pattern matching.</param>
 /// <param name="Settings">Per-rule configuration settings.</param>
 /// <param name="SchemaContext">Optional unified schema context for schema-aware analysis. Null when no schema snapshot is loaded.</param>
+/// <param name="ObjectCatalog">Optional cross-object catalog. Null when no object catalog is loaded.</param>
 public sealed record RuleContext(
     string FilePath,
     int CompatLevel,
     ScriptDomAst Ast,
     IReadOnlyList<Token> Tokens,
     RuleSettings Settings,
-    ISchemaContext? SchemaContext = null
+    ISchemaContext? SchemaContext = null,
+    IObjectCatalogProvider? ObjectCatalog = null
 )
 {
     /// <summary>

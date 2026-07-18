@@ -11,6 +11,7 @@ Schemas are available under `schemas/`:
 - `schemas/tsqlrefine.schema.json`
 - `schemas/ruleset.schema.json`
 - `schemas/baseline.schema.json`
+- `schemas/objects-catalog.schema.json`
 
 ## Configuration File Discovery
 
@@ -253,6 +254,36 @@ Rules are organized into five importance tiers (Critical, Essential, Recommended
 - Use `strict-logic` for comprehensive correctness checking without style/cosmetic noise
 - Use `strict` for maximum enforcement when you want both logic and style consistency
 - Use `security-only` for security-focused code review or CI gates
+
+## Schema and Object Catalog Configuration
+
+Schema-aware inputs are configured independently. A unified directory is convenient when
+using `schema build`:
+
+```json
+{
+  "schema": {
+    "path": ".tsqlrefine/schema",
+    "defaultSchema": "dbo"
+  }
+}
+```
+
+This derives `schema.json`, `relations.json`, and `objects.json` from the directory. Explicit
+paths override the corresponding derived path:
+
+```json
+{
+  "schema": {
+    "snapshotPath": "artifacts/schema.json",
+    "relationsProfilePath": "artifacts/relations.json",
+    "objectsCatalogPath": "artifacts/objects.json"
+  }
+}
+```
+
+The object catalog is loaded independently, so cross-object rules can run without a database
+snapshot. Relative paths are resolved from the configuration file directory.
 
 ## Per-Rule Configuration
 

@@ -1,7 +1,99 @@
 #nullable enable
+const TsqlRefine.PluginSdk.PluginApi.CurrentVersion = 4 -> int
+TsqlRefine.PluginSdk.CatalogObjectIdInfo
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.CatalogObjectIdInfo(string? DatabaseName, string! SchemaName, string! Name) -> void
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.DatabaseName.get -> string?
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.DatabaseName.init -> void
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.Name.get -> string!
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.Name.init -> void
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.SchemaName.get -> string!
+TsqlRefine.PluginSdk.CatalogObjectIdInfo.SchemaName.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo
+TsqlRefine.PluginSdk.CatalogObjectInfo.CatalogObjectInfo(TsqlRefine.PluginSdk.CatalogObjectIdInfo! Id, TsqlRefine.PluginSdk.CatalogObjectKind Kind, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.CatalogParameterInfo!>! Parameters, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.SchemaColumnInfo!>? ResultColumns, string! DefinedInFile, TsqlRefine.PluginSdk.Range! DefinedAt) -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.DefinedAt.get -> TsqlRefine.PluginSdk.Range!
+TsqlRefine.PluginSdk.CatalogObjectInfo.DefinedAt.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.DefinedInFile.get -> string!
+TsqlRefine.PluginSdk.CatalogObjectInfo.DefinedInFile.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.Id.get -> TsqlRefine.PluginSdk.CatalogObjectIdInfo!
+TsqlRefine.PluginSdk.CatalogObjectInfo.Id.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.Kind.get -> TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectInfo.Kind.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.Parameters.get -> System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.CatalogParameterInfo!>!
+TsqlRefine.PluginSdk.CatalogObjectInfo.Parameters.init -> void
+TsqlRefine.PluginSdk.CatalogObjectInfo.ResultColumns.get -> System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.SchemaColumnInfo!>?
+TsqlRefine.PluginSdk.CatalogObjectInfo.ResultColumns.init -> void
+TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectKind.Procedure = 0 -> TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectKind.ScalarFunction = 1 -> TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectKind.TableValuedFunction = 2 -> TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectKind.View = 3 -> TsqlRefine.PluginSdk.CatalogObjectKind
+TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.All = TsqlRefine.PluginSdk.CatalogObjectKindFilter.Procedure | TsqlRefine.PluginSdk.CatalogObjectKindFilter.Function | TsqlRefine.PluginSdk.CatalogObjectKindFilter.View -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.Function = TsqlRefine.PluginSdk.CatalogObjectKindFilter.ScalarFunction | TsqlRefine.PluginSdk.CatalogObjectKindFilter.TableValuedFunction -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.None = 0 -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.Procedure = 1 -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.ScalarFunction = 2 -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.TableValuedFunction = 4 -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogObjectKindFilter.View = 8 -> TsqlRefine.PluginSdk.CatalogObjectKindFilter
+TsqlRefine.PluginSdk.CatalogParameterInfo
+TsqlRefine.PluginSdk.CatalogParameterInfo.CatalogParameterInfo(string! Name, string! TypeName, TsqlRefine.PluginSdk.SchemaTypeInfo! Type, bool IsOutput, bool HasDefault) -> void
+TsqlRefine.PluginSdk.CatalogParameterInfo.HasDefault.get -> bool
+TsqlRefine.PluginSdk.CatalogParameterInfo.HasDefault.init -> void
+TsqlRefine.PluginSdk.CatalogParameterInfo.IsOutput.get -> bool
+TsqlRefine.PluginSdk.CatalogParameterInfo.IsOutput.init -> void
+TsqlRefine.PluginSdk.CatalogParameterInfo.Name.get -> string!
+TsqlRefine.PluginSdk.CatalogParameterInfo.Name.init -> void
+TsqlRefine.PluginSdk.CatalogParameterInfo.Type.get -> TsqlRefine.PluginSdk.SchemaTypeInfo!
+TsqlRefine.PluginSdk.CatalogParameterInfo.Type.init -> void
+TsqlRefine.PluginSdk.CatalogParameterInfo.TypeName.get -> string!
+TsqlRefine.PluginSdk.CatalogParameterInfo.TypeName.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo
+TsqlRefine.PluginSdk.CatalogReferenceInfo.CatalogReferenceInfo(TsqlRefine.PluginSdk.CatalogObjectIdInfo? FromObject, TsqlRefine.PluginSdk.CatalogObjectIdInfo! ToObject, string? ToColumn, TsqlRefine.PluginSdk.CatalogReferenceKind Kind, TsqlRefine.PluginSdk.CatalogResolutionStatus Resolution, string! ReferencedInFile, TsqlRefine.PluginSdk.Range! ReferencedAt, bool IsDynamic) -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.FromObject.get -> TsqlRefine.PluginSdk.CatalogObjectIdInfo?
+TsqlRefine.PluginSdk.CatalogReferenceInfo.FromObject.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.IsDynamic.get -> bool
+TsqlRefine.PluginSdk.CatalogReferenceInfo.IsDynamic.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.Kind.get -> TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogReferenceInfo.Kind.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ReferencedAt.get -> TsqlRefine.PluginSdk.Range!
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ReferencedAt.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ReferencedInFile.get -> string!
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ReferencedInFile.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.Resolution.get -> TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogReferenceInfo.Resolution.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ToColumn.get -> string?
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ToColumn.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ToObject.get -> TsqlRefine.PluginSdk.CatalogObjectIdInfo!
+TsqlRefine.PluginSdk.CatalogReferenceInfo.ToObject.init -> void
+TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogReferenceKind.Column = 3 -> TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogReferenceKind.Execute = 0 -> TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogReferenceKind.FunctionCall = 1 -> TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogReferenceKind.Table = 2 -> TsqlRefine.PluginSdk.CatalogReferenceKind
+TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogResolutionStatus.Ambiguous = 2 -> TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogResolutionStatus.OutOfScope = 3 -> TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogResolutionStatus.Resolved = 0 -> TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogResolutionStatus.Unresolved = 1 -> TsqlRefine.PluginSdk.CatalogResolutionStatus
+TsqlRefine.PluginSdk.CatalogScopeInfo
+TsqlRefine.PluginSdk.CatalogScopeInfo.CatalogScopeInfo(System.Collections.Generic.IReadOnlyList<string!>! Databases, bool IsAuthoritative, bool IncludesExternalReferences, string! DefaultSchema) -> void
+TsqlRefine.PluginSdk.CatalogScopeInfo.Databases.get -> System.Collections.Generic.IReadOnlyList<string!>!
+TsqlRefine.PluginSdk.CatalogScopeInfo.Databases.init -> void
+TsqlRefine.PluginSdk.CatalogScopeInfo.DefaultSchema.get -> string!
+TsqlRefine.PluginSdk.CatalogScopeInfo.DefaultSchema.init -> void
+TsqlRefine.PluginSdk.CatalogScopeInfo.IncludesExternalReferences.get -> bool
+TsqlRefine.PluginSdk.CatalogScopeInfo.IncludesExternalReferences.init -> void
+TsqlRefine.PluginSdk.CatalogScopeInfo.IsAuthoritative.get -> bool
+TsqlRefine.PluginSdk.CatalogScopeInfo.IsAuthoritative.init -> void
 TsqlRefine.PluginSdk.Diagnostic.Diagnostic(TsqlRefine.PluginSdk.Range! Range, string! Message, TsqlRefine.PluginSdk.DiagnosticSeverity? Severity = null, string? Code = null, string! Source = "tsqlrefine", System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.DiagnosticTag>? Tags = null, TsqlRefine.PluginSdk.DiagnosticData? Data = null) -> void
 TsqlRefine.PluginSdk.DiagnosticData.DiagnosticData(string? RuleId = null, string? Category = null, bool? Fixable = null, string? CodeDescriptionHref = null) -> void
 TsqlRefine.PluginSdk.Fix.Fix(string! Title, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.TextEdit!>! Edits) -> void
+TsqlRefine.PluginSdk.IObjectCatalogProvider
+TsqlRefine.PluginSdk.IObjectCatalogProvider.GetAllObjects() -> System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.CatalogObjectInfo!>!
+TsqlRefine.PluginSdk.IObjectCatalogProvider.GetReferencesTo(string? database, string! schema, string! name, string? column = null) -> System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.CatalogReferenceInfo!>!
+TsqlRefine.PluginSdk.IObjectCatalogProvider.HasData.get -> bool
+TsqlRefine.PluginSdk.IObjectCatalogProvider.ResolveObject(string? database, string? schema, string! name, TsqlRefine.PluginSdk.CatalogObjectKindFilter kind) -> TsqlRefine.PluginSdk.CatalogObjectInfo?
+TsqlRefine.PluginSdk.IObjectCatalogProvider.Scope.get -> TsqlRefine.PluginSdk.CatalogScopeInfo!
 TsqlRefine.PluginSdk.PluginApiVersionAttribute.PluginApiVersionAttribute(int version) -> void
 TsqlRefine.PluginSdk.Position.Position(int Line, int Character) -> void
 TsqlRefine.PluginSdk.Range.Range(TsqlRefine.PluginSdk.Position! Start, TsqlRefine.PluginSdk.Position! End) -> void
@@ -9,7 +101,9 @@ TsqlRefine.PluginSdk.RelationPatternDeviation.RelationPatternDeviation(string! J
 TsqlRefine.PluginSdk.RelationTablePairSummary.RelationTablePairSummary(string! LeftSchema, string! LeftTable, string! RightSchema, string! RightTable, int Total, int PatternCount, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.RelationPatternDeviation!>! Deviations) -> void
 TsqlRefine.PluginSdk.ResolvedColumn.ResolvedColumn(TsqlRefine.PluginSdk.ResolvedTable! Table, TsqlRefine.PluginSdk.SchemaColumnInfo! Column) -> void
 TsqlRefine.PluginSdk.ResolvedTable.ResolvedTable(string! DatabaseName, string! SchemaName, string! TableName, bool IsView) -> void
-TsqlRefine.PluginSdk.RuleContext.RuleContext(string! FilePath, int CompatLevel, TsqlRefine.PluginSdk.ScriptDomAst! Ast, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.Token!>! Tokens, TsqlRefine.PluginSdk.RuleSettings! Settings, TsqlRefine.PluginSdk.ISchemaContext? SchemaContext = null) -> void
+TsqlRefine.PluginSdk.RuleContext.ObjectCatalog.get -> TsqlRefine.PluginSdk.IObjectCatalogProvider?
+TsqlRefine.PluginSdk.RuleContext.ObjectCatalog.init -> void
+TsqlRefine.PluginSdk.RuleContext.RuleContext(string! FilePath, int CompatLevel, TsqlRefine.PluginSdk.ScriptDomAst! Ast, System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.Token!>! Tokens, TsqlRefine.PluginSdk.RuleSettings! Settings, TsqlRefine.PluginSdk.ISchemaContext? SchemaContext = null, TsqlRefine.PluginSdk.IObjectCatalogProvider? ObjectCatalog = null) -> void
 TsqlRefine.PluginSdk.RuleMetadata.RuleMetadata(string! RuleId, string! Description, string! Category, TsqlRefine.PluginSdk.RuleSeverity DefaultSeverity, bool Fixable, int? MinCompatLevel = null, int? MaxCompatLevel = null, System.Uri? DocumentationUri = null) -> void
 TsqlRefine.PluginSdk.SchemaColumnInfo.SchemaColumnInfo(string! Name, TsqlRefine.PluginSdk.SchemaTypeInfo! Type, bool IsNullable, bool IsIdentity = false, bool IsComputed = false) -> void
 TsqlRefine.PluginSdk.SchemaForeignKeyInfo.SchemaForeignKeyInfo(string! Name, TsqlRefine.PluginSdk.ResolvedTable! SourceTable, System.Collections.Generic.IReadOnlyList<string!>! SourceColumns, TsqlRefine.PluginSdk.ResolvedTable! TargetTable, System.Collections.Generic.IReadOnlyList<string!>! TargetColumns) -> void
@@ -19,8 +113,6 @@ TsqlRefine.PluginSdk.SchemaTypeInfo.SchemaTypeInfo(string! TypeName, TsqlRefine.
 TsqlRefine.PluginSdk.SchemaUniqueConstraintInfo.SchemaUniqueConstraintInfo(string! Name, System.Collections.Generic.IReadOnlyList<string!>! Columns) -> void
 TsqlRefine.PluginSdk.TextEdit.TextEdit(TsqlRefine.PluginSdk.Range! Range, string! NewText) -> void
 TsqlRefine.PluginSdk.Token.Token(string! Text, TsqlRefine.PluginSdk.Position! Start, int Length, string? TokenType = null) -> void
-
-const TsqlRefine.PluginSdk.PluginApi.CurrentVersion = 3 -> int
 TsqlRefine.PluginSdk.Diagnostic
 TsqlRefine.PluginSdk.Diagnostic.Code.get -> string?
 TsqlRefine.PluginSdk.Diagnostic.Code.init -> void

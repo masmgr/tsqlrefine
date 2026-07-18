@@ -8,13 +8,19 @@ namespace TsqlRefine.Cli.Tests.Services;
 /// </summary>
 public sealed class SchemaPathResolutionTests
 {
-    private static CliArgs CreateArgs(string? schemaPath = null, string? relationsProfilePath = null, string? configPath = null)
+    private static CliArgs CreateArgs(
+        string? schemaPath = null,
+        string? relationsProfilePath = null,
+        string? objectsCatalogPath = null,
+        string? configPath = null)
     {
         return CliParser.Parse(
             schemaPath is not null
                 ? ["lint", "--stdin", "--schema", schemaPath]
                 : relationsProfilePath is not null
                     ? ["lint", "--stdin", "--relations-profile", relationsProfilePath]
+                    : objectsCatalogPath is not null
+                        ? ["lint", "--stdin", "--objects-catalog", objectsCatalogPath]
                     : configPath is not null
                         ? ["lint", "--stdin", "--config", configPath]
                         : ["lint", "--stdin"]);
@@ -144,5 +150,32 @@ public sealed class SchemaPathResolutionTests
 
         Assert.Null(path);
         Assert.Equal("none", source);
+    }
+
+    [Fact]
+    public void ResolveObjectCatalogPath_WithSchemaPath_DerivesObjectsJson()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var args = CreateArgs();
+        var config = new TsqlRefineConfig(Schema: new SchemaConfig(Path: tempDir));
+
+        var (path, source) = ConfigLoader.ResolveObjectCatalogPath(args, config);
+
+        Assert.Equal(Path.Combine(tempDir, "objects.json"), path);
+        Assert.Contains("schema.path", source);
+    }
+
+    [Fact]
+    public void ResolveObjectCatalogPath_CliOverridesConfig()
+    {
+        var cliPath = Path.Combine(Path.GetTempPath(), "cli-objects.json");
+        var args = CreateArgs(objectsCatalogPath: cliPath);
+        var config = new TsqlRefineConfig(
+            Schema: new SchemaConfig(ObjectsCatalogPath: "config-objects.json"));
+
+        var (path, source) = ConfigLoader.ResolveObjectCatalogPath(args, config);
+
+        Assert.Equal(Path.GetFullPath(cliPath), path);
+        Assert.Equal("--objects-catalog", source);
     }
 }

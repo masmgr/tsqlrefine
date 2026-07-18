@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/objects-catalog.schema.json",
+  "title": "tsqlrefine Object Catalog",
+  "type": "object",
+  "required": ["version", "generatedAt", "compatLevel", "scope", "objects", "references"],
+  "properties": {
+    "version": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "compatLevel": { "type": "integer", "minimum": 100, "maximum": 160 },
+    "scope": { "$ref": "#/$defs/scope" },
+    "objects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/object" }
+    },
+    "references": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/reference" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "position": {
+      "type": "object",
+      "required": ["line", "character"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 0 },
+        "character": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      },
+      "additionalProperties": false
+    },
+    "objectId": {
+      "type": "object",
+      "required": ["schemaName", "name"],
+      "properties": {
+        "databaseName": { "type": ["string", "null"] },
+        "schemaName": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "typeInfo": {
+      "type": "object",
+      "required": ["typeName", "category"],
+      "properties": {
+        "typeName": { "type": "string" },
+        "category": {
+          "enum": ["exactNumeric", "approximateNumeric", "ansiString", "unicodeString", "dateTime", "binary", "uniqueIdentifier", "xml", "spatial", "other"]
+        },
+        "maxLength": { "type": ["integer", "null"] },
+        "precision": { "type": ["integer", "null"] },
+        "scale": { "type": ["integer", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "parameter": {
+      "type": "object",
+      "required": ["name", "typeName", "type", "isOutput", "hasDefault"],
+      "properties": {
+        "name": { "type": "string" },
+        "typeName": { "type": "string" },
+        "type": { "$ref": "#/$defs/typeInfo" },
+        "isOutput": { "type": "boolean" },
+        "hasDefault": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "column": {
+      "type": "object",
+      "required": ["name", "type", "isNullable", "isIdentity", "isComputed"],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "$ref": "#/$defs/typeInfo" },
+        "isNullable": { "type": "boolean" },
+        "isIdentity": { "type": "boolean" },
+        "isComputed": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "object": {
+      "type": "object",
+      "required": ["id", "kind", "parameters", "definedInFile", "definedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/objectId" },
+        "kind": { "enum": ["procedure", "scalarFunction", "tableValuedFunction", "view"] },
+        "parameters": { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+        "resultColumns": { "type": ["array", "null"], "items": { "$ref": "#/$defs/column" } },
+        "definedInFile": { "type": "string" },
+        "definedAt": { "$ref": "#/$defs/range" }
+      },
+      "additionalProperties": false
+    },
+    "reference": {
+      "type": "object",
+      "required": ["toObject", "kind", "resolution", "referencedInFile", "referencedAt", "isDynamic"],
+      "properties": {
+        "fromObject": { "oneOf": [{ "$ref": "#/$defs/objectId" }, { "type": "null" }] },
+        "toObject": { "$ref": "#/$defs/objectId" },
+        "toColumn": { "type": ["string", "null"] },
+        "kind": { "enum": ["execute", "functionCall", "table", "column"] },
+        "resolution": { "enum": ["resolved", "unresolved", "ambiguous", "outOfScope"] },
+        "referencedInFile": { "type": "string" },
+        "referencedAt": { "$ref": "#/$defs/range" },
+        "isDynamic": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "required": ["databases", "isAuthoritative", "includesExternalReferences", "defaultSchema"],
+      "properties": {
+        "databases": { "type": "array", "items": { "type": "string" } },
+        "isAuthoritative": { "type": "boolean" },
+        "includesExternalReferences": { "type": "boolean" },
+        "defaultSchema": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

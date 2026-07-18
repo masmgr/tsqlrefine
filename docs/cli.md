@@ -32,7 +32,8 @@ Commands:
 | `baseline trim` | Remove resolved diagnostics from a baseline |
 | `schema snapshot` | Generate a schema snapshot from SQL Server |
 | `schema collect-relations` | Collect JOIN relation patterns from SQL files |
-| `schema build` | Generate a snapshot and collect relations in one step |
+| `schema collect-objects` | Collect SQL object signatures and references from SQL files |
+| `schema build` | Generate a snapshot, relation profile, and object catalog in one step |
 
 ---
 
@@ -75,6 +76,9 @@ tsqlrefine lint [options] [paths...]
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
 | `--ruleset <name\|path>` | Custom ruleset name or file |
+| `--schema <path>` | Schema snapshot for schema-aware analysis |
+| `--relations-profile <path>` | JOIN relation profile for deviation analysis |
+| `--objects-catalog <path>` | Object catalog for cross-object analysis |
 | `--verbose` | Show detailed information (execution time) |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
@@ -126,7 +130,7 @@ fails, the baseline is not written.
 | `--root <path>` | Root used to normalize file paths; otherwise Git root or common input directory |
 | `--ignorelist`, `--detect-encoding`, `--max-file-size` | Standard file input options |
 | `--compat-level`, `--severity`, `--preset`, `--ruleset` | Standard lint selection options |
-| `--schema`, `--relations-profile` | Optional schema-aware analysis inputs |
+| `--schema`, `--relations-profile`, `--objects-catalog` | Optional schema-aware and cross-object analysis inputs |
 | `-q, --quiet` | Suppress informational stderr output |
 
 #### baseline trim
@@ -334,8 +338,19 @@ tsqlrefine schema build [options] [paths...]
 ```
 
 `schema build` accepts `--connection-string` and the schema filters above, plus
-`--output-dir`, `--relations-output`, and the standard SQL input options. It uses
+`--output-dir`, `--relations-output`, `--objects-output`, and the standard SQL input options.
+It writes `schema.json`, `relations.json`, and `objects.json` by default. It uses
 `TSQLREFINE_CONNECTION_STRING` when `--connection-string` is omitted.
+
+#### schema collect-objects
+
+```
+tsqlrefine schema collect-objects --output objects.json [options] [paths...]
+```
+
+Collects procedure, function, and view definitions plus their static references. It accepts
+the standard SQL input options and `--compat-level`. The generated catalog can be supplied to
+lint, fix, and baseline commands with `--objects-catalog`.
 
 > **Security note:** Avoid placing password-bearing connection strings directly on the
 > command line because process listings, shell history, and CI logs may expose them.

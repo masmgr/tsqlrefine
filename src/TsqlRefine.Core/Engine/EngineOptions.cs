@@ -11,12 +11,14 @@ namespace TsqlRefine.Core.Engine;
 /// <param name="Ruleset">The ruleset configuration specifying which rules to run.</param>
 /// <param name="RuleSettings">Per-rule configuration settings.</param>
 /// <param name="SchemaContext">Optional unified schema context for schema-aware analysis.</param>
+/// <param name="ObjectCatalog">Optional cross-object catalog.</param>
 public sealed record EngineOptions(
     int CompatLevel = 150,
     DiagnosticSeverity MinimumSeverity = DiagnosticSeverity.Hint,
     Ruleset? Ruleset = null,
     RuleSettings? RuleSettings = null,
-    ISchemaContext? SchemaContext = null
+    ISchemaContext? SchemaContext = null,
+    IObjectCatalogProvider? ObjectCatalog = null
 )
 {
     /// <summary>

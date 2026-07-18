@@ -8,6 +8,7 @@ using TsqlRefine.Core.Model;
 using TsqlRefine.Formatting;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Catalog;
 using TsqlRefine.Schema.Relations;
 using TsqlRefine.Schema.Snapshot;
 using TsqlRefine.Schema.SqlServer;
@@ -277,9 +278,10 @@ public sealed class CommandExecutor
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog);
         var result = engine.Run(command, read.Inputs, options);
         var sourceByPath = read.Inputs.ToDictionary(
             input => input.FilePath,
@@ -413,10 +415,11 @@ public sealed class CommandExecutor
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, ruleset, schemaContext));
+            CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -463,10 +466,11 @@ public sealed class CommandExecutor
         var rules = ConfigLoader.LoadRules(args, config, stderr);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, ruleset, schemaContext));
+            CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -540,9 +544,10 @@ public sealed class CommandExecutor
 
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schemaContext);
+        var options = CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -687,6 +692,9 @@ public sealed class CommandExecutor
         var relationsOutputPath = !string.IsNullOrWhiteSpace(args.SchemaRelationsOutput)
             ? Path.GetFullPath(args.SchemaRelationsOutput)
             : Path.Combine(outputDir, "relations.json");
+        var objectsOutputPath = !string.IsNullOrWhiteSpace(args.SchemaObjectsOutput)
+            ? Path.GetFullPath(args.SchemaObjectsOutput)
+            : Path.Combine(outputDir, "objects.json");
 
         // Step 1: Generate schema snapshot
         var snapshotArgs = args with { SchemaOutput = schemaOutputPath };
@@ -699,17 +707,31 @@ public sealed class CommandExecutor
         // Step 2: Collect relations (only if SQL file paths were provided)
         if (args.Paths.Count > 0 || args.Stdin)
         {
+            var inputText = args.Stdin ? await stdin.ReadToEndAsync() : null;
             var relationsArgs = args with { SchemaOutput = relationsOutputPath };
-            var relationsResult = await ExecuteSchemaCollectRelationsAsync(relationsArgs, stdin, stdout, stderr);
+            using var relationsStdin = inputText is null ? null : new StringReader(inputText);
+            var relationsResult = await ExecuteSchemaCollectRelationsAsync(
+                relationsArgs, relationsStdin ?? stdin, stdout, stderr);
             if (relationsResult != 0)
             {
                 return relationsResult;
+            }
+
+            var objectsArgs = args with { SchemaOutput = objectsOutputPath };
+            using var objectsStdin = inputText is null ? null : new StringReader(inputText);
+            var objectsResult = await ExecuteSchemaCollectObjectsAsync(
+                objectsArgs, objectsStdin ?? stdin, stdout, stderr);
+            if (objectsResult != 0)
+            {
+                return objectsResult;
             }
         }
         else if (!args.Quiet)
         {
             await stderr.WriteLineAsync("No SQL files specified; skipping relations collection.");
             await stderr.WriteLineAsync($"Run: tsqlrefine schema collect-relations --output {relationsOutputPath} <sql-files>");
+            await stderr.WriteLineAsync("No SQL files specified; skipping object catalog collection.");
+            await stderr.WriteLineAsync($"Run: tsqlrefine schema collect-objects --output {objectsOutputPath} <sql-files>");
         }
 
         return 0;
@@ -762,6 +784,48 @@ public sealed class CommandExecutor
         return 0;
     }
 
+    /// <summary>
+    /// Executes the 'schema collect-objects' command to collect SQL object definitions and references.
+    /// </summary>
+    public async Task<int> ExecuteSchemaCollectObjectsAsync(
+        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.SchemaOutput))
+        {
+            await stderr.WriteLineAsync("Error: --output is required for collect-objects.");
+            return ExitCodes.ConfigError;
+        }
+
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var compatLevel = args.CompatLevel ?? 150;
+        if (!args.Quiet)
+        {
+            await stderr.WriteLineAsync($"Collecting SQL objects from {read.Inputs.Count} file(s)...");
+        }
+
+        var inputs = read.Inputs.Select(i => (i.Text, i.FilePath));
+        var catalog = ObjectCatalogCollector.Collect(inputs, compatLevel);
+        var json = ObjectCatalogSerializer.Serialize(catalog);
+        var outputPath = Path.GetFullPath(args.SchemaOutput);
+        var directory = Path.GetDirectoryName(outputPath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+        await stdout.WriteLineAsync($"Object catalog written to {outputPath}");
+        await stdout.WriteLineAsync(
+            $"  {read.Inputs.Count} files analyzed, {catalog.Objects.Count} objects, "
+            + $"{catalog.References.Count} references");
+        return 0;
+    }
+
     private static string[]? ParseCommaSeparated(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -774,14 +838,16 @@ public sealed class CommandExecutor
 
     private static EngineOptions CreateEngineOptions(
         CliArgs args, TsqlRefineConfig config, Ruleset? ruleset,
-        ISchemaContext? schemaContext = null)
+        ISchemaContext? schemaContext = null,
+        IObjectCatalogProvider? objectCatalog = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset,
-            SchemaContext: schemaContext
+            SchemaContext: schemaContext,
+            ObjectCatalog: objectCatalog
         );
     }
 
