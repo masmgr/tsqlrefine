@@ -33,11 +33,22 @@ public static class ObjectCatalogCollector
         }
 
         var resolvedReferences = ResolveReferences(objects, references);
+        var databases = objects.Select(obj => obj.Id.DatabaseName)
+            .Concat(references.Select(reference => reference.ToObject.DatabaseName))
+            .Where(database => !string.IsNullOrWhiteSpace(database))
+            .Select(database => database!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         return new ObjectCatalog(
             ObjectCatalogSerializer.CurrentVersion,
             DateTimeOffset.UtcNow,
             compatLevel,
-            new CatalogScope([], isAuthoritative, references.Any(r => r.Resolution == CatalogResolutionStatus.OutOfScope), defaultSchema),
+            new CatalogScope(
+                databases,
+                isAuthoritative,
+                references.Any(r => r.Resolution == CatalogResolutionStatus.OutOfScope),
+                defaultSchema),
             objects,
             resolvedReferences);
     }

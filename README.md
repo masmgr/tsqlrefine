@@ -34,7 +34,7 @@ This creates `tsqlrefine.json` with sensible defaults:
 }
 ```
 
-The `recommended` preset enables 103 rules (out of 149 total). See [Preset Rulesets](#preset-rulesets) for other options.
+The `recommended` preset enables 107 rules (out of 153 total). See [Preset Rulesets](#preset-rulesets) for other options.
 
 For CI pipelines, use JSON output and exit codes:
 
@@ -66,7 +66,7 @@ T-SQL Refine catches problems **before execution** using static analysis on the 
 
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 149 built-in rules covering security, correctness, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 153 built-in rules covering security, correctness, performance, and coding conventions.
 
 Each rule is classified by severity:
 
@@ -236,10 +236,10 @@ Creates the following files:
 | Preset | Rules | Use Case |
 |--------|-------|----------|
 | `security-only` | 16 | Security vulnerabilities and critical safety |
-| `pragmatic` | 48 | Production-ready minimum for legacy codebases |
-| `recommended` | 103 | Balanced for production (default) |
-| `strict-logic` | 126 | Comprehensive correctness without cosmetic rules |
-| `strict` | 149 | Maximum enforcement including style |
+| `pragmatic` | 50 | Production-ready minimum for legacy codebases |
+| `recommended` | 107 | Balanced for production (default) |
+| `strict-logic` | 130 | Comprehensive correctness without cosmetic rules |
+| `strict` | 153 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
@@ -271,7 +271,7 @@ tsqlrefine lint --preset security-only src/**/*.sql
 
 ### Step 2: Correctness (Expand Coverage)
 
-Move to `pragmatic` to add 32 rules: duplicate aliases, column count mismatches, undefined references, and other bugs that cause runtime failures.
+Move to `pragmatic` to add 34 rules: duplicate aliases, column count mismatches, EXEC signature validation, undefined references, and other bugs that cause runtime failures.
 
 ```bash
 tsqlrefine lint --preset pragmatic src/**/*.sql

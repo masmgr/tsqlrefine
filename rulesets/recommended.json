@@ -1,5 +1,9 @@
 {
   "rules": [
+    { "id": "exec-parameter-count-mismatch" },
+    { "id": "exec-parameter-name-mismatch" },
+    { "id": "exec-parameter-type-mismatch" },
+    { "id": "exec-output-not-captured" },
     { "id": "dml-without-where" },
     { "id": "require-semicolon-before-throw" },
     { "id": "top-without-order-by" },

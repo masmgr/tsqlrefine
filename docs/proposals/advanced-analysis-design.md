@@ -615,7 +615,7 @@ tsqlrefine report [--output-format json|html] [--output report.html] [paths...]
 | Phase | 内容 | 依存 | 規模感 | Status |
 |-------|------|------|--------|--------|
 | **1** | ベースライン + SARIF 出力(提案 1.1, 1.2) | なし(Core/PluginSdk モデルは不変) | 小〜中 | Implemented |
-| **2** | オブジェクトカタログ収集 + EXEC 検証 4 ルール(提案 2.1–2.5 前半) | なし | 中 | Planned |
+| **2** | オブジェクトカタログ収集 + EXEC 検証 4 ルール(提案 2.1–2.5 前半) | なし | 中 | Implemented |
 | **3** | CFG 基盤 + トランザクション / カーソル / 変数ルール(提案 3) | なし | 中〜大 | Planned |
 | **4** | テイント解析(提案 4) | Phase 3 の DataFlow 基盤 | 中 | Planned |
 | **5** | 型付き per-rule options + メトリクス + report(提案 5) | Phase 3 の CFG | 中 | Planned |

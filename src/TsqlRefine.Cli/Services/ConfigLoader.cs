@@ -644,6 +644,10 @@ public sealed class ConfigLoader
 
         if (!File.Exists(snapshotPath))
         {
+            if (schemaSource == "config (schema.path)")
+            {
+                return null;
+            }
             throw new ConfigException($"Schema snapshot file not found: {snapshotPath}");
         }
 

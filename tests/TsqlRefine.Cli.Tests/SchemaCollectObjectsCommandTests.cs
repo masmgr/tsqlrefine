@@ -49,4 +49,44 @@ public sealed class SchemaCollectObjectsCommandTests
 
         Assert.Equal(ExitCodes.ConfigError, code);
     }
+
+    [Fact]
+    public async Task Lint_WithObjectCatalogOnly_RunsCrossObjectRule()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"tsqlrefine-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+        try
+        {
+            var definitionPath = Path.Combine(tempDirectory, "definition.sql");
+            var callPath = Path.Combine(tempDirectory, "call.sql");
+            var catalogPath = Path.Combine(tempDirectory, "objects.json");
+            await File.WriteAllTextAsync(
+                definitionPath,
+                "CREATE PROCEDURE dbo.FindUser @id int AS SELECT @id;");
+            await File.WriteAllTextAsync(callPath, "EXEC dbo.FindUser @userId = 1;");
+
+            var collectCode = await CliApp.RunAsync(
+                ["schema", "collect-objects", "--output", catalogPath, definitionPath],
+                TextReader.Null,
+                new StringWriter(),
+                new StringWriter());
+            var stdout = new StringWriter();
+            var lintCode = await CliApp.RunAsync(
+                [
+                    "lint", "--objects-catalog", catalogPath,
+                    "--preset", "recommended", callPath
+                ],
+                TextReader.Null,
+                stdout,
+                new StringWriter());
+
+            Assert.Equal(0, collectCode);
+            Assert.Equal(ExitCodes.Violations, lintCode);
+            Assert.Contains("exec-parameter-name-mismatch", stdout.ToString());
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **149 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **153 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -127,10 +127,10 @@ TsqlRefine provides five preset rulesets:
 | Preset | Rules | Cumulative | Use Case |
 |--------|-------|------------|----------|
 | **security-only** | 16 | 16 | Security vulnerabilities and critical safety only |
-| **pragmatic** | 48 | 48 | Production-ready minimum for legacy codebases |
-| **recommended** | 103 | 103 | Balanced production use with semantic analysis (default) |
-| **strict-logic** | 126 | 126 | Comprehensive correctness without cosmetic style rules |
-| **strict** | 149 | 149 | Maximum enforcement including all style/cosmetic rules |
+| **pragmatic** | 50 | 50 | Production-ready minimum for legacy codebases |
+| **recommended** | 107 | 107 | Balanced production use with semantic analysis (default) |
+| **strict-logic** | 130 | 130 | Comprehensive correctness without cosmetic style rules |
+| **strict** | 153 | 153 | Maximum enforcement including all style/cosmetic rules |
 
 ```powershell
 # Use recommended preset (default)

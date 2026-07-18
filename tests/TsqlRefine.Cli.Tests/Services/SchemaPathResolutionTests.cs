@@ -1,5 +1,6 @@
 using TsqlRefine.Cli.Services;
 using TsqlRefine.Core.Config;
+using TsqlRefine.Schema.Catalog;
 
 namespace TsqlRefine.Cli.Tests.Services;
 
@@ -177,5 +178,34 @@ public sealed class SchemaPathResolutionTests
 
         Assert.Equal(Path.GetFullPath(cliPath), path);
         Assert.Equal("--objects-catalog", source);
+    }
+
+    [Fact]
+    public void LoadObjectCatalog_WithSchemaPathAndNoSnapshot_LoadsCatalogIndependently()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var catalog = ObjectCatalogCollector.Collect(
+                [("CREATE PROCEDURE dbo.Ping AS SELECT 1;", "ping.sql")],
+                150);
+            File.WriteAllText(
+                Path.Combine(tempDir, "objects.json"),
+                ObjectCatalogSerializer.Serialize(catalog));
+            var args = CreateArgs();
+            var config = new TsqlRefineConfig(Schema: new SchemaConfig(Path: tempDir));
+
+            var schemaContext = ConfigLoader.LoadSchemaContext(args, config);
+            var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config);
+
+            Assert.Null(schemaContext);
+            Assert.NotNull(objectCatalog);
+            Assert.True(objectCatalog.HasData);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 }
