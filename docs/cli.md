@@ -363,6 +363,11 @@ This format is similar to ESLint / GCC / rustc and is recognized as clickable li
 
 Based on VSCode `Diagnostic` compatible format, bundled by file.
 
+Machine-readable contracts are available at
+[`schemas/lint-result.schema.json`](../schemas/lint-result.schema.json) and
+[`schemas/fix-result.schema.json`](../schemas/fix-result.schema.json). CI validates
+serialized CLI model output against these Draft 2020-12 schemas.
+
 ### 4.1 Top Level
 
 ```ts

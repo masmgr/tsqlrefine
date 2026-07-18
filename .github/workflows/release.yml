@@ -52,6 +52,15 @@ jobs:
           dotnet pack src/TsqlRefine.Cli/TsqlRefine.Cli.csproj -c Release --no-build /p:VersionSuffix=
           dotnet pack src/TsqlRefine.PluginSdk/TsqlRefine.PluginSdk.csproj -c Release --no-build /p:VersionSuffix=
 
+      - name: Smoke test packaged CLI
+        run: |
+          dotnet tool install --tool-path .artifacts/smoke --add-source "$PWD/nupkg" TsqlRefine --version "${{ steps.extract_version.outputs.VERSION }}"
+          .artifacts/smoke/tsqlrefine --version
+          .artifacts/smoke/tsqlrefine list-rules > /dev/null
+          printf 'SELECT 1;\n' | .artifacts/smoke/tsqlrefine lint --stdin --output json > smoke-lint.json
+          grep -q '"tool": "tsqlrefine"' smoke-lint.json
+          printf 'select 1;\n' | .artifacts/smoke/tsqlrefine format --stdin | grep -q 'SELECT 1;'
+
       - name: Generate SHA256 checksums
         run: |
           cd nupkg

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/fix-result.schema.json",
+  "title": "tsqlrefine fix result",
+  "type": "object",
+  "required": ["tool", "version", "command", "files"],
+  "properties": {
+    "tool": { "const": "tsqlrefine" },
+    "version": { "type": "string" },
+    "command": { "const": "fix" },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["filePath", "originalText", "fixedText", "diagnostics", "appliedFixes", "skippedFixes"],
+        "properties": {
+          "filePath": { "type": "string" }, "originalText": { "type": "string" }, "fixedText": { "type": "string" },
+          "diagnostics": { "type": "array" }, "appliedFixes": { "type": "array" }, "skippedFixes": { "type": "array" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
