@@ -1,6 +1,5 @@
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
@@ -42,14 +41,6 @@ public sealed class MultiRowUpdateFromRule : IRule
         {
             var updateSpec = node.UpdateSpecification;
             if (updateSpec?.FromClause?.TableReferences is not { Count: > 0 } tableRefs)
-            {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            // Skip temp tables and table variables as update targets. The target is usually
-            // an alias defined in the FROM clause, so resolve it back to the underlying table.
-            if (IsTemporaryOrVariableTarget(updateSpec.Target, tableRefs))
             {
                 base.ExplicitVisit(node);
                 return;
@@ -109,54 +100,5 @@ public sealed class MultiRowUpdateFromRule : IRule
                 ? qualifiedJoin.SearchCondition
                 : join.SecondTableReference;
 
-        private static string? GetTargetName(TableReference? target)
-        {
-            return target switch
-            {
-                NamedTableReference namedTarget => namedTarget.SchemaObject.BaseIdentifier?.Value,
-                VariableTableReference variableTarget => variableTarget.Variable?.Name,
-                _ => null
-            };
-        }
-
-        private static bool IsTemporaryOrVariableTarget(
-            TableReference? target,
-            IList<TableReference> fromTableRefs)
-        {
-            var targetName = GetTargetName(target);
-            if (targetName is null)
-            {
-                return false;
-            }
-
-            // Direct reference (e.g. UPDATE #Temp ... FROM ...).
-            if (AliasMapBuilder.IsTemporaryOrVariable(targetName))
-            {
-                return true;
-            }
-
-            // The target may be an alias declared in the FROM clause; resolve it.
-            var leaves = new List<TableReference>();
-            TableReferenceHelpers.CollectTableReferences(fromTableRefs, leaves);
-
-            foreach (var leaf in leaves)
-            {
-                if (leaf is NamedTableReference named &&
-                    string.Equals(named.Alias?.Value, targetName, StringComparison.OrdinalIgnoreCase) &&
-                    named.SchemaObject.BaseIdentifier?.Value is { } baseName &&
-                    AliasMapBuilder.IsTemporaryOrVariable(baseName))
-                {
-                    return true;
-                }
-
-                if (leaf is VariableTableReference variable &&
-                    string.Equals(variable.Alias?.Value ?? variable.Variable?.Name, targetName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
     }
 }

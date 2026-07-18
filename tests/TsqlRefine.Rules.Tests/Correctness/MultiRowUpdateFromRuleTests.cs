@@ -98,7 +98,7 @@ public sealed class MultiRowUpdateFromRuleTests
     }
 
     [Fact]
-    public void Analyze_TempTableTarget_ReturnsEmpty()
+    public void Analyze_TempTableTarget_ReturnsDiagnostic()
     {
         const string sql = """
             UPDATE t SET t.Value = s.Value
@@ -109,11 +109,11 @@ public sealed class MultiRowUpdateFromRuleTests
 
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
     }
 
     [Fact]
-    public void Analyze_TableVariableTarget_ReturnsEmpty()
+    public void Analyze_TableVariableTarget_ReturnsDiagnostic()
     {
         const string sql = """
             UPDATE t SET t.Value = s.Value
@@ -124,7 +124,7 @@ public sealed class MultiRowUpdateFromRuleTests
 
         var diagnostics = _rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
     }
 
     [Fact]

@@ -25,6 +25,8 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
     {
         private SchemaColumnResolver? _resolver;
         private ResolvedTable? _currentTarget;
+        private string? _currentUnresolvedTargetQualifier;
+        private string? _currentTargetDisplayName;
 
         public override void ExplicitVisit(UpdateStatement node)
         {
@@ -35,28 +37,26 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
                 return;
             }
 
-            var target = updateSpec.Target as NamedTableReference;
-            if (target is null)
-            {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            var tableName = target.SchemaObject.BaseIdentifier?.Value;
-            if (tableName is null || AliasMapBuilder.IsTemporaryOrVariable(tableName))
+            var targetName = GetTargetName(updateSpec.Target);
+            if (targetName is null)
             {
                 base.ExplicitVisit(node);
                 return;
             }
 
             var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
-            var resolvedTarget = ResolveUpdateTarget(
-                updateSpec, tableName,
-                target.SchemaObject.DatabaseIdentifier?.Value,
-                target.SchemaObject.SchemaIdentifier?.Value,
-                aliasMap);
+            var resolvedTarget = updateSpec.Target is NamedTableReference namedTarget
+                ? ResolveUpdateTarget(
+                    targetName,
+                    namedTarget.SchemaObject.DatabaseIdentifier?.Value,
+                    namedTarget.SchemaObject.SchemaIdentifier?.Value,
+                    aliasMap)
+                : null;
+            var unresolvedTarget = resolvedTarget is null
+                ? ResolveTemporaryOrVariableTarget(targetName, tableRefs)
+                : null;
 
-            if (resolvedTarget is null)
+            if (resolvedTarget is null && unresolvedTarget is null)
             {
                 base.ExplicitVisit(node);
                 return;
@@ -64,9 +64,14 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
 
             var previousResolver = _resolver;
             var previousTarget = _currentTarget;
+            var previousUnresolvedTargetQualifier = _currentUnresolvedTargetQualifier;
+            var previousTargetDisplayName = _currentTargetDisplayName;
 
             _resolver = new SchemaColumnResolver(schema, aliasMap);
             _currentTarget = resolvedTarget;
+            _currentUnresolvedTargetQualifier = unresolvedTarget?.Qualifier;
+            _currentTargetDisplayName = unresolvedTarget?.DisplayName
+                ?? (resolvedTarget is null ? targetName : $"{resolvedTarget.SchemaName}.{resolvedTarget.TableName}");
 
             foreach (var tableRef in tableRefs)
             {
@@ -75,6 +80,8 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
 
             _resolver = previousResolver;
             _currentTarget = previousTarget;
+            _currentUnresolvedTargetQualifier = previousUnresolvedTargetQualifier;
+            _currentTargetDisplayName = previousTargetDisplayName;
 
             base.ExplicitVisit(node);
         }
@@ -120,6 +127,15 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             {
                 var leftResolved = _resolver!.ResolveColumnToTable(leftCol);
                 var rightResolved = _resolver.ResolveColumnToTable(rightCol);
+
+                if (_currentTarget is null)
+                {
+                    CollectUnresolvedTargetPair(
+                        leftCol, rightCol, leftResolved, rightResolved,
+                        targetColumns, joinedColumns, ref joinedTable);
+                    continue;
+                }
+
                 if (leftResolved is null || rightResolved is null)
                 {
                     continue;
@@ -157,23 +173,120 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
                 return;
             }
 
-            var cardinality = schema.EstimateJoinCardinality(
-                _currentTarget!, targetColumns,
-                joinedTable, joinedColumns);
+            var canMatchMultipleRows = _currentTarget is null
+                ? !schema.IsUniqueColumnSet(joinedTable, joinedColumns)
+                : schema.EstimateJoinCardinality(
+                    _currentTarget, targetColumns,
+                    joinedTable, joinedColumns) is JoinCardinality.OneToMany or JoinCardinality.ManyToMany;
 
-            if (cardinality is JoinCardinality.OneToMany or JoinCardinality.ManyToMany)
+            if (canMatchMultipleRows)
             {
                 AddDiagnostic(
                     fragment: joinNode.SearchCondition,
-                    message: $"UPDATE may be non-deterministic: join to '{joinedTable.SchemaName}.{joinedTable.TableName}' can match multiple rows per '{_currentTarget!.SchemaName}.{_currentTarget.TableName}' row (join columns on '{joinedTable.TableName}' are not unique).",
+                    message: $"UPDATE may be non-deterministic: join to '{joinedTable.SchemaName}.{joinedTable.TableName}' can match multiple rows per '{_currentTargetDisplayName}' row (join columns on '{joinedTable.TableName}' are not unique).",
                     code: "update-join-cardinality-mismatch",
                     category: "Schema",
                     fixable: false);
             }
         }
 
+        private void CollectUnresolvedTargetPair(
+            ColumnReferenceExpression leftColumn,
+            ColumnReferenceExpression rightColumn,
+            (ResolvedTable Table, string ColumnName)? leftResolved,
+            (ResolvedTable Table, string ColumnName)? rightResolved,
+            ICollection<string> targetColumns,
+            ICollection<string> joinedColumns,
+            ref ResolvedTable? joinedTable)
+        {
+            if (_currentUnresolvedTargetQualifier is null)
+            {
+                return;
+            }
+
+            if (IsQualifiedBy(leftColumn, _currentUnresolvedTargetQualifier) && rightResolved is not null)
+            {
+                TryAddPair(leftColumn, rightResolved.Value, targetColumns, joinedColumns, ref joinedTable);
+            }
+            else if (IsQualifiedBy(rightColumn, _currentUnresolvedTargetQualifier) && leftResolved is not null)
+            {
+                TryAddPair(rightColumn, leftResolved.Value, targetColumns, joinedColumns, ref joinedTable);
+            }
+        }
+
+        private static void TryAddPair(
+            ColumnReferenceExpression targetColumn,
+            (ResolvedTable Table, string ColumnName) joined,
+            ICollection<string> targetColumns,
+            ICollection<string> joinedColumns,
+            ref ResolvedTable? joinedTable)
+        {
+            if (joinedTable is not null && !ResolvedTableComparers.TablesAreEqual(joined.Table, joinedTable))
+            {
+                return;
+            }
+
+            var targetColumnName = targetColumn.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value;
+            if (targetColumnName is null)
+            {
+                return;
+            }
+
+            targetColumns.Add(targetColumnName);
+            joinedColumns.Add(joined.ColumnName);
+            joinedTable ??= joined.Table;
+        }
+
+        private static bool IsQualifiedBy(ColumnReferenceExpression column, string qualifier)
+        {
+            var identifiers = column.MultiPartIdentifier?.Identifiers;
+            return identifiers is { Count: >= 2 }
+                && string.Equals(identifiers[^2].Value, qualifier, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string? GetTargetName(TableReference? target) => target switch
+        {
+            NamedTableReference named => named.SchemaObject.BaseIdentifier?.Value,
+            VariableTableReference variable => variable.Variable?.Name,
+            _ => null,
+        };
+
+        private static UnresolvedUpdateTarget? ResolveTemporaryOrVariableTarget(
+            string targetName,
+            IList<TableReference> tableRefs)
+        {
+            var leaves = new List<TableReference>();
+            TableReferenceHelpers.CollectTableReferences(tableRefs, leaves);
+
+            foreach (var leaf in leaves)
+            {
+                if (leaf is NamedTableReference named &&
+                    named.SchemaObject.BaseIdentifier?.Value is { } baseName &&
+                    AliasMapBuilder.IsTemporaryOrVariable(baseName))
+                {
+                    var qualifier = named.Alias?.Value ?? baseName;
+                    if (string.Equals(targetName, qualifier, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(targetName, baseName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new UnresolvedUpdateTarget(qualifier, baseName);
+                    }
+                }
+
+                if (leaf is VariableTableReference variable && variable.Variable?.Name is { } variableName)
+                {
+                    var qualifier = variable.Alias?.Value ?? variableName;
+                    if (string.Equals(targetName, qualifier, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(targetName, variableName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new UnresolvedUpdateTarget(qualifier, variableName);
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private ResolvedTable? ResolveUpdateTarget(
-            UpdateSpecification updateSpec,
             string tableName,
             string? dbName,
             string? schemaName,
@@ -191,5 +304,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
 
             return schema.ResolveTable(null, null, tableName);
         }
+
+        private sealed record UnresolvedUpdateTarget(string Qualifier, string DisplayName);
     }
 }
