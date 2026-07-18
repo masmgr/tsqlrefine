@@ -65,7 +65,7 @@ public sealed class PreferTrimOverLtrimRtrimRule : IRule
                     {
                         AddDiagnostic(
                             fragment: node,
-                            message: $"Use TRIM() instead of nested {functionName.ToUpperInvariant()}({innerName.ToUpperInvariant}()); it's clearer and less error-prone.",
+                            message: $"Use TRIM() instead of nested {functionName.ToUpperInvariant()}({innerName.ToUpperInvariant()}()); it's clearer and less error-prone.",
                             code: "prefer-trim-over-ltrim-rtrim",
                             category: "Style",
                             fixable: false

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
@@ -24,7 +25,7 @@ public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
 
     private sealed class BanQueryHintsVisitor : DiagnosticVisitorBase
     {
-        private static readonly HashSet<TableHintKind> BannedTableHintKinds =
+        private static readonly FrozenSet<TableHintKind> BannedTableHintKinds = FrozenSet.ToFrozenSet(
         [
             TableHintKind.ForceSeek,
             TableHintKind.ForceScan,
@@ -32,9 +33,9 @@ public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
             TableHintKind.NoExpand,
             TableHintKind.FastFirstRow,
             TableHintKind.SpatialWindowMaxCells
-        ];
+        ]);
 
-        private static readonly HashSet<OptimizerHintKind> ExcludedOptimizerHintKinds =
+        private static readonly FrozenSet<OptimizerHintKind> ExcludedOptimizerHintKinds = FrozenSet.ToFrozenSet(
         [
             // Common operational hints frequently used in production:
             // keep noise low and focus this rule on optimizer-forcing hints.
@@ -44,7 +45,7 @@ public sealed class BanQueryHintsRule : DiagnosticVisitorRuleBase
             OptimizerHintKind.Label,
             // OPTION (TABLE HINT(...)) is evaluated via each nested TableHint.
             OptimizerHintKind.TableHints
-        ];
+        ]);
 
         // Base table hint handler.
         public override void ExplicitVisit(TableHint node)

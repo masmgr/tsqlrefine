@@ -28,6 +28,18 @@ public sealed class PreferTrimOverLtrimRtrimRuleTests
         Assert.Contains("TRIM", diagnostics[0].Message);
     }
 
+    [Fact]
+    public void Analyze_LowercaseNestedTrim_ReportsUppercaseFunctionNames()
+    {
+        var context = CreateContext("select ltrim(rtrim(name)) from users;", compatLevel: 140);
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+
+        Assert.Equal(
+            "Use TRIM() instead of nested LTRIM(RTRIM()); it's clearer and less error-prone.",
+            diagnostic.Message);
+    }
+
     [Theory]
     [InlineData("SELECT TRIM(name) FROM users;")]
     [InlineData("SELECT LTRIM(name) FROM users;")]

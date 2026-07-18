@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using TsqlRefine.Core.Config;
@@ -13,20 +14,20 @@ public static class CliParser
 {
     public const string ConnectionStringEnvironmentVariable = "TSQLREFINE_CONNECTION_STRING";
 
-    private static readonly HashSet<string> HelpVersionTokens = new(StringComparer.Ordinal)
-    {
+    private static readonly FrozenSet<string> HelpVersionTokens = FrozenSet.ToFrozenSet(
+    [
         "--help", "-h", "-?", "/?",
         "--version"
-    };
+    ], StringComparer.Ordinal);
 
-    private static readonly HashSet<string> OutputFormatCommands = new(StringComparer.Ordinal)
-    {
+    private static readonly FrozenSet<string> OutputFormatCommands = FrozenSet.ToFrozenSet(
+    [
         "lint",
         "fix",
         "list-rules",
         "list-plugins",
         "print-format-config"
-    };
+    ], StringComparer.Ordinal);
 
     // =================================================================
     // Option Definitions
