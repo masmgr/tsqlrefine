@@ -27,11 +27,16 @@ public sealed class AvoidExecDynamicSqlRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(ExecuteStatement node)
         {
             // Check if this is dynamic SQL execution (EXEC(@var) or EXEC('string'))
-            if (node.ExecuteSpecification?.ExecutableEntity is ExecutableStringList)
+            if (node.ExecuteSpecification?.ExecutableEntity is ExecutableStringList executableStrings)
             {
+                var isConstant = executableStrings.Strings.All(static expression => expression is StringLiteral);
+                var message = isConstant
+                    ? "Avoid executing constant SQL text with EXEC('...'). Prefer static SQL so dependencies remain visible to analysis and tooling."
+                    : "Avoid dynamic SQL execution with EXEC(@variable). Consider using sp_executesql with parameters or static stored procedures to prevent SQL injection.";
+
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetFirstTokenRange(node),
-                    message: "Avoid dynamic SQL execution with EXEC(@variable) or EXEC('string'). Consider using sp_executesql with parameters or static stored procedures to prevent SQL injection.",
+                    message: message,
                     code: "avoid-exec-dynamic-sql",
                     category: "Security",
                     fixable: false
