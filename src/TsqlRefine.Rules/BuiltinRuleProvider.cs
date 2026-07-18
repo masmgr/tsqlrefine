@@ -65,6 +65,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new HavingColumnMismatchRule(),
         new MultiRowUpdateFromRule(),
         new LenForEmptinessCheckRule(),
+        new RequireSemicolonBeforeThrowRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -102,6 +103,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new LinkedServerRule(),
         new AvoidExecuteAsRule(),
         new RequireParameterizedSpExecutesqlRule(),
+        new AvoidHardcodedPasswordRule(),
 
         // === Schema ===
         new NamedConstraintRule(),

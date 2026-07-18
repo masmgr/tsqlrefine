@@ -1,6 +1,7 @@
 {
   "rules": [
     { "id": "dml-without-where" },
+    { "id": "require-semicolon-before-throw" },
     { "id": "top-without-order-by" },
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
@@ -21,6 +22,7 @@
     { "id": "order-by-in-subquery" },
     { "id": "avoid-named-constraint-in-temp-table" },
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },
     { "id": "avoid-execute-as" },

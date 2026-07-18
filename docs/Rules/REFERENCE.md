@@ -19,17 +19,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 143
+- **Total Rules**: 145
 - **Fixable Rules**: 14 (10%)
 - **By Importance Tier**:
-  - Critical (security-only): 14 rules
+  - Critical (security-only): 16 rules
   - Essential (pragmatic): 32 rules
   - Recommended (recommended): 52 rules
   - Thorough (strict-logic): 22 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 23 rules (16%)
-  - Warning: 81 rules (57%)
+  - Error: 24 rules (17%)
+  - Warning: 82 rules (57%)
   - Information: 39 rules (27%)
 
 ## Importance Tiers
@@ -42,19 +42,19 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
-| **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 52 | 98 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 22 | 120 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 143 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Critical** | security-only | 16 | 16 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
+| **Essential** | pragmatic | 32 | 48 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 52 | 100 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 22 | 122 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 145 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Security** | 5 | Identifies security vulnerabilities like SQL injection |
+| **Security** | 6 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 41 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 42 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 23 | Flags patterns that can cause performance issues |
 | **Transactions** | 15 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
@@ -65,14 +65,15 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Critical (security-only)
 
-**14 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
+**16 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
 
-#### Security (5 rules)
+#### Security (6 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md) | Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks. | Warning | No |
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection | Warning | No |
+| [avoid-hardcoded-password](security/avoid-hardcoded-password.md) | Detects hardcoded passwords in login DDL and ad hoc data-source connection strings. | Warning | No |
 | [avoid-execute-as](security/avoid-execute-as.md) | Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation. | Warning | No |
 | [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
 | [require-parameterized-sp-executesql](security/require-parameterized-sp-executesql.md) | Detects sp_executesql calls without proper parameterization or with string concatenation. | Warning | No |
@@ -86,12 +87,13 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [dangerous-ddl](safety/dangerous-ddl.md) | Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss. | Warning | No |
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications. | Error | No |
 
-#### Correctness (5 rules)
+#### Correctness (6 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [require-column-list-for-insert-select](correctness/require-column-list-for-insert-select.md) | INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
 | [require-column-list-for-insert-values](correctness/require-column-list-for-insert-values.md) | INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
+| [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md) | Requires the statement immediately before THROW to be terminated with a semicolon. | Error | No |
 | [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md) | Detects duplicate table aliases in the same scope, which causes ambiguous references. | Error | No |
 | [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md) | Detects column count mismatches between the target column list and the source in INSERT statements. | Error | No |
 | [semantic/undefined-alias](correctness/semantic-undefined-alias.md) | Detects references to undefined table aliases in column qualifiers. | Error | No |
@@ -143,7 +145,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
-| [avoid-deprecated-types](schema/avoid-deprecated-types.md) | Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead. | Warning | No |
+| [avoid-deprecated-types](schema/avoid-deprecated-types.md) | Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types and recommends modern replacements. | Warning | No |
 | [delete-column-not-in-table](schema/delete-column-not-in-table.md) | Detects DELETE statements whose WHERE clause references columns not found in the target table. | Error | No |
 | [duplicate-column-definition](schema/duplicate-column-definition.md) | Detects duplicate column names in CREATE TABLE definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-table-function-column](schema/duplicate-table-function-column.md) | Detects duplicate column names in table-valued function definitions; duplicate columns always cause a runtime error. | Error | No |
@@ -328,7 +330,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (23 rules)
+### Error (24 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -345,6 +347,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-view-column](schema/duplicate-view-column.md)
 - [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
+- [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
 - [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md)
@@ -354,7 +357,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (81 rules)
+### Warning (82 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -367,6 +370,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md)
 - [avoid-execute-as](security/avoid-execute-as.md)
 - [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md)
+- [avoid-hardcoded-password](security/avoid-hardcoded-password.md)
 - [avoid-heap-table](schema/avoid-heap-table.md)
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
 - [avoid-merge](safety/avoid-merge.md)

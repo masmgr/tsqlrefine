@@ -1,10 +1,12 @@
 {
   "rules": [
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },
     { "id": "avoid-execute-as" },
     { "id": "dml-without-where" },
+    { "id": "require-semicolon-before-throw" },
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
     { "id": "semantic-undefined-alias" },

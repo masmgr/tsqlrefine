@@ -1,6 +1,7 @@
 {
   "rules": [
     { "id": "dml-without-where" },
+    { "id": "require-semicolon-before-throw" },
     { "id": "top-without-order-by" },
     { "id": "semantic-undefined-alias" },
     { "id": "semantic-duplicate-alias" },
@@ -28,6 +29,7 @@
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },
     { "id": "like-leading-wildcard" },

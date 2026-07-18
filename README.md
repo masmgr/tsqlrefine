@@ -34,7 +34,7 @@ This creates `tsqlrefine.json` with sensible defaults:
 }
 ```
 
-The `recommended` preset enables 87 rules (out of 130 total). See [Preset Rulesets](#preset-rulesets) for other options.
+The `recommended` preset enables 100 rules (out of 145 total). See [Preset Rulesets](#preset-rulesets) for other options.
 
 For CI pipelines, use JSON output and exit codes:
 
@@ -207,11 +207,11 @@ Creates the following files:
 
 | Preset | Rules | Use Case |
 |--------|-------|----------|
-| `security-only` | 14 | Security vulnerabilities and critical safety |
-| `pragmatic` | 43 | Production-ready minimum for legacy codebases |
-| `recommended` | 87 | Balanced for production (default) |
-| `strict-logic` | 107 | Comprehensive correctness without cosmetic rules |
-| `strict` | 130 | Maximum enforcement including style |
+| `security-only` | 16 | Security vulnerabilities and critical safety |
+| `pragmatic` | 48 | Production-ready minimum for legacy codebases |
+| `recommended` | 100 | Balanced for production (default) |
+| `strict-logic` | 122 | Comprehensive correctness without cosmetic rules |
+| `strict` | 145 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
@@ -235,7 +235,7 @@ Gradually introduce tsqlrefine to your team by starting strict on critical issue
 
 ### Step 1: Security & Safety (Block PRs)
 
-Start with the `security-only` preset. These 14 rules catch SQL injection, dangerous procedures, and accidental mass UPDATE/DELETE — issues that should never reach production.
+Start with the `security-only` preset. These 16 rules catch SQL injection, exposed passwords, broken error propagation, dangerous procedures, and accidental mass UPDATE/DELETE — issues that should never reach production.
 
 ```bash
 tsqlrefine lint --preset security-only src/**/*.sql
@@ -243,7 +243,7 @@ tsqlrefine lint --preset security-only src/**/*.sql
 
 ### Step 2: Correctness (Expand Coverage)
 
-Move to `pragmatic` to add 29 correctness rules: duplicate aliases, column count mismatches, undefined references, and other bugs that cause runtime failures.
+Move to `pragmatic` to add 32 rules: duplicate aliases, column count mismatches, undefined references, and other bugs that cause runtime failures.
 
 ```bash
 tsqlrefine lint --preset pragmatic src/**/*.sql
