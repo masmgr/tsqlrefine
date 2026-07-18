@@ -102,7 +102,7 @@ public static class CliApp
             WarnConflictingOptions(parsed, stderr);
 
             // Warn about legacy file locations only for commands that use config files
-            if (command is "lint" or "format" or "fix")
+            if (command is "lint" or "format" or "fix" or "baseline create" or "baseline trim")
             {
                 WarnLegacyFileLocations(parsed, stderr);
             }
@@ -121,6 +121,8 @@ public static class CliApp
                 "format" => await commandExecutor.ExecuteFormatAsync(parsed, stdin, stdout, stderr),
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
+                "baseline create" => await commandExecutor.ExecuteBaselineCreateAsync(parsed, stdin, stdout, stderr),
+                "baseline trim" => await commandExecutor.ExecuteBaselineTrimAsync(parsed, stdin, stdout, stderr),
                 "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
                 "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
                 "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),

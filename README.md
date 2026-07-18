@@ -45,6 +45,21 @@ tsqlrefine lint --output json src/**/*.sql
 
 See [CI Integration Guide](docs/ci-integration.md) for full GitHub Actions / Azure Pipelines / GitLab CI examples.
 
+Existing codebases can adopt linting incrementally with a diagnostic baseline, while CI systems
+can consume SARIF directly:
+
+```bash
+# Record existing diagnostics, then fail only on new diagnostics
+tsqlrefine baseline create --output .tsqlrefine/baseline.json src
+tsqlrefine lint --baseline .tsqlrefine/baseline.json src
+
+# GitHub Code Scanning / Azure DevOps compatible output
+tsqlrefine lint --output sarif src > tsqlrefine.sarif
+```
+
+The baseline path can also be stored as `"baseline": ".tsqlrefine/baseline.json"` in
+`tsqlrefine.json`. Use `baseline trim` after fixing existing findings.
+
 ## Features
 
 T-SQL Refine catches problems **before execution** using static analysis on the SQL script alone — no database connection required. Designed for CI/CD pipelines and offline validation.
@@ -73,6 +88,9 @@ echo "SELECT * FROM users;" | tsqlrefine lint --stdin
 
 # Output as JSON (for CI integration)
 tsqlrefine lint --output json path/to/file.sql
+
+# Output SARIF 2.1.0
+tsqlrefine lint --output sarif path/to/file.sql
 ```
 
 **Example output:**

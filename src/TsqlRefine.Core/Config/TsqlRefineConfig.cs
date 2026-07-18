@@ -103,6 +103,7 @@ public sealed record SchemaConfig(
 /// <param name="Rules">Per-rule severity overrides. Keys are rule IDs, values are severity strings
 /// ("error", "warning", "info", "inherit", "none").</param>
 /// <param name="Schema">Schema-aware analysis settings.</param>
+/// <param name="Baseline">Path to a baseline JSON file. Relative paths are resolved from the config file directory.</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,
@@ -110,7 +111,8 @@ public sealed record TsqlRefineConfig(
     IReadOnlyList<PluginConfig>? Plugins = null,
     FormattingConfig? Formatting = null,
     IReadOnlyDictionary<string, string>? Rules = null,
-    SchemaConfig? Schema = null
+    SchemaConfig? Schema = null,
+    string? Baseline = null
 )
 {
     /// <summary>
@@ -233,6 +235,11 @@ public sealed record TsqlRefineConfig(
         if (Schema is not null && string.IsNullOrWhiteSpace(Schema.DefaultSchema))
         {
             return "Invalid schema.defaultSchema: must not be empty.";
+        }
+
+        if (Baseline is not null && string.IsNullOrWhiteSpace(Baseline))
+        {
+            return "Invalid baseline: must not be empty.";
         }
 
         return null;

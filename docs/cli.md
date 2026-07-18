@@ -28,6 +28,8 @@ Commands:
 | `print-format-config` | Output effective formatting options |
 | `list-rules` | List available rules (loaded) |
 | `list-plugins` | List loaded plugins (Rule plugins only) |
+| `baseline create` | Record current diagnostics as a baseline |
+| `baseline trim` | Remove resolved diagnostics from a baseline |
 | `schema snapshot` | Generate a schema snapshot from SQL Server |
 | `schema collect-relations` | Collect JOIN relation patterns from SQL files |
 | `schema build` | Generate a snapshot and collect relations in one step |
@@ -65,7 +67,10 @@ tsqlrefine lint [options] [paths...]
 | `--ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
-| `--output <text\|json>` | Output format (default: `text`) |
+| `--output <text\|json\|sarif>` | Output format (default: `text`) |
+| `--baseline <path>` | Suppress diagnostics recorded in a baseline file |
+| `--root <path>` | Validate or set the root used for baseline path normalization |
+| `--show-suppressed` | Include baseline-suppressed diagnostics in text, JSON, or SARIF output |
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
@@ -96,6 +101,50 @@ Time: 42ms
 ```
 
 With `--quiet` (`-q`), all informational stderr output is suppressed. Only stdout diagnostics and the exit code remain. This is designed for IDE/extension integration where machine-readable output is consumed programmatically.
+
+When a baseline is active, the summary and exit code count only active diagnostics. A separate
+stderr line reports the number of suppressed diagnostics. Parse errors and parser exceptions are
+never suppressed. With `--show-suppressed`, text output adds `Suppressed`, JSON diagnostics add
+`suppressed` and `fingerprint`, and SARIF results add an external suppression.
+
+SARIF output conforms to SARIF 2.1.0 and includes rule metadata, source locations, and stable
+`partialFingerprints` suitable for GitHub Code Scanning and other SARIF consumers.
+
+#### baseline create
+
+```
+tsqlrefine baseline create --output <path> [options] [paths...]
+```
+
+Runs lint with the selected preset/ruleset and records all non-parse diagnostics. Path input is
+required; stdin is rejected because it has no stable repository-relative identity. If parsing
+fails, the baseline is not written.
+
+| Option | Description |
+|------------|------|
+| `--output <path>` | Required baseline JSON output path |
+| `--root <path>` | Root used to normalize file paths; otherwise Git root or common input directory |
+| `--ignorelist`, `--detect-encoding`, `--max-file-size` | Standard file input options |
+| `--compat-level`, `--severity`, `--preset`, `--ruleset` | Standard lint selection options |
+| `--schema`, `--relations-profile` | Optional schema-aware analysis inputs |
+| `-q, --quiet` | Suppress informational stderr output |
+
+#### baseline trim
+
+```
+tsqlrefine baseline trim --baseline <path> [options] [paths...]
+```
+
+Re-runs lint and removes resolved entries only for files included in the current invocation.
+Entries for files outside the analyzed input remain unchanged. `--remove-missing` additionally
+removes entries whose files no longer exist. Parse failures leave the baseline unchanged.
+
+| Option | Description |
+|------------|------|
+| `--baseline <path>` | Baseline to update; may instead come from `tsqlrefine.json` |
+| `--root <path>` | Assert the root stored by the baseline |
+| `--remove-missing` | Remove entries for files that no longer exist |
+| Other lint options | Same rule, schema, and file-input options as `baseline create` |
 
 #### format
 
@@ -399,6 +448,8 @@ interface Diagnostic {
     category?: string;
     fixable?: boolean;
   };
+  suppressed?: boolean; // present with --show-suppressed
+  fingerprint?: string; // 64 lowercase hex characters; present with --show-suppressed
 }
 
 interface Range {
@@ -424,13 +475,20 @@ enum DiagnosticTag {
 }
 ```
 
+### 4.3 SARIF Output
+
+`lint --output sarif` emits a SARIF 2.1.0 log. Positions are converted from the internal 0-based
+diagnostic range to SARIF's 1-based region format. Each result contains `ruleId`, `ruleIndex`, level,
+message, artifact URI, region, and—except for parser failures—a `tsqlrefine/v1` partial fingerprint.
+Use `--show-suppressed` to include baseline matches with an external SARIF suppression.
+
 ---
 
 ## 5. Exit Codes
 
 Fixed exit codes by result type for easy CI handling.
 
-- `0`: Success (0 diagnostics, or 0 after `--severity` filter)
+- `0`: Success (0 active diagnostics after severity and baseline filtering)
 - `1`: Rule violations found (diagnostics present)
 - `2`: Parse error (unparseable, `GO` split failure, etc.)
 - `3`: Configuration error (config/ignore load failure, invalid compatibility level, etc.)

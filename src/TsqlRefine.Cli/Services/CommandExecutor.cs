@@ -281,36 +281,75 @@ public sealed class CommandExecutor
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, ruleset, schemaContext);
         var result = engine.Run(command, read.Inputs, options);
-        var diagnosticsSummary = SummarizeDiagnostics(result.Files);
+        var sourceByPath = read.Inputs.ToDictionary(
+            input => input.FilePath,
+            input => input.Text,
+            StringComparer.OrdinalIgnoreCase);
+
+        var baselinePath = ConfigLoader.ResolveBaselinePath(args, config);
+        BaselineDocument? baseline = null;
+        string root;
+        if (baselinePath is not null)
+        {
+            baseline = BaselineStore.Load(baselinePath);
+            root = BaselineStore.ResolveStoredRoot(baselinePath, baseline);
+            BaselineStore.ValidateExplicitRoot(args.BaselineRoot, root);
+        }
+        else
+        {
+            root = BaselineStore.ResolveRootForCreate(args.BaselineRoot, read.Inputs);
+        }
+
+        var classified = BaselineStore.Classify(result.Files, sourceByPath, root, baseline);
+        var activeFiles = classified
+            .Select(file => new FileResult(
+                file.FilePath,
+                file.Diagnostics.Where(item => !item.Suppressed).Select(item => item.Diagnostic).ToArray()))
+            .ToArray();
+        var diagnosticsSummary = SummarizeDiagnostics(activeFiles);
+        var suppressedCount = classified.Sum(file => file.Diagnostics.Count(item => item.Suppressed));
 
         stopwatch.Stop();
 
         if (string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase))
         {
-            await OutputWriter.WriteJsonOutputAsync(stdout, result);
+            if (args.ShowSuppressed)
+            {
+                await OutputWriter.WriteClassifiedJsonOutputAsync(stdout, result.Version, result.Command, classified);
+            }
+            else
+            {
+                await OutputWriter.WriteJsonOutputAsync(stdout, result with { Files = activeFiles });
+            }
+        }
+        else if (string.Equals(args.Output, "sarif", StringComparison.OrdinalIgnoreCase))
+        {
+            await OutputWriter.WriteSarifOutputAsync(
+                stdout,
+                result.Version,
+                classified,
+                rules,
+                root,
+                args.ShowSuppressed);
         }
         else
         {
-            // Build source lookup for parse-error context display
-            var sourceByPath = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var input in read.Inputs)
-            {
-                sourceByPath[input.FilePath] = input.Text;
-            }
-
             // Sort by file path, then by line, then by character
-            var sortedFiles = result.Files.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
+            var sortedFiles = classified.OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase);
             foreach (var file in sortedFiles)
             {
                 var sortedDiagnostics = file.Diagnostics
-                    .OrderBy(d => d.Range.Start.Line)
-                    .ThenBy(d => d.Range.Start.Character);
-                foreach (var d in sortedDiagnostics)
+                    .Where(item => args.ShowSuppressed || !item.Suppressed)
+                    .OrderBy(item => item.Diagnostic.Range.Start.Line)
+                    .ThenBy(item => item.Diagnostic.Range.Start.Character);
+                foreach (var item in sortedDiagnostics)
                 {
+                    var d = item.Diagnostic;
                     var start = d.Range.Start;
                     var ruleId = d.Data?.RuleId ?? d.Code;
                     var fixableIndicator = d.Data?.Fixable == true ? ",Fixable" : "";
-                    await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator})");
+                    var suppressedIndicator = item.Suppressed ? ",Suppressed" : "";
+                    await stdout.WriteLineAsync($"{file.FilePath}:{start.Line + 1}:{start.Character + 1}: {d.Severity}: {d.Message} ({ruleId}{fixableIndicator}{suppressedIndicator})");
 
                     if (d.Code == TsqlRefineEngine.ParseErrorCode &&
                         sourceByPath.TryGetValue(file.FilePath, out var sourceText))
@@ -326,6 +365,10 @@ public sealed class CommandExecutor
             // Show summary to stderr (suppressed in quiet mode for IDE integration)
             await stderr.WriteLineAsync();
             await stderr.WriteLineAsync(FormatSummary(diagnosticsSummary));
+            if (suppressedCount > 0)
+            {
+                await stderr.WriteLineAsync($"{suppressedCount} baseline-suppressed diagnostic(s).");
+            }
 
             if (args.Verbose)
             {
@@ -343,6 +386,104 @@ public sealed class CommandExecutor
         }
 
         return diagnosticsSummary.TotalDiagnostics > 0 ? ExitCodes.Violations : 0;
+    }
+
+    public async Task<int> ExecuteBaselineCreateAsync(
+        CliArgs args,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr)
+    {
+        if (string.IsNullOrWhiteSpace(args.BaselineOutput))
+        {
+            throw new ConfigException("baseline create requires --output <file>.");
+        }
+        if (args.Stdin || args.Paths.Contains("-", StringComparer.Ordinal))
+        {
+            throw new ConfigException("baseline create does not support stdin; use path inputs.");
+        }
+
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var config = ConfigLoader.LoadConfig(args);
+        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var result = new TsqlRefineEngine(rules).Run(
+            "lint",
+            read.Inputs,
+            CreateEngineOptions(args, config, ruleset, schemaContext));
+        var summary = SummarizeDiagnostics(result.Files);
+        if (summary.HasParseErrors)
+        {
+            await stderr.WriteLineAsync("Baseline was not written because analysis failed.");
+            return ExitCodes.AnalysisError;
+        }
+
+        var root = BaselineStore.ResolveRootForCreate(args.BaselineRoot, read.Inputs);
+        var sources = read.Inputs.ToDictionary(
+            input => input.FilePath,
+            input => input.Text,
+            StringComparer.OrdinalIgnoreCase);
+        var document = BaselineStore.Create(args.BaselineOutput, root, result, sources);
+        await BaselineStore.WriteAsync(args.BaselineOutput, document);
+        await stdout.WriteLineAsync(
+            $"Created baseline: {Path.GetFullPath(args.BaselineOutput)} ({document.Entries.Count} entries)");
+        return 0;
+    }
+
+    public async Task<int> ExecuteBaselineTrimAsync(
+        CliArgs args,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr)
+    {
+        if (args.Stdin || args.Paths.Contains("-", StringComparer.Ordinal))
+        {
+            throw new ConfigException("baseline trim does not support stdin; use path inputs.");
+        }
+
+        var config = ConfigLoader.LoadConfig(args);
+        var baselinePath = ConfigLoader.ResolveBaselinePath(args, config)
+            ?? throw new ConfigException("baseline trim requires --baseline <file> or a baseline config value.");
+        var baseline = BaselineStore.Load(baselinePath);
+        var root = BaselineStore.ResolveStoredRoot(baselinePath, baseline);
+        BaselineStore.ValidateExplicitRoot(args.BaselineRoot, root);
+
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var result = new TsqlRefineEngine(rules).Run(
+            "lint",
+            read.Inputs,
+            CreateEngineOptions(args, config, ruleset, schemaContext));
+        var summary = SummarizeDiagnostics(result.Files);
+        if (summary.HasParseErrors)
+        {
+            await stderr.WriteLineAsync("Baseline was not trimmed because analysis failed.");
+            return ExitCodes.AnalysisError;
+        }
+
+        var sources = read.Inputs.ToDictionary(
+            input => input.FilePath,
+            input => input.Text,
+            StringComparer.OrdinalIgnoreCase);
+        var trimmed = BaselineStore.Trim(baseline, result.Files, sources, root, args.RemoveMissing);
+        await BaselineStore.WriteAsync(baselinePath, trimmed);
+        await stdout.WriteLineAsync(
+            $"Trimmed baseline: {Path.GetFullPath(baselinePath)} " +
+            $"({baseline.Entries.Count - trimmed.Entries.Count} removed, {trimmed.Entries.Count} retained)");
+        return 0;
     }
 
     public async Task<int> ExecuteFormatAsync(CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
@@ -683,7 +824,7 @@ public sealed class CommandExecutor
                 if (diagnostic.Data?.Fixable == true)
                     fixable++;
 
-                if (!hasParseErrors && diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
+                if (!hasParseErrors && BaselineStore.IsAnalysisFailure(diagnostic))
                     hasParseErrors = true;
             }
         }
@@ -735,7 +876,7 @@ public sealed class CommandExecutor
         {
             foreach (var diagnostic in file.Diagnostics)
             {
-                if (diagnostic.Code == TsqlRefineEngine.ParseErrorCode)
+                if (BaselineStore.IsAnalysisFailure(diagnostic))
                 {
                     return true;
                 }

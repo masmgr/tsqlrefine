@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Json.Schema;
 using TsqlRefine.Cli;
+using TsqlRefine.Cli.Services;
 using TsqlRefine.Core;
 using TsqlRefine.Core.Engine;
 using TsqlRefine.Rules;
@@ -21,6 +22,21 @@ public sealed class OutputContractTests
         AssertMatchesSchema(
             engine.Fix([input], new EngineOptions()),
             Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "fix-result.schema.json"));
+        AssertMatchesSchema(
+            new BaselineDocument(
+                Version: 1,
+                FingerprintVersion: 1,
+                GeneratedAt: DateTimeOffset.UtcNow,
+                ToolVersion: "1.0.0",
+                Root: "..",
+                Entries:
+                [
+                    new BaselineEntry(
+                        new string('a', 64),
+                        "avoid-select-star",
+                        "contract.sql")
+                ]),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "baseline.schema.json"));
     }
 
     [Fact]

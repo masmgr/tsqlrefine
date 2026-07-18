@@ -69,8 +69,36 @@ public static class CliParser
         // Output options
         public static readonly Option<string?> Output = new("--output")
         {
-            Description = "Output format (text/json)",
+            Description = "Output format (text/json/sarif for lint)",
             Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> Baseline = new("--baseline")
+        {
+            Description = "Baseline JSON file path",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> ShowSuppressed = new("--show-suppressed")
+        {
+            Description = "Include baseline-suppressed diagnostics in output"
+        };
+
+        public static readonly Option<string?> BaselineRoot = new("--root")
+        {
+            Description = "Root directory for baseline path normalization",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> RemoveMissing = new("--remove-missing")
+        {
+            Description = "Remove baseline entries for files that no longer exist"
+        };
+
+        public static readonly Option<string?> BaselineOutput = new("--output")
+        {
+            Description = "Baseline JSON output file path",
+            Arity = ArgumentArity.ExactlyOne
         };
 
         // Analysis options
@@ -313,6 +341,9 @@ public static class CliParser
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.ShowSuppressed);
         return command;
     }
 
@@ -394,6 +425,43 @@ public static class CliParser
         return schemaCommand;
     }
 
+    private static Command BuildBaselineCommand()
+    {
+        var baselineCommand = new Command("baseline", "Create and maintain diagnostic baselines");
+        baselineCommand.Subcommands.Add(BuildBaselineCreateCommand());
+        baselineCommand.Subcommands.Add(BuildBaselineTrimCommand());
+        return baselineCommand;
+    }
+
+    private static Command BuildBaselineCreateCommand()
+    {
+        var command = new Command("create", "Create a baseline from current diagnostics")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.BaselineOutput);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildBaselineTrimCommand()
+    {
+        var command = new Command("trim", "Remove resolved diagnostics from a baseline")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.RemoveMissing);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
     private static Command BuildSchemaBuildCommand()
     {
         var command = new Command("build", "Generate schema snapshot and collect JOIN relations in one step")
@@ -457,6 +525,7 @@ public static class CliParser
         root.Subcommands.Add(BuildListRulesCommand());
         root.Subcommands.Add(BuildListPluginsCommand());
         root.Subcommands.Add(BuildSchemaCommand());
+        root.Subcommands.Add(BuildBaselineCommand());
 
         return root;
     }
@@ -536,7 +605,12 @@ public static class CliParser
             SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
             SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
             SchemaOutputDir: GetOptionValue<string?>(parseResult, "--output-dir"),
-            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output")
+            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output"),
+            BaselinePath: GetOptionValue<string?>(parseResult, "--baseline"),
+            BaselineOutput: GetBaselineOutput(parseResult),
+            BaselineRoot: GetOptionValue<string?>(parseResult, "--root"),
+            ShowSuppressed: GetOptionValue<bool>(parseResult, "--show-suppressed"),
+            RemoveMissing: GetOptionValue<bool>(parseResult, "--remove-missing")
         );
     }
 
@@ -635,6 +709,18 @@ public static class CliParser
         return null;
     }
 
+    private static string? GetBaselineOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.BaselineOutput)
+        {
+            return parseResult.GetValue(typedOption);
+        }
+
+        return null;
+    }
+
     private static string ParseOutput(string command, string? value)
     {
         if (!OutputFormatCommands.Contains(command))
@@ -651,8 +737,10 @@ public static class CliParser
         {
             "text" => "text",
             "json" => "json",
+            "sarif" when command == "lint" => "sarif",
             _ => throw new ConfigException(
-                $"Invalid --output value: '{value}'. Expected one of: text, json.")
+                $"Invalid --output value: '{value}'. Expected one of: " +
+                (command == "lint" ? "text, json, sarif." : "text, json."))
         };
     }
 

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/baseline.schema.json",
+  "title": "tsqlrefine diagnostic baseline",
+  "type": "object",
+  "required": ["version", "fingerprintVersion", "generatedAt", "toolVersion", "root", "entries"],
+  "properties": {
+    "version": { "const": 1 },
+    "fingerprintVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "toolVersion": { "type": "string" },
+    "root": { "type": "string", "minLength": 1 },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["fingerprint", "ruleId", "file"],
+        "properties": {
+          "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "ruleId": { "type": "string", "minLength": 1 },
+          "file": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

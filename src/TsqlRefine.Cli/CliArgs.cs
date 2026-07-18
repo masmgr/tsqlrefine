@@ -41,6 +41,11 @@ namespace TsqlRefine.Cli;
 /// <param name="SchemaExcludeSchemas">Comma-separated schema names to exclude from snapshot generation.</param>
 /// <param name="SchemaOutputDir">Output directory for 'schema build' command (writes schema.json and relations.json).</param>
 /// <param name="SchemaRelationsOutput">Output path for relations profile in 'schema build' command (overrides SchemaOutputDir for relations.json).</param>
+/// <param name="BaselinePath">Path to a baseline JSON file.</param>
+/// <param name="BaselineOutput">Output path for the 'baseline create' command.</param>
+/// <param name="BaselineRoot">Root directory used to normalize baseline file paths.</param>
+/// <param name="ShowSuppressed">Whether suppressed diagnostics are included in output.</param>
+/// <param name="RemoveMissing">Whether baseline trim removes entries for missing files.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -76,5 +81,10 @@ public sealed record CliArgs(
     string? SchemaIncludeSchemas = null,
     string? SchemaExcludeSchemas = null,
     string? SchemaOutputDir = null,
-    string? SchemaRelationsOutput = null
+    string? SchemaRelationsOutput = null,
+    string? BaselinePath = null,
+    string? BaselineOutput = null,
+    string? BaselineRoot = null,
+    bool ShowSuppressed = false,
+    bool RemoveMissing = false
 );

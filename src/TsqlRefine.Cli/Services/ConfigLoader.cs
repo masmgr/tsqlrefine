@@ -543,6 +543,29 @@ public sealed class ConfigLoader
     }
 
     /// <summary>
+    /// Resolves the effective baseline path. Command-line paths are relative to the current directory;
+    /// configuration paths are relative to the configuration file.
+    /// </summary>
+    public static string? ResolveBaselinePath(CliArgs args, TsqlRefineConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(args.BaselinePath))
+        {
+            return Path.GetFullPath(args.BaselinePath);
+        }
+
+        if (string.IsNullOrWhiteSpace(config.Baseline))
+        {
+            return null;
+        }
+
+        var configPath = GetConfigPath(args);
+        var baseDirectory = configPath is null
+            ? Directory.GetCurrentDirectory()
+            : Path.GetDirectoryName(configPath)!;
+        return Path.GetFullPath(config.Baseline, baseDirectory);
+    }
+
+    /// <summary>
     /// Returns the trusted directories used for filename-only plugin resolution.
     /// </summary>
     internal static IReadOnlyList<string> GetPluginSearchDirectories(

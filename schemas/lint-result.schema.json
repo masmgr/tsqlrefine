@@ -42,7 +42,9 @@
         "range": { "$ref": "#/$defs/range" }, "message": { "type": "string" },
         "severity": { "type": ["integer", "null"] }, "code": { "type": ["string", "null"] },
         "source": { "type": "string" }, "tags": { "type": ["array", "null"] },
-        "data": { "type": ["object", "null"] }
+        "data": { "type": ["object", "null"] },
+        "suppressed": { "type": "boolean" },
+        "fingerprint": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" }
       },
       "additionalProperties": false
     }

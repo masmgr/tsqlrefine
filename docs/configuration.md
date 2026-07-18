@@ -10,6 +10,7 @@ Schemas are available under `schemas/`:
 
 - `schemas/tsqlrefine.schema.json`
 - `schemas/ruleset.schema.json`
+- `schemas/baseline.schema.json`
 
 ## Configuration File Discovery
 
@@ -35,6 +36,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 - `ruleset` (string): custom ruleset name or file path. A short name (e.g. `"my-team"`) is resolved from `.tsqlrefine/rulesets/` directories. A file path (containing `/`, `\`, or ending in `.json`) is resolved relative to the working directory or as an absolute path. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection. Paths can be relative (resolved from config file directory) or filename-only (searched in config dir, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`).
 - `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
+- `baseline` (string): diagnostic baseline path (optional). Relative paths are resolved from the directory containing `tsqlrefine.json`; `--baseline` takes precedence.
 
 > **Note**: If both `preset` and `ruleset` are specified in the config file, `preset` takes precedence. CLI options (`--preset` or `--ruleset`) always override config-level settings.
 
@@ -44,6 +46,7 @@ Example:
 {
   "compatLevel": 150,
   "preset": "recommended",
+  "baseline": "baseline.json",
   "plugins": [
     { "path": "plugins/custom-rules.dll", "enabled": true }
   ],
@@ -64,6 +67,22 @@ Example:
   }
 }
 ```
+
+### Diagnostic Baseline
+
+Use a baseline to suppress existing diagnostics while continuing to fail lint for newly introduced
+diagnostics:
+
+```powershell
+tsqlrefine baseline create --output .tsqlrefine/baseline.json src
+tsqlrefine lint --baseline .tsqlrefine/baseline.json src
+tsqlrefine baseline trim --baseline .tsqlrefine/baseline.json src
+```
+
+Setting `"baseline": "baseline.json"` in `.tsqlrefine/tsqlrefine.json` applies the same file without
+requiring the CLI option. Baseline paths stored inside the baseline are relative to its recorded root,
+so the file can be shared across machines. Parse errors and parser exceptions are never suppressed.
+See [CLI Specification](cli.md#baseline-create) for creation and trimming behavior.
 
 ### Formatting Configuration
 
