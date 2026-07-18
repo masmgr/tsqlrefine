@@ -16,6 +16,14 @@ SELECT TOP 1000 ProductId, ProductName, Price
 INTO ##GlobalTempProducts
 FROM dbo.Products;
 
+-- BAD: TOP in a UNION branch still chooses rows before the set operation completes
+SELECT TOP 100 CustomerId
+INTO #SelectedCustomers
+FROM dbo.Customers
+UNION ALL
+SELECT CustomerId
+FROM dbo.ArchivedCustomers;
+
 -- GOOD: TOP with ORDER BY in SELECT INTO
 SELECT TOP 100 *
 INTO dbo.TopCustomers
@@ -43,3 +51,8 @@ SELECT OrderId, CustomerId, OrderDate
 INTO #AllOrders
 FROM dbo.Orders
 WHERE OrderDate >= '2024-01-01';
+
+-- GOOD: TOP 100 PERCENT selects every row, so row membership is deterministic
+SELECT TOP (100) PERCENT OrderId, CustomerId
+INTO #AllOrdersByPercent
+FROM dbo.Orders;

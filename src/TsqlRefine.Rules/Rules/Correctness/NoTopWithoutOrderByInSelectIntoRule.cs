@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
@@ -26,24 +27,72 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
     {
         public override void ExplicitVisit(SelectStatement node)
         {
-            var querySpec = node.QueryExpression as QuerySpecification;
-
-            // Check if this is SELECT TOP ... INTO without ORDER BY
-            if (querySpec != null &&
-                querySpec.TopRowFilter != null &&
-                node.Into != null &&
-                querySpec.OrderByClause == null)
+            if (node.Into is not null)
             {
-                AddDiagnostic(
-                    fragment: querySpec.TopRowFilter,
-                    message: "SELECT TOP ... INTO without ORDER BY creates a permanent table with non-deterministic data. Add an ORDER BY clause to ensure reproducible results.",
-                    code: "avoid-top-without-order-by-in-select-into",
-                    category: "Correctness",
-                    fixable: false
-                );
+                foreach (var querySpec in EnumerateQuerySpecifications(node.QueryExpression))
+                {
+                    if (querySpec.TopRowFilter is not null &&
+                        querySpec.OrderByClause is null &&
+                        !IsTopOneHundredPercent(querySpec.TopRowFilter))
+                    {
+                        AddDiagnostic(
+                            fragment: querySpec.TopRowFilter,
+                            message: "SELECT TOP ... INTO without ORDER BY creates a permanent table with non-deterministic data. Add an ORDER BY clause to ensure reproducible results.",
+                            code: "avoid-top-without-order-by-in-select-into",
+                            category: "Correctness",
+                            fixable: false
+                        );
+                    }
+                }
             }
 
             base.ExplicitVisit(node);
         }
+
+        private static IEnumerable<QuerySpecification> EnumerateQuerySpecifications(QueryExpression queryExpression)
+        {
+            switch (queryExpression)
+            {
+                case QuerySpecification querySpecification:
+                    yield return querySpecification;
+                    break;
+                case BinaryQueryExpression binaryQueryExpression:
+                    foreach (var querySpecification in EnumerateQuerySpecifications(binaryQueryExpression.FirstQueryExpression))
+                    {
+                        yield return querySpecification;
+                    }
+
+                    foreach (var querySpecification in EnumerateQuerySpecifications(binaryQueryExpression.SecondQueryExpression))
+                    {
+                        yield return querySpecification;
+                    }
+                    break;
+                case QueryParenthesisExpression parenthesisExpression:
+                    foreach (var querySpecification in EnumerateQuerySpecifications(parenthesisExpression.QueryExpression))
+                    {
+                        yield return querySpecification;
+                    }
+                    break;
+            }
+        }
+
+        private static bool IsTopOneHundredPercent(TopRowFilter topRowFilter)
+        {
+            if (!topRowFilter.Percent || GetLiteral(topRowFilter.Expression) is not { } literal)
+            {
+                return false;
+            }
+
+            return decimal.TryParse(literal.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) &&
+                value == 100m;
+        }
+
+        private static Literal? GetLiteral(ScalarExpression expression) =>
+            expression switch
+            {
+                Literal literal => literal,
+                ParenthesisExpression parenthesisExpression => GetLiteral(parenthesisExpression.Expression),
+                _ => null
+            };
     }
 }

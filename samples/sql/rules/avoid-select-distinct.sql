@@ -44,7 +44,7 @@ FROM Products p
 JOIN Categories cat ON p.CategoryId = cat.CategoryId
 WHERE cat.CategoryName = 'Electronics';
 
--- GOOD: Legitimate use - unique value list
+-- FLAGGED: This may be intentional, but the rule consistently flags every SELECT DISTINCT
 SELECT DISTINCT Country
 FROM Customers
 ORDER BY Country;

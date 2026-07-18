@@ -38,3 +38,11 @@ SELECT o.OrderId, c.CustomerName, p.ProductName
 FROM Orders o
 INNER JOIN Customers c ON o.CustomerId = c.CustomerId
 LEFT JOIN Products p ON o.ProductId = p.ProductId;
+
+-- GOOD: *= is also a legal compound assignment operator outside join predicates
+SET @Quantity *= 2;
+
+SELECT @Quantity *= 2;
+
+UPDATE dbo.Products
+SET Price *= 1.1;
