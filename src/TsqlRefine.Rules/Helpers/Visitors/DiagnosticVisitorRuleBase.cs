@@ -46,6 +46,7 @@ public abstract class DiagnosticVisitorRuleBase<TFragment> : IRule
         }
 
         var visitor = CreateVisitor(context, fragment);
+        visitor.RuleMetadata = Metadata;
         fragment.Accept(visitor);
         return visitor.Diagnostics;
     }

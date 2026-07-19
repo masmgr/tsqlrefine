@@ -168,11 +168,7 @@ public sealed class RequireExplicitJoinTypeRule : DiagnosticVisitorRuleBase<TSql
 
         private void ReportViolation(int joinTokenIndex)
         {
-            var joinToken = _tokenStream[joinTokenIndex];
-            var range = new TsqlRefine.PluginSdk.Range(
-                new Position(joinToken.Line - 1, joinToken.Column - 1),
-                new Position(joinToken.Line - 1, joinToken.Column - 1 + joinToken.Text.Length)
-            );
+            var range = ScriptDomHelpers.GetTokenRange(_tokenStream[joinTokenIndex]);
 
             AddDiagnostic(new Diagnostic(
                 Range: range,

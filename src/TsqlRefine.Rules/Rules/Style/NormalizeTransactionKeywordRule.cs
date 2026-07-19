@@ -234,13 +234,8 @@ public sealed class NormalizeTransactionKeywordRule : DiagnosticVisitorRuleBase<
             return string.Equals(text, "WORK", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static TsqlRefine.PluginSdk.Range GetTokenRange(TSqlParserToken token)
-        {
-            var start = new Position(token.Line - 1, token.Column - 1);
-            var length = token.Text?.Length ?? 0;
-            var end = new Position(token.Line - 1, token.Column - 1 + length);
-            return new TsqlRefine.PluginSdk.Range(start, end);
-        }
+        private static TsqlRefine.PluginSdk.Range GetTokenRange(TSqlParserToken token) =>
+            ScriptDomHelpers.GetTokenRange(token);
     }
 
 }

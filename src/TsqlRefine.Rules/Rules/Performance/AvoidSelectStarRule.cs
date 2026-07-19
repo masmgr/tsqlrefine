@@ -17,12 +17,9 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
     );
 
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
-        new AvoidSelectStarVisitor(Metadata);
+        new AvoidSelectStarVisitor();
 
-    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        RuleHelpers.NoFixes(context, diagnostic);
-
-    private sealed class AvoidSelectStarVisitor(RuleMetadata metadata) : DiagnosticVisitorBase
+    private sealed class AvoidSelectStarVisitor : DiagnosticVisitorBase
     {
         private int _existsDepth;
 
@@ -49,13 +46,7 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
                 return;
             }
 
-            AddDiagnostic(
-                fragment: node,
-                message: "Avoid SELECT *; explicitly list required columns.",
-                code: metadata.RuleId,
-                category: metadata.Category,
-                fixable: metadata.Fixable
-            );
+            AddDiagnostic(node, "Avoid SELECT *; explicitly list required columns.");
 
             base.ExplicitVisit(node);
         }

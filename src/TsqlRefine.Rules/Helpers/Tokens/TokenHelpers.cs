@@ -76,48 +76,7 @@ public static class TokenHelpers
     {
         ArgumentNullException.ThrowIfNull(token);
 
-        var text = token.Text ?? string.Empty;
-        var start = token.Start;
-        if (text.Length == 0)
-        {
-            return start;
-        }
-
-        // Fast path: most tokens are single-line.
-        if (text.AsSpan().IndexOfAny('\r', '\n') < 0)
-        {
-            return new Position(start.Line, start.Character + token.Length);
-        }
-
-        var line = start.Line;
-        var character = start.Character;
-
-        for (var i = 0; i < text.Length; i++)
-        {
-            var ch = text[i];
-            if (ch == '\r')
-            {
-                if (i + 1 < text.Length && text[i + 1] == '\n')
-                {
-                    i++;
-                }
-
-                line++;
-                character = 0;
-                continue;
-            }
-
-            if (ch == '\n')
-            {
-                line++;
-                character = 0;
-                continue;
-            }
-
-            character++;
-        }
-
-        return new Position(line, character);
+        return TextPositionHelpers.AdvancePosition(token.Start, token.Text);
     }
 
     /// <summary>

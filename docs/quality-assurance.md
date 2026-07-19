@@ -20,7 +20,14 @@ The `TsqlRefine.Qa.Tests` project verifies:
 - lint/fix JSON models validate against the committed schemas;
 - CLI exit codes remain stable.
 - every public concrete rule is registered exactly once, rule IDs are unique
-  kebab-case values, and fixable rules provide a rule-specific fix implementation.
+  kebab-case values, and fixable rules provide a rule-specific fix implementation;
+- every rule, run directly against the samples and corpus (with schema and relation
+  fixtures for dependent rules), emits diagnostics whose code, category, and
+  fixability agree with the rule metadata, whose ranges stay inside the analyzed
+  document, and whose fixes have non-overlapping in-document edits; schema-dependent
+  rules must emit at least one validated diagnostic (`RuleDiagnosticIntegrityTests`);
+- every rule tolerates degenerate inputs — empty, comment-only, unparseable SQL,
+  and a missing AST fragment — without throwing (`RuleRobustnessTests`).
 
 Property tests share a grammar-based SQL generator across Core, Rules, and
 Formatting. It produces parseable SELECT, UPDATE, and DELETE scripts so that

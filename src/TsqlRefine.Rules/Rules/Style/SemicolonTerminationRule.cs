@@ -113,11 +113,7 @@ public sealed class SemicolonTerminationRule : IRule
     {
         if (statement.LastTokenIndex >= 0 && statement.LastTokenIndex < tokenStream.Count)
         {
-            var lastToken = tokenStream[statement.LastTokenIndex];
-            var tokenText = lastToken.Text ?? string.Empty;
-            var start = new Position(lastToken.Line - 1, lastToken.Column - 1);
-            var end = new Position(lastToken.Line - 1, lastToken.Column - 1 + tokenText.Length);
-            return new PluginSdk.Range(start, end);
+            return ScriptDomHelpers.GetTokenRange(tokenStream[statement.LastTokenIndex]);
         }
 
         // Fallback to full statement range
