@@ -242,5 +242,15 @@ public sealed class LineEndingHelpersTests
         Assert.Equal("SELECT\r\nFROM", result);
     }
 
+    [Theory]
+    [InlineData("SELECT 'a\rb'", "SELECT 'a\rb'")]
+    [InlineData("SELECT [a\rb]", "SELECT [a\rb]")]
+    [InlineData("SELECT 1 /* a\rb */", "SELECT 1 /* a\rb */")]
+    [InlineData("SELECT 1 -- a\rb", "SELECT 1 -- a\rb")]
+    public void StripStandaloneCr_ProtectedContent_PreservesCr(string input, string expected)
+    {
+        Assert.Equal(expected, LineEndingHelpers.StripStandaloneCr(input));
+    }
+
     #endregion
 }

@@ -123,7 +123,7 @@ public static class KeywordSpaceNormalizer
 
             // Check if this is a whitespace token eligible for normalization
             if (ScriptDomTokenHelper.TriviaTokenTypes.Contains(token.TokenType) &&
-                IsInlineWhitespaceOnly(text))
+                ScriptDomTokenHelper.IsInlineWhitespaceOnly(text))
             {
                 var prevIdx = previousNonTriviaIndexes[i];
                 var nextIdx = nextNonTriviaIndexes[i];
@@ -148,21 +148,5 @@ public static class KeywordSpaceNormalizer
         }
 
         return sb.ToString();
-    }
-
-    /// <summary>
-    /// Checks if whitespace text contains only spaces and tabs (no line breaks).
-    /// </summary>
-    private static bool IsInlineWhitespaceOnly(string text)
-    {
-        foreach (var c in text)
-        {
-            if (c is not (' ' or '\t'))
-            {
-                return false;
-            }
-        }
-
-        return text.Length > 0;
     }
 }

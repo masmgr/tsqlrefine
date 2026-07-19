@@ -34,6 +34,22 @@ internal static class ScriptDomTokenHelper
     public static bool IsTrivia(TSqlParserToken token) => TriviaTokenTypes.Contains(token.TokenType);
 
     /// <summary>
+    /// Checks whether text contains only inline whitespace (spaces or tabs).
+    /// </summary>
+    public static bool IsInlineWhitespaceOnly(string text)
+    {
+        foreach (var c in text)
+        {
+            if (c is not (' ' or '\t'))
+            {
+                return false;
+            }
+        }
+
+        return text.Length > 0;
+    }
+
+    /// <summary>
     /// Builds an index array where each element contains the index of the previous non-trivia token.
     /// Returns -1 for tokens with no preceding non-trivia token.
     /// </summary>

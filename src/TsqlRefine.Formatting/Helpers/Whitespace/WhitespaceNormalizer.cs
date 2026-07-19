@@ -65,16 +65,38 @@ public static class WhitespaceNormalizer
         var sb = new StringBuilder(input.Length + 16);
         var line = new StringBuilder();
         var tracker = new ProtectedRegionTracker();
+        var scanTracker = new ProtectedRegionTracker();
+        var inLineComment = false;
 
         for (var i = 0; i < input.Length; i++)
         {
             var c = input[i];
+
+            if (!inLineComment && scanTracker.IsInProtectedRegion())
+            {
+                AppendProtectedSpan(input, line, scanTracker, ref i);
+                continue;
+            }
 
             if (TryConsumeNewline(input, ref i, c))
             {
                 AppendProcessedLine(sb, line, options, tracker);
                 sb.Append(lineEnding);
                 line.Clear();
+                inLineComment = false;
+                continue;
+            }
+
+            if (!inLineComment && ProtectedRegionTracker.IsLineCommentStart(input, i))
+            {
+                inLineComment = true;
+            }
+
+            var scanIndex = i;
+            if (!inLineComment && scanTracker.TryAdvance(input, ref scanIndex))
+            {
+                line.Append(input.AsSpan(i, scanIndex - i));
+                i = scanIndex - 1;
                 continue;
             }
 
@@ -93,6 +115,18 @@ public static class WhitespaceNormalizer
         }
 
         return sb.ToString();
+    }
+
+    private static void AppendProtectedSpan(
+        string input,
+        StringBuilder line,
+        ProtectedRegionTracker tracker,
+        ref int index)
+    {
+        var startIndex = index;
+        _ = tracker.TryAdvance(input, ref index);
+        line.Append(input.AsSpan(startIndex, index - startIndex));
+        index--;
     }
 
     /// <summary>
@@ -158,7 +192,6 @@ public static class WhitespaceNormalizer
 
         var text = line.ToString();
         var lineStartsInProtected = tracker.IsInProtectedRegion();
-        var lineContainsProtected = lineStartsInProtected;
 
         var indentSize = GetIndentSize(options);
         GetLeadingWhitespace(text, indentSize, out var leadingLength, out var columns);
@@ -198,13 +231,11 @@ public static class WhitespaceNormalizer
 
             if (ProtectedRegionTracker.TryStartLineComment(text, sbLine, ref i, ref inLineComment))
             {
-                lineContainsProtected = true;
                 continue;
             }
 
             if (tracker.TryStartProtectedRegion(text, sbLine, ref i))
             {
-                lineContainsProtected = true;
                 continue;
             }
 

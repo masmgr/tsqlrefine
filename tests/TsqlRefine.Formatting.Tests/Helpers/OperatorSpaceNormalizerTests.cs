@@ -69,6 +69,8 @@ public sealed class OperatorSpaceNormalizerTests
     [InlineData("WHERE a!=b", "WHERE a != b")]
     [InlineData("WHERE a<=b", "WHERE a <= b")]
     [InlineData("WHERE a>=b", "WHERE a >= b")]
+    [InlineData("WHERE a!<b", "WHERE a !< b")]
+    [InlineData("WHERE a!>b", "WHERE a !> b")]
     public void Normalize_CompoundOperators_AddsSpacing(string input, string expected)
     {
         var result = OperatorSpaceNormalizer.Normalize(input, _defaultOptions);

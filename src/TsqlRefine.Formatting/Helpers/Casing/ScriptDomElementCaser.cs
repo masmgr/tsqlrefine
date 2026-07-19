@@ -15,15 +15,25 @@ public static class ScriptDomElementCaser
     /// </summary>
     /// <param name="input">The SQL text to transform</param>
     /// <param name="options">Formatting options containing casing settings</param>
-    /// <param name="compatLevel">SQL Server compatibility level (100-160). Defaults to 150 (SQL Server 2019)</param>
     /// <returns>SQL text with casing applied</returns>
-    public static string Apply(string input, FormattingOptions options, int compatLevel = 150)
+    public static string Apply(string input, FormattingOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
-        var parser = ScriptDomTokenHelper.CreateParser(compatLevel);
+        if (string.IsNullOrEmpty(input))
+        {
+            return input;
+        }
+
+        var parser = ScriptDomTokenHelper.CreateParser(options.CompatLevel);
         using var reader = new StringReader(input);
         var tokens = parser.GetTokenStream(reader, out _);
+
+        if (tokens is null || tokens.Count == 0)
+        {
+            return input;
+        }
+
         var (previousNonTriviaIndexes, nextNonTriviaIndexes) =
             ScriptDomTokenHelper.BuildNonTriviaNeighborIndexes(tokens);
 

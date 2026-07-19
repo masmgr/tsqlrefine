@@ -91,18 +91,28 @@ public static class InlineSpaceNormalizer
             // Try to consume characters in active protected region
             if (tracker.TryConsume(line, output, ref index))
             {
-                needsSpaceAfterComma = false;
                 continue;
             }
 
             // Try to start a new protected region
+            if (needsSpaceAfterComma && IsProtectedRegionStart(line, index))
+            {
+                output.Append(' ');
+                needsSpaceAfterComma = false;
+            }
+
             if (tracker.TryStartProtectedRegion(line, output, ref index))
             {
-                needsSpaceAfterComma = false;
                 continue;
             }
 
             // Handle line comments specially - preserve rest of line as-is
+            if (needsSpaceAfterComma && ProtectedRegionTracker.IsLineCommentStart(line, index))
+            {
+                output.Append(' ');
+                needsSpaceAfterComma = false;
+            }
+
             var inLineComment = false;
             if (ProtectedRegionTracker.TryStartLineComment(line, output, ref index, ref inLineComment))
             {
@@ -159,6 +169,13 @@ public static class InlineSpaceNormalizer
         }
 
         return output.ToString();
+    }
+
+    private static bool IsProtectedRegionStart(string line, int index)
+    {
+        var c = line[index];
+        return c is '\'' or '"' or '[' ||
+               (c == '/' && index + 1 < line.Length && line[index + 1] == '*');
     }
 
 }

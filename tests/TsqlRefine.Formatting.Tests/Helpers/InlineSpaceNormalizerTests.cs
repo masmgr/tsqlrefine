@@ -336,4 +336,15 @@ WHERE  o.OrderDate  >=  '2024-01-01'";
         var result = InlineSpaceNormalizer.Normalize(input, _defaultOptions);
         Assert.Equal("SELECT /* start,\r\nmiddle,end\r\n*/ id, name FROM users", result);
     }
+
+    [Theory]
+    [InlineData("SELECT a,'x'", "SELECT a, 'x'")]
+    [InlineData("SELECT a,[c]", "SELECT a, [c]")]
+    [InlineData("SELECT a,\"c\"", "SELECT a, \"c\"")]
+    [InlineData("SELECT a,/*comment*/b", "SELECT a, /*comment*/b")]
+    [InlineData("SELECT a,--comment", "SELECT a, --comment")]
+    public void Normalize_CommaBeforeProtectedRegion_AddsSpace(string input, string expected)
+    {
+        Assert.Equal(expected, InlineSpaceNormalizer.Normalize(input, _defaultOptions));
+    }
 }
