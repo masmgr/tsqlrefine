@@ -200,7 +200,7 @@ public sealed class CircularObjectReferenceRule : IRule
         {
             return [];
         }
-        var graph = new CatalogDependencyGraph(catalog);
+        var graph = CatalogDependencyGraph.For(catalog);
         return graph.Objects
             .Where(obj => SameFile(obj.DefinedInFile, context.FilePath))
             .Select(obj => (Object: obj, Cycle: graph.FindCycle(obj)))

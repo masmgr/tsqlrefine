@@ -1,13 +1,15 @@
+using System.Runtime.CompilerServices;
 using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Rules.Helpers.Catalog;
 
 internal sealed class CatalogDependencyGraph
 {
+    private static readonly ConditionalWeakTable<IObjectCatalogProvider, CatalogDependencyGraph> Cache = new();
     private readonly Dictionary<string, CatalogObjectInfo> _objectsById;
     private readonly Dictionary<CatalogObjectInfo, CatalogObjectInfo[]> _outgoing;
 
-    internal CatalogDependencyGraph(IObjectCatalogProvider catalog)
+    private CatalogDependencyGraph(IObjectCatalogProvider catalog)
     {
         Objects = catalog.GetAllObjects();
         _objectsById = Objects.ToDictionary(obj => CreateKey(obj.Id), StringComparer.OrdinalIgnoreCase);
@@ -32,6 +34,9 @@ internal sealed class CatalogDependencyGraph
     }
 
     internal IReadOnlyList<CatalogObjectInfo> Objects { get; }
+
+    internal static CatalogDependencyGraph For(IObjectCatalogProvider catalog) =>
+        Cache.GetValue(catalog, static provider => new CatalogDependencyGraph(provider));
 
     internal IReadOnlyList<CatalogObjectInfo> GetDependencies(CatalogObjectInfo source) =>
         _outgoing.TryGetValue(source, out var dependencies) ? dependencies : [];

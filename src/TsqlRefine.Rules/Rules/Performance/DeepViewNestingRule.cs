@@ -29,7 +29,7 @@ public sealed class DeepViewNestingRule : IRule, IRuleOptionsDescriptorProvider
         var maximum = context.Settings.Options?.TryGetInt32("max", out var configured) is true
             ? configured
             : DefaultMaximum;
-        var graph = new CatalogDependencyGraph(catalog);
+        var graph = CatalogDependencyGraph.For(catalog);
         return graph.Objects
             .Where(obj => obj.Kind == CatalogObjectKind.View && SameFile(obj.DefinedInFile, context.FilePath))
             .Select(obj => (Object: obj, Depth: graph.GetViewNestingDepth(obj)))
