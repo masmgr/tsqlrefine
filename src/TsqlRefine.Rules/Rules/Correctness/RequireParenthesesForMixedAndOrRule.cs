@@ -28,24 +28,26 @@ public sealed class RequireParenthesesForMixedAndOrRule : DiagnosticVisitorRuleB
         {
             // Check if either child is a BooleanBinaryExpression with a different operator
             // that is NOT wrapped in parentheses
-            CheckForMixedOperators(node, node.FirstExpression);
-            CheckForMixedOperators(node, node.SecondExpression);
+            if (!CheckForMixedOperators(node, node.FirstExpression))
+            {
+                CheckForMixedOperators(node, node.SecondExpression);
+            }
 
             // Continue traversal
             base.ExplicitVisit(node);
         }
 
-        private void CheckForMixedOperators(BooleanBinaryExpression parent, BooleanExpression? child)
+        private bool CheckForMixedOperators(BooleanBinaryExpression parent, BooleanExpression? child)
         {
             if (child is null)
             {
-                return;
+                return false;
             }
 
             // If the child is wrapped in parentheses, it's fine - parentheses create a new precedence level
             if (child is BooleanParenthesisExpression)
             {
-                return;
+                return false;
             }
 
             // If the child is a BooleanBinaryExpression with a different operator, report
@@ -54,14 +56,17 @@ public sealed class RequireParenthesesForMixedAndOrRule : DiagnosticVisitorRuleB
                 if (childBinary.BinaryExpressionType != parent.BinaryExpressionType)
                 {
                     AddDiagnostic(
-                        fragment: parent,
+                        fragment: childBinary,
                         message: "Mixed AND/OR operators without parentheses can cause precedence confusion. Use explicit parentheses to clarify intent.",
                         code: "require-parentheses-for-mixed-and-or",
                         category: "Correctness",
                         fixable: false
                     );
+                    return true;
                 }
             }
+
+            return false;
         }
     }
 }

@@ -16,7 +16,7 @@ public sealed class InconsistentResultSetRule : ControlFlowRuleBase
 
     private protected override IEnumerable<ControlFlowIssue> AnalyzeScope(ControlFlowScope scope)
     {
-        if (scope.Owner is not ProcedureStatementBody)
+        if (scope.Owner is not ProcedureStatementBody procedure)
         {
             return [];
         }
@@ -29,7 +29,7 @@ public sealed class InconsistentResultSetRule : ControlFlowRuleBase
         }
 
         return [new ControlFlowIssue(
-            scope.Owner,
+            procedure.ProcedureReference?.Name?.BaseIdentifier is { } procedureName ? procedureName : procedure,
             "This procedure returns different result-set column shapes on different execution paths.")];
     }
 

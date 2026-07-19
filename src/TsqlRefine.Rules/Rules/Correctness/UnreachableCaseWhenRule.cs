@@ -48,7 +48,7 @@ public sealed class UnreachableCaseWhenRule : DiagnosticVisitorRuleBase
             Func<T, string?> getConditionDisplay)
             where T : TSqlFragment
         {
-            var seenConditions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenConditions = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var clause in whenClauses)
             {
@@ -99,7 +99,9 @@ public sealed class UnreachableCaseWhenRule : DiagnosticVisitorRuleBase
                     sb.Append(' ');
                 }
 
-                sb.Append(token.Text);
+                sb.Append(IsStringLiteral(token.TokenType)
+                    ? token.Text
+                    : token.Text.ToUpperInvariant());
             }
 
             return sb.ToString();
@@ -179,5 +181,8 @@ public sealed class UnreachableCaseWhenRule : DiagnosticVisitorRuleBase
                    tokenType == TSqlTokenType.SingleLineComment ||
                    tokenType == TSqlTokenType.MultilineComment;
         }
+
+        private static bool IsStringLiteral(TSqlTokenType tokenType) =>
+            tokenType is TSqlTokenType.AsciiStringLiteral or TSqlTokenType.UnicodeStringLiteral;
     }
 }

@@ -77,7 +77,7 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
             }
 
             var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
-            var resolved = ResolveColumn(colRef, aliasMap);
+            var resolved = SchemaColumnResolutionHelpers.ResolveColumn(schema!, colRef, aliasMap);
 
             if (resolved is not { Column.IsNullable: false })
             {
@@ -90,49 +90,6 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
                 aliasMap,
                 resolved.Table,
                 columnQualifier);
-        }
-
-        private ResolvedColumn? ResolveColumn(ColumnReferenceExpression colRef, AliasMap aliasMap)
-        {
-            var identifiers = colRef.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null or { Count: 0 })
-            {
-                return null;
-            }
-
-            if (identifiers.Count >= 2)
-            {
-                var columnName = identifiers[^1].Value;
-
-                if (!TryResolveQualifiedTable(identifiers, aliasMap, out var resolvedTable)
-                    || resolvedTable is null)
-                {
-                    return null;
-                }
-
-                return schema!.ResolveColumn(resolvedTable, columnName);
-            }
-
-            // Unqualified column — search all tables in the alias map
-            var unqualifiedName = identifiers[0].Value;
-            foreach (var table in aliasMap.AllTables)
-            {
-                var resolved = schema!.ResolveColumn(table, unqualifiedName);
-                if (resolved is not null)
-                {
-                    return resolved;
-                }
-            }
-
-            return null;
-        }
-
-        private static bool TryResolveQualifiedTable(
-            IList<Identifier> identifiers,
-            AliasMap aliasMap,
-            out ResolvedTable? resolvedTable)
-        {
-            return QualifierLookupKeyBuilder.TryResolve(aliasMap, identifiers, out resolvedTable);
         }
 
         private static bool HasNullIntroducingJoinForColumnSource(

@@ -108,6 +108,33 @@ public sealed class UnresolvedProcedureReferenceRuleTests
     }
 
     [Fact]
+    public void CircularObjectReference_RelativeAndAbsolutePaths_ReturnsDiagnostic()
+    {
+        const string first = "CREATE VIEW dbo.FirstView AS SELECT Id FROM dbo.SecondView;";
+        var absolutePath = Path.GetFullPath("first.sql");
+        var context = CreateContext(
+            first,
+            "first.sql",
+            [
+                (first, absolutePath),
+                ("CREATE VIEW dbo.SecondView AS SELECT Id FROM dbo.FirstView;", "second.sql")
+            ]);
+
+        Assert.Single(new CircularObjectReferenceRule().Analyze(context));
+    }
+
+    [Fact]
+    public void UnreferencedObject_InvalidCatalogPath_DoesNotThrow()
+    {
+        const string definition = "CREATE PROCEDURE dbo.OrphanProcedure AS SELECT 1;";
+        var context = CreateContext(definition, "other.sql", [(definition, "\0")]);
+
+        var exception = Record.Exception(() => new UnreferencedObjectRule().Analyze(context).ToArray());
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public void DependencyRules_NoCatalog_ReturnNoDiagnostics()
     {
         var context = RuleTestContext.CreateContext("EXEC dbo.MissingProcedure;");

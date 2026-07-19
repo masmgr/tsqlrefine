@@ -23,6 +23,17 @@ public sealed class InconsistentResultSetRuleTests
     }
 
     [Fact]
+    public void Analyze_InconsistentProcedure_ReportsProcedureIdentifier()
+    {
+        const string sql = "CREATE PROCEDURE dbo.GetValue @full bit AS IF @full = 1 SELECT Id, Name FROM dbo.Users; ELSE SELECT Id FROM dbo.Users;";
+
+        var diagnostic = Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Equal(sql.IndexOf("GetValue", StringComparison.Ordinal), diagnostic.Range.Start.Character);
+        Assert.Equal("GetValue".Length, diagnostic.Range.End.Character - diagnostic.Range.Start.Character);
+    }
+
+    [Fact]
     public void Analyze_BranchesReturnSameShape_ReturnsNoDiagnostic()
     {
         const string sql = """

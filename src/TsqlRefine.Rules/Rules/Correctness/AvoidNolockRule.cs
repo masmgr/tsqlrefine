@@ -30,7 +30,7 @@ public sealed class AvoidNolockRule : DiagnosticVisitorRuleBase
             if (node.HintKind == TableHintKind.NoLock)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "NOLOCK hint can lead to dirty reads and data inconsistency. Consider using SNAPSHOT isolation or explicit locking.",
                     code: "avoid-nolock",
                     category: "Correctness",
@@ -46,7 +46,7 @@ public sealed class AvoidNolockRule : DiagnosticVisitorRuleBase
             if (node.Level == IsolationLevel.ReadUncommitted)
             {
                 AddDiagnostic(
-                    fragment: node,
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
                     message: "READ UNCOMMITTED isolation level can lead to dirty reads and data inconsistency. Consider using SNAPSHOT or READ COMMITTED isolation.",
                     code: "avoid-nolock",
                     category: "Correctness",

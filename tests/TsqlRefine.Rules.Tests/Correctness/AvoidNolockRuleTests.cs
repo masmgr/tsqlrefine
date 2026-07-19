@@ -231,6 +231,7 @@ SELECT * FROM UserOrders;";
         // The statement should start at the beginning
         Assert.Equal(0, diagnostic.Range.Start.Line);
         Assert.Equal(0, diagnostic.Range.Start.Character);
+        Assert.Equal(3, diagnostic.Range.End.Character);
     }
 
     [Fact]

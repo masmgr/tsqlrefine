@@ -31,7 +31,8 @@ public sealed class DeepViewNestingRule : IRule, IRuleOptionsDescriptorProvider
             : DefaultMaximum;
         var graph = CatalogDependencyGraph.For(catalog);
         return graph.Objects
-            .Where(obj => obj.Kind == CatalogObjectKind.View && SameFile(obj.DefinedInFile, context.FilePath))
+            .Where(obj => obj.Kind == CatalogObjectKind.View &&
+                          CatalogFilePathHelpers.SameFile(obj.DefinedInFile, context.FilePath))
             .Select(obj => (Object: obj, Depth: graph.GetViewNestingDepth(obj)))
             .Where(item => item.Depth > maximum)
             .Select(item => new Diagnostic(
@@ -45,6 +46,4 @@ public sealed class DeepViewNestingRule : IRule, IRuleOptionsDescriptorProvider
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private static bool SameFile(string left, string right) =>
-        string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }

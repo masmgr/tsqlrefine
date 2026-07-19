@@ -144,6 +144,17 @@ public sealed class AvoidBetweenForDatetimeRangeRule : DiagnosticVisitorRuleBase
                 return true;
             }
 
+            if (expression is BinaryExpression binary)
+            {
+                return ContainsDatetimeCastOrConvert(binary.FirstExpression)
+                    || ContainsDatetimeCastOrConvert(binary.SecondExpression);
+            }
+
+            if (expression is ParenthesisExpression parenthesis)
+            {
+                return ContainsDatetimeCastOrConvert(parenthesis.Expression);
+            }
+
             return false;
         }
     }

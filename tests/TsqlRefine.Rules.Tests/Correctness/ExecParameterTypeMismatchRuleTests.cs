@@ -40,6 +40,26 @@ public sealed class ExecParameterTypeMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_AnsiStringLiteralExceedsNvarcharCharacterLength_ReturnsDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "EXEC dbo.TakeCode 'abcdefghij';",
+            "CREATE PROCEDURE dbo.TakeCode @code nvarchar(5) AS SELECT @code;");
+
+        Assert.Single(_rule.Analyze(context));
+    }
+
+    [Fact]
+    public void Analyze_AnsiStringLiteralFitsNvarcharCharacterLength_ReturnsNoDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "EXEC dbo.TakeCode 'abcde';",
+            "CREATE PROCEDURE dbo.TakeCode @code nvarchar(5) AS SELECT @code;");
+
+        Assert.Empty(_rule.Analyze(context));
+    }
+
+    [Fact]
     public void Analyze_UnknownExpressionType_ReturnsNoDiagnostic()
     {
         var context = ExecCatalogRuleTestHelper.CreateContext(

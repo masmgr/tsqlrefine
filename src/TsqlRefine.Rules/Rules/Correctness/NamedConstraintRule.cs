@@ -29,46 +29,47 @@ public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
             // Check if table is a temp table (starts with # or ##)
             if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
             {
-                // Check for named constraints
-                if (node.Definition != null)
-                {
-                    foreach (var element in node.Definition.TableConstraints)
-                    {
-                        if (element.ConstraintIdentifier != null)
-                        {
-                            AddDiagnostic(
-                                fragment: element,
-                                message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
-                                code: "avoid-named-constraint-in-temp-table",
-                                category: "Correctness",
-                                fixable: false
-                            );
-                        }
-                    }
-
-                    foreach (var column in node.Definition.ColumnDefinitions)
-                    {
-                        if (column.Constraints != null)
-                        {
-                            foreach (var constraint in column.Constraints)
-                            {
-                                if (constraint.ConstraintIdentifier != null)
-                                {
-                                    AddDiagnostic(
-                                        fragment: constraint,
-                                        message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
-                                        code: "avoid-named-constraint-in-temp-table",
-                                        category: "Correctness",
-                                        fixable: false
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
+                CheckDefinition(node.Definition);
             }
 
             base.ExplicitVisit(node);
         }
+
+        public override void ExplicitVisit(AlterTableAddTableElementStatement node)
+        {
+            if (ScriptDomHelpers.IsTemporaryTableName(node.SchemaObjectName?.BaseIdentifier?.Value))
+            {
+                CheckDefinition(node.Definition);
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        private void CheckDefinition(TableDefinition? definition)
+        {
+            if (definition is null)
+            {
+                return;
+            }
+
+            foreach (var element in definition.TableConstraints.Where(element => element.ConstraintIdentifier is not null))
+            {
+                AddNamedConstraintDiagnostic(element.ConstraintIdentifier!);
+            }
+
+            foreach (var constraint in definition.ColumnDefinitions
+                         .SelectMany(column => column.Constraints)
+                         .Where(constraint => constraint.ConstraintIdentifier is not null))
+            {
+                AddNamedConstraintDiagnostic(constraint.ConstraintIdentifier!);
+            }
+        }
+
+        private void AddNamedConstraintDiagnostic(Identifier identifier) => AddDiagnostic(
+            fragment: identifier,
+            message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
+            code: "avoid-named-constraint-in-temp-table",
+            category: "Correctness",
+            fixable: false);
     }
 }

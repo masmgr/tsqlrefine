@@ -8,9 +8,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// and produce non-deterministic updates. This is the schema-free syntactic counterpart to
 /// <c>update-join-cardinality-mismatch</c>.
 /// </summary>
-public sealed class MultiRowUpdateFromRule : IRule
+public sealed class MultiRowUpdateFromRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "multi-row-update-from",
         Description: "Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates.",
         Category: "Correctness",
@@ -18,21 +18,9 @@ public sealed class MultiRowUpdateFromRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) => new MultiRowUpdateFromVisitor(Metadata);
 
-        if (context.Ast.Fragment is null)
-        {
-            return [];
-        }
-
-        var visitor = new MultiRowUpdateFromVisitor(Metadata);
-        context.Ast.Fragment.Accept(visitor);
-        return visitor.Diagnostics;
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class MultiRowUpdateFromVisitor(RuleMetadata metadata) : DiagnosticVisitorBase

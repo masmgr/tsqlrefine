@@ -131,7 +131,7 @@ public sealed class UnreferencedObjectRule : IRule, IRuleOptionsDescriptorProvid
         }
         var entrypoints = GetEntrypoints(context.Settings.Options);
         return catalog.GetAllObjects()
-            .Where(obj => SameFile(obj.DefinedInFile, context.FilePath))
+            .Where(obj => CatalogFilePathHelpers.SameFile(obj.DefinedInFile, context.FilePath))
             .Where(obj => !entrypoints.Contains(CatalogDependencyGraph.DisplayName(obj.Id)) &&
                           !entrypoints.Contains(obj.Id.Name))
             .Where(obj => !catalog.GetReferencesTo(obj.Id.DatabaseName, obj.Id.SchemaName, obj.Id.Name)
@@ -160,16 +160,6 @@ public sealed class UnreferencedObjectRule : IRule, IRuleOptionsDescriptorProvid
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool SameFile(string left, string right)
-    {
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (string.Equals(left, right, comparison))
-        {
-            return true;
-        }
-        return !left.StartsWith('<') && !right.StartsWith('<') &&
-               string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), comparison);
-    }
 }
 
 public sealed class CircularObjectReferenceRule : IRule
@@ -190,7 +180,7 @@ public sealed class CircularObjectReferenceRule : IRule
         }
         var graph = CatalogDependencyGraph.For(catalog);
         return graph.Objects
-            .Where(obj => SameFile(obj.DefinedInFile, context.FilePath))
+            .Where(obj => CatalogFilePathHelpers.SameFile(obj.DefinedInFile, context.FilePath))
             .Select(obj => (Object: obj, Cycle: graph.FindCycle(obj)))
             .Where(item => item.Cycle is not null)
             .Select(item => new Diagnostic(
@@ -204,6 +194,4 @@ public sealed class CircularObjectReferenceRule : IRule
     public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private static bool SameFile(string left, string right) =>
-        string.Equals(left, right, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }

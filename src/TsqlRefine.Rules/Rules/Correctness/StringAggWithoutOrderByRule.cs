@@ -6,9 +6,9 @@ namespace TsqlRefine.Rules.Rules.Correctness;
 /// <summary>
 /// Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results.
 /// </summary>
-public sealed class StringAggWithoutOrderByRule : IRule
+public sealed class StringAggWithoutOrderByRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "string-agg-without-order-by",
         Description: "Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results.",
         Category: "Correctness",
@@ -16,31 +16,11 @@ public sealed class StringAggWithoutOrderByRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
+    protected override bool ShouldAnalyze(RuleContext context) => context.CompatLevel >= 140;
 
-        // STRING_AGG is available in SQL Server 2017+ (CompatLevel 140+)
-        if (context.CompatLevel < 140)
-        {
-            yield break;
-        }
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) => new StringAggWithoutOrderByVisitor();
 
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new StringAggWithoutOrderByVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
+    public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class StringAggWithoutOrderByVisitor : DiagnosticVisitorBase

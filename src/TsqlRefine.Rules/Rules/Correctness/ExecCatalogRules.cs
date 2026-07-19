@@ -319,7 +319,9 @@ internal static class ExecTypeInference
             {
                 return true;
             }
-            return parameter.MaxLength is > -1 && argument.MaxLength > parameter.MaxLength;
+            var argumentLength = GetStringCharacterCapacity(argument);
+            var parameterLength = GetStringCharacterCapacity(parameter);
+            return parameterLength is > -1 && argumentLength > parameterLength;
         }
 
         if (argument.Category == SchemaTypeCategory.ExactNumeric && parameter.Category == SchemaTypeCategory.ExactNumeric)
@@ -339,6 +341,11 @@ internal static class ExecTypeInference
 
         return false;
     }
+
+    private static int? GetStringCharacterCapacity(SchemaTypeInfo type) =>
+        type.Category == SchemaTypeCategory.UnicodeString && type.MaxLength is > -1
+            ? type.MaxLength / 2
+            : type.MaxLength;
 
     private static SchemaTypeInfo InferDecimal(string value)
     {
