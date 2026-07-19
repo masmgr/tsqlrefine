@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 165
+- **Total Rules**: 169
 - **Fixable Rules**: 14 (9%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
   - Essential (pragmatic): 35 rules
   - Recommended (recommended): 60 rules
-  - Thorough (strict-logic): 30 rules
+  - Thorough (strict-logic): 34 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 28 rules (18%)
-  - Warning: 94 rules (57%)
-  - Information: 43 rules (26%)
+  - Warning: 97 rules (57%)
+  - Information: 44 rules (26%)
 
 ## Importance Tiers
 
@@ -45,8 +45,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
 | **Recommended** | recommended | 60 | 112 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 30 | 142 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 165 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Thorough** | strict-logic | 34 | 146 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 169 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,8 +54,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 54 | Detects code that may produce incorrect results or runtime errors |
-| **Performance** | 29 | Flags patterns that can cause performance issues |
+| **Correctness** | 57 | Detects code that may produce incorrect results or runtime errors |
+| **Performance** | 30 | Flags patterns that can cause performance issues |
 | **Transactions** | 16 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
@@ -249,7 +249,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**30 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**34 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -257,18 +257,21 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-#### Correctness (6 rules)
+#### Correctness (9 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [circular-object-reference](correctness/circular-object-reference.md) | Detects cycles between cataloged SQL objects. | Warning | No |
 | [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
 | [inconsistent-result-set](correctness/inconsistent-result-set.md) | Detects procedures that return different result-set shapes on different execution paths. | Warning | No |
 | [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that use DATALENGTH for termination but LEN to advance the same string variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 | [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
+| [unreferenced-object](correctness/unreferenced-object.md) | Detects cataloged SQL objects that have no incoming references. | Information | No |
+| [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md) | Detects procedure or function calls that do not resolve in an authoritative object catalog. | Warning | No |
 
-#### Performance (15 rules)
+#### Performance (16 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -280,6 +283,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-select-distinct](performance/avoid-select-distinct.md) | Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications. | Information | No |
 | [avoid-select-into](performance/avoid-select-into.md) | Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results. | Information | No |
 | [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
+| [deep-view-nesting](performance/deep-view-nesting.md) | Detects views whose dependency nesting exceeds a configured maximum. | Warning | No |
 | [max-cyclomatic-complexity](performance/max-cyclomatic-complexity.md) | Limits cyclomatic complexity per SQL object or batch. | Warning | No |
 | [max-joins-per-query](performance/max-joins-per-query.md) | Limits the number of joins in a single query. | Warning | No |
 | [max-nesting-depth](performance/max-nesting-depth.md) | Limits control-flow nesting depth per SQL object or batch. | Warning | No |
@@ -381,7 +385,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (94 rules)
+### Warning (97 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -413,8 +417,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
 - [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md)
 - [cross-database-transaction](safety/cross-database-transaction.md)
+- [circular-object-reference](correctness/circular-object-reference.md)
 - [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
+- [deep-view-nesting](performance/deep-view-nesting.md)
 - [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md)
 - [duplicate-index-column](schema/duplicate-index-column.md)
 - [duplicate-index-definition](schema/duplicate-index-definition.md)
@@ -474,11 +480,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [unreachable-statement](correctness/unreachable-statement.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
+- [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
 - [variable-used-before-assignment](correctness/variable-used-before-assignment.md)
 
-### Information (43 rules)
+### Information (44 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -523,6 +530,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [set-nocount](transactions/set-nocount.md)
 - [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
 - [unused-variable](correctness/unused-variable.md)
+- [unreferenced-object](correctness/unreferenced-object.md)
 
 ## Fixable Rules
 

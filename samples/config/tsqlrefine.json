@@ -6,6 +6,14 @@
     "max-cyclomatic-complexity": {
       "severity": "warning",
       "options": { "max": 20 }
+    },
+    "deep-view-nesting": {
+      "severity": "warning",
+      "options": { "max": 3 }
+    },
+    "unreferenced-object": {
+      "severity": "info",
+      "options": { "entrypoints": "dbo.ApplicationEntryPoint" }
     }
   }
 }

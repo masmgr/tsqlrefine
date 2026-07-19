@@ -164,7 +164,11 @@
     { "id": "max-nesting-depth" },
     { "id": "max-statement-count" },
     { "id": "max-joins-per-query" },
-    { "id": "max-parameter-count" }
+    { "id": "max-parameter-count" },
+    { "id": "unresolved-procedure-reference" },
+    { "id": "unreferenced-object" },
+    { "id": "deep-view-nesting" },
+    { "id": "circular-object-reference" }
   ]
 }
 

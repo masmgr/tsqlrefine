@@ -78,6 +78,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new UnusedVariableRule(),
         new UnreachableStatementRule(),
         new InconsistentResultSetRule(),
+        new UnresolvedProcedureReferenceRule(),
+        new UnreferencedObjectRule(),
+        new CircularObjectReferenceRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -102,6 +105,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new MaxStatementCountRule(),
         new MaxJoinsPerQueryRule(),
         new MaxParameterCountRule(),
+        new DeepViewNestingRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
