@@ -37,6 +37,7 @@
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "dynamic-sql-taint" },
     { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },

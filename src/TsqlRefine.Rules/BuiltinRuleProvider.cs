@@ -110,6 +110,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         // === Security ===
         new AvoidExecDynamicSqlRule(),
+        new DynamicSqlTaintRule(),
         new AvoidDangerousProceduresRule(),
         new AvoidOpenrowsetOpendatasourceRule(),
         new AvoidNolockRule(),

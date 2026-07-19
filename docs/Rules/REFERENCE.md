@@ -19,16 +19,16 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 159
+- **Total Rules**: 160
 - **Fixable Rules**: 14 (9%)
 - **By Importance Tier**:
-  - Critical (security-only): 16 rules
+  - Critical (security-only): 17 rules
   - Essential (pragmatic): 35 rules
   - Recommended (recommended): 60 rules
   - Thorough (strict-logic): 25 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 27 rules (17%)
+  - Error: 28 rules (18%)
   - Warning: 91 rules (57%)
   - Information: 41 rules (26%)
 
@@ -42,17 +42,17 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
-| **Critical** | security-only | 16 | 16 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 35 | 51 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 60 | 111 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 25 | 136 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 159 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
+| **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 60 | 112 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 25 | 137 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 160 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Security** | 6 | Identifies security vulnerabilities like SQL injection |
+| **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Correctness** | 54 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 24 | Flags patterns that can cause performance issues |
@@ -65,9 +65,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Critical (security-only)
 
-**16 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
+**17 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
 
-#### Security (6 rules)
+#### Security (7 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -76,6 +76,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-execute-as](security/avoid-execute-as.md) | Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation. | Warning | No |
 | [avoid-hardcoded-password](security/avoid-hardcoded-password.md) | Detects hardcoded passwords in login DDL and ad hoc data-source connection strings. | Warning | No |
 | [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
+| [dynamic-sql-taint](security/dynamic-sql-taint.md) | Detects untrusted values that flow into dynamically executed SQL text. | Error | No |
 | [require-parameterized-sp-executesql](security/require-parameterized-sp-executesql.md) | Detects sp_executesql calls without proper parameterization or with string concatenation. | Warning | No |
 
 #### Safety (4 rules)
@@ -344,7 +345,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (27 rules)
+### Error (28 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -354,6 +355,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md)
 - [delete-column-not-in-table](schema/delete-column-not-in-table.md)
 - [dml-without-where](safety/dml-without-where.md)
+- [dynamic-sql-taint](security/dynamic-sql-taint.md)
 - [duplicate-column-definition](schema/duplicate-column-definition.md)
 - [duplicate-insert-column](correctness/duplicate-insert-column.md)
 - [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)

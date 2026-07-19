@@ -40,6 +40,7 @@
     { "id": "order-by-in-subquery" },
     { "id": "avoid-named-constraint-in-temp-table" },
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "dynamic-sql-taint" },
     { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },

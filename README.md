@@ -34,7 +34,7 @@ This creates `tsqlrefine.json` with sensible defaults:
 }
 ```
 
-The `recommended` preset enables 111 rules (out of 159 total). See [Preset Rulesets](#preset-rulesets) for other options.
+The `recommended` preset enables 112 rules (out of 160 total). See [Preset Rulesets](#preset-rulesets) for other options.
 
 For CI pipelines, use JSON output and exit codes:
 
@@ -66,7 +66,7 @@ T-SQL Refine catches problems **before execution** using static analysis on the 
 
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 159 built-in rules covering security, correctness, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 160 built-in rules covering security, correctness, performance, and coding conventions.
 
 Each rule is classified by severity:
 
@@ -235,11 +235,11 @@ Creates the following files:
 
 | Preset | Rules | Use Case |
 |--------|-------|----------|
-| `security-only` | 16 | Security vulnerabilities and critical safety |
-| `pragmatic` | 51 | Production-ready minimum for legacy codebases |
-| `recommended` | 111 | Balanced for production (default) |
-| `strict-logic` | 136 | Comprehensive correctness without cosmetic rules |
-| `strict` | 159 | Maximum enforcement including style |
+| `security-only` | 17 | Security vulnerabilities and critical safety |
+| `pragmatic` | 52 | Production-ready minimum for legacy codebases |
+| `recommended` | 112 | Balanced for production (default) |
+| `strict-logic` | 137 | Comprehensive correctness without cosmetic rules |
+| `strict` | 160 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
@@ -263,7 +263,7 @@ Gradually introduce tsqlrefine to your team by starting strict on critical issue
 
 ### Step 1: Security & Safety (Block PRs)
 
-Start with the `security-only` preset. These 16 rules catch SQL injection, exposed passwords, broken error propagation, dangerous procedures, and accidental mass UPDATE/DELETE — issues that should never reach production.
+Start with the `security-only` preset. These 17 rules catch SQL injection, exposed passwords, broken error propagation, dangerous procedures, and accidental mass UPDATE/DELETE — issues that should never reach production.
 
 ```bash
 tsqlrefine lint --preset security-only src/**/*.sql
