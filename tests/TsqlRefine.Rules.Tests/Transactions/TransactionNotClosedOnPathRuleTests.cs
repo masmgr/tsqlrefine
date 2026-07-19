@@ -69,9 +69,25 @@ public sealed class TransactionNotClosedOnPathRuleTests
     [Theory]
     [InlineData("BEGIN TRANSACTION; IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;")]
     [InlineData("BEGIN TRANSACTION; IF @@TRANCOUNT = 0 RETURN; ELSE ROLLBACK TRANSACTION;")]
+    [InlineData("BEGIN TRANSACTION; IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;")]
+    [InlineData("BEGIN TRANSACTION; IF 0 < @@TRANCOUNT ROLLBACK TRANSACTION;")]
     public void Analyze_TransactionStateGuardAccountsForClosedBranch_ReturnsNoDiagnostic(string sql)
     {
         Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
+    [Fact]
+    public void Analyze_ReportsTheBeginThatRemainsOpen()
+    {
+        const string sql = """
+            BEGIN TRANSACTION;
+            COMMIT;
+            BEGIN TRANSACTION;
+            """;
+
+        var diagnostic = Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Equal(2, diagnostic.Range.Start.Line);
     }
 
     [Fact]

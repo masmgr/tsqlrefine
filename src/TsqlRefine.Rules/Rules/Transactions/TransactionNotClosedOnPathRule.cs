@@ -23,45 +23,43 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
             return [];
         }
 
-        var begin = scope.Graph.Nodes
-            .Where(node => states.ContainsKey(node))
-            .Select(node => node.Statement)
-            .OfType<BeginTransactionStatement>()
-            .FirstOrDefault();
-        return begin is null
-            ? []
-            : [new ControlFlowIssue(
+        return exitState.OpenBegins.Keys
+            .OrderBy(begin => begin.FirstTokenIndex)
+            .Select(begin => new ControlFlowIssue(
                 begin,
-                "A transaction opened in this scope is not committed or rolled back on every execution path.")];
+                "A transaction opened in this scope is not committed or rolled back on every execution path."))
+            .ToArray();
     }
 
     private sealed class TransactionAnalysis : ForwardDataFlowAnalysis<TransactionState>
     {
-        protected override TransactionState InitialState() => new(1, false);
+        protected override TransactionState InitialState() => new(1, false, new());
 
         protected override TransactionState Transfer(TransactionState input, CfgNode node)
         {
             return node.Statement switch
             {
-                BeginTransactionStatement => input with
-                {
-                    DepthMask = ShiftDepths(input.DepthMask, increase: true) |
-                        (input.HasUnknownPath ? 2 : 0)
-                },
-                CommitTransactionStatement => input with
-                {
-                    DepthMask = ShiftDepths(input.DepthMask, increase: false)
-                },
-                RollbackTransactionStatement rollback when rollback.Name is null => input with { DepthMask = 1 },
-                ExecuteStatement => new TransactionState(0, true),
+                BeginTransactionStatement begin => BeginTransaction(input, begin),
+                CommitTransactionStatement => CommitTransaction(input),
+                RollbackTransactionStatement rollback when rollback.Name is null =>
+                    new TransactionState(1, false, new()),
+                ExecuteStatement => new TransactionState(0, true, new()),
                 _ => input
             };
         }
 
         protected override TransactionState Merge(TransactionState left, TransactionState right) =>
-            new(left.DepthMask | right.DepthMask, left.HasUnknownPath || right.HasUnknownPath);
+            new(
+                left.DepthMask | right.DepthMask,
+                left.HasUnknownPath || right.HasUnknownPath,
+                MergeOpenBegins(left.OpenBegins, right.OpenBegins));
 
-        protected override bool StateEquals(TransactionState left, TransactionState right) => left == right;
+        protected override bool StateEquals(TransactionState left, TransactionState right) =>
+            left.DepthMask == right.DepthMask &&
+            left.HasUnknownPath == right.HasUnknownPath &&
+            left.OpenBegins.Count == right.OpenBegins.Count &&
+            left.OpenBegins.All(pair =>
+                right.OpenBegins.TryGetValue(pair.Key, out var mask) && mask == pair.Value);
 
         protected override TransactionState TransferEdge(
             TransactionState input,
@@ -71,9 +69,53 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
             if (edge.Source.Statement is IfStatement conditional &&
                 BranchGuaranteesNoTransaction(conditional.Predicate, edge.Kind))
             {
-                return new TransactionState(1, false);
+                return new TransactionState(1, false, new());
             }
             return base.TransferEdge(input, output, edge);
+        }
+
+        private static TransactionState BeginTransaction(
+            TransactionState input,
+            BeginTransactionStatement begin)
+        {
+            var openBegins = input.OpenBegins.ToDictionary(
+                pair => pair.Key,
+                pair => ShiftDepths(pair.Value, increase: true));
+            openBegins[begin] = 1;
+            return new TransactionState(
+                ShiftDepths(input.DepthMask, increase: true) |
+                    (input.HasUnknownPath ? 2 : 0),
+                input.HasUnknownPath,
+                openBegins);
+        }
+
+        private static TransactionState CommitTransaction(TransactionState input)
+        {
+            var openBegins = new Dictionary<BeginTransactionStatement, int>();
+            foreach (var (begin, mask) in input.OpenBegins)
+            {
+                var remainingMask = mask >> 1;
+                if (remainingMask != 0)
+                {
+                    openBegins[begin] = remainingMask;
+                }
+            }
+            return new TransactionState(
+                ShiftDepths(input.DepthMask, increase: false),
+                input.HasUnknownPath,
+                openBegins);
+        }
+
+        private static Dictionary<BeginTransactionStatement, int> MergeOpenBegins(
+            IReadOnlyDictionary<BeginTransactionStatement, int> left,
+            IReadOnlyDictionary<BeginTransactionStatement, int> right)
+        {
+            var merged = new Dictionary<BeginTransactionStatement, int>(left);
+            foreach (var (begin, mask) in right)
+            {
+                merged[begin] = merged.GetValueOrDefault(begin) | mask;
+            }
+            return merged;
         }
 
         private static int ShiftDepths(int mask, bool increase)
@@ -111,11 +153,13 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
 
             var stateExpression = comparison.FirstExpression;
             var zeroExpression = comparison.SecondExpression;
+            var stateIsFirst = true;
             if (!IsTransactionStateExpression(stateExpression) ||
                 zeroExpression is not IntegerLiteral { Value: "0" })
             {
                 stateExpression = comparison.SecondExpression;
                 zeroExpression = comparison.FirstExpression;
+                stateIsFirst = false;
                 if (!IsTransactionStateExpression(stateExpression) ||
                     zeroExpression is not IntegerLiteral { Value: "0" })
                 {
@@ -128,9 +172,17 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
             {
                 BooleanComparisonType.Equals => trueBranch,
                 BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !trueBranch,
+                BooleanComparisonType.GreaterThan when stateIsFirst && IsTransactionCountExpression(stateExpression) =>
+                    !trueBranch,
+                BooleanComparisonType.LessThan when !stateIsFirst && IsTransactionCountExpression(stateExpression) =>
+                    !trueBranch,
                 _ => false
             };
         }
+
+        private static bool IsTransactionCountExpression(ScalarExpression expression) =>
+            expression is GlobalVariableExpression global &&
+            string.Equals(global.Name, "@@TRANCOUNT", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsTransactionStateExpression(ScalarExpression expression) => expression switch
         {
@@ -142,5 +194,8 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
         };
     }
 
-    private sealed record TransactionState(int DepthMask, bool HasUnknownPath);
+    private sealed record TransactionState(
+        int DepthMask,
+        bool HasUnknownPath,
+        Dictionary<BeginTransactionStatement, int> OpenBegins);
 }

@@ -39,7 +39,8 @@ public sealed class UncommittedTransactionRule : IRule
             // Try to find an unused COMMIT after this BEGIN
             for (var i = 0; i < visitor.CommitTransactions.Count; i++)
             {
-                if (!usedCommits.Contains(i) && visitor.CommitTransactions[i].StartLine > beginTran.StartLine)
+                if (!usedCommits.Contains(i) &&
+                    visitor.CommitTransactions[i].FirstTokenIndex > beginTran.FirstTokenIndex)
                 {
                     usedCommits.Add(i);
                     hasMatch = true;
@@ -52,7 +53,8 @@ public sealed class UncommittedTransactionRule : IRule
             {
                 for (var i = 0; i < visitor.RollbackTransactions.Count; i++)
                 {
-                    if (!usedRollbacks.Contains(i) && visitor.RollbackTransactions[i].StartLine > beginTran.StartLine)
+                    if (!usedRollbacks.Contains(i) &&
+                        visitor.RollbackTransactions[i].FirstTokenIndex > beginTran.FirstTokenIndex)
                     {
                         usedRollbacks.Add(i);
                         hasMatch = true;

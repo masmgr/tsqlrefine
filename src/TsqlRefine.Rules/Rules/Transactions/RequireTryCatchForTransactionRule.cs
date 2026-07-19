@@ -24,19 +24,19 @@ public sealed class RequireTryCatchForTransactionRule : DiagnosticVisitorRuleBas
 
     private sealed class RequireTryCatchForTransactionVisitor : DiagnosticVisitorBase
     {
-        private readonly Stack<bool> _tryCatchStack = new();
+        private int _tryCatchDepth;
 
         public override void ExplicitVisit(TryCatchStatement node)
         {
-            _tryCatchStack.Push(true);
+            _tryCatchDepth++;
             base.ExplicitVisit(node);
-            _tryCatchStack.Pop();
+            _tryCatchDepth--;
         }
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
             // Check if we're inside a TRY/CATCH block
-            if (_tryCatchStack.Count == 0 || !_tryCatchStack.Peek())
+            if (_tryCatchDepth == 0)
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetFirstTokenRange(node),

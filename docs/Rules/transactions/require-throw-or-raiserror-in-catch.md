@@ -91,6 +91,6 @@ To disable this rule:
 
 ## See Also
 
-- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Detects empty CATCH blocks that suppress errors
+- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Stricter variant that requires THROW or RAISERROR and does not accept RETURN
 - [require-try-catch-for-transaction](require-try-catch-for-transaction.md) - Requires TRY/CATCH for transactions
 - [TsqlRefine Rules Documentation](../README.md)

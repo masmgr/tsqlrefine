@@ -24,32 +24,21 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
 
     private sealed class CatchSwallowingVisitor : DiagnosticVisitorBase
     {
-        private bool _insideTryCatchStatement;
-        private bool _insideTryBlock;
+        private int _catchDepth;
         private bool _catchHasErrorPropagation;
-        private TryCatchStatement? _currentTryCatch;
 
         public override void ExplicitVisit(TryCatchStatement node)
         {
-            var wasInside = _insideTryCatchStatement;
-            _insideTryCatchStatement = true;
-            _currentTryCatch = node;
+            node.TryStatements?.Accept(this);
 
-            // Visit TRY block first
-            _insideTryBlock = true;
+            var previousDepth = _catchDepth;
+            var previousPropagation = _catchHasErrorPropagation;
+
+            _catchDepth++;
             _catchHasErrorPropagation = false;
-            if (node.TryStatements != null)
-            {
-                node.TryStatements.Accept(this);
-            }
-            _insideTryBlock = false;
+            node.CatchStatements?.Accept(this);
 
-            // Visit CATCH blocks - check if any has THROW/RAISERROR
-            _catchHasErrorPropagation = false;
-            base.ExplicitVisit(node);
-
-            // After visiting entire TRY/CATCH, check if CATCH had error propagation
-            if (!_catchHasErrorPropagation && !wasInside)
+            if (!_catchHasErrorPropagation)
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetCatchKeywordPairRange(node),
@@ -60,16 +49,13 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
                 );
             }
 
-            _insideTryCatchStatement = wasInside;
-            if (!wasInside)
-            {
-                _currentTryCatch = null;
-            }
+            _catchDepth = previousDepth;
+            _catchHasErrorPropagation = previousPropagation;
         }
 
         public override void ExplicitVisit(ThrowStatement node)
         {
-            if (_insideTryCatchStatement && !_insideTryBlock)
+            if (_catchDepth > 0)
             {
                 _catchHasErrorPropagation = true;
             }
@@ -79,7 +65,7 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(RaiseErrorStatement node)
         {
-            if (_insideTryCatchStatement && !_insideTryBlock)
+            if (_catchDepth > 0)
             {
                 _catchHasErrorPropagation = true;
             }

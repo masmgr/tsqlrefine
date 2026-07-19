@@ -6,7 +6,7 @@ namespace TsqlRefine.Rules.Rules.Transactions;
 /// <summary>
 /// Requires SET XACT_ABORT ON with explicit transactions to ensure runtime errors reliably abort and roll back work.
 /// </summary>
-public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScript>
+public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
         RuleId: "set-xact-abort",
@@ -16,28 +16,21 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScrip
         Fixable: false
     );
 
-    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context, TSqlScript script) =>
-        new RequireXactAbortOnVisitor(script);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new RequireXactAbortOnVisitor();
 
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
     private sealed class RequireXactAbortOnVisitor : DiagnosticVisitorBase
     {
-        private readonly TSqlScript _script;
         private bool _hasXactAbortOn;
-
-        public RequireXactAbortOnVisitor(TSqlScript script)
-        {
-            _script = script;
-        }
 
         public override void ExplicitVisit(PredicateSetStatement node)
         {
-            // Check for SET XACT_ABORT ON
-            if (node.Options == SetOptions.XactAbort && node.IsOn)
+            if ((node.Options & SetOptions.XactAbort) == SetOptions.XactAbort)
             {
-                _hasXactAbortOn = true;
+                _hasXactAbortOn = node.IsOn;
             }
 
             base.ExplicitVisit(node);
@@ -48,52 +41,16 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase<TSqlScrip
             // Check if XACT_ABORT ON was set before this transaction
             if (!_hasXactAbortOn)
             {
-                // Check if SET XACT_ABORT ON appears before this statement
-                if (!HasXactAbortBeforeStatement(node))
-                {
-                    AddDiagnostic(
-                        range: ScriptDomHelpers.GetFirstTokenRange(node),
-                        message: "BEGIN TRANSACTION should be preceded by SET XACT_ABORT ON to ensure runtime errors reliably abort the transaction.",
-                        code: "set-xact-abort",
-                        category: "Transactions",
-                        fixable: false
-                    );
-                }
+                AddDiagnostic(
+                    range: ScriptDomHelpers.GetFirstTokenRange(node),
+                    message: "BEGIN TRANSACTION should be preceded by SET XACT_ABORT ON to ensure runtime errors reliably abort the transaction.",
+                    code: "set-xact-abort",
+                    category: "Transactions",
+                    fixable: false
+                );
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private bool HasXactAbortBeforeStatement(BeginTransactionStatement transactionStmt)
-        {
-            // Check batches before the transaction statement
-            if (_script.Batches != null)
-            {
-                foreach (var batch in _script.Batches)
-                {
-                    if (batch.Statements != null)
-                    {
-                        foreach (var stmt in batch.Statements)
-                        {
-                            // If we reached the transaction statement, stop
-                            if (stmt == transactionStmt)
-                            {
-                                return false;
-                            }
-
-                            // Check if this is SET XACT_ABORT ON
-                            if (stmt is PredicateSetStatement predicateSet &&
-                                predicateSet.Options == SetOptions.XactAbort &&
-                                predicateSet.IsOn)
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return false;
         }
     }
 }

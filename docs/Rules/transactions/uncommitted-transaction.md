@@ -130,8 +130,10 @@ IF @condition = 1
 -- ELSE branch has no COMMIT/ROLLBACK (rule won't detect this!)
 ```
 
-**Recommendation:** Use this rule as a first-pass check for obvious errors. For complete coverage, also use:
-- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - More sophisticated batch-level analysis
+**Recommendation:** Use this rule as a file-level first-pass check for obvious errors. For stronger coverage, also use:
+
+- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - Matches transaction counts independently in each batch
+- [transaction-not-closed-on-path](transaction-not-closed-on-path.md) - Uses control-flow analysis to check every reachable exit path
 - Runtime monitoring with `@@TRANCOUNT` checks
 
 ## Best Practices
@@ -145,7 +147,8 @@ IF @condition = 1
 ## Comparison with Similar Rules
 
 - **uncommitted-transaction** (this rule) - File-level greedy matching, Warning severity
-- **avoid-transaction-without-commit** - Batch-level analysis with control flow awareness, Error severity
+- **avoid-transaction-without-commit** - Batch-level transaction-depth matching, Error severity
+- **transaction-not-closed-on-path** - CFG path-level analysis, Error severity
 
 Use both rules together for comprehensive transaction checking.
 

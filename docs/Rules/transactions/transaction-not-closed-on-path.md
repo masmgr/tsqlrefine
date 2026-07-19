@@ -19,6 +19,12 @@ depth, full versus savepoint rollback, `XACT_STATE()`, `@@TRANCOUNT`, and unknow
 dynamic-SQL side effects are treated conservatively. Transactions owned by the caller are not
 reported. Scopes containing `GOTO` are skipped.
 
+## Relationship to Similar Rules
+
+- `uncommitted-transaction` performs lightweight file-level matching.
+- `avoid-transaction-without-commit` matches transaction depth within each batch.
+- This rule provides the strongest path-sensitive check and reports transactions left open on a reachable exit.
+
 ## Category
 
 Transactions

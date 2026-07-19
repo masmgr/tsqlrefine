@@ -54,7 +54,10 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
 
         public override void ExplicitVisit(SaveTransactionStatement node)
         {
-            _hasSaveTransaction = true;
+            if (_transactionDepth > 0)
+            {
+                _hasSaveTransaction = true;
+            }
             base.ExplicitVisit(node);
         }
 
@@ -63,6 +66,10 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
             if (_transactionDepth > 0)
             {
                 _transactionDepth--;
+                if (_transactionDepth == 0)
+                {
+                    _hasSaveTransaction = false;
+                }
             }
 
             base.ExplicitVisit(node);
@@ -70,9 +77,10 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            if (_transactionDepth > 0)
+            if (node.Name is null)
             {
-                _transactionDepth--;
+                _transactionDepth = 0;
+                _hasSaveTransaction = false;
             }
 
             base.ExplicitVisit(node);

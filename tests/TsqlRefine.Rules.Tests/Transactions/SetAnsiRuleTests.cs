@@ -18,6 +18,17 @@ public sealed class SetAnsiRuleTests
     }
 
     [Fact]
+    public void Analyze_WhenSetAnsiNullsEnabledInCombinedStatement_ReturnsEmpty()
+    {
+        var rule = new SetAnsiRule();
+        const string sql = "SET ANSI_NULLS, QUOTED_IDENTIFIER ON;\nGO\nCREATE PROCEDURE dbo.Test AS SELECT 1;";
+
+        var diagnostics = rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_WhenSetAnsiNullsMissing_ReturnsDiagnostic()
     {
         var rule = new SetAnsiRule();

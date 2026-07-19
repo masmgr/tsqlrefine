@@ -17,17 +17,29 @@ public abstract class SetOptionPreambleRuleBase : IRule
         string optionDisplayName,
         RuleSeverity defaultSeverity,
         SetOptions setOption)
+        : this(
+            ruleId,
+            $"SET {optionDisplayName} ON",
+            defaultSeverity,
+            statement => statement is PredicateSetStatement { IsOn: true } setStatement &&
+                (setStatement.Options & setOption) == setOption)
+    {
+    }
+
+    protected SetOptionPreambleRuleBase(
+        string ruleId,
+        string requirementDisplayName,
+        RuleSeverity defaultSeverity,
+        Func<TSqlStatement, bool> matchesEnabledOption)
     {
         Metadata = new RuleMetadata(
             RuleId: ruleId,
-            Description: $"Files should start with SET {optionDisplayName} ON within the first 10 statements.",
+            Description: $"Files should start with {requirementDisplayName} within the first 10 statements.",
             Category: "Transactions",
             DefaultSeverity: defaultSeverity,
             Fixable: false);
-        _diagnosticMessage = $"File should start with 'SET {optionDisplayName} ON' within the first 10 statements.";
-        _matchesEnabledOption = statement =>
-            statement is PredicateSetStatement { IsOn: true } setStatement &&
-            setStatement.Options == setOption;
+        _diagnosticMessage = $"File should start with '{requirementDisplayName}' within the first 10 statements.";
+        _matchesEnabledOption = matchesEnabledOption;
     }
 
     public RuleMetadata Metadata { get; }

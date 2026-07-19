@@ -50,6 +50,16 @@ public sealed class RequireXactAbortOnRuleTests
     }
 
     [Fact]
+    public void Analyze_XactAbortEnabledInCombinedStatement_ReturnsEmpty()
+    {
+        const string sql = "SET XACT_ABORT, NOCOUNT ON; BEGIN TRANSACTION; COMMIT;";
+
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_XactAbortOffBeforeTransaction_ReturnsDiagnostic()
     {
         // Arrange
@@ -66,6 +76,16 @@ public sealed class RequireXactAbortOnRuleTests
         // Assert
         Assert.Single(diagnostics);
         Assert.Equal("set-xact-abort", diagnostics[0].Code);
+    }
+
+    [Fact]
+    public void Analyze_XactAbortTurnedOffAfterOn_ReturnsDiagnostic()
+    {
+        const string sql = "SET XACT_ABORT ON; SET XACT_ABORT OFF; BEGIN TRANSACTION; COMMIT;";
+
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
     }
 
     [Fact]
@@ -106,6 +126,16 @@ public sealed class RequireXactAbortOnRuleTests
         var diagnostics = _rule.Analyze(context).ToArray();
 
         // Assert
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NestedTransactionBeforeXactAbortOn_ReturnsDiagnostic()
+    {
+        const string sql = "IF @run = 1 BEGIN BEGIN TRANSACTION; COMMIT; END SET XACT_ABORT ON;";
+
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
         Assert.Single(diagnostics);
     }
 

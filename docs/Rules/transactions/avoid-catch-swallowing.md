@@ -233,6 +233,11 @@ In `custom-ruleset.json`:
 - **Cannot detect** external error handling frameworks
 - **Nested TRY/CATCH** may produce complex scenarios
 
+## Relationship to Similar Rules
+
+This rule requires `THROW` or `RAISERROR` in every CATCH block. The related
+`require-throw-or-raiserror-in-catch` rule also accepts `RETURN` with an error code as propagation.
+
 ## See Also
 
 - [TsqlRefine Rules Documentation](../README.md)
