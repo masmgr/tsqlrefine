@@ -1,6 +1,6 @@
 # 高度静的解析機能 設計案
 
-> **Status**: Active Proposal — Phases 1–4 implemented (2026-07-19)
+> **Status**: Active Proposal — Phases 1–5 implemented (2026-07-19)
 > 複雑な T-SQL ソースコード(ストアドプロシージャ / ビュー / 関数)の品質向上を目的とした
 > 新機能群の設計案。本ドキュメントは提案段階であり、実装時に詳細が変わる可能性がある。
 
@@ -618,7 +618,7 @@ tsqlrefine report [--output-format json|html] [--output report.html] [paths...]
 | **2** | オブジェクトカタログ収集 + EXEC 検証 4 ルール(提案 2.1–2.5 前半) | なし | 中 | Implemented |
 | **3** | CFG 基盤 + トランザクション / カーソル / 変数ルール(提案 3) | なし | 中〜大 | Implemented |
 | **4** | テイント解析(提案 4) | Phase 3 の DataFlow 基盤 | 中 | Implemented |
-| **5** | 型付き per-rule options + メトリクス + report(提案 5) | Phase 3 の CFG | 中 | Planned |
+| **5** | 型付き per-rule options + メトリクス + report(提案 5) | Phase 3 の CFG | 中 | Implemented |
 | **6** | 依存グラフ系ルール + analyze impact/graph + 差分 lint(提案 2.5 後半, 2.6, 1.3) | Phase 2 のカタログ、Phase 5 の options | 中 | Planned |
 
 各 Phase は依存を満たした時点で独立してリリース可能。Phase 1 と 2 は並行着手できる。
