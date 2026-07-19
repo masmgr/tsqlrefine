@@ -1,6 +1,12 @@
 {
   "compatLevel": 150,
   "preset": "recommended",
-  "plugins": []
+  "plugins": [],
+  "rules": {
+    "max-cyclomatic-complexity": {
+      "severity": "warning",
+      "options": { "max": 20 }
+    }
+  }
 }
 

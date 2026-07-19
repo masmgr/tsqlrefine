@@ -136,7 +136,12 @@
     { "id": "update-join-cardinality-mismatch" },
     { "id": "multi-row-update-from" },
     { "id": "len-for-emptiness-check" },
-    { "id": "join-column-deviation" }
+    { "id": "join-column-deviation" },
+    { "id": "max-cyclomatic-complexity" },
+    { "id": "max-nesting-depth" },
+    { "id": "max-statement-count" },
+    { "id": "max-joins-per-query" },
+    { "id": "max-parameter-count" }
   ]
 }
 

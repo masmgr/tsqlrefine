@@ -1,6 +1,7 @@
 using TsqlRefine.Cli.Services;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules;
 
 namespace TsqlRefine.Cli.Tests;
 
@@ -14,6 +15,23 @@ public sealed class ConfigLoaderRuleOptionsTests
         var settings = ConfigLoader.LoadRuleSettings(config, [new ConfigurableRule()]);
 
         Assert.True(settings["test-configurable"].Options!.TryGetInt32("max", out var value));
+        Assert.Equal(12, value);
+    }
+
+    [Fact]
+    public void LoadRuleSettings_BuiltinMetricRule_PreservesDescriptorThroughMetadataWrapper()
+    {
+        var config = new TsqlRefineConfig(Rules: new Dictionary<string, RuleConfig>
+        {
+            ["max-cyclomatic-complexity"] = new(Options: new Dictionary<string, RuleOptionValue>
+            {
+                ["max"] = RuleOptionValue.FromInt32(12)
+            })
+        });
+
+        var settings = ConfigLoader.LoadRuleSettings(config, new BuiltinRuleProvider().GetRules());
+
+        Assert.True(settings["max-cyclomatic-complexity"].Options!.TryGetInt32("max", out var value));
         Assert.Equal(12, value);
     }
 

@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 160
+- **Total Rules**: 165
 - **Fixable Rules**: 14 (9%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
   - Essential (pragmatic): 35 rules
   - Recommended (recommended): 60 rules
-  - Thorough (strict-logic): 25 rules
+  - Thorough (strict-logic): 30 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
   - Error: 28 rules (18%)
-  - Warning: 91 rules (57%)
-  - Information: 41 rules (26%)
+  - Warning: 94 rules (57%)
+  - Information: 43 rules (26%)
 
 ## Importance Tiers
 
@@ -45,8 +45,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
 | **Recommended** | recommended | 60 | 112 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 25 | 137 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 160 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Thorough** | strict-logic | 30 | 142 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 165 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -55,7 +55,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
 | **Correctness** | 54 | Detects code that may produce incorrect results or runtime errors |
-| **Performance** | 24 | Flags patterns that can cause performance issues |
+| **Performance** | 29 | Flags patterns that can cause performance issues |
 | **Transactions** | 16 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
@@ -249,7 +249,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**25 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**30 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -268,7 +268,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
 | [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
 
-#### Performance (10 rules)
+#### Performance (15 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -280,6 +280,11 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-select-distinct](performance/avoid-select-distinct.md) | Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications. | Information | No |
 | [avoid-select-into](performance/avoid-select-into.md) | Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results. | Information | No |
 | [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
+| [max-cyclomatic-complexity](performance/max-cyclomatic-complexity.md) | Limits cyclomatic complexity per SQL object or batch. | Warning | No |
+| [max-joins-per-query](performance/max-joins-per-query.md) | Limits the number of joins in a single query. | Warning | No |
+| [max-nesting-depth](performance/max-nesting-depth.md) | Limits control-flow nesting depth per SQL object or batch. | Warning | No |
+| [max-parameter-count](performance/max-parameter-count.md) | Limits parameter count per procedure or function. | Information | No |
+| [max-statement-count](performance/max-statement-count.md) | Limits executable statement count per SQL object or batch. | Information | No |
 | [prefer-utc-datetime](performance/prefer-utc-datetime.md) | Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones | Warning | No |
 | [require-data-compression](performance/require-data-compression.md) | Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization | Information | No |
 
@@ -376,7 +381,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (91 rules)
+### Warning (94 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -425,6 +430,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md)
 - [len-for-emptiness-check](correctness/len-for-emptiness-check.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
+- [max-cyclomatic-complexity](performance/max-cyclomatic-complexity.md)
+- [max-joins-per-query](performance/max-joins-per-query.md)
+- [max-nesting-depth](performance/max-nesting-depth.md)
 - [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md)
 - [multi-row-update-from](correctness/multi-row-update-from.md)
 - [nested-block-comments](style/nested-block-comments.md)
@@ -470,7 +478,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
 - [variable-used-before-assignment](correctness/variable-used-before-assignment.md)
 
-### Information (41 rules)
+### Information (43 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -484,6 +492,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-empty-line](style/duplicate-empty-line.md)
 - [duplicate-go](style/duplicate-go.md)
 - [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md)
+- [max-parameter-count](performance/max-parameter-count.md)
+- [max-statement-count](performance/max-statement-count.md)
 - [normalize-execute-keyword](style/normalize-execute-keyword.md)
 - [normalize-inequality-operator](style/normalize-inequality-operator.md)
 - [normalize-procedure-keyword](style/normalize-procedure-keyword.md)

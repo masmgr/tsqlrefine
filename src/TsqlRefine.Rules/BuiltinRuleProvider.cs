@@ -97,6 +97,11 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new AvoidScalarUdfInQueryRule(),
         new AvoidCorrelatedScalarSubqueryInSelectRule(),
         new AvoidOrOnDifferentColumnsRule(),
+        new MaxCyclomaticComplexityRule(),
+        new MaxNestingDepthRule(),
+        new MaxStatementCountRule(),
+        new MaxJoinsPerQueryRule(),
+        new MaxParameterCountRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
@@ -228,7 +233,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new PrintStatementRule()
     ];
 
-    private sealed class RuleWithMetadata(IRule inner, RuleMetadata metadata) : IRule
+    private sealed class RuleWithMetadata(IRule inner, RuleMetadata metadata)
+        : IRule, IRuleOptionsDescriptorProvider
     {
         public RuleMetadata Metadata => metadata;
 
@@ -236,6 +242,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
             inner.GetFixes(context, diagnostic);
+
+        public IReadOnlyList<RuleOptionDescriptor> OptionDescriptors =>
+            inner is IRuleOptionsDescriptorProvider provider ? provider.OptionDescriptors : [];
     }
 }
 
