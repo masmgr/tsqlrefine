@@ -199,6 +199,7 @@ public static class BaselineStore
         {
             sources.TryGetValue(file.FilePath, out var source);
             source ??= string.Empty;
+            var sourceLines = GetSourceLines(source);
             var diagnostics = new List<ClassifiedDiagnostic>(file.Diagnostics.Count);
             foreach (var diagnostic in file.Diagnostics)
             {
@@ -208,7 +209,7 @@ public static class BaselineStore
                     continue;
                 }
 
-                var fingerprint = ComputeFingerprint(file.FilePath, source, diagnostic, root);
+                var fingerprint = ComputeFingerprint(file.FilePath, sourceLines, diagnostic, root);
                 var suppressed = remaining.TryGetValue(fingerprint, out var count) && count > 0;
                 if (suppressed)
                 {
@@ -277,6 +278,7 @@ public static class BaselineStore
         {
             sources.TryGetValue(file.FilePath, out var source);
             source ??= string.Empty;
+            var sourceLines = GetSourceLines(source);
             var normalizedPath = NormalizeFilePath(file.FilePath, root);
             foreach (var diagnostic in file.Diagnostics)
             {
@@ -285,7 +287,7 @@ public static class BaselineStore
                     continue;
                 }
                 entries.Add(new BaselineEntry(
-                    ComputeFingerprint(file.FilePath, source, diagnostic, root),
+                    ComputeFingerprint(file.FilePath, sourceLines, diagnostic, root),
                     diagnostic.Data?.RuleId ?? diagnostic.Code ?? string.Empty,
                     normalizedPath));
             }
@@ -299,11 +301,10 @@ public static class BaselineStore
 
     private static string ComputeFingerprint(
         string filePath,
-        string source,
+        string[] lines,
         Diagnostic diagnostic,
         string root)
     {
-        var lines = NormalizeNewlines(source).Split('\n');
         var diagnosticText = ExtractDiagnosticText(lines, diagnostic.Range);
         var leading = FindContextLine(lines, diagnostic.Range.Start.Line, -1);
         var trailing = FindContextLine(lines, diagnostic.Range.End.Line, 1);
@@ -395,6 +396,8 @@ public static class BaselineStore
 
     private static string NormalizeNewlines(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private static string[] GetSourceLines(string source) => NormalizeNewlines(source).Split('\n');
 
     private static string NormalizeSeparators(string value) => value.Replace('\\', '/');
 

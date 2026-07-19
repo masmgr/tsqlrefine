@@ -66,6 +66,52 @@ public sealed class ObjectCatalogCollectorTests
     }
 
     [Fact]
+    public void Collect_AliasAndUnqualifiedColumns_ResolveToTheirSingleTableSource()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [
+                ("CREATE VIEW dbo.AliasView AS SELECT u.Email FROM dbo.Users AS u;", "alias.sql"),
+                ("CREATE VIEW dbo.UnqualifiedView AS SELECT Email FROM dbo.Users;", "unqualified.sql")
+            ],
+            160);
+
+        var columnReferences = catalog.References
+            .Where(reference => reference.Kind == CatalogReferenceKind.Column)
+            .ToArray();
+        Assert.Equal(2, columnReferences.Length);
+        Assert.All(columnReferences, reference =>
+        {
+            Assert.Equal("dbo", reference.ToObject.SchemaName);
+            Assert.Equal("Users", reference.ToObject.Name);
+            Assert.Equal("Email", reference.ToColumn);
+        });
+    }
+
+    [Fact]
+    public void Collect_UpdateColumn_ResolvesToTargetTable()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [("CREATE PROCEDURE dbo.UpdateUser AS UPDATE dbo.Users SET Email = N'new@example.com';", "update.sql")],
+            160);
+
+        var reference = Assert.Single(
+            catalog.References,
+            item => item.Kind == CatalogReferenceKind.Column && item.ToColumn == "Email");
+        Assert.Equal("dbo", reference.ToObject.SchemaName);
+        Assert.Equal("Users", reference.ToObject.Name);
+    }
+
+    [Fact]
+    public void Collect_CrossDatabaseReference_DoesNotExpandAuthoritativeDatabaseScope()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [("CREATE PROCEDURE dbo.Caller AS EXEC OtherDb.dbo.RemoteProcedure;", "caller.sql")],
+            160);
+
+        Assert.DoesNotContain("OtherDb", catalog.Scope.Databases, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Collect_DynamicAndFourPartExec_MarksReferencesOutOfScope()
     {
         var catalog = ObjectCatalogCollector.Collect(

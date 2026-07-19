@@ -7,12 +7,18 @@ internal sealed class CatalogDependencyGraph
 {
     private static readonly ConditionalWeakTable<IObjectCatalogProvider, CatalogDependencyGraph> Cache = new();
     private readonly Dictionary<string, CatalogObjectInfo> _objectsById;
+    private readonly Dictionary<string, int> _objectCountsByKind;
     private readonly Dictionary<CatalogObjectInfo, CatalogObjectInfo[]> _outgoing;
+    private readonly Dictionary<CatalogObjectInfo, int> _viewDepths = [];
+    private readonly Dictionary<CatalogObjectInfo, IReadOnlyList<CatalogObjectInfo>> _cyclesByObject;
 
     private CatalogDependencyGraph(IObjectCatalogProvider catalog)
     {
         Objects = catalog.GetAllObjects();
         _objectsById = Objects.ToDictionary(obj => CreateKey(obj.Id), StringComparer.OrdinalIgnoreCase);
+        _objectCountsByKind = Objects
+            .GroupBy(obj => CreateKindKey(obj.Id, obj.Kind), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
         var outgoing = Objects.ToDictionary(obj => obj, _ => new HashSet<CatalogObjectInfo>());
         foreach (var target in Objects)
         {
@@ -31,6 +37,7 @@ internal sealed class CatalogDependencyGraph
             }
         }
         _outgoing = outgoing.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray());
+        _cyclesByObject = FindCycles();
     }
 
     internal IReadOnlyList<CatalogObjectInfo> Objects { get; }
@@ -42,13 +49,50 @@ internal sealed class CatalogDependencyGraph
         _outgoing.TryGetValue(source, out var dependencies) ? dependencies : [];
 
     internal int GetViewNestingDepth(CatalogObjectInfo view) =>
-        GetViewNestingDepth(view, [], new Dictionary<CatalogObjectInfo, int>());
+        GetCachedViewNestingDepth(view);
+
+    internal int CountMatches(
+        string? database,
+        string schema,
+        string name,
+        CatalogObjectKindFilter filter)
+    {
+        var id = new CatalogObjectIdInfo(database, schema, name);
+        var count = 0;
+        foreach (var kind in Enum.GetValues<CatalogObjectKind>())
+        {
+            if ((filter & ToFilter(kind)) != 0)
+            {
+                count += _objectCountsByKind.GetValueOrDefault(CreateKindKey(id, kind));
+            }
+        }
+        return count;
+    }
 
     internal IReadOnlyList<CatalogObjectInfo>? FindCycle(CatalogObjectInfo start)
     {
-        var path = new List<CatalogObjectInfo> { start };
-        var active = new HashSet<CatalogObjectInfo> { start };
-        return FindCycleCore(start, start, path, active);
+        if (!_cyclesByObject.TryGetValue(start, out var cycle))
+        {
+            return null;
+        }
+        var startIndex = -1;
+        for (var i = 0; i < cycle.Count - 1; i++)
+        {
+            if (cycle[i] == start)
+            {
+                startIndex = i;
+                break;
+            }
+        }
+        if (startIndex <= 0)
+        {
+            return cycle;
+        }
+        return cycle
+            .Skip(startIndex)
+            .Take(cycle.Count - startIndex - 1)
+            .Concat(cycle.Take(startIndex + 1))
+            .ToArray();
     }
 
     internal static bool IdentityEquals(CatalogObjectIdInfo left, CatalogObjectIdInfo right) =>
@@ -84,6 +128,82 @@ internal sealed class CatalogDependencyGraph
         return depth;
     }
 
+    private int GetCachedViewNestingDepth(CatalogObjectInfo view)
+    {
+        lock (_viewDepths)
+        {
+            return GetViewNestingDepth(view, [], _viewDepths);
+        }
+    }
+
+    private Dictionary<CatalogObjectInfo, IReadOnlyList<CatalogObjectInfo>> FindCycles()
+    {
+        var index = 0;
+        var indexes = new Dictionary<CatalogObjectInfo, int>();
+        var lowLinks = new Dictionary<CatalogObjectInfo, int>();
+        var stack = new Stack<CatalogObjectInfo>();
+        var onStack = new HashSet<CatalogObjectInfo>();
+        var cycles = new Dictionary<CatalogObjectInfo, IReadOnlyList<CatalogObjectInfo>>();
+
+        foreach (var obj in Objects)
+        {
+            if (!indexes.ContainsKey(obj))
+            {
+                Visit(obj);
+            }
+        }
+        return cycles;
+
+        void Visit(CatalogObjectInfo current)
+        {
+            indexes[current] = index;
+            lowLinks[current] = index;
+            index++;
+            stack.Push(current);
+            onStack.Add(current);
+
+            foreach (var dependency in GetDependencies(current))
+            {
+                if (!indexes.TryGetValue(dependency, out var dependencyIndex))
+                {
+                    Visit(dependency);
+                    lowLinks[current] = Math.Min(lowLinks[current], lowLinks[dependency]);
+                }
+                else if (onStack.Contains(dependency))
+                {
+                    lowLinks[current] = Math.Min(lowLinks[current], dependencyIndex);
+                }
+            }
+
+            if (lowLinks[current] != indexes[current])
+            {
+                return;
+            }
+
+            var component = new List<CatalogObjectInfo>();
+            CatalogObjectInfo member;
+            do
+            {
+                member = stack.Pop();
+                onStack.Remove(member);
+                component.Add(member);
+            }
+            while (member != current);
+
+            if (component.Count > 1 || GetDependencies(current).Contains(current))
+            {
+                var start = component[0];
+                var path = new List<CatalogObjectInfo> { start };
+                var active = new HashSet<CatalogObjectInfo> { start };
+                var cycle = FindCycleCore(start, start, path, active)!;
+                foreach (var item in component)
+                {
+                    cycles[item] = cycle;
+                }
+            }
+        }
+    }
+
     private IReadOnlyList<CatalogObjectInfo>? FindCycleCore(
         CatalogObjectInfo start,
         CatalogObjectInfo current,
@@ -114,4 +234,16 @@ internal sealed class CatalogDependencyGraph
 
     private static string CreateKey(CatalogObjectIdInfo id) =>
         $"{id.DatabaseName ?? string.Empty}\u001f{id.SchemaName}\u001f{id.Name}";
+
+    private static string CreateKindKey(CatalogObjectIdInfo id, CatalogObjectKind kind) =>
+        $"{CreateKey(id)}\u001f{kind}";
+
+    private static CatalogObjectKindFilter ToFilter(CatalogObjectKind kind) => kind switch
+    {
+        CatalogObjectKind.Procedure => CatalogObjectKindFilter.Procedure,
+        CatalogObjectKind.ScalarFunction => CatalogObjectKindFilter.ScalarFunction,
+        CatalogObjectKind.TableValuedFunction => CatalogObjectKindFilter.TableValuedFunction,
+        CatalogObjectKind.View => CatalogObjectKindFilter.View,
+        _ => CatalogObjectKindFilter.None
+    };
 }

@@ -34,7 +34,6 @@ public static class ObjectCatalogCollector
 
         var resolvedReferences = ResolveReferences(objects, references);
         var databases = objects.Select(obj => obj.Id.DatabaseName)
-            .Concat(references.Select(reference => reference.ToObject.DatabaseName))
             .Where(database => !string.IsNullOrWhiteSpace(database))
             .Select(database => database!)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -57,6 +56,9 @@ public static class ObjectCatalogCollector
         IReadOnlyList<CatalogObject> objects,
         List<CatalogReference> references)
     {
+        var objectCounts = objects
+            .GroupBy(obj => CreateResolutionKey(obj.Id, obj.Kind), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
         var output = new CatalogReference[references.Count];
         for (var i = 0; i < references.Count; i++)
         {
@@ -67,7 +69,8 @@ public static class ObjectCatalogCollector
                 continue;
             }
 
-            var matches = objects.Count(obj => IdentityEquals(obj.Id, reference.ToObject) && KindMatches(obj.Kind, reference.Kind));
+            var matches = GetMatchingKinds(reference.Kind)
+                .Sum(kind => objectCounts.GetValueOrDefault(CreateResolutionKey(reference.ToObject, kind)));
             var status = matches switch
             {
                 0 when reference.Kind is CatalogReferenceKind.Table or CatalogReferenceKind.Column =>
@@ -81,18 +84,16 @@ public static class ObjectCatalogCollector
         return output;
     }
 
-    private static bool IdentityEquals(CatalogObjectId left, CatalogObjectId right) =>
-        string.Equals(left.DatabaseName ?? string.Empty, right.DatabaseName ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(left.SchemaName, right.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(left.Name, right.Name, StringComparison.OrdinalIgnoreCase);
-
-    private static bool KindMatches(CatalogObjectKind kind, CatalogReferenceKind referenceKind) => referenceKind switch
+    private static IEnumerable<CatalogObjectKind> GetMatchingKinds(CatalogReferenceKind referenceKind) => referenceKind switch
     {
-        CatalogReferenceKind.Execute => kind == CatalogObjectKind.Procedure,
-        CatalogReferenceKind.FunctionCall => kind is CatalogObjectKind.ScalarFunction or CatalogObjectKind.TableValuedFunction,
-        CatalogReferenceKind.Table or CatalogReferenceKind.Column => kind == CatalogObjectKind.View,
-        _ => false
+        CatalogReferenceKind.Execute => [CatalogObjectKind.Procedure],
+        CatalogReferenceKind.FunctionCall => [CatalogObjectKind.ScalarFunction, CatalogObjectKind.TableValuedFunction],
+        CatalogReferenceKind.Table or CatalogReferenceKind.Column => [CatalogObjectKind.View],
+        _ => []
     };
+
+    private static string CreateResolutionKey(CatalogObjectId id, CatalogObjectKind kind) =>
+        $"{id.DatabaseName ?? string.Empty}\u001f{id.SchemaName}\u001f{id.Name}\u001f{kind}";
 
     private sealed class CollectorVisitor(
         string filePath,
@@ -101,6 +102,7 @@ public static class ObjectCatalogCollector
         List<CatalogReference> references) : TSqlFragmentVisitor
     {
         private CatalogObjectId? _currentObject;
+        private readonly Stack<Dictionary<string, CatalogObjectId>> _querySources = new();
 
         public override void ExplicitVisit(CreateProcedureStatement node) => VisitProcedure(node, () => base.ExplicitVisit(node));
         public override void ExplicitVisit(AlterProcedureStatement node) => VisitProcedure(node, () => base.ExplicitVisit(node));
@@ -168,10 +170,48 @@ public static class ObjectCatalogCollector
             base.ExplicitVisit(node);
         }
 
+        public override void ExplicitVisit(QuerySpecification node)
+        {
+            _querySources.Push(CollectQuerySources(node.FromClause));
+            base.ExplicitVisit(node);
+            _querySources.Pop();
+        }
+
+        public override void ExplicitVisit(UpdateSpecification node)
+        {
+            _querySources.Push(CollectStatementSources(node.FromClause, node.Target));
+            base.ExplicitVisit(node);
+            _querySources.Pop();
+        }
+
+        public override void ExplicitVisit(DeleteSpecification node)
+        {
+            _querySources.Push(CollectStatementSources(node.FromClause, node.Target));
+            base.ExplicitVisit(node);
+            _querySources.Pop();
+        }
+
+        public override void ExplicitVisit(InsertSpecification node)
+        {
+            _querySources.Push(CollectStatementSources(null, node.Target));
+            base.ExplicitVisit(node);
+            _querySources.Pop();
+        }
+
         public override void ExplicitVisit(ColumnReferenceExpression node)
         {
             var identifiers = node.MultiPartIdentifier?.Identifiers;
-            if (identifiers is { Count: 3 })
+            if (identifiers is { Count: 1 } && TryResolveUnqualifiedSource(out var unqualifiedTarget))
+            {
+                references.Add(CreateReference(
+                    unqualifiedTarget, identifiers[0].Value, CatalogReferenceKind.Column, node, false));
+            }
+            else if (identifiers is { Count: 2 } && TryResolveQualifiedSource(identifiers[0].Value, out var qualifiedTarget))
+            {
+                references.Add(CreateReference(
+                    qualifiedTarget, identifiers[1].Value, CatalogReferenceKind.Column, node, false));
+            }
+            else if (identifiers is { Count: 3 })
             {
                 var target = new CatalogObjectId(null, identifiers[0].Value, identifiers[1].Value);
                 references.Add(CreateReference(target, identifiers[2].Value, CatalogReferenceKind.Column, node, false));
@@ -182,6 +222,80 @@ public static class ObjectCatalogCollector
                 references.Add(CreateReference(target, identifiers[3].Value, CatalogReferenceKind.Column, node, false));
             }
             base.ExplicitVisit(node);
+        }
+
+        private Dictionary<string, CatalogObjectId> CollectQuerySources(FromClause? fromClause)
+            => CollectStatementSources(fromClause, null);
+
+        private Dictionary<string, CatalogObjectId> CollectStatementSources(
+            FromClause? fromClause,
+            TableReference? target)
+        {
+            var sources = new Dictionary<string, CatalogObjectId>(StringComparer.OrdinalIgnoreCase);
+            if (fromClause is not null)
+            {
+                foreach (var tableReference in fromClause.TableReferences)
+                {
+                    CollectTableSources(tableReference, sources);
+                }
+            }
+            if (target is not null)
+            {
+                CollectTableSources(target, sources);
+            }
+            return sources;
+        }
+
+        private void CollectTableSources(
+            TableReference tableReference,
+            Dictionary<string, CatalogObjectId> sources)
+        {
+            switch (tableReference)
+            {
+                case NamedTableReference { SchemaObject: not null } named:
+                    var id = ToId(named.SchemaObject);
+                    var qualifier = named.Alias?.Value ?? named.SchemaObject.BaseIdentifier?.Value;
+                    if (!string.IsNullOrWhiteSpace(qualifier))
+                    {
+                        sources[qualifier] = id;
+                    }
+                    break;
+                case JoinTableReference join:
+                    CollectTableSources(join.FirstTableReference, sources);
+                    CollectTableSources(join.SecondTableReference, sources);
+                    break;
+                case JoinParenthesisTableReference { Join: not null } parenthesis:
+                    CollectTableSources(parenthesis.Join, sources);
+                    break;
+            }
+        }
+
+        private bool TryResolveQualifiedSource(string qualifier, out CatalogObjectId target)
+        {
+            foreach (var sources in _querySources)
+            {
+                if (sources.TryGetValue(qualifier, out target!))
+                {
+                    return true;
+                }
+            }
+            target = null!;
+            return false;
+        }
+
+        private bool TryResolveUnqualifiedSource(out CatalogObjectId target)
+        {
+            if (_querySources.TryPeek(out var sources))
+            {
+                var targets = sources.Values.Distinct().Take(2).ToArray();
+                if (targets.Length == 1)
+                {
+                    target = targets[0];
+                    return true;
+                }
+            }
+            target = null!;
+            return false;
         }
 
         private void VisitProcedure(ProcedureStatementBody node, Action visitChildren)

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Rules.Helpers.Metrics;
@@ -16,9 +17,16 @@ public sealed record SqlObjectMetrics(
 /// <summary>Collects inexpensive structural metrics from ScriptDOM nodes.</summary>
 public static class SqlMetricsCollector
 {
+    private static readonly ConditionalWeakTable<TSqlFragment, SqlObjectMetrics[]> s_cache = new();
+
     public static IReadOnlyList<SqlObjectMetrics> Collect(TSqlFragment fragment)
     {
         ArgumentNullException.ThrowIfNull(fragment);
+        return s_cache.GetValue(fragment, static value => CollectCore(value));
+    }
+
+    private static SqlObjectMetrics[] CollectCore(TSqlFragment fragment)
+    {
         if (fragment is not TSqlScript script)
         {
             return [];
@@ -82,7 +90,7 @@ public static class SqlMetricsCollector
                     0));
             }
         }
-        return results;
+        return results.ToArray();
     }
 
     private static SqlObjectMetrics Measure(

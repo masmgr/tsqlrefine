@@ -101,6 +101,47 @@ public sealed class CliChangedOnlyTests
     }
 
     [Fact]
+    public async Task ChangedOnly_CommittedDiagnosticShiftedByWorkingTree_UsesWorkingTreeLines()
+    {
+        var context = await TestContext.CreateAsync("SELECT Id FROM dbo.FirstTable;");
+        try
+        {
+            await RunGitAsync(context.Directory, "init");
+            await RunGitAsync(context.Directory, "config", "user.email", "test@example.com");
+            await RunGitAsync(context.Directory, "config", "user.name", "TsqlRefine Test");
+            await RunGitAsync(context.Directory, "add", "input.sql");
+            await RunGitAsync(context.Directory, "commit", "-m", "initial");
+            await File.WriteAllTextAsync(
+                context.SqlPath,
+                "SELECT Id FROM dbo.FirstTable;\nSELECT * FROM dbo.SecondTable;");
+            await RunGitAsync(context.Directory, "add", "input.sql");
+            await RunGitAsync(context.Directory, "commit", "-m", "add violation");
+            await File.WriteAllTextAsync(
+                context.SqlPath,
+                "SELECT 1;\nSELECT Id FROM dbo.FirstTable;\nSELECT * FROM dbo.SecondTable;");
+            Environment.CurrentDirectory = context.Directory;
+
+            var result = await RunAsync([
+                "lint", "--changed-only", "--base-ref", "HEAD~1",
+                "--output", "json", "--quiet", context.SqlPath
+            ]);
+
+            Assert.Equal(ExitCodes.Violations, result.Code);
+            using var document = JsonDocument.Parse(result.Stdout);
+            var selectStar = document.RootElement.GetProperty("files")[0].GetProperty("diagnostics")
+                .EnumerateArray()
+                .Where(diagnostic => diagnostic.GetProperty("code").GetString() == "avoid-select-star")
+                .ToArray();
+            var diagnostic = Assert.Single(selectStar);
+            Assert.Equal(2, diagnostic.GetProperty("range").GetProperty("start").GetProperty("line").GetInt32());
+        }
+        finally
+        {
+            await context.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task ChangedLinesFile_UnsupportedVersion_ReturnsConfigError()
     {
         var context = await TestContext.CreateAsync("SELECT 1;");

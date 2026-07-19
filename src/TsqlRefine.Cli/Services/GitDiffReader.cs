@@ -126,20 +126,11 @@ public static class GitDiffReader
         var rootResult = await RunGitAsync(["rev-parse", "--show-toplevel"]);
         var root = Path.GetFullPath(rootResult.Trim());
         var ranges = new Dictionary<string, List<ChangedLineRange>>(GetPathComparer());
-        var committed = await RunGitAsync([
-            "-c", "core.quotepath=false", "diff", "--unified=0", "--no-color", "--no-ext-diff",
-            "--no-prefix", $"{baseRef}...HEAD", "--"
-        ]);
-        var staged = await RunGitAsync([
-            "-c", "core.quotepath=false", "diff", "--cached", "--unified=0", "--no-color",
-            "--no-ext-diff", "--no-prefix", "--"
-        ]);
+        var mergeBase = (await RunGitAsync(["merge-base", baseRef, "HEAD"])).Trim();
         var working = await RunGitAsync([
             "-c", "core.quotepath=false", "diff", "--unified=0", "--no-color", "--no-ext-diff",
-            "--no-prefix", "--"
+            "--no-prefix", mergeBase, "--"
         ]);
-        ParsePatch(committed, root, ranges);
-        ParsePatch(staged, root, ranges);
         ParsePatch(working, root, ranges);
 
         var untrackedOutput = await RunGitAsync([

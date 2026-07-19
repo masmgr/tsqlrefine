@@ -39,6 +39,15 @@ public sealed class UnresolvedProcedureReferenceRuleTests
     }
 
     [Fact]
+    public void UnresolvedProcedure_CrossDatabaseOutsideCatalogScope_ReturnsNoDiagnostic()
+    {
+        const string sql = "CREATE PROCEDURE dbo.Caller AS EXEC OtherDb.dbo.RemoteProcedure;";
+        var context = CreateContext(sql, "caller.sql", [(sql, "caller.sql")]);
+
+        Assert.Empty(new UnresolvedProcedureReferenceRule().Analyze(context));
+    }
+
+    [Fact]
     public void UnreferencedObject_NoIncomingReference_ReturnsDiagnostic()
     {
         const string definition = "CREATE PROCEDURE dbo.OrphanProcedure AS SELECT 1;";

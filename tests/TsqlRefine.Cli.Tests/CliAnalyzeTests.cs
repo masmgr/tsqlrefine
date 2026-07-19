@@ -122,7 +122,7 @@ public sealed class CliAnalyzeTests
             System.IO.Directory.CreateDirectory(directory);
             var catalog = ObjectCatalogCollector.Collect(
             [
-                ("CREATE VIEW dbo.DirectImpact AS SELECT dbo.Users.Email FROM dbo.Users;", "direct.sql"),
+                ("CREATE VIEW dbo.DirectImpact AS SELECT u.Email FROM dbo.Users AS u;", "direct.sql"),
                 ("CREATE VIEW dbo.IndirectImpact AS SELECT Email FROM dbo.DirectImpact;", "indirect.sql"),
                 ("CREATE PROCEDURE dbo.ProcedureImpact AS SELECT Email FROM dbo.IndirectImpact;", "procedure.sql")
             ], 150);

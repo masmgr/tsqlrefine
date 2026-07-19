@@ -35,6 +35,7 @@ public sealed class UnresolvedProcedureReferenceRule : IRule
 
     private sealed class UnresolvedCallVisitor(IObjectCatalogProvider catalog) : TSqlFragmentVisitor
     {
+        private readonly CatalogDependencyGraph _graph = CatalogDependencyGraph.For(catalog);
         internal List<UnresolvedCall> Issues { get; } = [];
 
         public override void ExplicitVisit(ExecuteStatement node)
@@ -89,11 +90,7 @@ public sealed class UnresolvedProcedureReferenceRule : IRule
                 return;
             }
             var normalizedSchema = schema ?? catalog.Scope.DefaultSchema;
-            var matches = catalog.GetAllObjects().Count(obj =>
-                (kind & ToFilter(obj.Kind)) != 0 &&
-                string.Equals(obj.Id.DatabaseName ?? string.Empty, database ?? string.Empty, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(obj.Id.SchemaName, normalizedSchema, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(obj.Id.Name, name, StringComparison.OrdinalIgnoreCase));
+            var matches = _graph.CountMatches(database, normalizedSchema, name, kind);
             if (matches == 0)
             {
                 Issues.Add(new UnresolvedCall(fragment,
@@ -105,15 +102,6 @@ public sealed class UnresolvedProcedureReferenceRule : IRule
 
         private bool IsInScope(string? database) =>
             database is null || catalog.Scope.Databases.Contains(database, StringComparer.OrdinalIgnoreCase);
-
-        private static CatalogObjectKindFilter ToFilter(CatalogObjectKind kind) => kind switch
-        {
-            CatalogObjectKind.Procedure => CatalogObjectKindFilter.Procedure,
-            CatalogObjectKind.ScalarFunction => CatalogObjectKindFilter.ScalarFunction,
-            CatalogObjectKind.TableValuedFunction => CatalogObjectKindFilter.TableValuedFunction,
-            CatalogObjectKind.View => CatalogObjectKindFilter.View,
-            _ => CatalogObjectKindFilter.None
-        };
     }
 
     private sealed record UnresolvedCall(TSqlFragment Fragment, string DisplayName);

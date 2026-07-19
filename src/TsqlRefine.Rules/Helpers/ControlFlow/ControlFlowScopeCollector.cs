@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 
 namespace TsqlRefine.Rules.Helpers.ControlFlow;
@@ -15,9 +16,16 @@ public sealed record ControlFlowScope(
 /// <summary>Finds independent executable scopes and builds a graph for each one.</summary>
 public static class ControlFlowScopeCollector
 {
+    private static readonly ConditionalWeakTable<TSqlFragment, ControlFlowScope[]> s_cache = new();
+
     public static IReadOnlyList<ControlFlowScope> Collect(TSqlFragment fragment)
     {
         ArgumentNullException.ThrowIfNull(fragment);
+        return s_cache.GetValue(fragment, static value => CollectCore(value));
+    }
+
+    private static ControlFlowScope[] CollectCore(TSqlFragment fragment)
+    {
         if (fragment is not TSqlScript script)
         {
             return [];
@@ -47,7 +55,7 @@ public static class ControlFlowScopeCollector
                 scopes.Add(new ControlFlowScope(batch, result.Graph, result.UnsupportedReasons, []));
             }
         }
-        return scopes;
+        return scopes.ToArray();
     }
 
     private static bool TryGetRoutineBody(
