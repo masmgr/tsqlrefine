@@ -37,6 +37,22 @@ public sealed class OutputContractTests
                         "contract.sql")
                 ]),
             Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "baseline.schema.json"));
+        AssertMatchesSchema(
+            new ReportDocument(
+                SchemaVersion: 1,
+                Tool: "tsqlrefine",
+                Version: "1.0.0",
+                GeneratedAt: DateTimeOffset.UtcNow,
+                Summary: new ReportSummary(1, 1, 0, 1, 0, 0),
+                DiagnosticsByCategory: [new ReportCount("Performance", 1)],
+                DiagnosticsByRule: [new ReportCount("avoid-select-star", 1)],
+                DiagnosticsByFile: [new ReportCount("contract.sql", 1)],
+                TopComplexObjects:
+                [
+                    new ReportMetric("contract.sql", "batch-1", "Batch", 1, 1, 0, 1, 0, 0)
+                ],
+                Baseline: new ReportBaselineSummary(1, 0, 0)),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "report-result.schema.json"));
     }
 
     [Fact]

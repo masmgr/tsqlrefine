@@ -390,6 +390,63 @@ public sealed class CommandExecutor
         return diagnosticsSummary.TotalDiagnostics > 0 ? ExitCodes.Violations : 0;
     }
 
+    public async Task<int> ExecuteReportAsync(
+        CliArgs args,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr)
+    {
+        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        if (read is null)
+        {
+            return errorCode!.Value;
+        }
+
+        var config = ConfigLoader.LoadConfig(args);
+        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
+        var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
+        var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
+        var result = new TsqlRefineEngine(rules).Run("report", read.Inputs, options);
+        var sources = read.Inputs.ToDictionary(
+            input => input.FilePath,
+            input => input.Text,
+            StringComparer.OrdinalIgnoreCase);
+
+        var baselinePath = ConfigLoader.ResolveBaselinePath(args, config);
+        BaselineDocument? baseline = null;
+        string root;
+        if (baselinePath is not null)
+        {
+            baseline = BaselineStore.Load(baselinePath);
+            root = BaselineStore.ResolveStoredRoot(baselinePath, baseline);
+            BaselineStore.ValidateExplicitRoot(args.BaselineRoot, root);
+        }
+        else
+        {
+            root = BaselineStore.ResolveRootForCreate(args.BaselineRoot, read.Inputs);
+        }
+
+        var classification = BaselineStore.ClassifyWithSummary(result.Files, sources, root, baseline);
+        var report = ReportWriter.Create(
+            result,
+            classification,
+            read.Inputs,
+            options.CompatLevel,
+            baseline is not null);
+        await ReportWriter.WriteAsync(report, args.ReportOutputFormat, args.ReportOutputPath, stdout);
+
+        if (!args.Quiet && args.ReportOutputPath is not null)
+        {
+            await stderr.WriteLineAsync($"Wrote report: {Path.GetFullPath(args.ReportOutputPath)}");
+        }
+
+        return result.Files.SelectMany(file => file.Diagnostics).Any(BaselineStore.IsAnalysisFailure)
+            ? ExitCodes.AnalysisError
+            : 0;
+    }
+
     public async Task<int> ExecuteBaselineCreateAsync(
         CliArgs args,
         TextReader stdin,

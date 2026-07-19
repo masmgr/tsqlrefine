@@ -48,6 +48,8 @@ namespace TsqlRefine.Cli;
 /// <param name="BaselineRoot">Root directory used to normalize baseline file paths.</param>
 /// <param name="ShowSuppressed">Whether suppressed diagnostics are included in output.</param>
 /// <param name="RemoveMissing">Whether baseline trim removes entries for missing files.</param>
+/// <param name="ReportOutputFormat">Report output format (json or html).</param>
+/// <param name="ReportOutputPath">Optional report output file path.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -90,5 +92,7 @@ public sealed record CliArgs(
     string? BaselineOutput = null,
     string? BaselineRoot = null,
     bool ShowSuppressed = false,
-    bool RemoveMissing = false
+    bool RemoveMissing = false,
+    string ReportOutputFormat = "json",
+    string? ReportOutputPath = null
 );

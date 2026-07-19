@@ -23,6 +23,10 @@ public sealed record ClassifiedDiagnostic(Diagnostic Diagnostic, bool Suppressed
 
 public sealed record ClassifiedFile(string FilePath, IReadOnlyList<ClassifiedDiagnostic> Diagnostics);
 
+public sealed record BaselineClassification(
+    IReadOnlyList<ClassifiedFile> Files,
+    int ResolvedCount);
+
 /// <summary>
 /// Reads, writes, and applies CLI diagnostic baselines.
 /// </summary>
@@ -173,8 +177,19 @@ public static class BaselineStore
         IReadOnlyDictionary<string, string> sources,
         string root,
         BaselineDocument? baseline)
+        => ClassifyWithSummary(files, sources, root, baseline).Files;
+
+    public static BaselineClassification ClassifyWithSummary(
+        IReadOnlyList<FileResult> files,
+        IReadOnlyDictionary<string, string> sources,
+        string root,
+        BaselineDocument? baseline)
     {
+        var analyzedFiles = files
+            .Select(file => NormalizeFilePath(file.FilePath, root))
+            .ToHashSet(GetPathComparer());
         var remaining = baseline?.Entries
+            .Where(entry => analyzedFiles.Contains(entry.File))
             .GroupBy(entry => entry.Fingerprint, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal)
             ?? new Dictionary<string, int>(StringComparer.Ordinal);
@@ -203,7 +218,7 @@ public static class BaselineStore
             }
             output.Add(new ClassifiedFile(file.FilePath, diagnostics));
         }
-        return output;
+        return new BaselineClassification(output, remaining.Values.Sum());
     }
 
     public static BaselineDocument Trim(

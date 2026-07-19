@@ -73,6 +73,18 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> ReportOutputFormat = new("--output-format")
+        {
+            Description = "Report output format (json/html)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ReportOutput = new("--output")
+        {
+            Description = "Report output file path (writes to stdout when omitted)",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
         public static readonly Option<string?> Baseline = new("--baseline")
         {
             Description = "Baseline JSON file path",
@@ -447,6 +459,22 @@ public static class CliParser
         return baselineCommand;
     }
 
+    private static Command BuildReportCommand()
+    {
+        var command = new Command("report", "Generate a diagnostics and SQL metrics report")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.ReportOutputFormat);
+        command.Options.Add(Options.ReportOutput);
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
     private static Command BuildBaselineCreateCommand()
     {
         var command = new Command("create", "Create a baseline from current diagnostics")
@@ -552,6 +580,7 @@ public static class CliParser
         root.Subcommands.Add(BuildListPluginsCommand());
         root.Subcommands.Add(BuildSchemaCommand());
         root.Subcommands.Add(BuildBaselineCommand());
+        root.Subcommands.Add(BuildReportCommand());
 
         return root;
     }
@@ -603,7 +632,9 @@ public static class CliParser
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
             Utf8: GetOptionValue<bool>(parseResult, "--utf8"),
-            Output: ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
+            Output: command == "report"
+                ? "text"
+                : ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
             CompatLevel: ParseCompatLevel(GetOptionValue<string?>(parseResult, "--compat-level")),
@@ -638,7 +669,10 @@ public static class CliParser
             BaselineOutput: GetBaselineOutput(parseResult),
             BaselineRoot: GetOptionValue<string?>(parseResult, "--root"),
             ShowSuppressed: GetOptionValue<bool>(parseResult, "--show-suppressed"),
-            RemoveMissing: GetOptionValue<bool>(parseResult, "--remove-missing")
+            RemoveMissing: GetOptionValue<bool>(parseResult, "--remove-missing"),
+            ReportOutputFormat: ParseReportOutputFormat(
+                GetOptionValue<string?>(parseResult, "--output-format")),
+            ReportOutputPath: GetReportOutput(parseResult)
         );
     }
 
@@ -748,6 +782,26 @@ public static class CliParser
 
         return null;
     }
+
+    private static string? GetReportOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.ReportOutput)
+        {
+            return parseResult.GetValue(typedOption);
+        }
+
+        return null;
+    }
+
+    private static string ParseReportOutputFormat(string? value) => value?.ToLowerInvariant() switch
+    {
+        null or "json" => "json",
+        "html" => "html",
+        _ => throw new ConfigException(
+            $"Invalid --output-format value: '{value}'. Expected one of: json, html.")
+    };
 
     private static string ParseOutput(string command, string? value)
     {

@@ -55,10 +55,21 @@ tsqlrefine lint --baseline .tsqlrefine/baseline.json src
 
 # GitHub Code Scanning / Azure DevOps compatible output
 tsqlrefine lint --output sarif src > tsqlrefine.sarif
+
+# Save a self-contained quality report as a CI artifact
+tsqlrefine report --output-format html --output tsqlrefine-report.html src
 ```
 
 The baseline path can also be stored as `"baseline": ".tsqlrefine/baseline.json"` in
 `tsqlrefine.json`. Use `baseline trim` after fixing existing findings.
+
+The `report` command summarizes diagnostics by category, rule, and file and ranks complex SQL
+objects using structural metrics. When a baseline is supplied, it also reports new, frozen, and
+resolved findings:
+
+```bash
+tsqlrefine report --baseline .tsqlrefine/baseline.json --output report.json src
+```
 
 ## Features
 

@@ -30,6 +30,7 @@ Commands:
 | `list-plugins` | List loaded plugins (Rule plugins only) |
 | `baseline create` | Record current diagnostics as a baseline |
 | `baseline trim` | Remove resolved diagnostics from a baseline |
+| `report` | Generate diagnostic aggregations and SQL metrics in JSON or HTML |
 | `schema snapshot` | Generate a schema snapshot from SQL Server |
 | `schema collect-relations` | Collect JOIN relation patterns from SQL files |
 | `schema collect-objects` | Collect SQL object signatures and references from SQL files |
@@ -149,6 +150,33 @@ removes entries whose files no longer exist. Parse failures leave the baseline u
 | `--root <path>` | Assert the root stored by the baseline |
 | `--remove-missing` | Remove entries for files that no longer exist |
 | Other lint options | Same rule, schema, and file-input options as `baseline create` |
+
+#### report
+
+```
+tsqlrefine report [--output-format json|html] [--output <path>] [options] [paths...]
+```
+
+Runs the configured lint rules and creates a point-in-time quality report. The report contains
+diagnostic counts by category, rule, and file, plus the 20 objects or batches with the highest
+cyclomatic complexity. Each ranked object also includes nesting depth, statement count, maximum
+joins per query, and parameter count.
+
+| Option | Description |
+|------------|------|
+| `--output-format <json\|html>` | Report format (default: `json`) |
+| `--output <path>` | Write the report to a file instead of stdout |
+| `--baseline <path>` | Include new, frozen, and resolved diagnostic counts using a baseline |
+| `--root <path>` | Assert the root stored by the baseline |
+| `--ignorelist`, `--detect-encoding`, `--stdin`, `--max-file-size` | Standard input options |
+| `--compat-level`, `--severity`, `--preset`, `--ruleset` | Standard lint selection options |
+| `--schema`, `--relations-profile`, `--objects-catalog` | Optional schema-aware and cross-object analysis inputs |
+| `-q, --quiet` | Suppress the output-file confirmation on stderr |
+
+JSON output conforms to
+[`schemas/report-result.schema.json`](../schemas/report-result.schema.json). HTML output is a
+self-contained document with inline CSS and JavaScript, suitable for storage as a CI artifact.
+The initial report format is a single-run snapshot and does not include historical trends.
 
 #### format
 
@@ -429,7 +457,8 @@ Based on VSCode `Diagnostic` compatible format, bundled by file.
 
 Machine-readable contracts are available at
 [`schemas/lint-result.schema.json`](../schemas/lint-result.schema.json) and
-[`schemas/fix-result.schema.json`](../schemas/fix-result.schema.json). CI validates
+[`schemas/fix-result.schema.json`](../schemas/fix-result.schema.json). The report contract is
+defined separately in [`schemas/report-result.schema.json`](../schemas/report-result.schema.json). CI validates
 serialized CLI model output against these Draft 2020-12 schemas.
 
 ### 4.1 Top Level
@@ -510,6 +539,8 @@ Fixed exit codes by result type for easy CI handling.
 - `4`: Runtime exception (internal error)
 
 For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
+`report` returns `0` after successfully generating an artifact even when diagnostics are present;
+parse failures still return `2`.
 
 ---
 
