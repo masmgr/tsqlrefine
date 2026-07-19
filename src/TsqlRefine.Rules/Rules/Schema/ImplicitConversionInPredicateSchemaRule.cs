@@ -50,9 +50,7 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
                 _tableColumnTypeCache = new Dictionary<(ResolvedTable Table, string ColumnName), SchemaTypeInfo?>(ResolvedTableComparers.TableColumnKeyComparer.Instance);
                 _unqualifiedColumnTypeCache = new Dictionary<string, SchemaTypeInfo?>(StringComparer.OrdinalIgnoreCase);
 
-                node.WhereClause?.Accept(this);
-                node.HavingClause?.Accept(this);
-                node.FromClause.Accept(this);
+                QuerySpecificationChildVisitor.VisitChildren(this, node);
 
                 _currentAliasMap = previousMap;
                 _expressionTypeCache = previousExpressionTypeCache;
@@ -181,6 +179,13 @@ public sealed class ImplicitConversionInPredicateSchemaRule : SchemaAwareVisitor
             else
             {
                 // Unqualified columns are only useful for type checks when they resolve uniquely.
+                // With unverifiable sources in scope (CTE, derived table, temp table, ...) the
+                // attribution would be a guess, so skip.
+                if (_currentAliasMap.HasUnresolvableEntries)
+                {
+                    return null;
+                }
+
                 var columnName = identifiers[0].Value;
 
                 if (_unqualifiedColumnTypeCache.TryGetValue(columnName, out var unqualifiedCached))

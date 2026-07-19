@@ -164,7 +164,14 @@ public sealed class DeleteColumnNotInTableRule : SchemaAwareVisitorRuleBase
                 return;
             }
 
-            // No alias map or qualifier not found — check against target table
+            if (aliasMap is not null)
+            {
+                // The qualifier was not found in the FROM clause scope — it cannot be
+                // attributed to the target table reliably, so skip.
+                return;
+            }
+
+            // No alias map — the qualifier can only refer to the target table
             if (schema.ResolveColumn(targetTable, columnName) is null)
             {
                 AddDiagnostic(
@@ -189,8 +196,9 @@ public sealed class DeleteColumnNotInTableRule : SchemaAwareVisitorRuleBase
                     }
                 }
 
-                // If AllTables is empty (all unresolvable), skip
-                if (aliasMap.AllTables.Count == 0)
+                // The column may belong to an unverifiable source (CTE, derived
+                // table, temp table, ...) — no conclusion can be drawn.
+                if (aliasMap.AllTables.Count == 0 || aliasMap.HasUnresolvableEntries)
                 {
                     return;
                 }

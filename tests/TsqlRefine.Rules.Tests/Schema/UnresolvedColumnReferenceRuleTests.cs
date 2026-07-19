@@ -281,4 +281,212 @@ public sealed class UnresolvedColumnReferenceRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    // === Complex query scenarios ===
+
+    [Fact]
+    public void Analyze_DerivedTableJoinWithUnqualifiedDerivedColumn_ReturnsNoDiagnostics()
+    {
+        // OrderCount only exists in the derived table; it must not be reported
+        // as missing just because dbo.Users does not contain it.
+        const string sql = """
+            SELECT u.Name, OrderCount
+            FROM dbo.Users AS u
+            INNER JOIN (
+                SELECT o.UserId, COUNT(*) AS OrderCount
+                FROM dbo.Orders AS o
+                GROUP BY o.UserId
+            ) AS agg ON agg.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CteJoinWithUnqualifiedCteColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            WITH OrderTotals AS (
+                SELECT o.UserId, SUM(o.Total) AS TotalAmount
+                FROM dbo.Orders AS o
+                GROUP BY o.UserId
+            )
+            SELECT u.Name, TotalAmount
+            FROM dbo.Users AS u
+            INNER JOIN OrderTotals AS t ON t.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_OrderBySelectAlias_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT u.Name AS DisplayName
+            FROM dbo.Users AS u
+            ORDER BY DisplayName;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_MissingSelectExpressionMatchingItsAlias_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT Nonexistent AS Nonexistent FROM dbo.Users;";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("Nonexistent", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_SelectAliasReferencedInWhere_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT u.Name AS BadCol FROM dbo.Users AS u WHERE BadCol = N'x';";
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        var diagnostic = Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_OrderBySelectAliasMatchingAmbiguousSourceColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT u.Name AS Id
+            FROM dbo.Users AS u
+            INNER JOIN dbo.Orders AS o ON u.Id = o.UserId
+            ORDER BY Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UnknownTableJoinWithUnqualifiedColumn_ReturnsNoDiagnostics()
+    {
+        // dbo.LegacyCodes is not in the snapshot; its columns cannot be verified,
+        // so unqualified references must not be reported.
+        const string sql = """
+            SELECT LegacyCode
+            FROM dbo.Users AS u
+            INNER JOIN dbo.LegacyCodes AS x ON x.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TempTableJoinWithUnqualifiedColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT StagedValue
+            FROM dbo.Users AS u
+            INNER JOIN #Staging AS s ON s.UserId = u.Id;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_PivotWithJoinedTable_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT p.UserId, p.[1], p.[2]
+            FROM (
+                SELECT o.UserId, o.Id, o.Total
+                FROM dbo.Orders AS o
+            ) AS src
+            PIVOT (SUM(Total) FOR Id IN ([1], [2])) AS p
+            INNER JOIN dbo.Users AS u ON u.Id = p.UserId;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_QualifiedMissingColumnWithDerivedTableInScope_ReturnsDiagnostic()
+    {
+        // Qualified references to resolved tables must still be validated even
+        // when unresolvable sources are present in the same FROM clause.
+        const string sql = """
+            SELECT u.BadCol, d.Anything
+            FROM dbo.Users AS u
+            INNER JOIN (SELECT 1 AS Anything) AS d ON 1 = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_NestedDerivedTablesWithOuterReferences_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT outerQuery.Name
+            FROM (
+                SELECT innerQuery.Name
+                FROM (
+                    SELECT u.Name
+                    FROM dbo.Users AS u
+                ) AS innerQuery
+            ) AS outerQuery
+            WHERE outerQuery.Name = N'test';
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_CrossApplyWithUnqualifiedApplyColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            SELECT u.Name, LatestTotal
+            FROM dbo.Users AS u
+            CROSS APPLY (
+                SELECT TOP (1) o.Total AS LatestTotal
+                FROM dbo.Orders AS o
+                WHERE o.UserId = u.Id
+                ORDER BY o.Id DESC
+            ) AS latest;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
 }

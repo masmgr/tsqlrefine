@@ -82,6 +82,13 @@ internal sealed class SchemaColumnResolver
             return null;
         }
 
+        // An unqualified column may belong to an unverifiable source (CTE, derived
+        // table, temp table, ...) — attribution to a resolved table would be a guess.
+        if (AliasMap.HasUnresolvableEntries)
+        {
+            return null;
+        }
+
         if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
         {
             return unqualifiedCached;

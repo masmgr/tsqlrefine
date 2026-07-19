@@ -400,4 +400,46 @@ public sealed class JoinColumnDeviationRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    // ===== Complex query scenarios =====
+
+    [Fact]
+    public void Analyze_RarePatternInsideExistsSubquery_ReturnsDiagnostic()
+    {
+        // The rare join (INNER on Amount=Id) is nested inside an EXISTS subquery.
+        const string sql = """
+            SELECT p.Id
+            FROM dbo.Products AS p
+            WHERE EXISTS (
+                SELECT 1
+                FROM dbo.Orders AS o
+                INNER JOIN dbo.Users AS u ON u.Id = o.Amount
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema(), CreateDeviations());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-column-deviation");
+    }
+
+    [Fact]
+    public void Analyze_RarePatternInsideDerivedTable_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT d.Id
+            FROM (
+                SELECT o.Id
+                FROM dbo.Orders AS o
+                INNER JOIN dbo.Users AS u ON u.Id = o.Amount
+            ) AS d;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema(), CreateDeviations());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-column-deviation");
+    }
 }

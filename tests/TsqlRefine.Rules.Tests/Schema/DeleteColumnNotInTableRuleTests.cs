@@ -215,4 +215,60 @@ public sealed class DeleteColumnNotInTableRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    [Fact]
+    public void Analyze_TempTableJoinWithUnqualifiedTempColumn_ReturnsNoDiagnostics()
+    {
+        // Flag exists only in the temp table, whose columns cannot be verified.
+        const string sql = """
+            DELETE u
+            FROM dbo.Users AS u
+            INNER JOIN #ToDelete AS d ON d.UserId = u.Id
+            WHERE Flag = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_DerivedTableJoinWithUnqualifiedDerivedColumn_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            DELETE u
+            FROM dbo.Users AS u
+            INNER JOIN (
+                SELECT o.UserId, COUNT(*) AS OrderCount
+                FROM dbo.Orders AS o
+                GROUP BY o.UserId
+            ) AS agg ON agg.UserId = u.Id
+            WHERE OrderCount > 10;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_QualifiedBadColumnWithDerivedTableInScope_ReturnsDiagnostic()
+    {
+        // Qualified references to resolved tables must still be validated even
+        // when unresolvable sources are present in the same FROM clause.
+        const string sql = """
+            DELETE u
+            FROM dbo.Users AS u
+            INNER JOIN (SELECT 1 AS Anything) AS d ON 1 = 1
+            WHERE u.BadCol = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("BadCol", diagnostics[0].Message);
+    }
 }

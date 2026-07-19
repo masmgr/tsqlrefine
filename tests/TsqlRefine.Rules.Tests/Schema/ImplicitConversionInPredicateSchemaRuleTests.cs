@@ -254,4 +254,59 @@ public sealed class ImplicitConversionInPredicateSchemaRuleTests
         Assert.Equal("implicit-conversion-in-predicate-schema", diagnostics[0].Code);
         Assert.Contains("sales.Orders.Code", diagnostics[0].Message);
     }
+
+    // === Complex query scenarios ===
+
+    [Fact]
+    public void Analyze_ConversionInsideSelectListCase_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT CASE WHEN u.Email = 1 THEN 1 ELSE 0 END AS Flag
+            FROM dbo.Users AS u;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("implicit-conversion-in-predicate-schema", diagnostics[0].Code);
+        Assert.Contains("Email", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_ConversionInsideSelectListSubquery_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT o.Id,
+                (SELECT TOP (1) u.Id
+                 FROM dbo.Users AS u
+                 WHERE u.Email = 1) AS AnyUserId
+            FROM dbo.Orders AS o;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("implicit-conversion-in-predicate-schema", diagnostics[0].Code);
+        Assert.Contains("Email", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_UnqualifiedColumnWithDerivedTableInScope_ReturnsNoDiagnostics()
+    {
+        // Email exists both in dbo.Users (varchar) and in the derived table; the
+        // reference cannot be attributed reliably, so no diagnostic is expected.
+        const string sql = """
+            SELECT u.Id
+            FROM dbo.Users AS u
+            INNER JOIN (SELECT 1 AS Email) AS d ON d.Email = u.Id
+            WHERE Email = 1;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
 }
