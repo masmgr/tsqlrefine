@@ -1,4 +1,7 @@
 using FsCheck.Xunit;
+using FsCheck.Fluent;
+using TsqlRefine.TestSupport;
+using Xunit;
 
 namespace TsqlRefine.Formatting.Tests.PropertyTests;
 
@@ -109,5 +112,17 @@ public sealed class FormattingIdempotencyPropertyTests
         var result = SqlFormatter.Format(sql, new FormattingOptions());
 
         return result.Contains("--");
+    }
+
+    [Fact]
+    public void Format_GrammarGeneratedSql_IsIdempotent()
+    {
+        foreach (var sql in SqlGrammarGenerator.Scripts().Sample(200, 200))
+        {
+            var once = SqlFormatter.Format(sql, new FormattingOptions());
+            var twice = SqlFormatter.Format(once, new FormattingOptions());
+
+            Assert.Equal(once, twice);
+        }
     }
 }

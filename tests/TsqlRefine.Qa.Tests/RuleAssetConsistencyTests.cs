@@ -1,10 +1,16 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules;
 
 namespace TsqlRefine.Qa.Tests;
 
 public sealed class RuleAssetConsistencyTests
 {
+    private static readonly Regex KebabCaseRuleId = new(
+        "^[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)?$",
+        RegexOptions.CultureInvariant);
+
     [Fact]
     public void EveryBuiltinRule_HasDocumentationSqlExamplesAndPresetAssignment()
     {
@@ -45,4 +51,52 @@ public sealed class RuleAssetConsistencyTests
 
         Assert.Empty(failures);
     }
+
+    [Fact]
+    public void EveryConcreteRule_IsRegisteredExactlyOnce()
+    {
+        var registeredRuleIds = new BuiltinRuleProvider().GetRules()
+            .Select(rule => rule.Metadata.RuleId)
+            .ToArray();
+        var discoverableRuleIds = CreateDiscoverableRules()
+            .Select(rule => rule.Metadata.RuleId)
+            .ToArray();
+
+        Assert.Equal(
+            discoverableRuleIds.Order(StringComparer.Ordinal),
+            registeredRuleIds.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void EveryBuiltinRule_HasUniqueKebabCaseId()
+    {
+        var ruleIds = new BuiltinRuleProvider().GetRules()
+            .Select(rule => rule.Metadata.RuleId)
+            .ToArray();
+
+        Assert.All(ruleIds, ruleId => Assert.Matches(KebabCaseRuleId, ruleId));
+        Assert.Equal(ruleIds.Length, ruleIds.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void EveryFixableRule_ProvidesRuleSpecificGetFixesImplementation()
+    {
+        var failures = CreateDiscoverableRules()
+            .Where(rule => rule.Metadata.Fixable)
+            .Where(rule => rule.GetType().GetMethod(nameof(IRule.GetFixes))?.DeclaringType != rule.GetType())
+            .Select(rule => $"{rule.Metadata.RuleId}: inherits the default GetFixes implementation")
+            .ToArray();
+
+        Assert.Empty(failures);
+    }
+
+    private static IRule[] CreateDiscoverableRules() =>
+        typeof(BuiltinRuleProvider).Assembly
+            .GetTypes()
+            .Where(type =>
+                type is { IsAbstract: false, IsClass: true, IsPublic: true } &&
+                typeof(IRule).IsAssignableFrom(type) &&
+                type.GetConstructor(Type.EmptyTypes) is not null)
+            .Select(type => (IRule)Activator.CreateInstance(type)!)
+            .ToArray();
 }

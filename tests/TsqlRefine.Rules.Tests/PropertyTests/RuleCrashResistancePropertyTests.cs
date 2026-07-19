@@ -1,6 +1,7 @@
 using FsCheck.Fluent;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.TestSupport;
 
 namespace TsqlRefine.Rules.Tests.PropertyTests;
 
@@ -60,14 +61,9 @@ public sealed class RuleCrashResistancePropertyTests
     }
 
     [Fact]
-    public void AllRules_NeverThrowOnStructuredSql()
+    public void AllRules_NeverThrowOnGrammarGeneratedSql()
     {
-        var gen = Gen.Elements("*", "Id", "Name", "1", "GETDATE()")
-            .SelectMany(
-                _ => Gen.Elements("t", "dbo.Users", "[My Table]", "#temp"),
-                (col, tbl) => $"SELECT {col} FROM {tbl};");
-
-        var samples = gen.Sample(100, 100);
+        var samples = SqlGrammarGenerator.Scripts().Sample(200, 200);
 
         foreach (var sql in samples)
         {
