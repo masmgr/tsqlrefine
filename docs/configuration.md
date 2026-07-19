@@ -287,7 +287,8 @@ snapshot. Relative paths are resolved from the configuration file directory.
 
 ## Per-Rule Configuration
 
-The `rules` property in `tsqlrefine.json` lets you override individual rule severity on top of the selected preset or ruleset.
+The `rules` property in `tsqlrefine.json` lets you override individual rule severity and configure
+options declared by a rule. The existing severity-string form remains supported.
 
 ```json
 {
@@ -309,6 +310,23 @@ Keys are rule IDs (both built-in and plugin). Values are severity levels: `"erro
 | `"info"` | Enable with Information severity |
 | `"inherit"` | Enable with the rule's default severity |
 | `"none"` | Disable the rule |
+
+Rules with declared options also accept an object form:
+
+```json
+{
+  "rules": {
+    "max-cyclomatic-complexity": {
+      "severity": "warning",
+      "options": { "max": 20 }
+    }
+  }
+}
+```
+
+Option values are typed as Boolean, 32-bit integer, or string values. Specifying options for a rule
+that does not declare them, an unknown option name, a mismatched type, or a value outside the
+declared range is a configuration error. Each rule's documentation lists its supported options.
 
 ### Plugin rules
 

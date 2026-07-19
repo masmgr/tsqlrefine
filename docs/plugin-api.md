@@ -87,6 +87,28 @@ public sealed record RuleContext(
 );
 ```
 
+### 4.1 Typed rule options
+
+A plugin rule that accepts options implements `IRuleOptionsDescriptorProvider`. The engine validates
+configuration before analysis and exposes values without leaking JSON types into the PluginSdk:
+
+```csharp
+public interface IRuleOptions
+{
+    bool TryGetBoolean(string name, out bool value);
+    bool TryGetInt32(string name, out int value);
+    bool TryGetString(string name, out string? value);
+}
+
+public interface IRuleOptionsDescriptorProvider
+{
+    IReadOnlyList<RuleOptionDescriptor> OptionDescriptors { get; }
+}
+```
+
+Use `context.Settings.Options` to read a configured value and fall back to the rule's documented
+default when the option is absent. Available descriptor types are `Flag`, `Number`, and `Text`.
+
 *Note: `GetFixes` is only called when `Metadata.Fixable == true`.
 
 ---

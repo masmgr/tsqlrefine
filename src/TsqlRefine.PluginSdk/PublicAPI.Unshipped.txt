@@ -1,5 +1,30 @@
 #nullable enable
-const TsqlRefine.PluginSdk.PluginApi.CurrentVersion = 4 -> int
+const TsqlRefine.PluginSdk.PluginApi.CurrentVersion = 5 -> int
+TsqlRefine.PluginSdk.IRuleOptions
+TsqlRefine.PluginSdk.IRuleOptions.TryGetBoolean(string! name, out bool value) -> bool
+TsqlRefine.PluginSdk.IRuleOptions.TryGetInt32(string! name, out int value) -> bool
+TsqlRefine.PluginSdk.IRuleOptions.TryGetString(string! name, out string? value) -> bool
+TsqlRefine.PluginSdk.IRuleOptionsDescriptorProvider
+TsqlRefine.PluginSdk.IRuleOptionsDescriptorProvider.OptionDescriptors.get -> System.Collections.Generic.IReadOnlyList<TsqlRefine.PluginSdk.RuleOptionDescriptor!>!
+TsqlRefine.PluginSdk.RuleOptionDescriptor
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Description.get -> string!
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Description.init -> void
+TsqlRefine.PluginSdk.RuleOptionDescriptor.MaximumInt32.get -> int?
+TsqlRefine.PluginSdk.RuleOptionDescriptor.MaximumInt32.init -> void
+TsqlRefine.PluginSdk.RuleOptionDescriptor.MinimumInt32.get -> int?
+TsqlRefine.PluginSdk.RuleOptionDescriptor.MinimumInt32.init -> void
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Name.get -> string!
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Name.init -> void
+TsqlRefine.PluginSdk.RuleOptionDescriptor.RuleOptionDescriptor(string! Name, TsqlRefine.PluginSdk.RuleOptionType Type, string! Description, int? MinimumInt32 = null, int? MaximumInt32 = null) -> void
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Type.get -> TsqlRefine.PluginSdk.RuleOptionType
+TsqlRefine.PluginSdk.RuleOptionDescriptor.Type.init -> void
+TsqlRefine.PluginSdk.RuleOptionType
+TsqlRefine.PluginSdk.RuleOptionType.Flag = 0 -> TsqlRefine.PluginSdk.RuleOptionType
+TsqlRefine.PluginSdk.RuleOptionType.Number = 1 -> TsqlRefine.PluginSdk.RuleOptionType
+TsqlRefine.PluginSdk.RuleOptionType.Text = 2 -> TsqlRefine.PluginSdk.RuleOptionType
+TsqlRefine.PluginSdk.RuleSettings.Options.get -> TsqlRefine.PluginSdk.IRuleOptions?
+TsqlRefine.PluginSdk.RuleSettings.Options.init -> void
+TsqlRefine.PluginSdk.RuleSettings.RuleSettings(TsqlRefine.PluginSdk.IRuleOptions? Options = null) -> void
 TsqlRefine.PluginSdk.CatalogObjectIdInfo
 TsqlRefine.PluginSdk.CatalogObjectIdInfo.CatalogObjectIdInfo(string? DatabaseName, string! SchemaName, string! Name) -> void
 TsqlRefine.PluginSdk.CatalogObjectIdInfo.DatabaseName.get -> string?

@@ -55,11 +55,32 @@
     },
     "rules": {
       "type": "object",
-      "description": "Per-rule severity overrides. Keys are rule IDs (both built-in and plugin), values are severity levels. Applied on top of the preset or ruleset. Use 'none' to disable plugin rules that are enabled by default.",
+      "description": "Per-rule severity overrides and typed options. Applied on top of the preset or ruleset.",
       "additionalProperties": {
-        "type": "string",
-        "enum": ["error", "warning", "info", "inherit", "none"],
-        "description": "Severity level: error, warning, info (enabled with specified severity), inherit (enabled with rule default severity), none (disabled)."
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": ["error", "warning", "info", "inherit", "none"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "severity": {
+                "type": "string",
+                "enum": ["error", "warning", "info", "inherit", "none"],
+                "default": "inherit"
+              },
+              "options": {
+                "type": "object",
+                "description": "Options declared by the selected rule. Unknown names and invalid types or ranges are configuration errors.",
+                "additionalProperties": {
+                  "type": ["boolean", "integer", "string"]
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
       }
     },
     "baseline": {

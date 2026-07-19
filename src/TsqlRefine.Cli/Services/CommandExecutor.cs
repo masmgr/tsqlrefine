@@ -281,7 +281,7 @@ public sealed class CommandExecutor
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
         var result = engine.Run(command, read.Inputs, options);
         var sourceByPath = read.Inputs.ToDictionary(
             input => input.FilePath,
@@ -419,7 +419,7 @@ public sealed class CommandExecutor
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog));
+            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -470,7 +470,7 @@ public sealed class CommandExecutor
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog));
+            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -547,7 +547,7 @@ public sealed class CommandExecutor
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, ruleset, schemaContext, objectCatalog);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -837,7 +837,7 @@ public sealed class CommandExecutor
     }
 
     private static EngineOptions CreateEngineOptions(
-        CliArgs args, TsqlRefineConfig config, Ruleset? ruleset,
+        CliArgs args, TsqlRefineConfig config, IReadOnlyList<IRule> rules, Ruleset? ruleset,
         ISchemaContext? schemaContext = null,
         IObjectCatalogProvider? objectCatalog = null)
     {
@@ -846,6 +846,7 @@ public sealed class CommandExecutor
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset,
+            RuleSettingsByRule: ConfigLoader.LoadRuleSettings(config, rules),
             SchemaContext: schemaContext,
             ObjectCatalog: objectCatalog
         );

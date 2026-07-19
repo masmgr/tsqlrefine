@@ -138,7 +138,8 @@ public sealed class TsqlRefineEngine
 
         foreach (var rule in rules)
         {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups, disabledRanges);
+            var ruleContext = context with { Settings = GetRuleSettings(rule, options) };
+            AppendDiagnostics(rule, ruleContext, options, diagnostics, fixGroups, disabledRanges);
         }
 
         IReadOnlyList<DiagnosticFixGroup> collectedFixGroups =
@@ -279,6 +280,16 @@ public sealed class TsqlRefineEngine
             SchemaContext: options.SchemaContext,
             ObjectCatalog: options.ObjectCatalog
         );
+    }
+
+    private static RuleSettings GetRuleSettings(IRule rule, EngineOptions options)
+    {
+        if (options.RuleSettingsByRule is not null &&
+            options.RuleSettingsByRule.TryGetValue(rule.Metadata.RuleId, out var settings))
+        {
+            return settings;
+        }
+        return options.RuleSettings ?? DefaultRuleSettings;
     }
 
     private static void AppendDiagnostics(

@@ -177,6 +177,80 @@ public sealed class ConfigLoader
         return withPlugins;
     }
 
+    /// <summary>Validates configured options and creates typed settings for each rule.</summary>
+    public static IReadOnlyDictionary<string, RuleSettings> LoadRuleSettings(
+        TsqlRefineConfig config,
+        IReadOnlyList<IRule> allRules)
+    {
+        var result = new Dictionary<string, RuleSettings>(StringComparer.OrdinalIgnoreCase);
+        if (config.Rules is null)
+        {
+            return result;
+        }
+
+        foreach (var (ruleId, ruleConfig) in config.Rules)
+        {
+            if (ruleConfig.Options is not { Count: > 0 })
+            {
+                continue;
+            }
+
+            var rule = allRules.FirstOrDefault(candidate =>
+                string.Equals(candidate.Metadata.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+            if (rule is null)
+            {
+                throw new ConfigException($"Options are configured for unknown rule '{ruleId}'.");
+            }
+            if (rule is not IRuleOptionsDescriptorProvider descriptorProvider)
+            {
+                throw new ConfigException($"Rule '{ruleId}' does not accept options.");
+            }
+
+            var descriptors = descriptorProvider.OptionDescriptors.ToDictionary(
+                descriptor => descriptor.Name,
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var (optionName, value) in ruleConfig.Options)
+            {
+                if (!descriptors.TryGetValue(optionName, out var descriptor))
+                {
+                    throw new ConfigException($"Unknown option '{optionName}' for rule '{ruleId}'.");
+                }
+                ValidateRuleOption(ruleId, optionName, value, descriptor);
+            }
+            result[ruleId] = new RuleSettings(new RuleOptions(ruleConfig.Options));
+        }
+        return result;
+    }
+
+    private static void ValidateRuleOption(
+        string ruleId,
+        string optionName,
+        RuleOptionValue value,
+        RuleOptionDescriptor descriptor)
+    {
+        var expectedKind = descriptor.Type switch
+        {
+            RuleOptionType.Flag => RuleOptionValueKind.Flag,
+            RuleOptionType.Number => RuleOptionValueKind.Number,
+            RuleOptionType.Text => RuleOptionValueKind.Text,
+            _ => throw new ConfigException($"Unsupported descriptor type for '{ruleId}.{optionName}'.")
+        };
+        if (value.Kind != expectedKind)
+        {
+            throw new ConfigException(
+                $"Option '{optionName}' for rule '{ruleId}' must be {descriptor.Type}.");
+        }
+        if (value.Kind == RuleOptionValueKind.Number &&
+            ((descriptor.MinimumInt32 is { } minimum && value.Int32Value < minimum) ||
+             (descriptor.MaximumInt32 is { } maximum && value.Int32Value > maximum)))
+        {
+            throw new ConfigException(
+                $"Option '{optionName}' for rule '{ruleId}' is outside the allowed range " +
+                $"{descriptor.MinimumInt32?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unbounded"}.." +
+                $"{descriptor.MaximumInt32?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unbounded"}.");
+        }
+    }
+
     private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // CLI --preset always wins (already mutually exclusive with --ruleset via ValidateOptions)

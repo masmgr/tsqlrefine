@@ -102,8 +102,7 @@ public sealed record SchemaConfig(
 /// <param name="Preset">Name of a built-in preset ruleset (e.g. "recommended", "strict").</param>
 /// <param name="Plugins">List of plugin configurations to load.</param>
 /// <param name="Formatting">Formatting configuration options.</param>
-/// <param name="Rules">Per-rule severity overrides. Keys are rule IDs, values are severity strings
-/// ("error", "warning", "info", "inherit", "none").</param>
+/// <param name="Rules">Per-rule severity overrides and typed options.</param>
 /// <param name="Schema">Schema-aware analysis settings.</param>
 /// <param name="Baseline">Path to a baseline JSON file. Relative paths are resolved from the config file directory.</param>
 public sealed record TsqlRefineConfig(
@@ -112,7 +111,7 @@ public sealed record TsqlRefineConfig(
     string? Preset = null,
     IReadOnlyList<PluginConfig>? Plugins = null,
     FormattingConfig? Formatting = null,
-    IReadOnlyDictionary<string, string>? Rules = null,
+    IReadOnlyDictionary<string, RuleConfig>? Rules = null,
     SchemaConfig? Schema = null,
     string? Baseline = null
 )
@@ -221,15 +220,15 @@ public sealed record TsqlRefineConfig(
 
         if (Rules is not null)
         {
-            foreach (var (ruleId, severity) in Rules)
+            foreach (var (ruleId, ruleConfig) in Rules)
             {
                 try
                 {
-                    Config.Ruleset.ParseSeverityLevel(severity);
+                    Config.Ruleset.ParseSeverityLevel(ruleConfig.Severity);
                 }
                 catch (ConfigValidationException)
                 {
-                    return $"Invalid severity '{severity}' for rule '{ruleId}'. Valid values: error, warning, info, inherit, none.";
+                    return $"Invalid severity '{ruleConfig.Severity}' for rule '{ruleId}'. Valid values: error, warning, info, inherit, none.";
                 }
             }
         }

@@ -64,7 +64,7 @@ public sealed class Ruleset
     }
 
     /// <summary>
-    /// Internal constructor for <see cref="WithOverrides"/> — accepts a pre-built cache directly.
+    /// Internal constructor used when merging overrides; accepts a pre-built cache directly.
     /// </summary>
     private Ruleset(
         IReadOnlyList<RulesetRule> rules,
@@ -253,6 +253,20 @@ public sealed class Ruleset
             merged[ruleId] = ParseSeverityLevel(severityStr);
         }
 
+        return new Ruleset(_rules, _singleRuleWhitelist, merged, _whitelistMode);
+    }
+
+    /// <summary>Creates a new Ruleset using severity values from rich rule configurations.</summary>
+    public Ruleset WithOverrides(IReadOnlyDictionary<string, RuleConfig> overrides)
+    {
+        var merged = _ruleCache is not null
+            ? new Dictionary<string, RuleSeverityLevel>(_ruleCache, StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, RuleSeverityLevel>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (ruleId, ruleConfig) in overrides)
+        {
+            merged[ruleId] = ParseSeverityLevel(ruleConfig.Severity);
+        }
         return new Ruleset(_rules, _singleRuleWhitelist, merged, _whitelistMode);
     }
 

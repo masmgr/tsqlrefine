@@ -110,7 +110,7 @@ public sealed record RuleContext(
     int CompatLevel,                    // SQL Server compat level (100-160)
     ScriptDomAst Ast,                   // Parsed syntax tree (TSqlFragment)
     IReadOnlyList<Token> Tokens,        // Flat token stream
-    RuleSettings Settings               // Per-rule configuration (currently empty)
+    RuleSettings Settings               // Typed per-rule configuration
 );
 ```
 
@@ -173,7 +173,7 @@ private class MyVisitor : TSqlFragmentVisitor
 The plugin must declare compatibility with the current Plugin API version:
 
 ```csharp
-public int PluginApiVersion => PluginApi.CurrentVersion; // Currently 1
+public int PluginApiVersion => PluginApi.CurrentVersion; // Currently 5
 ```
 
 If the API version doesn't match, tsqlrefine will refuse to load the plugin to prevent compatibility issues.

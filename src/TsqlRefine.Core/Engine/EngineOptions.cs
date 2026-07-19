@@ -10,6 +10,7 @@ namespace TsqlRefine.Core.Engine;
 /// <param name="MinimumSeverity">Minimum diagnostic severity to report. Default is Hint (reports all diagnostics).</param>
 /// <param name="Ruleset">The ruleset configuration specifying which rules to run.</param>
 /// <param name="RuleSettings">Per-rule configuration settings.</param>
+/// <param name="RuleSettingsByRule">Rule-ID keyed settings. Overrides <paramref name="RuleSettings"/>.</param>
 /// <param name="SchemaContext">Optional unified schema context for schema-aware analysis.</param>
 /// <param name="ObjectCatalog">Optional cross-object catalog.</param>
 public sealed record EngineOptions(
@@ -17,6 +18,7 @@ public sealed record EngineOptions(
     DiagnosticSeverity MinimumSeverity = DiagnosticSeverity.Hint,
     Ruleset? Ruleset = null,
     RuleSettings? RuleSettings = null,
+    IReadOnlyDictionary<string, RuleSettings>? RuleSettingsByRule = null,
     ISchemaContext? SchemaContext = null,
     IObjectCatalogProvider? ObjectCatalog = null
 )

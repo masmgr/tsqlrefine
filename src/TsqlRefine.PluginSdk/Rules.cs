@@ -44,17 +44,54 @@ public sealed record RuleMetadata(
 );
 
 /// <summary>
-/// Per-rule configuration settings. Currently empty, reserved for future use.
+/// Provides typed access to configured rule options.
 /// </summary>
-/// <remarks>
-/// Future versions may include:
-/// <list type="bullet">
-/// <item><description>Rule enablement/disablement</description></item>
-/// <item><description>Severity overrides</description></item>
-/// <item><description>Custom thresholds and parameters</description></item>
-/// </list>
-/// </remarks>
-public sealed record RuleSettings;
+public interface IRuleOptions
+{
+    /// <summary>Tries to read a Boolean option.</summary>
+    bool TryGetBoolean(string name, out bool value);
+
+    /// <summary>Tries to read a 32-bit integer option.</summary>
+    bool TryGetInt32(string name, out int value);
+
+    /// <summary>Tries to read a string option.</summary>
+    bool TryGetString(string name, out string? value);
+}
+
+/// <summary>Supported types for a rule option descriptor.</summary>
+public enum RuleOptionType
+{
+    /// <summary>Boolean option.</summary>
+    Flag,
+    /// <summary>32-bit integer option.</summary>
+    Number,
+    /// <summary>String option.</summary>
+    Text
+}
+
+/// <summary>Describes one option accepted by a rule.</summary>
+/// <param name="Name">Option name as it appears in configuration.</param>
+/// <param name="Type">Required option value type.</param>
+/// <param name="Description">Human-readable option description.</param>
+/// <param name="MinimumInt32">Optional inclusive minimum for an integer option.</param>
+/// <param name="MaximumInt32">Optional inclusive maximum for an integer option.</param>
+public sealed record RuleOptionDescriptor(
+    string Name,
+    RuleOptionType Type,
+    string Description,
+    int? MinimumInt32 = null,
+    int? MaximumInt32 = null);
+
+/// <summary>Implemented by rules that accept configurable options.</summary>
+public interface IRuleOptionsDescriptorProvider
+{
+    /// <summary>Gets the options accepted by this rule.</summary>
+    IReadOnlyList<RuleOptionDescriptor> OptionDescriptors { get; }
+}
+
+/// <summary>Per-rule configuration settings.</summary>
+/// <param name="Options">Typed options configured for the current rule.</param>
+public sealed record RuleSettings(IRuleOptions? Options = null);
 
 /// <summary>
 /// Represents a single token from the SQL source.
