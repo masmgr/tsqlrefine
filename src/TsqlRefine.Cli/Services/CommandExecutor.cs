@@ -30,6 +30,33 @@ public sealed class CommandExecutor
 
     private const string ConfigDirName = ".tsqlrefine";
 
+    public static async Task<int> ExecuteAnalyzeImpactAsync(CliArgs args, TextWriter stdout)
+    {
+        var catalog = CatalogAnalysisService.LoadCatalog(args.AnalyzeCatalogPath);
+        var result = CatalogAnalysisService.AnalyzeImpact(catalog, args.AnalyzeTable, args.AnalyzeColumn);
+        await CatalogAnalysisService.WriteJsonAsync(result, args.AnalyzeOutputPath, stdout);
+        return 0;
+    }
+
+    public static async Task<int> ExecuteAnalyzeGraphAsync(CliArgs args, TextWriter stdout)
+    {
+        if (string.IsNullOrWhiteSpace(args.AnalyzeOutputPath))
+        {
+            throw new ConfigException("analyze graph requires --output <file>.");
+        }
+        var catalog = CatalogAnalysisService.LoadCatalog(args.AnalyzeCatalogPath);
+        var graph = CatalogAnalysisService.CreateGraph(catalog);
+        if (string.Equals(args.AnalyzeGraphFormat, "dot", StringComparison.OrdinalIgnoreCase))
+        {
+            await CatalogAnalysisService.WriteDotAsync(graph, args.AnalyzeOutputPath, stdout);
+        }
+        else
+        {
+            await CatalogAnalysisService.WriteJsonAsync(graph, args.AnalyzeOutputPath, stdout);
+        }
+        return 0;
+    }
+
     public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         var baseDir = args.Global

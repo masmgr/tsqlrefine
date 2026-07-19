@@ -53,6 +53,25 @@ public sealed class OutputContractTests
                 ],
                 Baseline: new ReportBaselineSummary(1, 0, 0)),
             Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "report-result.schema.json"));
+        var range = new TsqlRefine.PluginSdk.Range(
+            new TsqlRefine.PluginSdk.Position(0, 0),
+            new TsqlRefine.PluginSdk.Position(0, 5));
+        AssertMatchesSchema(
+            new ImpactAnalysisResult(
+                1,
+                "tsqlrefine",
+                "1.0.0",
+                new CatalogAnalysisTarget(null, "dbo", "Users", "Email"),
+                [new ImpactedCatalogObject("dbo.UserView", "View", "view.sql", range, 1)]),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "impact-result.schema.json"));
+        AssertMatchesSchema(
+            new DependencyGraphResult(
+                1,
+                "tsqlrefine",
+                "1.0.0",
+                [new DependencyGraphNode("dbo.UserView", "View", "view.sql", range)],
+                [new DependencyGraphEdge("dbo.UserView", "dbo.Users", "Table", "OutOfScope", null, "view.sql", range)]),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "graph-result.schema.json"));
     }
 
     [Fact]

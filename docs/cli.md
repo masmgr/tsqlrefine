@@ -31,6 +31,8 @@ Commands:
 | `baseline create` | Record current diagnostics as a baseline |
 | `baseline trim` | Remove resolved diagnostics from a baseline |
 | `report` | Generate diagnostic aggregations and SQL metrics in JSON or HTML |
+| `analyze impact` | Find direct and transitive dependents of a table or column |
+| `analyze graph` | Export the object dependency graph as JSON or DOT |
 | `schema snapshot` | Generate a schema snapshot from SQL Server |
 | `schema collect-relations` | Collect JOIN relation patterns from SQL files |
 | `schema collect-objects` | Collect SQL object signatures and references from SQL files |
@@ -177,6 +179,29 @@ JSON output conforms to
 [`schemas/report-result.schema.json`](../schemas/report-result.schema.json). HTML output is a
 self-contained document with inline CSS and JavaScript, suitable for storage as a CI artifact.
 The initial report format is a single-run snapshot and does not include historical trends.
+
+#### analyze impact
+
+```
+tsqlrefine analyze impact --table <table> [--column <column>] --catalog <objects.json> [--output <path>]
+```
+
+Reads an object catalog and returns cataloged procedures, functions, and views affected by changing
+the target table or column. `depth: 1` means a direct reference; higher depths are transitive
+dependents. One-, two-, and three-part table names are accepted. Output is JSON on stdout unless
+`--output` is specified and conforms to
+[`schemas/impact-result.schema.json`](../schemas/impact-result.schema.json).
+
+#### analyze graph
+
+```
+tsqlrefine analyze graph --catalog <objects.json> --output <path> [--format json|dot]
+```
+
+Exports catalog definitions as nodes and static references as directed edges. JSON is the default
+and conforms to [`schemas/graph-result.schema.json`](../schemas/graph-result.schema.json). DOT output
+can be rendered with Graphviz. Dynamic references are omitted; unresolved and out-of-scope static
+targets remain visible as edges so incomplete catalog coverage is explicit.
 
 #### format
 

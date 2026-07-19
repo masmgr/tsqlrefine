@@ -122,6 +122,8 @@ public static class CliApp
                 "fix" => await commandExecutor.ExecuteFixAsync(parsed, stdin, stdout, stderr),
                 "lint" => await commandExecutor.ExecuteLintAsync("lint", parsed, stdin, stdout, stderr),
                 "report" => await commandExecutor.ExecuteReportAsync(parsed, stdin, stdout, stderr),
+                "analyze impact" => await CommandExecutor.ExecuteAnalyzeImpactAsync(parsed, stdout),
+                "analyze graph" => await CommandExecutor.ExecuteAnalyzeGraphAsync(parsed, stdout),
                 "baseline create" => await commandExecutor.ExecuteBaselineCreateAsync(parsed, stdin, stdout, stderr),
                 "baseline trim" => await commandExecutor.ExecuteBaselineTrimAsync(parsed, stdin, stdout, stderr),
                 "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),

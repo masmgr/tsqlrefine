@@ -85,6 +85,36 @@ public static class CliParser
             Arity = ArgumentArity.ExactlyOne
         };
 
+        public static readonly Option<string?> AnalyzeCatalog = new("--catalog")
+        {
+            Description = "Object catalog path",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeTable = new("--table")
+        {
+            Description = "Table name for impact analysis",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeColumn = new("--column")
+        {
+            Description = "Optional column name for impact analysis",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeOutput = new("--output")
+        {
+            Description = "Analysis output file path (writes to stdout when omitted)",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeFormat = new("--format")
+        {
+            Description = "Dependency graph format (json/dot)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         public static readonly Option<string?> Baseline = new("--baseline")
         {
             Description = "Baseline JSON file path",
@@ -475,6 +505,33 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildAnalyzeCommand()
+    {
+        var command = new Command("analyze", "Analyze dependencies in an object catalog");
+        command.Subcommands.Add(BuildAnalyzeImpactCommand());
+        command.Subcommands.Add(BuildAnalyzeGraphCommand());
+        return command;
+    }
+
+    private static Command BuildAnalyzeImpactCommand()
+    {
+        var command = new Command("impact", "Find objects affected by a table or column change");
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeTable);
+        command.Options.Add(Options.AnalyzeColumn);
+        command.Options.Add(Options.AnalyzeOutput);
+        return command;
+    }
+
+    private static Command BuildAnalyzeGraphCommand()
+    {
+        var command = new Command("graph", "Export the object dependency graph");
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeOutput);
+        command.Options.Add(Options.AnalyzeFormat);
+        return command;
+    }
+
     private static Command BuildBaselineCreateCommand()
     {
         var command = new Command("create", "Create a baseline from current diagnostics")
@@ -581,6 +638,7 @@ public static class CliParser
         root.Subcommands.Add(BuildSchemaCommand());
         root.Subcommands.Add(BuildBaselineCommand());
         root.Subcommands.Add(BuildReportCommand());
+        root.Subcommands.Add(BuildAnalyzeCommand());
 
         return root;
     }
@@ -672,7 +730,12 @@ public static class CliParser
             RemoveMissing: GetOptionValue<bool>(parseResult, "--remove-missing"),
             ReportOutputFormat: ParseReportOutputFormat(
                 GetOptionValue<string?>(parseResult, "--output-format")),
-            ReportOutputPath: GetReportOutput(parseResult)
+            ReportOutputPath: GetReportOutput(parseResult),
+            AnalyzeCatalogPath: GetOptionValue<string?>(parseResult, "--catalog"),
+            AnalyzeTable: GetOptionValue<string?>(parseResult, "--table"),
+            AnalyzeColumn: GetOptionValue<string?>(parseResult, "--column"),
+            AnalyzeOutputPath: GetAnalyzeOutput(parseResult),
+            AnalyzeGraphFormat: ParseAnalyzeGraphFormat(GetOptionValue<string?>(parseResult, "--format"))
         );
     }
 
@@ -801,6 +864,23 @@ public static class CliParser
         "html" => "html",
         _ => throw new ConfigException(
             $"Invalid --output-format value: '{value}'. Expected one of: json, html.")
+    };
+
+    private static string? GetAnalyzeOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        return option is Option<string?> typedOption && option == Options.AnalyzeOutput
+            ? parseResult.GetValue(typedOption)
+            : null;
+    }
+
+    private static string ParseAnalyzeGraphFormat(string? value) => value?.ToLowerInvariant() switch
+    {
+        null or "json" => "json",
+        "dot" => "dot",
+        _ => throw new ConfigException(
+            $"Invalid --format value: '{value}'. Expected one of: json, dot.")
     };
 
     private static string ParseOutput(string command, string? value)

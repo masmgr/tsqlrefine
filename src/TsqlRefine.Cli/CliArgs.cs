@@ -50,6 +50,11 @@ namespace TsqlRefine.Cli;
 /// <param name="RemoveMissing">Whether baseline trim removes entries for missing files.</param>
 /// <param name="ReportOutputFormat">Report output format (json or html).</param>
 /// <param name="ReportOutputPath">Optional report output file path.</param>
+/// <param name="AnalyzeCatalogPath">Object catalog path for analyze commands.</param>
+/// <param name="AnalyzeTable">Table target for impact analysis.</param>
+/// <param name="AnalyzeColumn">Optional column target for impact analysis.</param>
+/// <param name="AnalyzeOutputPath">Optional analyze output file path.</param>
+/// <param name="AnalyzeGraphFormat">Dependency graph format (json or dot).</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -94,5 +99,10 @@ public sealed record CliArgs(
     bool ShowSuppressed = false,
     bool RemoveMissing = false,
     string ReportOutputFormat = "json",
-    string? ReportOutputPath = null
+    string? ReportOutputPath = null,
+    string? AnalyzeCatalogPath = null,
+    string? AnalyzeTable = null,
+    string? AnalyzeColumn = null,
+    string? AnalyzeOutputPath = null,
+    string AnalyzeGraphFormat = "json"
 );

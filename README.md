@@ -182,6 +182,16 @@ tsqlrefine lint --objects-catalog .tsqlrefine/objects.json sql/
 `schema build --output-dir .tsqlrefine/schema sql/` generates `schema.json`, `relations.json`,
 and `objects.json` together.
 
+Use the collected object catalog for impact analysis or dependency graph export:
+
+```bash
+tsqlrefine analyze impact --table dbo.Users --column Email --catalog .tsqlrefine/schema/objects.json
+tsqlrefine analyze graph --catalog .tsqlrefine/schema/objects.json --format dot --output dependencies.dot
+```
+
+Impact analysis follows reverse dependencies transitively, making it useful before table or column
+changes. Graph export supports versioned JSON and Graphviz DOT.
+
 ## Installation
 
 ### .NET Global Tool (Recommended)

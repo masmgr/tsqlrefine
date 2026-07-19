@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/graph-result.schema.json",
+  "title": "tsqlrefine dependency graph result",
+  "type": "object",
+  "required": ["schemaVersion", "tool", "version", "nodes", "edges"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": { "const": "tsqlrefine" },
+    "version": { "type": "string" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "definedInFile", "definedAt"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "$ref": "#/$defs/kind" },
+          "definedInFile": { "type": "string" },
+          "definedAt": { "$ref": "#/$defs/range" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "kind", "resolution", "referencedInFile", "referencedAt"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["Execute", "FunctionCall", "Table", "Column"] },
+          "resolution": { "enum": ["Resolved", "Unresolved", "Ambiguous", "OutOfScope"] },
+          "column": { "type": "string", "minLength": 1 },
+          "referencedInFile": { "type": "string" },
+          "referencedAt": { "$ref": "#/$defs/range" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "kind": { "enum": ["Procedure", "ScalarFunction", "TableValuedFunction", "View"] },
+    "position": {
+      "type": "object",
+      "required": ["line", "character"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 0 },
+        "character": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
