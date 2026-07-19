@@ -310,6 +310,11 @@ public sealed class CommandExecutor
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
         var result = engine.Run(command, read.Inputs, options);
+        if (args.ChangedOnly || args.ChangedLinesFrom is not null)
+        {
+            var changedLines = await GitDiffReader.ReadAsync(args, read.Inputs);
+            result = GitDiffReader.Filter(result, changedLines);
+        }
         var sourceByPath = read.Inputs.ToDictionary(
             input => input.FilePath,
             input => input.Text,

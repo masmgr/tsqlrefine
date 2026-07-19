@@ -72,6 +72,11 @@ public sealed class OutputContractTests
                 [new DependencyGraphNode("dbo.UserView", "View", "view.sql", range)],
                 [new DependencyGraphEdge("dbo.UserView", "dbo.Users", "Table", "OutOfScope", null, "view.sql", range)]),
             Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "graph-result.schema.json"));
+        AssertMatchesSchema(
+            new ChangedLinesDocument(
+                1,
+                [new ChangedFileLines("contract.sql", [new ChangedLineRange(2, 4)])]),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "changed-lines.schema.json"));
     }
 
     [Fact]

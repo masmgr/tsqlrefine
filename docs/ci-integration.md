@@ -107,15 +107,8 @@ jobs:
       - name: Install TsqlRefine
         run: dotnet tool install --global TsqlRefine
 
-      - name: Get changed SQL files
-        id: changed
-        run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- '*.sql' | tr '\n' ' ')
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
-
-      - name: Lint changed files
-        if: steps.changed.outputs.files != ''
-        run: tsqlrefine lint ${{ steps.changed.outputs.files }}
+      - name: Lint changed SQL lines
+        run: tsqlrefine lint --changed-only --base-ref origin/${{ github.base_ref }} .
 ```
 
 ### Multi-Preset Strategy

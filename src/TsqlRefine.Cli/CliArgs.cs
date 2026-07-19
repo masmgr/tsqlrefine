@@ -55,6 +55,9 @@ namespace TsqlRefine.Cli;
 /// <param name="AnalyzeColumn">Optional column target for impact analysis.</param>
 /// <param name="AnalyzeOutputPath">Optional analyze output file path.</param>
 /// <param name="AnalyzeGraphFormat">Dependency graph format (json or dot).</param>
+/// <param name="ChangedOnly">Whether lint output is limited to changed lines.</param>
+/// <param name="BaseRef">Git base reference used by changed-only lint.</param>
+/// <param name="ChangedLinesFrom">Optional changed-lines JSON file used instead of Git.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -104,5 +107,8 @@ public sealed record CliArgs(
     string? AnalyzeTable = null,
     string? AnalyzeColumn = null,
     string? AnalyzeOutputPath = null,
-    string AnalyzeGraphFormat = "json"
+    string AnalyzeGraphFormat = "json",
+    bool ChangedOnly = false,
+    string? BaseRef = null,
+    string? ChangedLinesFrom = null
 );

@@ -58,10 +58,16 @@ tsqlrefine lint --output sarif src > tsqlrefine.sarif
 
 # Save a self-contained quality report as a CI artifact
 tsqlrefine report --output-format html --output tsqlrefine-report.html src
+
+# On pull requests, report diagnostics only on changed lines
+tsqlrefine lint --changed-only --base-ref origin/main src
 ```
 
 The baseline path can also be stored as `"baseline": ".tsqlrefine/baseline.json"` in
 `tsqlrefine.json`. Use `baseline trim` after fixing existing findings.
+
+Changed-only lint combines committed, staged, working-tree, and untracked changes. In environments
+without Git, pass a versioned changed-lines JSON file with `--changed-lines-from`.
 
 The `report` command summarizes diagnostics by category, rule, and file and ranks complex SQL
 objects using structural metrics. When a baseline is supplied, it also reports new, frozen, and

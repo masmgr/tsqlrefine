@@ -75,6 +75,9 @@ tsqlrefine lint [options] [paths...]
 | `--baseline <path>` | Suppress diagnostics recorded in a baseline file |
 | `--root <path>` | Validate or set the root used for baseline path normalization |
 | `--show-suppressed` | Include baseline-suppressed diagnostics in text, JSON, or SARIF output |
+| `--changed-only` | Report only diagnostics whose ranges intersect changed Git lines |
+| `--base-ref <ref>` | Git merge-base reference for `--changed-only` (default: `origin/main`) |
+| `--changed-lines-from <path>` | Read changed lines from versioned JSON instead of invoking Git |
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
@@ -116,6 +119,35 @@ never suppressed. With `--show-suppressed`, text output adds `Suppressed`, JSON 
 
 SARIF output conforms to SARIF 2.1.0 and includes rule metadata, source locations, and stable
 `partialFingerprints` suitable for GitHub Code Scanning and other SARIF consumers.
+
+##### Changed-only lint
+
+`--changed-only` combines added-line ranges from `<base-ref>...HEAD`, the index, and the working
+tree. Renames use the destination path, deleted lines do not create a reportable range, and every
+line of an untracked input file is considered changed. Diagnostics intersecting those 1-based line
+ranges are retained. Parse errors and parser exceptions are always retained, even outside changed
+lines.
+
+When Git is unavailable, `--changed-lines-from` activates the same filtering using JSON relative to
+the JSON file's directory:
+
+```json
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/procedures/users.sql",
+      "ranges": [
+        { "startLine": 12, "endLine": 18 }
+      ]
+    }
+  ]
+}
+```
+
+This input conforms to
+[`schemas/changed-lines.schema.json`](../schemas/changed-lines.schema.json). Changed-only lint does
+not support stdin. `--base-ref` and `--changed-lines-from` are mutually exclusive.
 
 #### baseline create
 

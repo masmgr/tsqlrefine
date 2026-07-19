@@ -126,6 +126,23 @@ public static class CliParser
             Description = "Include baseline-suppressed diagnostics in output"
         };
 
+        public static readonly Option<bool> ChangedOnly = new("--changed-only")
+        {
+            Description = "Report only diagnostics intersecting changed lines"
+        };
+
+        public static readonly Option<string?> BaseRef = new("--base-ref")
+        {
+            Description = "Git base reference for changed-only lint (default: origin/main)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ChangedLinesFrom = new("--changed-lines-from")
+        {
+            Description = "Read changed line ranges from a JSON file instead of Git",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
         public static readonly Option<string?> BaselineRoot = new("--root")
         {
             Description = "Root directory for baseline path normalization",
@@ -399,6 +416,9 @@ public static class CliParser
         command.Options.Add(Options.Baseline);
         command.Options.Add(Options.BaselineRoot);
         command.Options.Add(Options.ShowSuppressed);
+        command.Options.Add(Options.ChangedOnly);
+        command.Options.Add(Options.BaseRef);
+        command.Options.Add(Options.ChangedLinesFrom);
         return command;
     }
 
@@ -735,7 +755,10 @@ public static class CliParser
             AnalyzeTable: GetOptionValue<string?>(parseResult, "--table"),
             AnalyzeColumn: GetOptionValue<string?>(parseResult, "--column"),
             AnalyzeOutputPath: GetAnalyzeOutput(parseResult),
-            AnalyzeGraphFormat: ParseAnalyzeGraphFormat(GetOptionValue<string?>(parseResult, "--format"))
+            AnalyzeGraphFormat: ParseAnalyzeGraphFormat(GetOptionValue<string?>(parseResult, "--format")),
+            ChangedOnly: GetOptionValue<bool>(parseResult, "--changed-only"),
+            BaseRef: GetOptionValue<string?>(parseResult, "--base-ref"),
+            ChangedLinesFrom: GetOptionValue<string?>(parseResult, "--changed-lines-from")
         );
     }
 

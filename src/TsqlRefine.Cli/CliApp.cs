@@ -161,6 +161,16 @@ public static class CliApp
             throw new ConfigException(
                 "--verbose and --quiet are mutually exclusive. Use one or the other.");
         }
+
+        if (args.BaseRef is not null && !args.ChangedOnly)
+        {
+            throw new ConfigException("--base-ref requires --changed-only.");
+        }
+
+        if (args.BaseRef is not null && args.ChangedLinesFrom is not null)
+        {
+            throw new ConfigException("--base-ref and --changed-lines-from are mutually exclusive.");
+        }
     }
 
     private static void WarnConflictingOptions(CliArgs args, TextWriter stderr)
