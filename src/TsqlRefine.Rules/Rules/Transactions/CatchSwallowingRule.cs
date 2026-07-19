@@ -24,21 +24,13 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
 
     private sealed class CatchSwallowingVisitor : DiagnosticVisitorBase
     {
-        private int _catchDepth;
-        private bool _catchHasErrorPropagation;
-
         public override void ExplicitVisit(TryCatchStatement node)
         {
             node.TryStatements?.Accept(this);
 
-            var previousDepth = _catchDepth;
-            var previousPropagation = _catchHasErrorPropagation;
-
-            _catchDepth++;
-            _catchHasErrorPropagation = false;
-            node.CatchStatements?.Accept(this);
-
-            if (!_catchHasErrorPropagation)
+            var propagationVisitor = new EscapingErrorPropagationVisitor();
+            node.CatchStatements?.Accept(propagationVisitor);
+            if (!propagationVisitor.HasErrorPropagation)
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetCatchKeywordPairRange(node),
@@ -49,28 +41,29 @@ public sealed class CatchSwallowingRule : DiagnosticVisitorRuleBase
                 );
             }
 
-            _catchDepth = previousDepth;
-            _catchHasErrorPropagation = previousPropagation;
+            node.CatchStatements?.Accept(this);
         }
 
-        public override void ExplicitVisit(ThrowStatement node)
+        private sealed class EscapingErrorPropagationVisitor : TSqlFragmentVisitor
         {
-            if (_catchDepth > 0)
+            internal bool HasErrorPropagation { get; private set; }
+
+            public override void ExplicitVisit(ThrowStatement node)
             {
-                _catchHasErrorPropagation = true;
+                HasErrorPropagation = true;
             }
 
-            base.ExplicitVisit(node);
-        }
-
-        public override void ExplicitVisit(RaiseErrorStatement node)
-        {
-            if (_catchDepth > 0)
+            public override void ExplicitVisit(RaiseErrorStatement node)
             {
-                _catchHasErrorPropagation = true;
+                HasErrorPropagation = true;
             }
 
-            base.ExplicitVisit(node);
+            public override void ExplicitVisit(TryCatchStatement node)
+            {
+                // Errors raised in the nested TRY are handled locally. Only propagation from
+                // its CATCH can escape the current CATCH block.
+                node.CatchStatements?.Accept(this);
+            }
         }
     }
 }

@@ -22,23 +22,21 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class RequireSaveTransactionInNestedVisitor : DiagnosticVisitorBase
+    private sealed class RequireSaveTransactionInNestedVisitor : ProcedureScopeDiagnosticVisitorBase
     {
-        private int _transactionDepth;
-        private bool _hasSaveTransaction;
+        private readonly LinearTransactionState _transactions = new();
 
         public override void ExplicitVisit(TSqlBatch node)
         {
-            _transactionDepth = 0;
-            _hasSaveTransaction = false;
+            _transactions.Reset();
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
-            _transactionDepth++;
+            _transactions.Begin(node);
 
-            if (_transactionDepth > 1 && !_hasSaveTransaction)
+            if (_transactions.Depth > 1 && !_transactions.HasSavepoint)
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetLeadingKeywordPairRange(node),
@@ -54,51 +52,30 @@ public sealed class RequireSaveTransactionInNestedRule : DiagnosticVisitorRuleBa
 
         public override void ExplicitVisit(SaveTransactionStatement node)
         {
-            if (_transactionDepth > 0)
-            {
-                _hasSaveTransaction = true;
-            }
+            _transactions.Save();
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(CommitTransactionStatement node)
         {
-            if (_transactionDepth > 0)
-            {
-                _transactionDepth--;
-                if (_transactionDepth == 0)
-                {
-                    _hasSaveTransaction = false;
-                }
-            }
+            _transactions.Commit();
 
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            if (node.Name is null)
-            {
-                _transactionDepth = 0;
-                _hasSaveTransaction = false;
-            }
+            _transactions.Rollback(node);
 
             base.ExplicitVisit(node);
         }
 
-        // Handle CREATE PROCEDURE as separate scope
-        public override void ExplicitVisit(CreateProcedureStatement node)
+        protected override void VisitProcedureScope(Action visitChildren)
         {
-            var parentDepth = _transactionDepth;
-            var parentHasSave = _hasSaveTransaction;
-
-            _transactionDepth = 0;
-            _hasSaveTransaction = false;
-
-            base.ExplicitVisit(node);
-
-            _transactionDepth = parentDepth;
-            _hasSaveTransaction = parentHasSave;
+            var parentState = _transactions.Capture();
+            _transactions.Reset();
+            visitChildren();
+            _transactions.Restore(parentState);
         }
     }
 }

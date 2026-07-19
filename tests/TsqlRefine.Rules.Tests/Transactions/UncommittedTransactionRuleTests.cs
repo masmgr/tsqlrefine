@@ -69,6 +69,26 @@ ROLLBACK TRANSACTION;
     }
 
     [Fact]
+    public void Analyze_UnnamedRollbackClosesAllNestedTransactions()
+    {
+        const string sql = "BEGIN TRANSACTION; BEGIN TRANSACTION; ROLLBACK TRANSACTION;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_RollbackToSavepoint_DoesNotCloseTransaction()
+    {
+        const string sql = "BEGIN TRANSACTION; SAVE TRANSACTION s; ROLLBACK TRANSACTION s;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_MultipleBeginOneCommit_ReportsOnlyUncommitted()
     {
         var sql = @"

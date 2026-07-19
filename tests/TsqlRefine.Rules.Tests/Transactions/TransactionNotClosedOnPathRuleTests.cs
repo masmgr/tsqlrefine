@@ -26,6 +26,14 @@ public sealed class TransactionNotClosedOnPathRuleTests
     }
 
     [Fact]
+    public void Analyze_RollbackToNamedTransaction_ReturnsNoDiagnostic()
+    {
+        const string sql = "BEGIN TRANSACTION outer_transaction; ROLLBACK TRANSACTION outer_transaction;";
+
+        Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
+    [Fact]
     public void Analyze_OnlyOneBranchCommits_ReturnsDiagnostic()
     {
         const string sql = "BEGIN TRANSACTION; IF @ok = 1 COMMIT TRANSACTION;";

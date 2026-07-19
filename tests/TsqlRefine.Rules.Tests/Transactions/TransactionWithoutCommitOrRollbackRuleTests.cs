@@ -92,6 +92,16 @@ ROLLBACK;";
         Assert.Empty(diagnostics);
     }
 
+    [Fact]
+    public void Analyze_RollbackToNamedTransaction_ClosesTransaction()
+    {
+        const string sql = "BEGIN TRANSACTION outer_transaction; ROLLBACK TRANSACTION outer_transaction;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM dbo.Users;")]
     [InlineData("")]

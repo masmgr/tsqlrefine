@@ -101,6 +101,23 @@ END CATCH;";
     }
 
     [Fact]
+    public void Analyze_ThrowCaughtByNestedCatch_DoesNotCountAsOuterPropagation()
+    {
+        const string sql = """
+            BEGIN TRY SELECT 1; END TRY
+            BEGIN CATCH
+                BEGIN TRY THROW 50000, 'nested', 1; END TRY
+                BEGIN CATCH PRINT 'swallowed'; END CATCH;
+            END CATCH;
+            """;
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Equal([1, 3], diagnostics.Select(diagnostic => diagnostic.Range.Start.Line));
+    }
+
+    [Fact]
     public void Analyze_CatchWithThrow_NoDiagnostic()
     {
         const string sql = @"

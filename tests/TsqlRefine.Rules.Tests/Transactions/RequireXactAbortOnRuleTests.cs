@@ -139,6 +139,27 @@ public sealed class RequireXactAbortOnRuleTests
         Assert.Single(diagnostics);
     }
 
+    [Theory]
+    [InlineData("CREATE PROCEDURE")]
+    [InlineData("ALTER PROCEDURE")]
+    [InlineData("CREATE OR ALTER PROCEDURE")]
+    public void Analyze_XactAbortInsideProcedureDoesNotAffectFollowingBatch(string procedureDdl)
+    {
+        var sql = $$"""
+            {{procedureDdl}} dbo.ConfigureTransaction
+            AS
+                SET XACT_ABORT ON;
+            GO
+            BEGIN TRANSACTION;
+            COMMIT;
+            """;
+
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal(4, diagnostics[0].Range.Start.Line);
+    }
+
     [Fact]
     public void Analyze_NestedTransactions_ChecksEachOne()
     {

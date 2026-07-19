@@ -25,14 +25,25 @@ internal static class SchemaColumnResolutionHelpers
                 : null;
         }
 
+        if (aliasMap.HasUnresolvableEntries)
+        {
+            return null;
+        }
+
+        ResolvedColumn? match = null;
         foreach (var table in aliasMap.AllTables)
         {
             if (schema.ResolveColumn(table, columnName) is { } resolved)
             {
-                return resolved;
+                if (match is not null)
+                {
+                    return null;
+                }
+
+                match = resolved;
             }
         }
 
-        return null;
+        return match;
     }
 }

@@ -183,6 +183,22 @@ public sealed class RequireSaveTransactionInNestedRuleTests
     }
 
     [Fact]
+    public void Analyze_RollbackToNamedTransactionResetsTransactionDepth()
+    {
+        const string sql = """
+            BEGIN TRANSACTION outer_transaction;
+            ROLLBACK TRANSACTION outer_transaction;
+            BEGIN TRANSACTION;
+            BEGIN TRANSACTION;
+            """;
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal(3, diagnostics[0].Range.Start.Line);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsEmptyCollection()
     {
         const string sql = @"

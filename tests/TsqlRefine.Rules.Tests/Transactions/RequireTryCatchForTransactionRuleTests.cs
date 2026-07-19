@@ -143,6 +143,25 @@ public sealed class RequireTryCatchForTransactionRuleTests
     }
 
     [Fact]
+    public void Analyze_TransactionInCatchBlock_ReturnsDiagnostic()
+    {
+        const string sql = """
+            BEGIN TRY
+                SELECT 1;
+            END TRY
+            BEGIN CATCH
+                BEGIN TRANSACTION;
+                UPDATE users SET active = 0;
+                COMMIT;
+            END CATCH;
+            """;
+
+        var diagnostics = _rule.Analyze(CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_TransactionInProcedureWithoutTryCatch_ReturnsDiagnostic()
     {
         // Arrange

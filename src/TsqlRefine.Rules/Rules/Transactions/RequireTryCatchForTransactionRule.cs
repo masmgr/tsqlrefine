@@ -29,8 +29,12 @@ public sealed class RequireTryCatchForTransactionRule : DiagnosticVisitorRuleBas
         public override void ExplicitVisit(TryCatchStatement node)
         {
             _tryCatchDepth++;
-            base.ExplicitVisit(node);
+            node.TryStatements?.Accept(this);
             _tryCatchDepth--;
+
+            // A transaction opened while handling an error is not protected by the TRY that
+            // has already completed.
+            node.CatchStatements?.Accept(this);
         }
 
         public override void ExplicitVisit(BeginTransactionStatement node)

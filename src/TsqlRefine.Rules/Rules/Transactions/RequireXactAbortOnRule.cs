@@ -22,7 +22,7 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class RequireXactAbortOnVisitor : DiagnosticVisitorBase
+    private sealed class RequireXactAbortOnVisitor : ProcedureScopeDiagnosticVisitorBase
     {
         private bool _hasXactAbortOn;
 
@@ -51,6 +51,14 @@ public sealed class RequireXactAbortOnRule : DiagnosticVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
+        }
+
+        protected override void VisitProcedureScope(Action visitChildren)
+        {
+            var parentValue = _hasXactAbortOn;
+            _hasXactAbortOn = false;
+            visitChildren();
+            _hasXactAbortOn = parentValue;
         }
     }
 }

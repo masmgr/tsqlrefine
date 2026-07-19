@@ -263,6 +263,10 @@ This rule has significant limitations due to static analysis constraints:
 4. **Complex control flow** - May produce false positives with nested IF/WHILE
 5. **@@TRANCOUNT** logic - Cannot analyze runtime transaction count checks
 
+The rule distinguishes a potential savepoint rollback from an unnamed rollback or a rollback to
+the outer transaction's name. The same transaction-state semantics are shared with the other
+lexical transaction rules.
+
 **Recommendation:** Use this rule to catch obvious errors. For complex scenarios, use runtime monitoring:
 ```sql
 -- Add at end of stored procedures

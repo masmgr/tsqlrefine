@@ -28,51 +28,15 @@ public sealed class UncommittedTransactionRule : IRule
         var visitor = new TransactionVisitor();
         context.Ast.Fragment.Accept(visitor);
 
-        // Use a greedy matching algorithm: match each BEGIN with the first available COMMIT/ROLLBACK
-        var usedCommits = new HashSet<int>();
-        var usedRollbacks = new HashSet<int>();
-
-        foreach (var beginTran in visitor.BeginTransactions)
+        foreach (var beginTran in visitor.OpenTransactions)
         {
-            var hasMatch = false;
-
-            // Try to find an unused COMMIT after this BEGIN
-            for (var i = 0; i < visitor.CommitTransactions.Count; i++)
-            {
-                if (!usedCommits.Contains(i) &&
-                    visitor.CommitTransactions[i].FirstTokenIndex > beginTran.FirstTokenIndex)
-                {
-                    usedCommits.Add(i);
-                    hasMatch = true;
-                    break;
-                }
-            }
-
-            // If no COMMIT found, try to find an unused ROLLBACK after this BEGIN
-            if (!hasMatch)
-            {
-                for (var i = 0; i < visitor.RollbackTransactions.Count; i++)
-                {
-                    if (!usedRollbacks.Contains(i) &&
-                        visitor.RollbackTransactions[i].FirstTokenIndex > beginTran.FirstTokenIndex)
-                    {
-                        usedRollbacks.Add(i);
-                        hasMatch = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasMatch)
-            {
-                yield return RuleHelpers.CreateDiagnostic(
-                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
-                    message: "BEGIN TRANSACTION without corresponding COMMIT TRANSACTION in the same file",
-                    code: Metadata.RuleId,
-                    category: Metadata.Category,
-                    fixable: Metadata.Fixable
-                );
-            }
+            yield return RuleHelpers.CreateDiagnostic(
+                range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
+                message: "BEGIN TRANSACTION without corresponding COMMIT TRANSACTION in the same file",
+                code: Metadata.RuleId,
+                category: Metadata.Category,
+                fixable: Metadata.Fixable
+            );
         }
     }
 
@@ -81,25 +45,25 @@ public sealed class UncommittedTransactionRule : IRule
 
     private sealed class TransactionVisitor : TSqlFragmentVisitor
     {
-        public List<BeginTransactionStatement> BeginTransactions { get; } = new();
-        public List<CommitTransactionStatement> CommitTransactions { get; } = new();
-        public List<RollbackTransactionStatement> RollbackTransactions { get; } = new();
+        private readonly LinearTransactionState _transactions = new();
+
+        internal IReadOnlyList<BeginTransactionStatement> OpenTransactions => _transactions.OpenTransactions;
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
-            BeginTransactions.Add(node);
+            _transactions.Begin(node);
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(CommitTransactionStatement node)
         {
-            CommitTransactions.Add(node);
+            _transactions.Commit();
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            RollbackTransactions.Add(node);
+            _transactions.Rollback(node);
             base.ExplicitVisit(node);
         }
     }

@@ -41,7 +41,9 @@ public sealed class TransactionNotClosedOnPathRule : ControlFlowRuleBase
             {
                 BeginTransactionStatement begin => BeginTransaction(input, begin),
                 CommitTransactionStatement => CommitTransaction(input),
-                RollbackTransactionStatement rollback when rollback.Name is null =>
+                RollbackTransactionStatement rollback when TransactionStatementHelpers.IsFullRollback(
+                    rollback,
+                    input.OpenBegins.Keys.OrderBy(begin => begin.FirstTokenIndex).FirstOrDefault()) =>
                     new TransactionState(1, false, new()),
                 ExecuteStatement => new TransactionState(0, true, new()),
                 _ => input

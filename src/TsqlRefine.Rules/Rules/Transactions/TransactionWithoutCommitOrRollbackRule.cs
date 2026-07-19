@@ -22,14 +22,14 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class TransactionWithoutCommitOrRollbackVisitor : DiagnosticVisitorBase
+    private sealed class TransactionWithoutCommitOrRollbackVisitor : ProcedureScopeDiagnosticVisitorBase
     {
-        private readonly Stack<BeginTransactionStatement> _openTransactions = new();
+        private readonly LinearTransactionState _transactions = new();
 
         public override void ExplicitVisit(TSqlBatch node)
         {
             // Reset for each batch (GO separator creates new batch)
-            _openTransactions.Clear();
+            _transactions.Reset();
 
             base.ExplicitVisit(node);
             ReportOpenTransactions(
@@ -38,50 +38,37 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
-            _openTransactions.Push(node);
+            _transactions.Begin(node);
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(CommitTransactionStatement node)
         {
-            if (_openTransactions.Count > 0)
-            {
-                _openTransactions.Pop();
-            }
+            _transactions.Commit();
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            if (node.Name is null)
-            {
-                _openTransactions.Clear();
-            }
+            _transactions.Rollback(node);
             base.ExplicitVisit(node);
         }
 
-        // Analyze stored procedure bodies as scopes independent from their containing batch.
-        public override void ExplicitVisit(CreateProcedureStatement node)
+        protected override void VisitProcedureScope(Action visitChildren)
         {
-            var parentOpenTransactions = _openTransactions.Reverse().ToArray();
+            var parentState = _transactions.Capture();
+            _transactions.Reset();
 
-            _openTransactions.Clear();
-
-            base.ExplicitVisit(node);
+            visitChildren();
 
             ReportOpenTransactions(
                 "BEGIN TRANSACTION in stored procedure without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.");
-
-            _openTransactions.Clear();
-            foreach (var beginTransaction in parentOpenTransactions)
-            {
-                _openTransactions.Push(beginTransaction);
-            }
+            _transactions.Restore(parentState);
         }
 
         private void ReportOpenTransactions(string message)
         {
-            foreach (var beginTransaction in _openTransactions.Reverse())
+            foreach (var beginTransaction in _transactions.OpenTransactions)
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTransaction),
