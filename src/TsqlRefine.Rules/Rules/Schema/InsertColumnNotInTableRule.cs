@@ -22,6 +22,7 @@ public sealed class InsertColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
     private sealed class InsertColumnNotInTableVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing schema-aware INSERT validation; tracked as complexity baseline debt.")]
         public override void ExplicitVisit(InsertStatement node)
         {
             var insertSpec = node.InsertSpecification;

@@ -1,0 +1,5 @@
+# Keep new methods and types below these maintainability limits. Existing
+# hotspots are explicitly baselined at their declaration sites.
+CA1502: 15
+CA1505: 10
+CA1506: 40

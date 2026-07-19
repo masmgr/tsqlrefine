@@ -149,6 +149,10 @@ public static class OperatorSpaceNormalizer
         return output.ToString();
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing operator classification decision tree; tracked as complexity baseline debt.")]
     private static bool TryProcessCompoundOperator(string line, StringBuilder output, ref int index)
     {
         if (index + 1 >= line.Length)

@@ -95,6 +95,10 @@ public static class ObjectCatalogCollector
     private static string CreateResolutionKey(CatalogObjectId id, CatalogObjectKind kind) =>
         $"{id.DatabaseName ?? string.Empty}\u001f{id.SchemaName}\u001f{id.Name}\u001f{kind}";
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1506:Avoid excessive class coupling",
+        Justification = "Existing ScriptDOM catalog visitor; tracked as coupling baseline debt.")]
     private sealed class CollectorVisitor(
         string filePath,
         string defaultSchema,

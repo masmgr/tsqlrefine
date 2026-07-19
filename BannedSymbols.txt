@@ -1,0 +1,6 @@
+# Avoid ambient local time in production logic; inject time or use UTC explicitly.
+P:System.DateTime.Now;Use DateTimeOffset.UtcNow or inject a time provider instead.
+
+# Parameterless casing is culture-sensitive and unsafe for T-SQL identifiers.
+M:System.String.ToLower;Use an OrdinalIgnoreCase comparer or ToLowerInvariant instead.
+M:System.String.ToUpper;Use an OrdinalIgnoreCase comparer or ToUpperInvariant instead.

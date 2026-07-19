@@ -45,6 +45,7 @@ public sealed record ReportDocument(
     IReadOnlyList<ReportMetric> TopComplexObjects,
     ReportBaselineSummary? Baseline);
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing reporting service; tracked as coupling baseline debt.")]
 public static class ReportWriter
 {
     public const int CurrentSchemaVersion = 1;

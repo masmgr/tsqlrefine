@@ -25,6 +25,7 @@ public static class SqlMetricsCollector
         return s_cache.GetValue(fragment, static value => CollectCore(value));
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing metrics aggregation logic; tracked as complexity baseline debt.")]
     private static SqlObjectMetrics[] CollectCore(TSqlFragment fragment)
     {
         if (fragment is not TSqlScript script)

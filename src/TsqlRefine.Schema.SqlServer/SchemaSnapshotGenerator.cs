@@ -10,6 +10,7 @@ namespace TsqlRefine.Schema.SqlServer;
 /// <summary>
 /// Generates a <see cref="SchemaSnapshot"/> by querying SQL Server catalog views.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing schema extraction orchestration; tracked as coupling baseline debt.")]
 public static class SchemaSnapshotGenerator
 {
     private static readonly FrozenSet<string> DefaultExcludeSchemas =

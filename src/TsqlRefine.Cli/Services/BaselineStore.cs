@@ -30,6 +30,7 @@ public sealed record BaselineClassification(
 /// <summary>
 /// Reads, writes, and applies CLI diagnostic baselines.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing baseline persistence and classification service; tracked as coupling baseline debt.")]
 public static class BaselineStore
 {
     public const int CurrentVersion = 1;

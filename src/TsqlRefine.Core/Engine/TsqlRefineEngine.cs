@@ -8,6 +8,7 @@ namespace TsqlRefine.Core.Engine;
 /// <summary>
 /// Main analysis engine that runs rules against SQL files and produces lint or fix results.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing engine orchestration; tracked as coupling baseline debt.")]
 public sealed class TsqlRefineEngine
 {
     private readonly IRule[] _rules;

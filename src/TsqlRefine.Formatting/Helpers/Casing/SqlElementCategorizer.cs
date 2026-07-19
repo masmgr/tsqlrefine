@@ -135,6 +135,10 @@ public static class SqlElementCategorizer
         return category;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing token classification decision tree; tracked as complexity baseline debt.")]
     private static ElementCategory CategorizeCore(
         TSqlParserToken token,
         TSqlParserToken? previousToken,

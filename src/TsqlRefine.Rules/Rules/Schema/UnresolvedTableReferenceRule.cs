@@ -21,6 +21,7 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
         new UnresolvedTableReferenceVisitor(context.Schema!);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing schema-aware ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class UnresolvedTableReferenceVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private static readonly FrozenSet<string> ExcludedSchemas =
@@ -249,6 +250,7 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing ScriptDOM table-reference dispatch; tracked as complexity baseline debt.")]
         private static string? GetExplicitAlias(TableReference tableRef) =>
             tableRef switch
             {

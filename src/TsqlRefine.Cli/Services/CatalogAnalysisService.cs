@@ -48,6 +48,7 @@ public sealed record DependencyGraphResult(
     IReadOnlyList<DependencyGraphNode> Nodes,
     IReadOnlyList<DependencyGraphEdge> Edges);
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing catalog analysis service; tracked as coupling baseline debt.")]
 public static class CatalogAnalysisService
 {
     public const int CurrentSchemaVersion = 1;
@@ -77,6 +78,7 @@ public static class CatalogAnalysisService
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing impact analysis decision tree; tracked as complexity baseline debt.")]
     public static ImpactAnalysisResult AnalyzeImpact(ObjectCatalog catalog, string? table, string? column)
     {
         ArgumentNullException.ThrowIfNull(catalog);

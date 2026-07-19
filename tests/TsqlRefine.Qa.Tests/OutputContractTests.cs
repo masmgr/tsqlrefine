@@ -8,6 +8,7 @@ using TsqlRefine.Rules;
 
 namespace TsqlRefine.Qa.Tests;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing cross-layer contract coverage; tracked as coupling baseline debt.")]
 public sealed class OutputContractTests
 {
     [Fact]

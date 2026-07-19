@@ -17,6 +17,7 @@ public sealed class InputReader
         List<SqlInput> Inputs,
         IReadOnlyDictionary<string, Encoding> WriteEncodings);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing input discovery workflow; tracked as complexity baseline debt.")]
     public async Task<ReadInputsResult> ReadInputsAsync(
         CliArgs args,
         TextReader stdin,

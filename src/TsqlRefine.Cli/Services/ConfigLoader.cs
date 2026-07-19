@@ -14,6 +14,7 @@ namespace TsqlRefine.Cli.Services;
 /// <summary>
 /// Loads and merges configuration from files, CLI arguments, and presets.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing configuration loading service; tracked as coupling baseline debt.")]
 public sealed class ConfigLoader
 {
     private const string ConfigDirName = ".tsqlrefine";

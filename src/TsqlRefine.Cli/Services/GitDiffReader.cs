@@ -40,6 +40,7 @@ public sealed class ChangedLineMap
     }
 }
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing Git diff integration service; tracked as coupling baseline debt.")]
 public static class GitDiffReader
 {
     private const int CurrentChangedLinesVersion = 1;

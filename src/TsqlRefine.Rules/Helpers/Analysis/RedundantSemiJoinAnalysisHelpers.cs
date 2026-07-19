@@ -3,6 +3,7 @@ using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Helpers.Analysis;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing ScriptDOM analysis helper; tracked as coupling baseline debt.")]
 internal static class RedundantSemiJoinAnalysisHelpers
 {
     public sealed record Match(BooleanExpression Predicate, InPredicate? InPredicate);
@@ -132,6 +133,7 @@ internal static class RedundantSemiJoinAnalysisHelpers
             fact.OuterColumn.Equals(outerColumn));
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing semi-join matching logic; tracked as complexity baseline debt.")]
     private static bool TryMatchExistsPredicate(ExistsPredicate predicate, IReadOnlyList<JoinFact> facts)
     {
         if (!TryGetSimpleSubquery(predicate.Subquery, requireWhere: true, out var subquery, out var table, out _))
@@ -171,6 +173,7 @@ internal static class RedundantSemiJoinAnalysisHelpers
               leftColumn.Equals(fact.OuterColumn))));
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing subquery shape matching logic; tracked as complexity baseline debt.")]
     private static bool TryGetSimpleSubquery(
         ScalarSubquery? scalarSubquery,
         bool requireWhere,

@@ -43,6 +43,10 @@ public static class InlineSpaceNormalizer
         return LineEndingHelpers.TransformLines(input, (line, _) => NormalizeLine(line, tracker));
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing protected-region state machine; tracked as complexity baseline debt.")]
     private static string NormalizeLine(string line, ProtectedRegionTracker tracker)
     {
         if (string.IsNullOrEmpty(line))

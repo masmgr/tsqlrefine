@@ -15,6 +15,7 @@ namespace TsqlRefine.Rules;
 /// <summary>
 /// Provides all built-in T-SQL lint rules included with TsqlRefine.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Built-in rule composition root necessarily references every rule; tracked as coupling baseline debt.")]
 public sealed class BuiltinRuleProvider : IRuleProvider
 {
     private const string BaseDocUrl = "https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/";
@@ -39,6 +40,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         return new RuleWithMetadata(rule, m with { DocumentationUri = uri });
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Built-in rule composition root necessarily constructs every rule; tracked as coupling baseline debt.")]
     private static IRule[] CreateRawRules() =>
     [
         // === Correctness ===

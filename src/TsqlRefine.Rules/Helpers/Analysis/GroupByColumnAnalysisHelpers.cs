@@ -6,6 +6,7 @@ namespace TsqlRefine.Rules.Helpers.Analysis;
 /// <summary>
 /// Provides shared column and expression analysis for GROUP BY validation rules.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing ScriptDOM analysis helper; tracked as coupling baseline debt.")]
 public static class GroupByColumnAnalysisHelpers
 {
     public static List<ScalarExpression> CollectGroupByExpressions(GroupByClause groupBy)
@@ -21,6 +22,7 @@ public static class GroupByColumnAnalysisHelpers
         return expressions;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing ScriptDOM expression dispatch; tracked as complexity baseline debt.")]
     public static void CollectColumnReferences(
         ScalarExpression? expression,
         List<ColumnReferenceExpression> result,

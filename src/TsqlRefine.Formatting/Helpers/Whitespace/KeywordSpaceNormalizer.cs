@@ -78,6 +78,10 @@ public static class KeywordSpaceNormalizer
     /// <param name="input">SQL text to normalize</param>
     /// <param name="options">Formatting options</param>
     /// <returns>SQL text with normalized keyword spacing</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing compound-keyword normalization loop; tracked as complexity baseline debt.")]
     public static string Normalize(string input, FormattingOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);

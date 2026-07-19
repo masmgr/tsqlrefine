@@ -24,6 +24,7 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class LeftJoinFilteredByWhereVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
         private const string DefaultMessageSuffix =

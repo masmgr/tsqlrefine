@@ -15,6 +15,10 @@ public static class BlankLineNormalizer
     /// <param name="input">SQL text to normalize</param>
     /// <param name="options">Formatting options controlling blank line normalization</param>
     /// <returns>SQL text with normalized blank lines</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing protected-region state machine; tracked as complexity baseline debt.")]
     public static string Normalize(string input, FormattingOptions options)
     {
         if (string.IsNullOrEmpty(input))

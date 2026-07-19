@@ -107,6 +107,7 @@ public sealed class ExecParameterTypeMismatchRule : ExecCatalogRuleBase
 }
 
 /// <summary>Shared ScriptDOM-based implementation for object-catalog-backed EXEC rules.</summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing catalog-aware EXEC analysis; tracked as coupling baseline debt.")]
 public abstract class ExecCatalogRuleBase : IRule
 {
     public abstract RuleMetadata Metadata { get; }
@@ -175,6 +176,7 @@ public abstract class ExecCatalogRuleBase : IRule
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing EXEC argument matching logic; tracked as complexity baseline debt.")]
     private static bool TryCreateCall(
         ExecuteStatement statement,
         IObjectCatalogProvider catalog,

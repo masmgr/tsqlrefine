@@ -113,6 +113,7 @@ internal static class CharsetDetection
         return encoding;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing BOM signature dispatch; tracked as complexity baseline debt.")]
     private static bool TryDetectBomEncoding(byte[] bytes, out Encoding encoding)
     {
         // UTF-8 BOM: EF BB BF

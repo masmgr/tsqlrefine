@@ -6,6 +6,7 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Cli.Tests;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing end-to-end plugin security coverage; tracked as coupling baseline debt.")]
 public sealed class PluginSecurityTests
 {
     // ================================================================

@@ -113,6 +113,7 @@ public sealed class AggregateInWhereClauseRule : DiagnosticVisitorRuleBase
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing ScriptDOM expression traversal; tracked as complexity baseline debt.")]
         private void CheckScalarExpressionForAggregate(ScalarExpression? expression)
         {
             if (TryCheckAggregateInConversionLikeCall(expression))

@@ -28,6 +28,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
         private string? _currentUnresolvedTargetQualifier;
         private string? _currentTargetDisplayName;
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing update cardinality analysis; tracked as complexity baseline debt.")]
         public override void ExplicitVisit(UpdateStatement node)
         {
             var updateSpec = node.UpdateSpecification;
@@ -111,6 +112,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing relationship cardinality decision tree; tracked as complexity baseline debt.")]
         private void CheckJoinCardinality(QualifiedJoin joinNode)
         {
             var pairs = JoinEqualityPairCollector.Extract(joinNode.SearchCondition);
@@ -251,6 +253,7 @@ public sealed class UpdateJoinCardinalityMismatchRule : SchemaAwareVisitorRuleBa
             _ => null,
         };
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing temporary target resolution; tracked as complexity baseline debt.")]
         private static UnresolvedUpdateTarget? ResolveTemporaryOrVariableTarget(
             string targetName,
             IList<TableReference> tableRefs)

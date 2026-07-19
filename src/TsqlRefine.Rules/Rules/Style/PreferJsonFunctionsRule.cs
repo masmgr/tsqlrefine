@@ -75,6 +75,7 @@ public sealed class PreferJsonFunctionsRule : IRule
         /// Checks whether the function parameters collectively contain evidence of JSON string manipulation.
         /// Uses a two-tier approach: strong multi-character JSON patterns, then paired brace detection across parameters.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing JSON evidence decision tree; tracked as complexity baseline debt.")]
         private static bool HasJsonEvidence(IList<ScalarExpression> parameters)
         {
             var literals = new List<string>();

@@ -254,6 +254,10 @@ public sealed class PluginLoader
     /// <param name="baseDirectory">Base directory for plugin path validation. When provided, paths are validated before loading.</param>
     /// <param name="resolvedPathDirectories">Trusted search directories for pre-resolved plugin paths.
     /// The base directory is always included when provided.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing plugin validation and loading workflow; tracked as complexity baseline debt.")]
     public static IReadOnlyList<LoadedPlugin> Load(
         IEnumerable<PluginDescriptor> plugins,
         string? baseDirectory = null,

@@ -24,6 +24,7 @@ public sealed class StringAssignmentLengthMismatchRule : DiagnosticVisitorRuleBa
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing schema-aware ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class StringAssignmentLengthMismatchVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
         private readonly Dictionary<string, StringCapacity> _variables = new(StringComparer.OrdinalIgnoreCase);
@@ -436,6 +437,7 @@ public sealed class StringAssignmentLengthMismatchRule : DiagnosticVisitorRuleBa
             return ResolveColumnCapacity(column, resolution);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing column resolution decision tree; tracked as complexity baseline debt.")]
         private StringCapacity? ResolveColumnCapacity(
             ColumnReferenceExpression column,
             ResolutionContext resolution)
@@ -520,6 +522,7 @@ public sealed class StringAssignmentLengthMismatchRule : DiagnosticVisitorRuleBa
             return new ResolutionContext(localAliases, schemaAliases);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing alias collection dispatch; tracked as complexity baseline debt.")]
         private void CollectLocalAliases(TableReference reference, Dictionary<string, LocalTable> aliases)
         {
             switch (reference)

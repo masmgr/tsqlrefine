@@ -18,6 +18,7 @@ namespace TsqlRefine.Cli.Services;
 /// <summary>
 /// Executes CLI commands (lint, format, fix, etc.) and returns appropriate exit codes.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing CLI command orchestration; tracked as coupling baseline debt.")]
 public sealed class CommandExecutor
 {
     private const string StdinFilePath = "<stdin>";
@@ -291,6 +292,8 @@ public sealed class CommandExecutor
         return 0;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing lint command workflow; tracked as complexity baseline debt.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing lint command workflow; tracked as coupling baseline debt.")]
     public async Task<int> ExecuteLintAsync(string command, CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {
         var stopwatch = Stopwatch.StartNew();
@@ -758,6 +761,7 @@ public sealed class CommandExecutor
     /// <summary>
     /// Executes the 'schema build' command: generates a schema snapshot and collects JOIN relations in one step.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing schema build workflow; tracked as complexity baseline debt.")]
     public async Task<int> ExecuteSchemaBuildAsync(
         CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
     {

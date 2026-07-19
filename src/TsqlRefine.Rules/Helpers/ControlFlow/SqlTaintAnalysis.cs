@@ -82,6 +82,7 @@ public sealed record SqlValueState(SqlTrustKind Trust, IReadOnlyList<SqlSegment>
     }
 }
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing control-flow analysis; tracked as coupling baseline debt.")]
 internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments = 32)
     : ForwardDataFlowAnalysis<Dictionary<string, SqlValueState>>
 {

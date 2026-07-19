@@ -8,6 +8,7 @@ namespace TsqlRefine.Cli.Services;
 /// <summary>
 /// Writes output in various formats (text, JSON) to stdout/stderr.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing multi-format output service; tracked as coupling baseline debt.")]
 public sealed class OutputWriter
 {
     private const string SarifSchema = "https://json.schemastore.org/sarif-2.1.0.json";
@@ -39,6 +40,7 @@ public sealed class OutputWriter
         return WriteJsonOutputAsync(stdout, result);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing SARIF serialization workflow; tracked as complexity baseline debt.")]
     public static async Task WriteSarifOutputAsync(
         TextWriter stdout,
         string version,
