@@ -201,6 +201,25 @@ public sealed class DynamicSqlTaintRuleTests
     }
 
     [Fact]
+    public void Analyze_DifferentConstantSqlOnBranches_ReturnsEmpty()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.RunReport @detailed bit
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                IF @detailed = 1
+                    SET @sql = N'SELECT Id, Name FROM dbo.Users';
+                ELSE
+                    SET @sql = N'SELECT Id FROM dbo.Users';
+                EXEC sys.sp_executesql @sql;
+            END;
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
     public void Analyze_GotoScope_ReturnsEmpty()
     {
         const string sql = "CREATE PROCEDURE dbo.RunSql @sql nvarchar(max) AS BEGIN GOTO done; done: EXEC(@sql); END;";

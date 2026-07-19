@@ -151,7 +151,7 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
         {
             var leftValue = GetVariable(left, name);
             var rightValue = GetVariable(right, name);
-            merged[name] = ValueEquals(leftValue, rightValue) ? leftValue : s_unknown;
+            merged[name] = Join(leftValue, rightValue);
         }
         return merged;
     }
@@ -239,6 +239,18 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
         ((left.Segments is null && right.Segments is null) ||
          (left.Segments is not null && right.Segments is not null &&
           left.Segments.SequenceEqual(right.Segments)));
+
+    private static SqlValueState Join(SqlValueState left, SqlValueState right)
+    {
+        if (ValueEquals(left, right))
+        {
+            return left;
+        }
+
+        return left.Trust == right.Trust && left.Trust is not (SqlTrustKind.SqlFragment or SqlTrustKind.Unknown)
+            ? SqlValueState.FromTrust(left.Trust)
+            : s_unknown;
+    }
 
     private static bool IsNumericType(DataTypeReference? dataType) =>
         dataType is SqlDataTypeReference sqlType && sqlType.SqlDataTypeOption is
