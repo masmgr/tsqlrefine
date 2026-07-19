@@ -1,15 +1,15 @@
 {
   "stryker-config": {
-    "project": "src/TsqlRefine.Rules/TsqlRefine.Rules.csproj",
+    "project": "src/TsqlRefine.Core/TsqlRefine.Core.csproj",
     "test-projects": [
-      "tests/TsqlRefine.Rules.Tests/TsqlRefine.Rules.Tests.csproj"
+      "tests/TsqlRefine.Core.Tests/TsqlRefine.Core.Tests.csproj"
     ],
     "target-framework": "net10.0",
     "reporters": ["progress", "html", "json"],
     "thresholds": {
       "high": 80,
       "low": 60,
-      "break": 0
+      "break": 51
     },
     "mutate": [
       "**/*.cs",

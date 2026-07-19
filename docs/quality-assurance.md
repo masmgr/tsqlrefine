@@ -19,6 +19,25 @@ The `TsqlRefine.Qa.Tests` project verifies:
 - corpus files behave across compatibility levels 110 through 160;
 - lint/fix JSON models validate against the committed schemas;
 - CLI exit codes remain stable.
+- every public concrete rule is registered exactly once, rule IDs are unique
+  kebab-case values, and fixable rules provide a rule-specific fix implementation.
+
+Property tests share a grammar-based SQL generator across Core, Rules, and
+Formatting. It produces parseable SELECT, UPDATE, and DELETE scripts so that
+crash-resistance, formatter idempotency, and autofix syntax/range/convergence
+properties exercise rule logic rather than mostly parser-error paths.
+
+## Static analysis and code metrics
+
+`CodeMetricsConfig.txt` gates new code at cyclomatic complexity 15,
+maintainability index 10, and class coupling 40. Existing hotspots carry a
+declaration-level `SuppressMessage` with a baseline-debt justification; do not
+add project-wide suppressions for new violations.
+
+SonarAnalyzer.CSharp and Meziantou.Analyzer are installed in observation mode.
+Reviewed rules can be promoted from `suggestion` in `.editorconfig` in small
+batches. `BannedSymbols.txt` rejects ambient local time and culture-sensitive
+parameterless string casing APIs.
 
 To intentionally accept a diagnostic change:
 
@@ -42,8 +61,12 @@ coverage report and tests added for the changed behavior.
 
 - `performance.yml` runs the all-rule corpus benchmark on pushes to `main` and
   alerts when the cached result regresses by more than 50 percent.
-- `mutation.yml` runs Stryker.NET against `TsqlRefine.Rules` weekly. Its reports are
-  artifacts for survivor review; no absolute mutation score is enforced.
+- `mutation.yml` runs Stryker.NET against Rules, Core, and Formatting weekly and
+  runs changed-code mutation analysis for pull requests. Core is gated at 51
+  (56.71% measured baseline) and Formatting at 77 (82.31% measured baseline).
+  Rules remains report-only until the corrected full-run configuration produces
+  its first valid score; its previous repository-relative mutate glob excluded
+  all runnable mutants.
 - `dogfood.yml` runs the strict preset over repository SQL monthly and uploads the
   diagnostics for human triage. Private SQL estates can reuse this workflow in an
   access-controlled repository; do not copy customer or sensitive SQL into the
