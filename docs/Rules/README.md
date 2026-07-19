@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **153 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **159 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -33,9 +33,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Description |
 |------|--------|-------|-------------|
 | **Critical** | security-only | 16 | Security vulnerabilities and critical safety issues |
-| **Essential** | pragmatic | 32 | Production-ready minimum for correctness and runtime error prevention |
-| **Recommended** | recommended | 55 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 23 | Comprehensive correctness, performance, and schema checks |
+| **Essential** | pragmatic | 35 | Production-ready minimum for correctness and runtime error prevention |
+| **Recommended** | recommended | 60 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 25 | Comprehensive correctness, performance, and schema checks |
 | **Cosmetic** | strict | 23 | Style consistency, formatting, and naming conventions |
 
 See [REFERENCE.md](REFERENCE.md#importance-tiers) for the complete tier breakdown with all rules listed.
@@ -127,10 +127,10 @@ TsqlRefine provides five preset rulesets:
 | Preset | Rules | Cumulative | Use Case |
 |--------|-------|------------|----------|
 | **security-only** | 16 | 16 | Security vulnerabilities and critical safety only |
-| **pragmatic** | 50 | 50 | Production-ready minimum for legacy codebases |
-| **recommended** | 107 | 107 | Balanced production use with semantic analysis (default) |
-| **strict-logic** | 130 | 130 | Comprehensive correctness without cosmetic style rules |
-| **strict** | 153 | 153 | Maximum enforcement including all style/cosmetic rules |
+| **pragmatic** | 51 | 51 | Production-ready minimum for legacy codebases |
+| **recommended** | 111 | 111 | Balanced production use with semantic analysis (default) |
+| **strict-logic** | 136 | 136 | Comprehensive correctness without cosmetic style rules |
+| **strict** | 159 | 159 | Maximum enforcement including all style/cosmetic rules |
 
 ```powershell
 # Use recommended preset (default)

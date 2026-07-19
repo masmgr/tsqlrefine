@@ -103,23 +103,31 @@ public static class ControlFlowGraphBuilder
         {
             var condition = CreateNode(CfgNodeKind.Statement, statement);
             ConnectIncoming(incoming, condition);
+            if (context.ExceptionTarget is not null)
+            {
+                Connect(condition, context.ExceptionTarget, CfgEdgeKind.Exception, isConservative: true);
+            }
             var join = CreateNode(CfgNodeKind.Join, null);
+            var predicate = EvaluatePredicate(statement.Predicate);
 
             var thenExits = BuildStatement(
                 statement.ThenStatement,
-                [new FlowEndpoint(condition, CfgEdgeKind.TrueBranch)],
+                predicate == false ? [] : [new FlowEndpoint(condition, CfgEdgeKind.TrueBranch)],
                 context);
             ConnectIncoming(thenExits, join);
 
             if (statement.ElseStatement is null)
             {
-                Connect(condition, join, CfgEdgeKind.FalseBranch);
+                if (predicate != true)
+                {
+                    Connect(condition, join, CfgEdgeKind.FalseBranch);
+                }
             }
             else
             {
                 var elseExits = BuildStatement(
                     statement.ElseStatement,
-                    [new FlowEndpoint(condition, CfgEdgeKind.FalseBranch)],
+                    predicate == true ? [] : [new FlowEndpoint(condition, CfgEdgeKind.FalseBranch)],
                     context);
                 ConnectIncoming(elseExits, join);
             }
@@ -134,12 +142,20 @@ public static class ControlFlowGraphBuilder
             var condition = CreateNode(CfgNodeKind.Statement, statement);
             var join = CreateNode(CfgNodeKind.Join, null);
             ConnectIncoming(incoming, condition);
-            Connect(condition, join, CfgEdgeKind.FalseBranch);
+            if (context.ExceptionTarget is not null)
+            {
+                Connect(condition, context.ExceptionTarget, CfgEdgeKind.Exception, isConservative: true);
+            }
+            var predicate = EvaluatePredicate(statement.Predicate);
+            if (predicate != true)
+            {
+                Connect(condition, join, CfgEdgeKind.FalseBranch);
+            }
 
             var loopContext = context with { BreakTarget = join, ContinueTarget = condition };
             var bodyExits = BuildStatement(
                 statement.Statement,
-                [new FlowEndpoint(condition, CfgEdgeKind.TrueBranch)],
+                predicate == false ? [] : [new FlowEndpoint(condition, CfgEdgeKind.TrueBranch)],
                 loopContext);
             foreach (var endpoint in bodyExits)
             {
@@ -227,6 +243,31 @@ public static class ControlFlowGraphBuilder
             var node = new CfgNode(_nodes.Count, kind, statement);
             _nodes.Add(node);
             return node;
+        }
+
+        private static bool? EvaluatePredicate(BooleanExpression expression) => expression switch
+        {
+            BooleanParenthesisExpression parenthesis => EvaluatePredicate(parenthesis.Expression),
+            BooleanComparisonExpression comparison => EvaluateComparison(comparison),
+            _ => null
+        };
+
+        private static bool? EvaluateComparison(BooleanComparisonExpression comparison)
+        {
+            if (comparison.FirstExpression is not Literal first ||
+                comparison.SecondExpression is not Literal second)
+            {
+                return null;
+            }
+
+            var equal = first.GetType() == second.GetType() &&
+                string.Equals(first.Value, second.Value, StringComparison.Ordinal);
+            return comparison.ComparisonType switch
+            {
+                BooleanComparisonType.Equals => equal,
+                BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !equal,
+                _ => null
+            };
         }
 
         private static void ConnectIncoming(IReadOnlyList<FlowEndpoint> incoming, CfgNode target)

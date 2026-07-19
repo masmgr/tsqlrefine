@@ -1,5 +1,9 @@
 {
   "rules": [
+    { "id": "transaction-not-closed-on-path" },
+    { "id": "cursor-not-deallocated-on-path" },
+    { "id": "variable-used-before-assignment" },
+    { "id": "unreachable-statement" },
     { "id": "exec-parameter-count-mismatch" },
     { "id": "exec-parameter-name-mismatch" },
     { "id": "exec-parameter-type-mismatch" },

@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 153
+- **Total Rules**: 159
 - **Fixable Rules**: 14 (9%)
 - **By Importance Tier**:
   - Critical (security-only): 16 rules
-  - Essential (pragmatic): 34 rules
-  - Recommended (recommended): 57 rules
-  - Thorough (strict-logic): 23 rules
+  - Essential (pragmatic): 35 rules
+  - Recommended (recommended): 60 rules
+  - Thorough (strict-logic): 25 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 26 rules (17%)
-  - Warning: 87 rules (57%)
-  - Information: 40 rules (26%)
+  - Error: 27 rules (17%)
+  - Warning: 91 rules (57%)
+  - Information: 41 rules (26%)
 
 ## Importance Tiers
 
@@ -43,10 +43,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 16 | 16 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 34 | 50 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 57 | 107 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 23 | 130 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 153 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Essential** | pragmatic | 35 | 51 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 60 | 111 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 25 | 136 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 159 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,9 +54,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 6 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 49 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 54 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 24 | Flags patterns that can cause performance issues |
-| **Transactions** | 15 | Ensures proper transaction handling and session settings |
+| **Transactions** | 16 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
@@ -100,7 +100,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Essential (pragmatic)
 
-**34 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
+**35 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
 
 #### Correctness (24 rules)
 
@@ -137,11 +137,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY, which produces non-deterministic results. | Warning | No |
 
-#### Transactions (1 rules)
+#### Transactions (2 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
+| [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md) | Detects execution paths that leave a transaction opened by the current scope unclosed. | Error | No |
 
 #### Schema (8 rules)
 
@@ -158,15 +159,16 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**57 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**60 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
-#### Correctness (15 rules)
+#### Correctness (18 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
 | [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md) | Detects MAX(...) plus a positive integer in assignments or DML values, which is unsafe for key generation. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
+| [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md) | Detects execution paths where an opened cursor is not deallocated. | Warning | No |
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
 | [exec-output-not-captured](correctness/exec-output-not-captured.md) | Detects EXEC calls that omit OUTPUT when passing an output parameter. | Warning | No |
@@ -179,6 +181,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
 | [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md) | Detects string assignments whose statically known maximum length exceeds the destination capacity. | Warning | No |
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
+| [unreachable-statement](correctness/unreachable-statement.md) | Detects statements that are unreachable after control transfer or in constant-false branches. | Warning | No |
+| [variable-used-before-assignment](correctness/variable-used-before-assignment.md) | Detects variables read before assignment on every path reaching the use. | Warning | No |
 
 #### Performance (13 rules)
 
@@ -244,7 +248,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**23 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**25 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -252,14 +256,16 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-#### Correctness (4 rules)
+#### Correctness (6 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
+| [inconsistent-result-set](correctness/inconsistent-result-set.md) | Detects procedures that return different result-set shapes on different execution paths. | Warning | No |
 | [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that use DATALENGTH for termination but LEN to advance the same string variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
+| [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
 
 #### Performance (10 rules)
 
@@ -338,7 +344,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (26 rules)
+### Error (27 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -364,10 +370,11 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md)
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
+- [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md)
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (87 rules)
+### Warning (91 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -399,6 +406,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
 - [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md)
 - [cross-database-transaction](safety/cross-database-transaction.md)
+- [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
 - [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md)
 - [duplicate-index-column](schema/duplicate-index-column.md)
@@ -410,6 +418,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
 - [having-column-mismatch](correctness/having-column-mismatch.md)
 - [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md)
+- [inconsistent-result-set](correctness/inconsistent-result-set.md)
 - [join-column-deviation](schema/join-column-deviation.md)
 - [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md)
 - [len-for-emptiness-check](correctness/len-for-emptiness-check.md)
@@ -452,12 +461,14 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
+- [unreachable-statement](correctness/unreachable-statement.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
+- [variable-used-before-assignment](correctness/variable-used-before-assignment.md)
 
-### Information (40 rules)
+### Information (41 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -499,6 +510,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semicolon-termination](style/semicolon-termination.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
+- [unused-variable](correctness/unused-variable.md)
 
 ## Fixable Rules
 

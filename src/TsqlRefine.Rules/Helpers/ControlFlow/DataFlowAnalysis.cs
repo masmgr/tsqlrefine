@@ -7,6 +7,8 @@ public abstract class ForwardDataFlowAnalysis<TState>
     protected abstract TState Transfer(TState input, CfgNode node);
     protected abstract TState Merge(TState left, TState right);
     protected abstract bool StateEquals(TState left, TState right);
+    protected virtual TState TransferEdge(TState input, TState output, CfgEdge edge) =>
+        edge.Kind == CfgEdgeKind.Exception && edge.IsConservative ? input : output;
 
     /// <summary>Computes the input state for every reachable graph node.</summary>
     public IReadOnlyDictionary<CfgNode, TState> Solve(ControlFlowGraph cfg)
@@ -28,10 +30,11 @@ public abstract class ForwardDataFlowAnalysis<TState>
             var output = Transfer(states[node], node);
             foreach (var edge in node.Successors)
             {
+                var edgeOutput = TransferEdge(states[node], output, edge);
                 var changed = false;
                 if (states.TryGetValue(edge.Target, out var existing))
                 {
-                    var merged = Merge(existing, output);
+                    var merged = Merge(existing, edgeOutput);
                     if (!StateEquals(existing, merged))
                     {
                         states[edge.Target] = merged;
@@ -40,7 +43,7 @@ public abstract class ForwardDataFlowAnalysis<TState>
                 }
                 else
                 {
-                    states[edge.Target] = output;
+                    states[edge.Target] = edgeOutput;
                     changed = true;
                 }
 

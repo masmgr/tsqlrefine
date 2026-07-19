@@ -1,5 +1,6 @@
 {
   "rules": [
+    { "id": "transaction-not-closed-on-path" },
     { "id": "exec-parameter-count-mismatch" },
     { "id": "exec-parameter-name-mismatch" },
     { "id": "dml-without-where" },

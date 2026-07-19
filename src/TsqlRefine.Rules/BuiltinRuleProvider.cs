@@ -73,6 +73,11 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new ExecParameterNameMismatchRule(),
         new ExecParameterTypeMismatchRule(),
         new ExecOutputNotCapturedRule(),
+        new CursorNotDeallocatedOnPathRule(),
+        new VariableUsedBeforeAssignmentRule(),
+        new UnusedVariableRule(),
+        new UnreachableStatementRule(),
+        new InconsistentResultSetRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -180,6 +185,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         // === Transactions ===
         new CrossDatabaseTransactionRule(),
+        new TransactionNotClosedOnPathRule(),
         new RequireTryCatchForTransactionRule(),
         new RequireXactAbortOnRule(),
         new TransactionWithoutCommitOrRollbackRule(),
