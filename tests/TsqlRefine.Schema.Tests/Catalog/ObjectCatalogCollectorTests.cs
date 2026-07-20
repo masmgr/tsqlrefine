@@ -112,6 +112,67 @@ public sealed class ObjectCatalogCollectorTests
     }
 
     [Fact]
+    public void Collect_ResolvedOutOfScopeTableReference_SetsExternalReferenceFlag()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [("CREATE VIEW dbo.UserView AS SELECT Id FROM dbo.Users;", "view.sql")],
+            160);
+
+        Assert.True(catalog.Scope.IncludesExternalReferences);
+    }
+
+    [Fact]
+    public void Collect_CteAndTemporarySources_DoNotCreateTableReferences()
+    {
+        const string sql = """
+            WITH recent AS (SELECT 1 AS Id)
+            SELECT Id FROM recent;
+            CREATE TABLE #items (Id int);
+            SELECT Id FROM #items;
+            DECLARE @items TABLE (Id int);
+            SELECT Id FROM @items;
+            """;
+
+        var catalog = ObjectCatalogCollector.Collect([(sql, "transient.sql")], 160);
+
+        Assert.DoesNotContain(catalog.References, reference =>
+            reference.Kind == CatalogReferenceKind.Table &&
+            reference.ToObject.Name is "recent" or "#items" or "@items");
+    }
+
+    [Fact]
+    public void Collect_CorrelatedSubqueryUnqualifiedColumn_DoesNotGuessInnerSource()
+    {
+        const string sql = """
+            CREATE VIEW dbo.CorrelatedView AS
+            SELECT o.Id
+            FROM dbo.OuterTable AS o
+            WHERE EXISTS (SELECT 1 FROM dbo.InnerTable AS i WHERE UnqualifiedValue = o.Id);
+            """;
+
+        var catalog = ObjectCatalogCollector.Collect([(sql, "correlated.sql")], 160);
+
+        Assert.DoesNotContain(catalog.References, reference =>
+            reference.Kind == CatalogReferenceKind.Column &&
+            reference.ToColumn == "UnqualifiedValue");
+    }
+
+    [Fact]
+    public void Collect_KnownViewColumnIsValidatedDuringResolution()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [
+                ("CREATE VIEW dbo.SourceView (KnownColumn) AS SELECT 1;", "source.sql"),
+                ("CREATE VIEW dbo.Consumer AS SELECT MissingColumn FROM dbo.SourceView;", "consumer.sql")
+            ],
+            160);
+
+        var reference = Assert.Single(catalog.References, item =>
+            item.Kind == CatalogReferenceKind.Column && item.ToColumn == "MissingColumn");
+        Assert.Equal(CatalogResolutionStatus.Unresolved, reference.Resolution);
+    }
+
+    [Fact]
     public void Collect_DynamicAndFourPartExec_MarksReferencesOutOfScope()
     {
         var catalog = ObjectCatalogCollector.Collect(
@@ -141,5 +202,16 @@ public sealed class ObjectCatalogCollectorTests
         Assert.NotNull(resolved);
         Assert.True(provider.HasData);
         Assert.Equal("@id", Assert.Single(resolved.Parameters).Name);
+    }
+
+    [Fact]
+    public void Collect_MultilineIdentifierRangeEndsOnLastTokenLine()
+    {
+        const string sql = "CREATE PROCEDURE dbo.[Multi\nLine] AS SELECT 1;";
+
+        var catalog = ObjectCatalogCollector.Collect([(sql, "multiline.sql")], 160);
+
+        var definition = Assert.Single(catalog.Objects);
+        Assert.Equal(1, definition.DefinedAt.End.Line);
     }
 }

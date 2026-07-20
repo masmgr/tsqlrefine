@@ -321,7 +321,8 @@ internal static class ExecTypeInference
             }
             var argumentLength = GetStringCharacterCapacity(argument);
             var parameterLength = GetStringCharacterCapacity(parameter);
-            return parameterLength is > -1 && argumentLength > parameterLength;
+            return parameterLength is > -1 &&
+                (argumentLength == -1 || argumentLength > parameterLength);
         }
 
         if (argument.Category == SchemaTypeCategory.ExactNumeric && parameter.Category == SchemaTypeCategory.ExactNumeric)

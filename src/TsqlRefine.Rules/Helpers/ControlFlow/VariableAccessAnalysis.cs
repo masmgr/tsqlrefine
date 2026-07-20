@@ -111,6 +111,12 @@ internal static class VariableAccessAnalysis
             node.ParameterValue?.Accept(this);
         }
 
+        public override void ExplicitVisit(ExecuteSpecification node)
+        {
+            AddWrite(node.Variable?.Name);
+            base.ExplicitVisit(node);
+        }
+
         public override void ExplicitVisit(IfStatement node)
         {
             node.Predicate?.Accept(this);

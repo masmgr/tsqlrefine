@@ -260,12 +260,16 @@ public static class ControlFlowGraphBuilder
                 return null;
             }
 
-            var equal = first.GetType() == second.GetType() &&
-                string.Equals(first.Value, second.Value, StringComparison.Ordinal);
+            if (first.GetType() != second.GetType() ||
+                !string.Equals(first.Value, second.Value, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
             return comparison.ComparisonType switch
             {
-                BooleanComparisonType.Equals => equal,
-                BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => !equal,
+                BooleanComparisonType.Equals => true,
+                BooleanComparisonType.NotEqualToBrackets or BooleanComparisonType.NotEqualToExclamation => false,
                 _ => null
             };
         }

@@ -485,7 +485,7 @@ public sealed record CatalogObjectInfo(
 /// <summary>Cross-object reference metadata exposed to analysis rules.</summary>
 /// <param name="FromObject">Containing object, or null for script-level references.</param>
 /// <param name="ToObject">Referenced object identity.</param>
-/// <param name="ToColumn">Referenced column, when known.</param>
+/// <param name="ToColumn">Referenced column, when known. Resolution validates it only when the target exposes known result columns.</param>
 /// <param name="Kind">Reference kind.</param>
 /// <param name="Resolution">Resolution status.</param>
 /// <param name="ReferencedInFile">Source file containing the reference.</param>

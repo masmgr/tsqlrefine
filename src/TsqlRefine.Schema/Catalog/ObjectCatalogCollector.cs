@@ -46,7 +46,7 @@ public static class ObjectCatalogCollector
             new CatalogScope(
                 databases,
                 isAuthoritative,
-                references.Any(r => r.Resolution == CatalogResolutionStatus.OutOfScope),
+                resolvedReferences.Any(r => r.Resolution == CatalogResolutionStatus.OutOfScope),
                 defaultSchema),
             objects,
             resolvedReferences);
@@ -56,9 +56,9 @@ public static class ObjectCatalogCollector
         IReadOnlyList<CatalogObject> objects,
         List<CatalogReference> references)
     {
-        var objectCounts = objects
+        var objectsByKey = objects
             .GroupBy(obj => CreateResolutionKey(obj.Id, obj.Kind), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
         var output = new CatalogReference[references.Count];
         for (var i = 0; i < references.Count; i++)
         {
@@ -69,14 +69,19 @@ public static class ObjectCatalogCollector
                 continue;
             }
 
-            var matches = GetMatchingKinds(reference.Kind)
-                .Sum(kind => objectCounts.GetValueOrDefault(CreateResolutionKey(reference.ToObject, kind)));
-            var status = matches switch
+            var objectMatches = GetMatchingKinds(reference.Kind)
+                .SelectMany(kind => objectsByKey.GetValueOrDefault(CreateResolutionKey(reference.ToObject, kind)) ?? [])
+                .ToArray();
+            var matches = reference is { Kind: CatalogReferenceKind.Column, ToColumn: not null }
+                ? objectMatches.Count(obj => obj.ResultColumns is null || obj.ResultColumns.Any(column =>
+                    string.Equals(column.Name, reference.ToColumn, StringComparison.OrdinalIgnoreCase)))
+                : objectMatches.Length;
+            var status = (ObjectMatches: objectMatches.Length, Matches: matches) switch
             {
-                0 when reference.Kind is CatalogReferenceKind.Table or CatalogReferenceKind.Column =>
+                (0, _) when reference.Kind is CatalogReferenceKind.Table or CatalogReferenceKind.Column =>
                     CatalogResolutionStatus.OutOfScope,
-                0 => CatalogResolutionStatus.Unresolved,
-                1 => CatalogResolutionStatus.Resolved,
+                (_, 0) => CatalogResolutionStatus.Unresolved,
+                (_, 1) => CatalogResolutionStatus.Resolved,
                 _ => CatalogResolutionStatus.Ambiguous
             };
             output[i] = reference with { Resolution = status };
@@ -107,6 +112,7 @@ public static class ObjectCatalogCollector
     {
         private CatalogObjectId? _currentObject;
         private readonly Stack<Dictionary<string, CatalogObjectId>> _querySources = new();
+        private readonly Stack<HashSet<string>> _cteScopes = new();
 
         public override void ExplicitVisit(CreateProcedureStatement node) => VisitProcedure(node, () => base.ExplicitVisit(node));
         public override void ExplicitVisit(AlterProcedureStatement node) => VisitProcedure(node, () => base.ExplicitVisit(node));
@@ -167,11 +173,22 @@ public static class ObjectCatalogCollector
 
         public override void ExplicitVisit(NamedTableReference node)
         {
-            if (node.SchemaObject is not null)
+            if (node.SchemaObject is not null && !IsTransientTableSource(node.SchemaObject))
             {
                 AddReference(node.SchemaObject, null, CatalogReferenceKind.Table);
             }
             base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            var names = node.WithCtesAndXmlNamespaces?.CommonTableExpressions
+                .Select(cte => cte.ExpressionName.Value)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase) ??
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            _cteScopes.Push(names);
+            base.ExplicitVisit(node);
+            _cteScopes.Pop();
         }
 
         public override void ExplicitVisit(QuerySpecification node)
@@ -256,7 +273,7 @@ public static class ObjectCatalogCollector
         {
             switch (tableReference)
             {
-                case NamedTableReference { SchemaObject: not null } named:
+                case NamedTableReference { SchemaObject: not null } named when !IsTransientTableSource(named.SchemaObject):
                     var id = ToId(named.SchemaObject);
                     var qualifier = named.Alias?.Value ?? named.SchemaObject.BaseIdentifier?.Value;
                     if (!string.IsNullOrWhiteSpace(qualifier))
@@ -289,17 +306,33 @@ public static class ObjectCatalogCollector
 
         private bool TryResolveUnqualifiedSource(out CatalogObjectId target)
         {
-            if (_querySources.TryPeek(out var sources))
+            var targets = _querySources
+                .SelectMany(sources => sources.Values)
+                .Distinct()
+                .Take(2)
+                .ToArray();
+            if (targets.Length == 1)
             {
-                var targets = sources.Values.Distinct().Take(2).ToArray();
-                if (targets.Length == 1)
-                {
-                    target = targets[0];
-                    return true;
-                }
+                target = targets[0];
+                return true;
             }
             target = null!;
             return false;
+        }
+
+        private bool IsTransientTableSource(SchemaObjectName name)
+        {
+            var baseName = name.BaseIdentifier?.Value;
+            if (string.IsNullOrWhiteSpace(baseName) || baseName[0] is '#' or '@')
+            {
+                return true;
+            }
+            if (name.SchemaIdentifier is not null || name.DatabaseIdentifier is not null ||
+                name.ServerIdentifier is not null)
+            {
+                return false;
+            }
+            return _cteScopes.Any(scope => scope.Contains(baseName));
         }
 
         private void VisitProcedure(ProcedureStatementBody node, Action visitChildren)
@@ -448,10 +481,43 @@ public static class ObjectCatalogCollector
         {
             var startLine = Math.Max(0, fragment.StartLine - 1);
             var startColumn = Math.Max(0, fragment.StartColumn - 1);
-            var endColumn = startColumn + Math.Max(1, fragment.FragmentLength);
+            var end = new Position(startLine, startColumn);
+            if (fragment.ScriptTokenStream is not null && fragment.LastTokenIndex >= 0 &&
+                fragment.LastTokenIndex < fragment.ScriptTokenStream.Count)
+            {
+                var token = fragment.ScriptTokenStream[fragment.LastTokenIndex];
+                end = AdvancePosition(
+                    new Position(Math.Max(0, token.Line - 1), Math.Max(0, token.Column - 1)),
+                    token.Text);
+            }
             return new TsqlRefine.PluginSdk.Range(
                 new Position(startLine, startColumn),
-                new Position(startLine, endColumn));
+                end);
+        }
+
+        private static Position AdvancePosition(Position start, string text)
+        {
+            var line = start.Line;
+            var character = start.Character;
+            for (var index = 0; index < text.Length; index++)
+            {
+                if (text[index] == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
+                {
+                    index++;
+                    line++;
+                    character = 0;
+                }
+                else if (text[index] is '\r' or '\n')
+                {
+                    line++;
+                    character = 0;
+                }
+                else
+                {
+                    character++;
+                }
+            }
+            return new Position(line, character);
         }
     }
 }

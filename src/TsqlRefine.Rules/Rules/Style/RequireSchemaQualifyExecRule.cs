@@ -1,6 +1,6 @@
-using System.Collections.Frozen;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Catalog;
 
 namespace TsqlRefine.Rules.Rules.Style;
 
@@ -11,24 +11,6 @@ public sealed class RequireSchemaQualifyExecRule : DiagnosticVisitorRuleBase
 {
     private const string RuleId = "require-schema-qualify-exec";
     private const string Category = "Style";
-
-    private static readonly FrozenSet<string> s_knownSystemProcs = new[]
-    {
-        "sp_executesql",
-        "sp_xml_preparedocument",
-        "sp_xml_removedocument",
-        "sp_prepare",
-        "sp_execute",
-        "sp_unprepare",
-        "sp_describe_first_result_set",
-        "sp_describe_undeclared_parameters",
-        "sp_getapplock",
-        "sp_releaseapplock",
-        "sp_addmessage",
-        "sp_dropmessage",
-        "xp_cmdshell",
-        "xp_sendmail",
-    }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
@@ -76,7 +58,7 @@ public sealed class RequireSchemaQualifyExecRule : DiagnosticVisitorRuleBase
                 }
 
                 // Skip known system stored procedures
-                if (s_knownSystemProcs.Contains(baseName))
+                if (SystemProcedureHelpers.IsKnownSystemProcedure(baseName))
                 {
                     base.ExplicitVisit(node);
                     return;

@@ -68,4 +68,14 @@ public sealed class ExecParameterTypeMismatchRuleTests
 
         Assert.Empty(_rule.Analyze(context));
     }
+
+    [Fact]
+    public void Analyze_MaxStringArgumentForBoundedParameter_ReturnsDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "DECLARE @value nvarchar(max); EXEC dbo.TakeCode @value;",
+            "CREATE PROCEDURE dbo.TakeCode @value nvarchar(100) AS SELECT @value;");
+
+        Assert.Single(_rule.Analyze(context));
+    }
 }

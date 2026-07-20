@@ -89,6 +89,11 @@ public sealed class UnresolvedProcedureReferenceRule : IRule
             {
                 return;
             }
+            if (kind == CatalogObjectKindFilter.Procedure &&
+                SystemProcedureHelpers.IsSystemProcedureReference(name, schema))
+            {
+                return;
+            }
             var normalizedSchema = schema ?? catalog.Scope.DefaultSchema;
             var matches = _graph.CountMatches(database, normalizedSchema, name, kind);
             if (matches == 0)

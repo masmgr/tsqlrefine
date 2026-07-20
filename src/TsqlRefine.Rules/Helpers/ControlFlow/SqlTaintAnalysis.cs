@@ -63,7 +63,7 @@ public sealed record SqlValueState(SqlTrustKind Trust, IReadOnlyList<SqlSegment>
         return false;
     }
 
-    private static void UpdateStringLiteralContext(string text, ref bool insideStringLiteral)
+    internal static void UpdateStringLiteralContext(string text, ref bool insideStringLiteral)
     {
         for (var index = 0; index < text.Length; index++)
         {
@@ -140,7 +140,34 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
                 }
                 break;
         }
+        if (node.Statement is not null)
+        {
+            foreach (var write in VariableAccessAnalysis.GetAccesses(node.Statement).Writes)
+            {
+                if (!IsDirectAssignment(node.Statement, write))
+                {
+                    output[write] = s_unknown;
+                }
+            }
+        }
         return output;
+    }
+
+    private static bool IsDirectAssignment(TSqlStatement statement, string name) => statement switch
+    {
+        DeclareVariableStatement declaration => declaration.Declarations.Any(item =>
+            string.Equals(item.VariableName?.Value, name, StringComparison.OrdinalIgnoreCase)),
+        SetVariableStatement set => string.Equals(set.Variable?.Name, name, StringComparison.OrdinalIgnoreCase),
+        SelectStatement select => HasSelectAssignment(select, name),
+        _ => false
+    };
+
+    private static bool HasSelectAssignment(SelectStatement select, string name)
+    {
+        var visitor = new SelectAssignmentVisitor();
+        select.Accept(visitor);
+        return visitor.Assignments.Any(item =>
+            string.Equals(item.Variable?.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     protected override Dictionary<string, SqlValueState> Merge(
@@ -248,9 +275,31 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
             return left;
         }
 
+        if (left.Trust == SqlTrustKind.Constant && right.Trust == SqlTrustKind.Constant)
+        {
+            var leftParity = GetQuoteParity(left);
+            var rightParity = GetQuoteParity(right);
+            return leftParity == rightParity
+                ? SqlValueState.FromConstant(leftParity ? "'" : string.Empty)
+                : s_unknown;
+        }
+
         return left.Trust == right.Trust && left.Trust is not (SqlTrustKind.SqlFragment or SqlTrustKind.Unknown)
             ? SqlValueState.FromTrust(left.Trust)
             : s_unknown;
+    }
+
+    private static bool GetQuoteParity(SqlValueState value)
+    {
+        var inside = false;
+        foreach (var segment in value.Segments ?? [])
+        {
+            if (segment.Trust == SqlTrustKind.Constant)
+            {
+                SqlValueState.UpdateStringLiteralContext(segment.ConstantText ?? string.Empty, ref inside);
+            }
+        }
+        return inside;
     }
 
     private static bool IsNumericType(DataTypeReference? dataType) =>

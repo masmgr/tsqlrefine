@@ -76,6 +76,11 @@ public static class ControlFlowScopeCollector
                 body = function.StatementList;
                 parameters = function.Parameters.ToArray();
                 return true;
+            case TriggerStatementBody trigger when trigger.StatementList is not null:
+                owner = trigger;
+                body = trigger.StatementList;
+                parameters = [];
+                return true;
             default:
                 owner = null!;
                 body = null!;

@@ -47,6 +47,20 @@ public sealed class UnresolvedProcedureReferenceRuleTests
         Assert.Empty(new UnresolvedProcedureReferenceRule().Analyze(context));
     }
 
+    [Theory]
+    [InlineData("EXEC sp_executesql N'SELECT 1';")]
+    [InlineData("EXEC sys.sp_getapplock @Resource = N'test', @LockMode = 'Exclusive';")]
+    [InlineData("EXEC xp_custom_system_proc;")]
+    public void UnresolvedProcedure_SystemProcedure_ReturnsNoDiagnostic(string sql)
+    {
+        var context = CreateContext(
+            sql,
+            "call.sql",
+            [("CREATE PROCEDURE dbo.KnownProcedure AS SELECT 1;", "known.sql")]);
+
+        Assert.Empty(new UnresolvedProcedureReferenceRule().Analyze(context));
+    }
+
     [Fact]
     public void UnreferencedObject_NoIncomingReference_ReturnsDiagnostic()
     {
@@ -121,6 +135,24 @@ public sealed class UnresolvedProcedureReferenceRuleTests
             ]);
 
         Assert.Single(new CircularObjectReferenceRule().Analyze(context));
+    }
+
+    [Fact]
+    public void CircularObjectReference_DiagnosticCycleContainsReportedObject()
+    {
+        const string third = "CREATE VIEW dbo.ThirdView AS SELECT Id FROM dbo.FirstView;";
+        var context = CreateContext(
+            third,
+            "third.sql",
+            [
+                ("CREATE VIEW dbo.FirstView AS SELECT b.Id FROM dbo.SecondView b JOIN dbo.ThirdView c ON b.Id = c.Id;", "first.sql"),
+                ("CREATE VIEW dbo.SecondView AS SELECT Id FROM dbo.FirstView;", "second.sql"),
+                (third, "third.sql")
+            ]);
+
+        var diagnostic = Assert.Single(new CircularObjectReferenceRule().Analyze(context));
+
+        Assert.Contains("dbo.ThirdView", diagnostic.Message);
     }
 
     [Fact]

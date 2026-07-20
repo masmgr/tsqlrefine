@@ -105,36 +105,53 @@ internal sealed class CatalogDependencyGraph
             ? $"{id.SchemaName}.{id.Name}"
             : $"{id.DatabaseName}.{id.SchemaName}.{id.Name}";
 
-    private int GetViewNestingDepth(
-        CatalogObjectInfo current,
-        HashSet<CatalogObjectInfo> active,
-        Dictionary<CatalogObjectInfo, int> memo)
-    {
-        if (memo.TryGetValue(current, out var cached))
-        {
-            return cached;
-        }
-        if (!active.Add(current))
-        {
-            return 0;
-        }
-        var depth = GetDependencies(current)
-            .Where(dependency => dependency.Kind == CatalogObjectKind.View)
-            .Select(dependency => 1 + GetViewNestingDepth(dependency, active, memo))
-            .DefaultIfEmpty(0)
-            .Max();
-        active.Remove(current);
-        memo[current] = depth;
-        return depth;
-    }
-
     private int GetCachedViewNestingDepth(CatalogObjectInfo view)
     {
         lock (_viewDepths)
         {
-            return GetViewNestingDepth(view, [], _viewDepths);
+            if (_viewDepths.TryGetValue(view, out var cached))
+            {
+                return cached;
+            }
+
+            var active = new HashSet<CatalogObjectInfo>();
+            var frames = new Stack<DepthFrame>();
+            frames.Push(new DepthFrame(view, GetViewDependencies(view)));
+            active.Add(view);
+            while (frames.TryPeek(out var frame))
+            {
+                if (frame.Index < frame.Dependencies.Length)
+                {
+                    var dependency = frame.Dependencies[frame.Index++];
+                    if (_viewDepths.TryGetValue(dependency, out var dependencyDepth))
+                    {
+                        frame.MaxDepth = Math.Max(frame.MaxDepth, 1 + dependencyDepth);
+                    }
+                    else if (active.Add(dependency))
+                    {
+                        frames.Push(new DepthFrame(dependency, GetViewDependencies(dependency)));
+                    }
+                    else
+                    {
+                        frame.MaxDepth = Math.Max(frame.MaxDepth, 1);
+                    }
+                    continue;
+                }
+
+                frames.Pop();
+                active.Remove(frame.Object);
+                _viewDepths[frame.Object] = frame.MaxDepth;
+                if (frames.TryPeek(out var parent))
+                {
+                    parent.MaxDepth = Math.Max(parent.MaxDepth, 1 + frame.MaxDepth);
+                }
+            }
+            return _viewDepths[view];
         }
     }
+
+    private CatalogObjectInfo[] GetViewDependencies(CatalogObjectInfo view) =>
+        GetDependencies(view).Where(dependency => dependency.Kind == CatalogObjectKind.View).ToArray();
 
     private Dictionary<CatalogObjectInfo, IReadOnlyList<CatalogObjectInfo>> FindCycles()
     {
@@ -145,73 +162,95 @@ internal sealed class CatalogDependencyGraph
         var onStack = new HashSet<CatalogObjectInfo>();
         var cycles = new Dictionary<CatalogObjectInfo, IReadOnlyList<CatalogObjectInfo>>();
 
-        foreach (var obj in Objects)
+        foreach (var root in Objects)
         {
-            if (!indexes.ContainsKey(obj))
+            if (indexes.ContainsKey(root))
             {
-                Visit(obj);
+                continue;
+            }
+            var traversal = new Stack<TarjanFrame>();
+            traversal.Push(CreateFrame(root, null));
+            while (traversal.TryPeek(out var frame))
+            {
+                if (frame.Index < frame.Dependencies.Length)
+                {
+                    var dependency = frame.Dependencies[frame.Index++];
+                    if (!indexes.TryGetValue(dependency, out var dependencyIndex))
+                    {
+                        traversal.Push(CreateFrame(dependency, frame.Object));
+                    }
+                    else if (onStack.Contains(dependency))
+                    {
+                        lowLinks[frame.Object] = Math.Min(lowLinks[frame.Object], dependencyIndex);
+                    }
+                    continue;
+                }
+
+                traversal.Pop();
+                if (frame.Parent is not null)
+                {
+                    lowLinks[frame.Parent] = Math.Min(lowLinks[frame.Parent], lowLinks[frame.Object]);
+                }
+                if (lowLinks[frame.Object] != indexes[frame.Object])
+                {
+                    continue;
+                }
+
+                var component = new List<CatalogObjectInfo>();
+                CatalogObjectInfo member;
+                do
+                {
+                    member = stack.Pop();
+                    onStack.Remove(member);
+                    component.Add(member);
+                }
+                while (member != frame.Object);
+
+                if (component.Count > 1 || GetDependencies(frame.Object).Contains(frame.Object))
+                {
+                    var componentSet = component.ToHashSet();
+                    foreach (var item in component)
+                    {
+                        cycles[item] = FindCycleCore(item, componentSet)!;
+                    }
+                }
             }
         }
         return cycles;
 
-        void Visit(CatalogObjectInfo current)
+        TarjanFrame CreateFrame(CatalogObjectInfo current, CatalogObjectInfo? parent)
         {
             indexes[current] = index;
             lowLinks[current] = index;
             index++;
             stack.Push(current);
             onStack.Add(current);
-
-            foreach (var dependency in GetDependencies(current))
-            {
-                if (!indexes.TryGetValue(dependency, out var dependencyIndex))
-                {
-                    Visit(dependency);
-                    lowLinks[current] = Math.Min(lowLinks[current], lowLinks[dependency]);
-                }
-                else if (onStack.Contains(dependency))
-                {
-                    lowLinks[current] = Math.Min(lowLinks[current], dependencyIndex);
-                }
-            }
-
-            if (lowLinks[current] != indexes[current])
-            {
-                return;
-            }
-
-            var component = new List<CatalogObjectInfo>();
-            CatalogObjectInfo member;
-            do
-            {
-                member = stack.Pop();
-                onStack.Remove(member);
-                component.Add(member);
-            }
-            while (member != current);
-
-            if (component.Count > 1 || GetDependencies(current).Contains(current))
-            {
-                var start = component[0];
-                var path = new List<CatalogObjectInfo> { start };
-                var active = new HashSet<CatalogObjectInfo> { start };
-                var cycle = FindCycleCore(start, start, path, active)!;
-                foreach (var item in component)
-                {
-                    cycles[item] = cycle;
-                }
-            }
+            return new TarjanFrame(current, parent, GetDependencies(current).ToArray());
         }
     }
 
     private IReadOnlyList<CatalogObjectInfo>? FindCycleCore(
         CatalogObjectInfo start,
-        CatalogObjectInfo current,
-        List<CatalogObjectInfo> path,
-        HashSet<CatalogObjectInfo> active)
+        IReadOnlySet<CatalogObjectInfo> component)
     {
-        foreach (var dependency in GetDependencies(current))
+        var path = new List<CatalogObjectInfo> { start };
+        var active = new HashSet<CatalogObjectInfo> { start };
+        var frames = new Stack<CycleFrame>();
+        frames.Push(new CycleFrame(start, GetDependencies(start).Where(component.Contains).ToArray()));
+        while (frames.TryPeek(out var frame))
         {
+            if (frame.Index >= frame.Dependencies.Length)
+            {
+                frames.Pop();
+                if (frame.Object != start)
+                {
+                    active.Remove(frame.Object);
+                    path.RemoveAt(path.Count - 1);
+                }
+                continue;
+            }
+
+            var dependency = frame.Dependencies[frame.Index++];
             if (dependency == start)
             {
                 return [.. path, start];
@@ -221,15 +260,37 @@ internal sealed class CatalogDependencyGraph
                 continue;
             }
             path.Add(dependency);
-            var cycle = FindCycleCore(start, dependency, path, active);
-            if (cycle is not null)
-            {
-                return cycle;
-            }
-            path.RemoveAt(path.Count - 1);
-            active.Remove(dependency);
+            frames.Push(new CycleFrame(
+                dependency,
+                GetDependencies(dependency).Where(component.Contains).ToArray()));
         }
         return null;
+    }
+
+    private sealed class DepthFrame(CatalogObjectInfo obj, CatalogObjectInfo[] dependencies)
+    {
+        internal CatalogObjectInfo Object { get; } = obj;
+        internal CatalogObjectInfo[] Dependencies { get; } = dependencies;
+        internal int Index { get; set; }
+        internal int MaxDepth { get; set; }
+    }
+
+    private sealed class TarjanFrame(
+        CatalogObjectInfo obj,
+        CatalogObjectInfo? parent,
+        CatalogObjectInfo[] dependencies)
+    {
+        internal CatalogObjectInfo Object { get; } = obj;
+        internal CatalogObjectInfo? Parent { get; } = parent;
+        internal CatalogObjectInfo[] Dependencies { get; } = dependencies;
+        internal int Index { get; set; }
+    }
+
+    private sealed class CycleFrame(CatalogObjectInfo obj, CatalogObjectInfo[] dependencies)
+    {
+        internal CatalogObjectInfo Object { get; } = obj;
+        internal CatalogObjectInfo[] Dependencies { get; } = dependencies;
+        internal int Index { get; set; }
     }
 
     private static string CreateKey(CatalogObjectIdInfo id) =>

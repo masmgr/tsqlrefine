@@ -10,7 +10,6 @@ public sealed class UnreachableStatementRuleTests
     [Theory]
     [InlineData("RETURN; SELECT 1;")]
     [InlineData("THROW 50000, 'failed', 1; SELECT 1;")]
-    [InlineData("IF 1 = 0 SELECT 1;")]
     [InlineData("IF 1 = 1 RETURN; SELECT 1;")]
     public void Analyze_UnreachableStatement_ReturnsDiagnostic(string sql)
     {
@@ -22,6 +21,17 @@ public sealed class UnreachableStatementRuleTests
     {
         const string sql = "IF @flag = 1 SELECT 1; ELSE SELECT 2; SELECT 3;";
 
+        Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
+    [Theory]
+    [InlineData("IF 1 = 0 SELECT 1;")]
+    [InlineData("IF 'a' = 'A' SELECT 1;")]
+    [InlineData("IF 'a' = 'a ' SELECT 1;")]
+    [InlineData("IF 1 = 01 SELECT 1;")]
+    [InlineData("IF 1 = 1.0 SELECT 1;")]
+    public void Analyze_LiteralComparisonThatIsNotExactlyEqual_DoesNotPruneBranch(string sql)
+    {
         Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
     }
 }

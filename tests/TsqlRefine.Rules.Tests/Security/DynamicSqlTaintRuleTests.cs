@@ -219,12 +219,68 @@ public sealed class DynamicSqlTaintRuleTests
         Assert.Empty(Analyze(sql));
     }
 
+    [Theory]
+    [InlineData("EXEC dbo.BuildQuery @sql OUTPUT;")]
+    [InlineData("EXEC @result = dbo.BuildQuery;")]
+    public void Analyze_ExecWriteInvalidatesConstant_ReturnsDiagnostic(string overwrite)
+    {
+        var variable = overwrite.Contains("@result", StringComparison.Ordinal) ? "@result" : "@sql";
+        var sql = $"DECLARE {variable} nvarchar(max) = N'SELECT 1'; {overwrite} EXEC({variable});";
+
+        Assert.Single(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_FetchIntoInvalidatesConstant_ReturnsDiagnostic()
+    {
+        const string sql = "DECLARE @sql nvarchar(max) = N'SELECT 1'; " +
+            "DECLARE query_cursor CURSOR FOR SELECT SqlText FROM dbo.Queue; " +
+            "OPEN query_cursor; FETCH NEXT FROM query_cursor INTO @sql; EXEC(@sql);";
+
+        Assert.Single(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_DifferentOpenLiteralConstantsBeforeQuotename_ReturnsDiagnostic()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.RunSql @name sysname, @flag bit
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                IF @flag = 1
+                    SET @sql = N'SELECT * FROM dbo.A WHERE Name = ''';
+                ELSE
+                    SET @sql = N'SELECT * FROM dbo.B WHERE Name = ''';
+                SET @sql = @sql + QUOTENAME(@name) + N'''';
+                EXEC(@sql);
+            END;
+            """;
+
+        Assert.Single(Analyze(sql));
+    }
+
     [Fact]
     public void Analyze_GotoScope_ReturnsEmpty()
     {
         const string sql = "CREATE PROCEDURE dbo.RunSql @sql nvarchar(max) AS BEGIN GOTO done; done: EXEC(@sql); END;";
 
         Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_TriggerBody_IsAnalyzed()
+    {
+        const string sql = """
+            CREATE TRIGGER dbo.RunDynamicSql ON dbo.Target AFTER INSERT AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                SELECT @sql = SqlText FROM inserted;
+                EXEC(@sql);
+            END;
+            """;
+
+        Assert.Single(Analyze(sql));
     }
 
     [Fact]
