@@ -447,6 +447,16 @@ changes are classified as breaking. It exits with code `1` when at least one bre
 change is found, making it suitable for CI. The versioned JSON contract is
 [`schemas/schema-diff-result.schema.json`](../schemas/schema-diff-result.schema.json).
 
+#### schema collect-relations
+
+```
+tsqlrefine schema collect-relations --output relations.json [options] [paths...]
+```
+
+Collects JOIN relation patterns (learned column pairings) from SQL files for relation-deviation
+analysis. It accepts the standard SQL input options and `--compat-level`. `--output` is required.
+The generated profile can be supplied to lint and fix commands with `--relations-profile`.
+
 #### schema collect-objects
 
 ```
@@ -618,6 +628,11 @@ Fixed exit codes by result type for easy CI handling.
 For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
 `report` returns `0` after successfully generating an artifact even when diagnostics are present;
 parse failures still return `2`.
+
+`analyze impact` and `analyze graph` return `0` on success and `3` when the object catalog is
+missing, unreadable, or a required option (`--catalog`, `--table` for `impact`, `--output` for
+`graph`) is absent. `schema diff` returns `0` when no breaking change is found, `1` when at least
+one breaking change is found, and `3` on a configuration error such as a missing snapshot file.
 
 ---
 

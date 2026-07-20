@@ -186,9 +186,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-try-catch-for-transaction", "enabled": false }
-  ]
+  "rules": {
+    "require-try-catch-for-transaction": "none"
+  }
 }
 ```
 

@@ -44,9 +44,9 @@ WHERE EXISTS (
 
 ```json
 {
-  "rules": [
-    { "id": "redundant-semi-join", "enabled": false }
-  ]
+  "rules": {
+    "redundant-semi-join": "none"
+  }
 }
 ```
 

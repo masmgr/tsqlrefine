@@ -34,6 +34,16 @@ Formatting. It produces parseable SELECT, UPDATE, and DELETE scripts so that
 crash-resistance, formatter idempotency, and autofix syntax/range/convergence
 properties exercise rule logic rather than mostly parser-error paths.
 
+## Diagnostic baselines and SARIF output
+
+`CliBaselineAndSarifTests` and `OutputContractTests` cover `baseline create`/`baseline trim`
+round-tripping, `--baseline`/`--show-suppressed` suppression accounting, and `--output sarif`
+against a SARIF 2.1.0 shape. Baseline and SARIF payloads are validated against
+[`schemas/baseline.schema.json`](../schemas/baseline.schema.json) and the diagnostic-range
+conventions documented in [CLI Specification](cli.md#4-json-output-specification-diagnostics).
+See [CI Integration](ci-integration.md#sarif-output-and-code-scanning) for wiring these into a
+pipeline.
+
 ## Static analysis and code metrics
 
 `CodeMetricsConfig.txt` gates new code at cyclomatic complexity 15,

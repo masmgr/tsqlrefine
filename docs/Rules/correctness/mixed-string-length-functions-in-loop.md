@@ -39,9 +39,9 @@ END;
 
 ```json
 {
-  "rules": [
-    { "id": "mixed-string-length-functions-in-loop", "enabled": false }
-  ]
+  "rules": {
+    "mixed-string-length-functions-in-loop": "none"
+  }
 }
 ```
 

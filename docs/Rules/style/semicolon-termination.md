@@ -153,9 +153,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semicolon-termination", "enabled": false }
-  ]
+  "rules": {
+    "semicolon-termination": "none"
+  }
 }
 ```
 

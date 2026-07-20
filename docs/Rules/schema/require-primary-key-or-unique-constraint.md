@@ -41,9 +41,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-primary-key-or-unique-constraint", "enabled": false }
-  ]
+  "rules": {
+    "require-primary-key-or-unique-constraint": "none"
+  }
 }
 ```
 

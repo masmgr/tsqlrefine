@@ -41,9 +41,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-explicit-join-type", "enabled": false }
-  ]
+  "rules": {
+    "require-explicit-join-type": "none"
+  }
 }
 ```
 

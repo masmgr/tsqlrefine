@@ -51,9 +51,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-insert-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-insert-column": "none"
+  }
 }
 ```
 

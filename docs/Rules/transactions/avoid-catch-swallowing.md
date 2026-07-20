@@ -221,9 +221,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-catch-swallowing", "enabled": false }
-  ]
+  "rules": {
+    "avoid-catch-swallowing": "none"
+  }
 }
 ```
 

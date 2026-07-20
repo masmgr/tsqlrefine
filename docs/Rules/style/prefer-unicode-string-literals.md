@@ -49,9 +49,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-unicode-string-literals", "enabled": false }
-  ]
+  "rules": {
+    "prefer-unicode-string-literals": "none"
+  }
 }
 ```
 

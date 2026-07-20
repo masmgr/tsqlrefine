@@ -48,9 +48,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "require-drop-if-exists", "enabled": false }
-  ]
+  "rules": {
+    "require-drop-if-exists": "none"
+  }
 }
 ```
 

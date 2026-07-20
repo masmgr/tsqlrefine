@@ -39,9 +39,9 @@ A standalone `THROW` or one used directly as the body of an `IF` statement does 
 
 ```json
 {
-  "rules": [
-    { "id": "require-semicolon-before-throw", "enabled": false }
-  ]
+  "rules": {
+    "require-semicolon-before-throw": "none"
+  }
 }
 ```
 

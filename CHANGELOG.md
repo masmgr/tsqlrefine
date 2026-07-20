@@ -9,7 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `analyze impact` / `analyze graph` CLI commands: transitive object-catalog impact analysis and dependency-graph export (JSON/DOT)
 - `schema diff` CLI command for breaking schema drift detection with optional transitive object-catalog impact analysis
+- `report` CLI command: diagnostic aggregations and top-complexity SQL metrics in JSON or HTML
+- `schema collect-objects` CLI command and SQL object catalog collection (procedure/function/view signatures and static/dynamic references)
+- `baseline create` / `baseline trim` CLI commands and `--baseline`/`--root`/`--show-suppressed` lint options for diagnostic baselines
+- `--output sarif` lint output (SARIF 2.1.0) for GitHub Code Scanning and other SARIF consumers
+- `--changed-only` / `--base-ref` / `--changed-lines-from` lint options for Git-diff-scoped linting
+- `TSQLREFINE_CONNECTION_STRING` environment variable support for schema commands
+- Typed per-rule options (`IRuleOptions` / `IRuleOptionsDescriptorProvider`) validated against declared descriptors, exposed to rules without leaking JSON types into the PluginSdk
+- Control-flow graph and data-flow analysis framework (including trigger bodies) powering path-sensitive rules
+- `dynamic-sql-taint` rule: tracks tainted values through variable assignments into `EXEC`/`sp_executesql` sinks across control-flow paths
+- `cursor-not-deallocated-on-path`, `inconsistent-result-set`, `unreachable-statement`, `unused-variable`, `variable-used-before-assignment`, `transaction-not-closed-on-path` path-sensitive rules
+- `exec-output-not-captured`, `exec-parameter-count-mismatch`, `exec-parameter-name-mismatch`, `exec-parameter-type-mismatch` rules validating `EXEC` calls against the object catalog
+- `circular-object-reference`, `unreferenced-object`, `unresolved-procedure-reference` rules using the object dependency graph
+- `deep-view-nesting` rule
+- Configurable SQL metrics thresholds: `max-cyclomatic-complexity`, `max-joins-per-query`, `max-nesting-depth`, `max-parameter-count`, `max-statement-count` rules
+- `require-semicolon-before-throw` rule: detect `THROW` statements missing a preceding semicolon
+- `avoid-hardcoded-password` rule: detect password literals in SQL source
 - `multi-row-update-from` rule: detect non-deterministic `UPDATE ... FROM` that joins multiple rows to a single target row
 - `len-for-emptiness-check` rule: detect `LEN(col) = 0` / `LEN(col) > 0` patterns that should use `= ''` / `<> ''`
 - `string-agg-nvarchar-max` rule: detect `STRING_AGG` calls missing `NVARCHAR(MAX)` cast on the separator
@@ -22,17 +39,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Schema-aware reference validation rules for column/table reference accuracy
 - `ISchemaContext` interface unifying schema and relation-deviation access (`ISchemaProvider` + `RelationDeviations`)
 - `SchemaContext` adapter class wrapping `ISchemaProvider` and optional `IRelationDeviationProvider`
-- `schema build` CLI command: generate `schema.json` + `relations.json` in one step via `--connection-string` + `--output-dir`
+- `schema build` CLI command: generate `schema.json` + `relations.json` + `objects.json` in one step via `--connection-string` + `--output-dir`
 - `schema collect-relations` CLI command: extract JOIN patterns from SQL files
 - `SchemaConfig.Path` shorthand in `tsqlrefine.json`: derives `schema.json` and `relations.json` from a single directory path
 - `schema.relationsProfilePath` config option for custom relation profile location
 - ER relationship query API on `ISchemaProvider`
 - Per-query caching and `TryResolve` helper in schema rules for repeated lookups
-- Plugin API bumped to v3 (schema provider integrated into analysis pipeline)
+- Plugin API bumped to v5 (v4 added object catalog access via `RuleContext.ObjectCatalog`; v5 added typed rule options)
 - `TsqlRefine.Schema.SqlServer` project for SQL Server schema snapshot extraction
 
 ### Changed
 
+- Multi-file analysis and input reading parallelized
+- `avoid-deprecated-types`: TIMESTAMP type detection strengthened
 - `union-type-mismatch` and `left-join-filtered-by-where` rules enhanced with schema awareness
 - `ConfigLoader` now exposes unified `LoadSchemaContext()` replacing separate `LoadSchema` + `LoadRelationDeviations` calls
 - `NameResolver` and `RelationDeviationProvider` use `FrozenDictionary` for hot-path lookups
@@ -43,6 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `dml-without-where`: alias-targeted `UPDATE`/`DELETE` (e.g. `DELETE u FROM Users AS u`) is no longer exempted, since an alias alone does not limit affected rows
+- `unresolved-procedure-reference`: system stored/extended procedure references (`sp_*`/`xp_*`) no longer misreported as missing from the object catalog
+- `exec-parameter-type-mismatch`: string arguments with unknown length now correctly flagged against fixed-length parameters instead of being skipped
+- Control-flow analysis: trigger bodies are now included in CFG-based rules; dynamic SQL taint tracking handles indirect variable writes (e.g. `EXEC ... INTO`, `SELECT` assignments) and constant-folds adjacent string-literal concatenations more accurately
 - `semantic-schema-qualify`: false positive on CTE references
 - `avoid-not-in-with-null`: suppressed when schema proves column is NOT NULL
 - `top-without-order-by`: suppressed when `WHERE` clause filters on a unique column

@@ -106,9 +106,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "cross-database-transaction", "enabled": false }
-  ]
+  "rules": {
+    "cross-database-transaction": "none"
+  }
 }
 ```
 

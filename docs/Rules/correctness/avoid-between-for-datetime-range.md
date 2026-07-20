@@ -48,9 +48,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-between-for-datetime-range", "enabled": false }
-  ]
+  "rules": {
+    "avoid-between-for-datetime-range": "none"
+  }
 }
 ```
 

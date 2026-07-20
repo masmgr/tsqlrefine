@@ -83,9 +83,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "require-throw-or-raiserror-in-catch", "enabled": false }
-  ]
+  "rules": {
+    "require-throw-or-raiserror-in-catch": "none"
+  }
 }
 ```
 

@@ -40,9 +40,9 @@ SELECT MAX(ItemId) + 1 AS SuggestedValue FROM dbo.Items;
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-max-plus-one-key-generation", "enabled": false }
-  ]
+  "rules": {
+    "avoid-max-plus-one-key-generation": "none"
+  }
 }
 ```
 

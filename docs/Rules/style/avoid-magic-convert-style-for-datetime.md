@@ -94,9 +94,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-magic-convert-style-for-datetime", "enabled": false }
-  ]
+  "rules": {
+    "avoid-magic-convert-style-for-datetime": "none"
+  }
 }
 ```
 

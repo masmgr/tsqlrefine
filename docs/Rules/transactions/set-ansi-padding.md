@@ -98,9 +98,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-ansi-padding", "enabled": false }
-  ]
+  "rules": {
+    "set-ansi-padding": "none"
+  }
 }
 ```
 

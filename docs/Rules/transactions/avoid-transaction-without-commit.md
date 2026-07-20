@@ -247,9 +247,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-transaction-without-commit", "enabled": false }
-  ]
+  "rules": {
+    "avoid-transaction-without-commit": "none"
+  }
 }
 ```
 

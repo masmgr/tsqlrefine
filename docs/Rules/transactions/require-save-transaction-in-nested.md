@@ -66,9 +66,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "require-save-transaction-in-nested", "enabled": false }
-  ]
+  "rules": {
+    "require-save-transaction-in-nested": "none"
+  }
 }
 ```
 

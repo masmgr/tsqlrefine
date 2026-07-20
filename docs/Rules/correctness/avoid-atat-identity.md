@@ -67,9 +67,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-atat-identity", "enabled": false }
-  ]
+  "rules": {
+    "avoid-atat-identity": "none"
+  }
 }
 ```
 

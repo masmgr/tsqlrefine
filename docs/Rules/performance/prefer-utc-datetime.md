@@ -113,9 +113,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-utc-datetime", "enabled": false }
-  ]
+  "rules": {
+    "prefer-utc-datetime": "none"
+  }
 }
 ```
 

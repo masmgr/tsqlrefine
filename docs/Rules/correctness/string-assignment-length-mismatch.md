@@ -41,9 +41,9 @@ SET @short_code = CAST(@source AS varchar(4));
 
 ```json
 {
-  "rules": [
-    { "id": "string-assignment-length-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "string-assignment-length-mismatch": "none"
+  }
 }
 ```
 

@@ -101,9 +101,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-explicit-join", "enabled": false }
-  ]
+  "rules": {
+    "require-explicit-join": "none"
+  }
 }
 ```
 

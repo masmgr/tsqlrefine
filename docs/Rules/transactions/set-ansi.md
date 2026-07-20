@@ -147,9 +147,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-ansi", "enabled": false }
-  ]
+  "rules": {
+    "set-ansi": "none"
+  }
 }
 ```
 

@@ -201,9 +201,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-column-list-for-insert-select", "enabled": false }
-  ]
+  "rules": {
+    "require-column-list-for-insert-select": "none"
+  }
 }
 ```
 

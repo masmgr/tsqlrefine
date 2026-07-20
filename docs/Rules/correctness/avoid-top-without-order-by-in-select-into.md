@@ -126,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-top-without-order-by-in-select-into", "enabled": false }
-  ]
+  "rules": {
+    "avoid-top-without-order-by-in-select-into": "none"
+  }
 }
 ```
 

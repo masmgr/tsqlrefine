@@ -108,9 +108,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-left-join-filtered-by-where", "enabled": false }
-  ]
+  "rules": {
+    "semantic-left-join-filtered-by-where": "none"
+  }
 }
 ```
 

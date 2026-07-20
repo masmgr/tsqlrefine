@@ -90,9 +90,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-quoted-identifier", "enabled": false }
-  ]
+  "rules": {
+    "set-quoted-identifier": "none"
+  }
 }
 ```
 

@@ -137,9 +137,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-nolock", "enabled": false }
-  ]
+  "rules": {
+    "avoid-nolock": "none"
+  }
 }
 ```
 

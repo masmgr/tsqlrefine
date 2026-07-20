@@ -260,9 +260,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-cursors", "enabled": false }
-  ]
+  "rules": {
+    "avoid-cursors": "none"
+  }
 }
 ```
 

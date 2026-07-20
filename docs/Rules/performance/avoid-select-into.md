@@ -49,9 +49,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-select-into", "enabled": false }
-  ]
+  "rules": {
+    "avoid-select-into": "none"
+  }
 }
 ```
 

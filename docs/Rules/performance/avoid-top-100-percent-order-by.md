@@ -101,9 +101,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-top-100-percent-order-by", "enabled": false }
-  ]
+  "rules": {
+    "avoid-top-100-percent-order-by": "none"
+  }
 }
 ```
 

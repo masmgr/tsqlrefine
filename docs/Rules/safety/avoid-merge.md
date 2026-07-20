@@ -146,9 +146,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-merge", "enabled": false }
-  ]
+  "rules": {
+    "avoid-merge": "none"
+  }
 }
 ```
 

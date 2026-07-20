@@ -197,9 +197,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-query-hints", "enabled": false }
-  ]
+  "rules": {
+    "avoid-query-hints": "none"
+  }
 }
 ```
 

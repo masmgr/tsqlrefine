@@ -77,9 +77,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-execute-as", "enabled": false }
-  ]
+  "rules": {
+    "avoid-execute-as": "none"
+  }
 }
 ```
 

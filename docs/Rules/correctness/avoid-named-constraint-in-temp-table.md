@@ -151,9 +151,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-named-constraint-in-temp-table", "enabled": false }
-  ]
+  "rules": {
+    "avoid-named-constraint-in-temp-table": "none"
+  }
 }
 ```
 

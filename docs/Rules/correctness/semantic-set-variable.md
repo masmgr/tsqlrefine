@@ -91,9 +91,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-set-variable", "enabled": false }
-  ]
+  "rules": {
+    "semantic-set-variable": "none"
+  }
 }
 ```
 

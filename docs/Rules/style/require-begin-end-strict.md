@@ -126,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-begin-end-strict", "enabled": false }
-  ]
+  "rules": {
+    "require-begin-end-strict": "none"
+  }
 }
 ```
 

@@ -74,9 +74,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-exec-dynamic-sql", "enabled": false }
-  ]
+  "rules": {
+    "avoid-exec-dynamic-sql": "none"
+  }
 }
 ```
 

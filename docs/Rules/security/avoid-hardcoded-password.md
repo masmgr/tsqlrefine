@@ -46,9 +46,9 @@ FROM OPENROWSET(
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-hardcoded-password", "enabled": false }
-  ]
+  "rules": {
+    "avoid-hardcoded-password": "none"
+  }
 }
 ```
 

@@ -269,9 +269,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-undefined-alias", "enabled": false }
-  ]
+  "rules": {
+    "semantic-undefined-alias": "none"
+  }
 }
 ```
 

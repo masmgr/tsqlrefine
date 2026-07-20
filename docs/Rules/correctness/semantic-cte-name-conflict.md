@@ -126,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-cte-name-conflict", "enabled": false }
-  ]
+  "rules": {
+    "semantic-cte-name-conflict": "none"
+  }
 }
 ```
 

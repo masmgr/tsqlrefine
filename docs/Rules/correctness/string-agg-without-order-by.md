@@ -64,9 +64,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "string-agg-without-order-by", "enabled": false }
-  ]
+  "rules": {
+    "string-agg-without-order-by": "none"
+  }
 }
 ```
 

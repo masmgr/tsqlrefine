@@ -163,9 +163,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-select-distinct", "enabled": false }
-  ]
+  "rules": {
+    "avoid-select-distinct": "none"
+  }
 }
 ```
 

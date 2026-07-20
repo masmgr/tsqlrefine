@@ -107,9 +107,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "nested-block-comments", "enabled": false }
-  ]
+  "rules": {
+    "nested-block-comments": "none"
+  }
 }
 ```
 

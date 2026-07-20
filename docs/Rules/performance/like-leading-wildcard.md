@@ -59,9 +59,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "like-leading-wildcard", "enabled": false }
-  ]
+  "rules": {
+    "like-leading-wildcard": "none"
+  }
 }
 ```
 

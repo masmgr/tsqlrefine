@@ -160,9 +160,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "dml-without-where", "enabled": false }
-  ]
+  "rules": {
+    "dml-without-where": "none"
+  }
 }
 ```
 

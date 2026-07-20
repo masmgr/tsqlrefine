@@ -70,9 +70,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "unreachable-case-when", "enabled": false }
-  ]
+  "rules": {
+    "unreachable-case-when": "none"
+  }
 }
 ```
 

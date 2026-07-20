@@ -157,9 +157,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-insert-column-count-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "semantic-insert-column-count-mismatch": "none"
+  }
 }
 ```
 

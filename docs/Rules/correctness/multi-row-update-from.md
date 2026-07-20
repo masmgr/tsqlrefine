@@ -61,9 +61,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "multi-row-update-from", "enabled": false }
-  ]
+  "rules": {
+    "multi-row-update-from": "none"
+  }
 }
 ```
 

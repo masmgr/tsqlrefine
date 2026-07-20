@@ -76,9 +76,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-qualified-columns-everywhere", "enabled": false }
-  ]
+  "rules": {
+    "require-qualified-columns-everywhere": "none"
+  }
 }
 ```
 

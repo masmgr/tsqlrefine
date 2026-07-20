@@ -51,9 +51,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-begin-end-lenient", "enabled": false }
-  ]
+  "rules": {
+    "require-begin-end-lenient": "none"
+  }
 }
 ```
 

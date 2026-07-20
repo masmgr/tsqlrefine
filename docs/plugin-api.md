@@ -83,7 +83,9 @@ public sealed record RuleContext(
     int CompatLevel,
     ScriptDomAst Ast,
     IReadOnlyList<Token> Tokens,
-    RuleSettings Settings
+    RuleSettings Settings,
+    ISchemaContext? SchemaContext = null,
+    IObjectCatalogProvider? ObjectCatalog = null
 );
 ```
 
@@ -110,6 +112,53 @@ Use `context.Settings.Options` to read a configured value and fall back to the r
 default when the option is absent. Available descriptor types are `Flag`, `Number`, and `Text`.
 
 *Note: `GetFixes` is only called when `Metadata.Fixable == true`.
+
+### 4.2 Schema and object catalog access
+
+`RuleContext.SchemaContext` and `RuleContext.ObjectCatalog` are `null` unless the user has
+configured a `schema` snapshot or object catalog in `tsqlrefine.json`; rules must handle the
+`null` case.
+
+```csharp
+public interface ISchemaProvider
+{
+    ResolvedTable? ResolveTable(string? database, string? schema, string name);
+    ResolvedColumn? ResolveColumn(ResolvedTable table, string columnName);
+    IReadOnlyList<SchemaColumnInfo> GetColumns(ResolvedTable table);
+    string DefaultSchema { get; }
+    SchemaSnapshotMetadata Metadata { get; }
+
+    // ER relationship queries (primary keys, unique constraints, foreign keys, ...)
+    SchemaPrimaryKeyInfo? GetPrimaryKey(ResolvedTable table);
+    IReadOnlyList<SchemaUniqueConstraintInfo> GetUniqueConstraints(ResolvedTable table);
+    IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table);
+}
+
+public interface ISchemaContext : ISchemaProvider
+{
+    IRelationDeviationProvider? RelationDeviations { get; }
+    bool HasRelationDeviations { get; }
+}
+
+public interface IRelationDeviationProvider
+{
+    bool HasData { get; }
+    int TablePairCount { get; }
+    // Deviation summary lookup for a canonicalized table pair.
+}
+
+public interface IObjectCatalogProvider
+{
+    bool HasData { get; }
+    CatalogScopeInfo Scope { get; }
+    CatalogObjectInfo? ResolveObject(string? database, string? schema, string name, CatalogObjectKindFilter kind);
+    // Reference lookups for an object or one of its columns.
+}
+```
+
+`RuleContext.Schema` and `RuleContext.RelationDeviations` are shorthand properties derived from
+`SchemaContext`, kept for source compatibility with rules written before `ISchemaContext` was
+introduced.
 
 ---
 
@@ -171,6 +220,7 @@ Plugin rules are **enabled by default** regardless of which preset or ruleset is
 
 ## 6. Compatibility
 
-- Core has a `pluginApiVersion` (e.g., `2`)
-- Plugins declare `supportedApiVersions: [2]`
+- Core has a `pluginApiVersion` (currently `5`, see `PluginApi.CurrentVersion`)
+- Plugin assemblies declare their built version via `[assembly: PluginApiVersion(5)]` (or the
+  `IRuleProvider.PluginApiVersion` property)
 - If mismatched, the plugin is not loaded (reason displayed in `list-plugins`)

@@ -45,9 +45,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "len-for-emptiness-check", "enabled": false }
-  ]
+  "rules": {
+    "len-for-emptiness-check": "none"
+  }
 }
 ```
 

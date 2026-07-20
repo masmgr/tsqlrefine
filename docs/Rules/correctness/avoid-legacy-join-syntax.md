@@ -90,9 +90,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-legacy-join-syntax", "enabled": false }
-  ]
+  "rules": {
+    "avoid-legacy-join-syntax": "none"
+  }
 }
 ```
 

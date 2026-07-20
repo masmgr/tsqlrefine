@@ -76,9 +76,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-dangerous-procedures", "enabled": false }
-  ]
+  "rules": {
+    "avoid-dangerous-procedures": "none"
+  }
 }
 ```
 

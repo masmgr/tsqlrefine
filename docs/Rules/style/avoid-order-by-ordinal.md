@@ -60,9 +60,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-order-by-ordinal", "enabled": false }
-  ]
+  "rules": {
+    "avoid-order-by-ordinal": "none"
+  }
 }
 ```
 

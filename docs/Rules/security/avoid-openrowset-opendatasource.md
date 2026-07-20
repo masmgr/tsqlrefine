@@ -61,9 +61,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-openrowset-opendatasource", "enabled": false }
-  ]
+  "rules": {
+    "avoid-openrowset-opendatasource": "none"
+  }
 }
 ```
 

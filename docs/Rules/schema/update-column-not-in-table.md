@@ -52,9 +52,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "update-column-not-in-table", "enabled": false }
-  ]
+  "rules": {
+    "update-column-not-in-table": "none"
+  }
 }
 ```
 

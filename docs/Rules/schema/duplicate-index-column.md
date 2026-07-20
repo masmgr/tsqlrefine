@@ -66,9 +66,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-index-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-index-column": "none"
+  }
 }
 ```
 

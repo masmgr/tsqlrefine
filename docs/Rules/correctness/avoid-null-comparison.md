@@ -147,9 +147,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-null-comparison", "enabled": false }
-  ]
+  "rules": {
+    "avoid-null-comparison": "none"
+  }
 }
 ```
 

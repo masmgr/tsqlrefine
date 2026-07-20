@@ -59,9 +59,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-table-function-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-table-function-column": "none"
+  }
 }
 ```
 

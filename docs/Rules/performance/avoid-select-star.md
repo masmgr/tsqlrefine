@@ -192,9 +192,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-select-star", "enabled": false }
-  ]
+  "rules": {
+    "avoid-select-star": "none"
+  }
 }
 ```
 

@@ -67,9 +67,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "aggregate-in-where-clause", "enabled": false }
-  ]
+  "rules": {
+    "aggregate-in-where-clause": "none"
+  }
 }
 ```
 

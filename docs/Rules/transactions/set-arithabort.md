@@ -105,9 +105,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-arithabort", "enabled": false }
-  ]
+  "rules": {
+    "set-arithabort": "none"
+  }
 }
 ```
 

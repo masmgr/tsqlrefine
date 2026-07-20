@@ -219,9 +219,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-parentheses-for-mixed-and-or", "enabled": false }
-  ]
+  "rules": {
+    "require-parentheses-for-mixed-and-or": "none"
+  }
 }
 ```
 

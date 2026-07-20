@@ -91,9 +91,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "update-join-cardinality-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "update-join-cardinality-mismatch": "none"
+  }
 }
 ```
 

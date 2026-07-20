@@ -84,7 +84,8 @@ EXEC sys.sp_executesql @sql;
 
 ## Analysis Boundaries
 
-- Analysis is intraprocedural and uses the control-flow graph for each batch or routine.
+- Analysis is intraprocedural and uses the control-flow graph for each batch or routine, including
+  trigger bodies.
 - Symbolic SQL text is bounded to 32 segments. More complex values widen to `Unknown` and are
   reported at a sink.
 - Scopes containing unsupported `GOTO` control flow are skipped to avoid misleading results.
@@ -92,14 +93,18 @@ EXEC sys.sp_executesql @sql;
   policy is planned with per-rule options.
 - `QUOTENAME` length and nullability do not make input trusted; callers should still account for a
   possible `NULL` result.
+- Indirect variable writes, such as `EXEC ... INTO @variable` and `SELECT @variable = ...`
+  assignments, widen the variable to `Unknown` instead of leaving its prior state unchanged.
+- Adjacent string-literal concatenations are constant-folded by tracking quote parity, so
+  splitting a literal across multiple `+` operands does not by itself defeat detection.
 
 ## Configuration
 
 ```json
 {
-  "rules": [
-    { "id": "dynamic-sql-taint", "enabled": false }
-  ]
+  "rules": {
+    "dynamic-sql-taint": "none"
+  }
 }
 ```
 

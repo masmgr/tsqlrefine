@@ -53,9 +53,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-select-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-select-column": "none"
+  }
 }
 ```
 

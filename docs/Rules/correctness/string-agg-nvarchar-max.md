@@ -55,9 +55,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "string-agg-nvarchar-max", "enabled": false }
-  ]
+  "rules": {
+    "string-agg-nvarchar-max": "none"
+  }
 }
 ```
 

@@ -121,9 +121,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-as-for-column-alias", "enabled": false }
-  ]
+  "rules": {
+    "require-as-for-column-alias": "none"
+  }
 }
 ```
 

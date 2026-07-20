@@ -88,9 +88,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "normalize-execute-keyword", "enabled": false }
-  ]
+  "rules": {
+    "normalize-execute-keyword": "none"
+  }
 }
 ```
 

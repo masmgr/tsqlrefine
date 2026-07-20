@@ -106,9 +106,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "uncommitted-transaction", "enabled": false }
-  ]
+  "rules": {
+    "uncommitted-transaction": "none"
+  }
 }
 ```
 

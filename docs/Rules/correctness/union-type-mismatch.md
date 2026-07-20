@@ -66,9 +66,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "union-type-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "union-type-mismatch": "none"
+  }
 }
 ```
 

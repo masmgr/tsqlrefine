@@ -56,9 +56,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "insert-column-not-in-table", "enabled": false }
-  ]
+  "rules": {
+    "insert-column-not-in-table": "none"
+  }
 }
 ```
 

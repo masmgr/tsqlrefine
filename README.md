@@ -121,17 +121,17 @@ path/to/file.sql:7:5: error missing-where-clause: UPDATE/DELETE without WHERE cl
 
 Automatically fixes detected issues. Rules with `fixable: true` can be auto-fixed.
 
-> **Safe by design:** Auto-fix is applied only to rules explicitly marked as fixable. All fixes are deterministic and syntax-aware — they never produce invalid SQL. Use dry-run mode (the default) to preview changes before writing.
+> **Safe by design:** Auto-fix is applied only to rules explicitly marked as fixable. All fixes are deterministic and syntax-aware — they never produce invalid SQL. Use `--output json` to preview changes without writing.
 
 ```bash
-# Preview fixes (dry run)
+# Apply fixes to a file (writes back automatically)
 tsqlrefine fix path/to/file.sql
 
-# Apply fixes to files
-tsqlrefine fix --write path/to/file.sql
-
 # Fix all .sql files in a directory
-tsqlrefine fix --write path/to/dir
+tsqlrefine fix path/to/dir
+
+# Preview fixes without writing (dry run)
+tsqlrefine fix --output json path/to/file.sql
 ```
 
 **Auto-fix examples:**
@@ -147,14 +147,14 @@ tsqlrefine fix --write path/to/dir
 Formats T-SQL code to a consistent style. Respects `.editorconfig` indentation settings.
 
 ```bash
-# Print formatted output to stdout
+# Format a file in-place (writes back automatically)
 tsqlrefine format path/to/file.sql
 
-# Format files in-place
-tsqlrefine format --write path/to/file.sql
-
 # Format all .sql files in a directory
-tsqlrefine format --write path/to/dir
+tsqlrefine format path/to/dir
+
+# Print formatted output to stdout instead of writing
+"select * from t;" | tsqlrefine format --stdin
 ```
 
 **Formatting features:**

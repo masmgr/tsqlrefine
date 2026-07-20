@@ -57,9 +57,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-optional-parameter-pattern", "enabled": false }
-  ]
+  "rules": {
+    "avoid-optional-parameter-pattern": "none"
+  }
 }
 ```
 

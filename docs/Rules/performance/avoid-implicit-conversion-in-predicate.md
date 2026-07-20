@@ -83,9 +83,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-implicit-conversion-in-predicate", "enabled": false }
-  ]
+  "rules": {
+    "avoid-implicit-conversion-in-predicate": "none"
+  }
 }
 ```
 

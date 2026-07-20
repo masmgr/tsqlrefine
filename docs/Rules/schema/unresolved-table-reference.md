@@ -56,9 +56,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "unresolved-table-reference", "enabled": false }
-  ]
+  "rules": {
+    "unresolved-table-reference": "none"
+  }
 }
 ```
 

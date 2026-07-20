@@ -173,9 +173,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-table-description", "enabled": false }
-  ]
+  "rules": {
+    "require-table-description": "none"
+  }
 }
 ```
 

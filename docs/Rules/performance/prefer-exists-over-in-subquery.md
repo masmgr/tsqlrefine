@@ -76,9 +76,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-exists-over-in-subquery", "enabled": false }
-  ]
+  "rules": {
+    "prefer-exists-over-in-subquery": "none"
+  }
 }
 ```
 

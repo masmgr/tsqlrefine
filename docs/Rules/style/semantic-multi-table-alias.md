@@ -71,9 +71,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-multi-table-alias", "enabled": false }
-  ]
+  "rules": {
+    "semantic-multi-table-alias": "none"
+  }
 }
 ```
 
