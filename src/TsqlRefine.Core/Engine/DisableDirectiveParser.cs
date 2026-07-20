@@ -311,7 +311,10 @@ public static class DisableDirectiveParser
             return true;
         }
 
-        return line < range.EndLine.Value;
+        // Closed ranges normally exclude the enable line. When disable and enable
+        // occur on the same line, include that line so the range is not empty.
+        return line < range.EndLine.Value ||
+               range.StartLine == range.EndLine.Value && line == range.StartLine;
     }
 
     private static bool TryMatchDirective(string content, string prefix, out string remainder)

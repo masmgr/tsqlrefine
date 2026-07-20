@@ -47,6 +47,21 @@ public sealed class EngineDisableDirectiveTests
     }
 
     [Fact]
+    public void DisableEnableSameLine_SuppressesDiagnosticOnThatLine()
+    {
+        var sql = "/* tsqlrefine-disable avoid-select-star */ select * from t; /* tsqlrefine-enable avoid-select-star */";
+
+        var result = _engine.Run(
+            command: "lint",
+            inputs: new[] { new SqlInput("test.sql", sql) },
+            options: new EngineOptions()
+        );
+
+        Assert.Single(result.Files);
+        Assert.DoesNotContain(result.Files[0].Diagnostics, d => d.Code == "avoid-select-star");
+    }
+
+    [Fact]
     public void WithoutDisable_HasDiagnostics()
     {
         // Baseline test - ensure diagnostics appear without disable

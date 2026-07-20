@@ -411,6 +411,17 @@ public sealed class DisableDirectiveParserTests
     }
 
     [Fact]
+    public void IsSuppressed_DisableAndEnableOnSameLine_ReturnsTrue()
+    {
+        var diagnostic = CreateDiagnostic(line: 5, code: "rule-a");
+        var ranges = new[] { new DisabledRange("rule-a", StartLine: 5, EndLine: 5) };
+
+        var result = DisableDirectiveParser.IsSuppressed(diagnostic, ranges);
+
+        Assert.True(result);
+    }
+
+    [Fact]
     public void IsSuppressed_OpenEndedRange_ReturnsTrue()
     {
         var diagnostic = CreateDiagnostic(line: 100, code: "rule-a");

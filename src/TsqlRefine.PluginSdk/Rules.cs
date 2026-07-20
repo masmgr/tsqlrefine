@@ -219,6 +219,11 @@ public sealed record RuleContext(
 /// <remarks>
 /// Rules analyze SQL and report diagnostics. Optionally, they can provide auto-fixes.
 /// <para>
+/// A rule instance can be shared across concurrent analyses of multiple SQL inputs.
+/// Implementations must therefore make <see cref="Analyze"/> and <see cref="GetFixes"/>
+/// thread-safe. Prefer stateless implementations; synchronize access to any mutable instance state.
+/// </para>
+/// <para>
 /// Implementation patterns:
 /// <list type="bullet">
 /// <item><description>AST-based: Use <see cref="ScriptDomAst.Fragment"/> with TSqlFragmentVisitor for structural analysis.</description></item>

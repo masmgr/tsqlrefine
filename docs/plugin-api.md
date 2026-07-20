@@ -89,6 +89,11 @@ public sealed record RuleContext(
 );
 ```
 
+The engine analyzes multiple SQL inputs in parallel and shares each `IRule` instance across those
+analyses. Consequently, `Analyze` and `GetFixes` can be called concurrently on the same instance.
+Rule implementations must be thread-safe. Prefer stateless rules; if a rule keeps mutable instance
+state, synchronize access to it.
+
 ### 4.1 Typed rule options
 
 A plugin rule that accepts options implements `IRuleOptionsDescriptorProvider`. The engine validates

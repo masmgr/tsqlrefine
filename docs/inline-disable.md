@@ -169,6 +169,11 @@ The inner `enable` closes the inner `disable`, and the outer `enable` closes the
 ### Line-Based Suppression
 
 Disabling is applied on a line basis. If a diagnostic's start line is within the disabled range, that diagnostic is suppressed.
+The line containing `tsqlrefine-enable` is normally outside the disabled range. If matching disable and enable directives occur on the same line, that line is suppressed, allowing a single-line region:
+
+```sql
+/* tsqlrefine-disable avoid-select-star */ SELECT * FROM Users; /* tsqlrefine-enable avoid-select-star */
+```
 
 ### Parse Errors Are Not Suppressed
 
