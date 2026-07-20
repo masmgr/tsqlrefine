@@ -708,7 +708,11 @@ public sealed class CommandExecutor
     /// <summary>
     /// Executes the 'schema snapshot' command to generate a schema snapshot from a database.
     /// </summary>
-    public static async Task<int> ExecuteSchemaSnapshotAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> ExecuteSchemaSnapshotAsync(
+        CliArgs args,
+        TextWriter stdout,
+        TextWriter stderr,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
         {
@@ -729,7 +733,7 @@ public sealed class CommandExecutor
         var options = new SchemaSnapshotOptions(
             IncludeSchemas: includeSchemas,
             ExcludeSchemas: excludeSchemas,
-            CompatLevel: args.CompatLevel ?? 150
+            CompatLevel: args.CompatLevel ?? SchemaSnapshotOptions.DefaultCompatLevel
         );
 
         try
@@ -740,7 +744,7 @@ public sealed class CommandExecutor
             }
 
             var snapshot = await SchemaSnapshotGenerator.GenerateAsync(
-                args.SchemaConnectionString, options);
+                args.SchemaConnectionString, options, cancellationToken);
 
             var json = SchemaSnapshotSerializer.Serialize(snapshot);
             var outputPath = Path.GetFullPath(args.SchemaOutput);
@@ -751,7 +755,7 @@ public sealed class CommandExecutor
                 Directory.CreateDirectory(dir);
             }
 
-            await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
+            await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8, cancellationToken);
 
             var tableCount = snapshot.Databases.Sum(db => db.Tables.Count);
             var viewCount = snapshot.Databases.Sum(db => db.Views.Count);
@@ -773,7 +777,11 @@ public sealed class CommandExecutor
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing schema build workflow; tracked as complexity baseline debt.")]
     public async Task<int> ExecuteSchemaBuildAsync(
-        CliArgs args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+        CliArgs args,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(args.SchemaConnectionString))
         {
@@ -801,7 +809,7 @@ public sealed class CommandExecutor
 
         // Step 1: Generate schema snapshot
         var snapshotArgs = args with { SchemaOutput = schemaOutputPath };
-        var snapshotResult = await ExecuteSchemaSnapshotAsync(snapshotArgs, stdout, stderr);
+        var snapshotResult = await ExecuteSchemaSnapshotAsync(snapshotArgs, stdout, stderr, cancellationToken);
         if (snapshotResult != 0)
         {
             return snapshotResult;
@@ -810,7 +818,7 @@ public sealed class CommandExecutor
         // Step 2: Collect relations (only if SQL file paths were provided)
         if (args.Paths.Count > 0 || args.Stdin)
         {
-            var inputText = args.Stdin ? await stdin.ReadToEndAsync() : null;
+            var inputText = args.Stdin ? await stdin.ReadToEndAsync(cancellationToken) : null;
             var relationsArgs = args with { SchemaOutput = relationsOutputPath };
             using var relationsStdin = inputText is null ? null : new StringReader(inputText);
             var relationsResult = await ExecuteSchemaCollectRelationsAsync(

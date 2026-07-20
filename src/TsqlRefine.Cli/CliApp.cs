@@ -8,7 +8,12 @@ namespace TsqlRefine.Cli;
 /// </summary>
 public static class CliApp
 {
-    public static async Task<int> RunAsync(string[] args, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> RunAsync(
+        string[] args,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr,
+        CancellationToken cancellationToken = default)
     {
         var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
@@ -16,10 +21,20 @@ public static class CliApp
             return handledExitCode.Value;
         }
 
-        return await RunParsedAsync(parsed ?? throw new InvalidOperationException("Parsed args were not available."), stdin, stdout, stderr);
+        return await RunParsedAsync(
+            parsed ?? throw new InvalidOperationException("Parsed args were not available."),
+            stdin,
+            stdout,
+            stderr,
+            cancellationToken);
     }
 
-    public static async Task<int> RunAsync(string[] args, Stream stdin, TextWriter stdout, TextWriter stderr)
+    public static async Task<int> RunAsync(
+        string[] args,
+        Stream stdin,
+        TextWriter stdout,
+        TextWriter stderr,
+        CancellationToken cancellationToken = default)
     {
         var (parsed, handledExitCode) = await ParseOrHandleBuiltInAsync(args, stdout, stderr);
         if (handledExitCode is not null)
@@ -35,7 +50,8 @@ public static class CliApp
             {
                 var decoded = await CharsetDetection.ReadStreamAsync(
                     stdin,
-                    parsedArgs.MaxFileSize > 0 ? parsedArgs.MaxFileSize : null);
+                    parsedArgs.MaxFileSize > 0 ? parsedArgs.MaxFileSize : null,
+                    cancellationToken);
                 if (decoded is null)
                 {
                     await stderr.WriteLineAsync(
@@ -44,7 +60,7 @@ public static class CliApp
                 }
 
                 using var decodedReader = new StringReader(decoded.Text);
-                return await RunParsedAsync(parsedArgs, decodedReader, stdout, stderr);
+                return await RunParsedAsync(parsedArgs, decodedReader, stdout, stderr, cancellationToken);
             }
 
             using var streamReader = new StreamReader(
@@ -53,10 +69,10 @@ public static class CliApp
                 detectEncodingFromByteOrderMarks: true,
                 leaveOpen: true);
 
-            return await RunParsedAsync(parsedArgs, streamReader, stdout, stderr);
+            return await RunParsedAsync(parsedArgs, streamReader, stdout, stderr, cancellationToken);
         }
 
-        return await RunParsedAsync(parsedArgs, TextReader.Null, stdout, stderr);
+        return await RunParsedAsync(parsedArgs, TextReader.Null, stdout, stderr, cancellationToken);
     }
 
     private static async Task<(CliArgs? Parsed, int? HandledExitCode)> ParseOrHandleBuiltInAsync(
@@ -86,7 +102,12 @@ public static class CliApp
         }
     }
 
-    private static async Task<int> RunParsedAsync(CliArgs parsed, TextReader stdin, TextWriter stdout, TextWriter stderr)
+    private static async Task<int> RunParsedAsync(
+        CliArgs parsed,
+        TextReader stdin,
+        TextWriter stdout,
+        TextWriter stderr,
+        CancellationToken cancellationToken)
     {
         var command = parsed.Command;
 
@@ -126,10 +147,12 @@ public static class CliApp
                 "analyze graph" => await CommandExecutor.ExecuteAnalyzeGraphAsync(parsed, stdout),
                 "baseline create" => await commandExecutor.ExecuteBaselineCreateAsync(parsed, stdin, stdout, stderr),
                 "baseline trim" => await commandExecutor.ExecuteBaselineTrimAsync(parsed, stdin, stdout, stderr),
-                "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(parsed, stdout, stderr),
+                "schema snapshot" => await CommandExecutor.ExecuteSchemaSnapshotAsync(
+                    parsed, stdout, stderr, cancellationToken),
                 "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
                 "schema collect-objects" => await commandExecutor.ExecuteSchemaCollectObjectsAsync(parsed, stdin, stdout, stderr),
-                "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),
+                "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(
+                    parsed, stdin, stdout, stderr, cancellationToken),
                 "schema diff" => await CommandExecutor.ExecuteSchemaDiffAsync(parsed, stdout),
                 _ => await UnknownCommandAsync(command, stderr)
             };
@@ -138,6 +161,11 @@ public static class CliApp
         {
             await stderr.WriteLineAsync(ex.Message);
             return ExitCodes.ConfigError;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            await stderr.WriteLineAsync("Operation canceled.");
+            return ExitCodes.Fatal;
         }
 
 #pragma warning disable CA1031 // Top-level CLI error boundary
