@@ -58,6 +58,16 @@ public sealed class CommandExecutor
         return 0;
     }
 
+    public static async Task<int> ExecuteSchemaDiffAsync(CliArgs args, TextWriter stdout)
+    {
+        var before = SchemaDiffService.LoadSnapshot(args.SchemaDiffBeforePath, "--from");
+        var after = SchemaDiffService.LoadSnapshot(args.SchemaDiffAfterPath, "--to");
+        var catalog = SchemaDiffService.LoadOptionalCatalog(args.AnalyzeCatalogPath);
+        var result = SchemaDiffService.CreateResult(before, after, catalog);
+        await CatalogAnalysisService.WriteJsonAsync(result, args.AnalyzeOutputPath, stdout);
+        return result.Summary.Breaking > 0 ? ExitCodes.Violations : 0;
+    }
+
     public static async Task<int> ExecuteInitAsync(CliArgs args, TextWriter stdout, TextWriter stderr)
     {
         var baseDir = args.Global

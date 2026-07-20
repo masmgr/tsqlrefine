@@ -74,6 +74,18 @@ public sealed class OutputContractTests
                 [new DependencyGraphEdge("dbo.UserView", "dbo.Users", "Table", "OutOfScope", null, "view.sql", range)]),
             Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "graph-result.schema.json"));
         AssertMatchesSchema(
+            new SchemaDiffResult(
+                1,
+                "tsqlrefine",
+                "1.0.0",
+                "before-hash",
+                "after-hash",
+                new SchemaDiffSummary(1, 1, 0),
+                [new SchemaDiffOutputChange(
+                    "columnRemoved", true, "AppDb", "dbo", "Users", "table", "Email", null, null,
+                    [new ImpactedCatalogObject("dbo.UserView", "View", "view.sql", range, 1)])]),
+            Path.Combine(CorpusSupport.RepositoryRoot, "schemas", "schema-diff-result.schema.json"));
+        AssertMatchesSchema(
             new ChangedLinesDocument(
                 1,
                 [new ChangedFileLines("contract.sql", [new ChangedLineRange(2, 4)])]),

@@ -130,6 +130,7 @@ public static class CliApp
                 "schema collect-relations" => await commandExecutor.ExecuteSchemaCollectRelationsAsync(parsed, stdin, stdout, stderr),
                 "schema collect-objects" => await commandExecutor.ExecuteSchemaCollectObjectsAsync(parsed, stdin, stdout, stderr),
                 "schema build" => await commandExecutor.ExecuteSchemaBuildAsync(parsed, stdin, stdout, stderr),
+                "schema diff" => await CommandExecutor.ExecuteSchemaDiffAsync(parsed, stdout),
                 _ => await UnknownCommandAsync(command, stderr)
             };
         }

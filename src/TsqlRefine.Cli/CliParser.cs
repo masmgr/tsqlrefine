@@ -329,6 +329,18 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> SchemaDiffBefore = new("--from")
+        {
+            Description = "Baseline schema snapshot path",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaDiffAfter = new("--to")
+        {
+            Description = "Candidate schema snapshot path",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
         // Arguments (factory method because each command needs its own instance)
         public static Argument<string[]> CreatePathsArgument() => new("paths")
         {
@@ -498,6 +510,7 @@ public static class CliParser
         schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
         schemaCommand.Subcommands.Add(BuildSchemaCollectObjectsCommand());
         schemaCommand.Subcommands.Add(BuildSchemaBuildCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaDiffCommand());
         return schemaCommand;
     }
 
@@ -631,6 +644,16 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildSchemaDiffCommand()
+    {
+        var command = new Command("diff", "Compare two schema snapshots for breaking changes");
+        command.Options.Add(Options.SchemaDiffBefore);
+        command.Options.Add(Options.SchemaDiffAfter);
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeOutput);
+        return command;
+    }
+
     // =================================================================
     // Root Command
     // =================================================================
@@ -758,7 +781,9 @@ public static class CliParser
             AnalyzeGraphFormat: ParseAnalyzeGraphFormat(GetOptionValue<string?>(parseResult, "--format")),
             ChangedOnly: GetOptionValue<bool>(parseResult, "--changed-only"),
             BaseRef: GetOptionValue<string?>(parseResult, "--base-ref"),
-            ChangedLinesFrom: GetOptionValue<string?>(parseResult, "--changed-lines-from")
+            ChangedLinesFrom: GetOptionValue<string?>(parseResult, "--changed-lines-from"),
+            SchemaDiffBeforePath: GetOptionValue<string?>(parseResult, "--from"),
+            SchemaDiffAfterPath: GetOptionValue<string?>(parseResult, "--to")
         );
     }
 

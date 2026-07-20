@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `schema diff` CLI command for breaking schema drift detection with optional transitive object-catalog impact analysis
 - `multi-row-update-from` rule: detect non-deterministic `UPDATE ... FROM` that joins multiple rows to a single target row
 - `len-for-emptiness-check` rule: detect `LEN(col) = 0` / `LEN(col) > 0` patterns that should use `= ''` / `<> ''`
 - `string-agg-nvarchar-max` rule: detect `STRING_AGG` calls missing `NVARCHAR(MAX)` cast on the separator

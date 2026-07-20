@@ -198,6 +198,17 @@ tsqlrefine analyze graph --catalog .tsqlrefine/schema/objects.json --format dot 
 Impact analysis follows reverse dependencies transitively, making it useful before table or column
 changes. Graph export supports versioned JSON and Graphviz DOT.
 
+Compare two snapshots to detect schema drift. Supplying the object catalog adds direct and
+transitive dependent procedures, functions, and views to each breaking change:
+
+```bash
+tsqlrefine schema diff --from schema-main.json --to schema-candidate.json \
+  --catalog .tsqlrefine/schema/objects.json --output schema-diff.json
+```
+
+`schema diff` returns exit code 1 when it finds a breaking removal, type change, or
+nullable-to-`NOT NULL` change, so it can be used as a CI quality gate.
+
 ## Installation
 
 ### .NET Global Tool (Recommended)

@@ -58,6 +58,8 @@ namespace TsqlRefine.Cli;
 /// <param name="ChangedOnly">Whether lint output is limited to changed lines.</param>
 /// <param name="BaseRef">Git base reference used by changed-only lint.</param>
 /// <param name="ChangedLinesFrom">Optional changed-lines JSON file used instead of Git.</param>
+/// <param name="SchemaDiffBeforePath">Baseline schema snapshot for schema diff.</param>
+/// <param name="SchemaDiffAfterPath">Candidate schema snapshot for schema diff.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -110,5 +112,7 @@ public sealed record CliArgs(
     string AnalyzeGraphFormat = "json",
     bool ChangedOnly = false,
     string? BaseRef = null,
-    string? ChangedLinesFrom = null
+    string? ChangedLinesFrom = null,
+    string? SchemaDiffBeforePath = null,
+    string? SchemaDiffAfterPath = null
 );

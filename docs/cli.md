@@ -37,6 +37,7 @@ Commands:
 | `schema collect-relations` | Collect JOIN relation patterns from SQL files |
 | `schema collect-objects` | Collect SQL object signatures and references from SQL files |
 | `schema build` | Generate a snapshot, relation profile, and object catalog in one step |
+| `schema diff` | Compare snapshots and report breaking schema changes |
 
 ---
 
@@ -426,6 +427,25 @@ tsqlrefine schema build [options] [paths...]
 `--output-dir`, `--relations-output`, `--objects-output`, and the standard SQL input options.
 It writes `schema.json`, `relations.json`, and `objects.json` by default. It uses
 `TSQLREFINE_CONNECTION_STRING` when `--connection-string` is omitted.
+
+#### schema diff
+
+```
+tsqlrefine schema diff --from <before-schema.json> --to <after-schema.json> [options]
+```
+
+| Option | Description |
+|------------|------|
+| `--from <path>` | Required baseline schema snapshot |
+| `--to <path>` | Required candidate schema snapshot |
+| `--catalog <path>` | Optional object catalog used to attach transitive impact results |
+| `--output <path>` | Write JSON to a file instead of stdout |
+
+The command reports additions, removals, column type changes, and nullability changes.
+Database, table, view, and column removals, all type changes, and nullable-to-`NOT NULL`
+changes are classified as breaking. It exits with code `1` when at least one breaking
+change is found, making it suitable for CI. The versioned JSON contract is
+[`schemas/schema-diff-result.schema.json`](../schemas/schema-diff-result.schema.json).
 
 #### schema collect-objects
 
