@@ -20,7 +20,7 @@
 ## Rule Statistics
 
 - **Total Rules**: 169
-- **Fixable Rules**: 14 (9%)
+- **Fixable Rules**: 14 (8%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
   - Essential (pragmatic): 35 rules
@@ -28,7 +28,7 @@
   - Thorough (strict-logic): 34 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 28 rules (18%)
+  - Error: 28 rules (17%)
   - Warning: 97 rules (57%)
   - Information: 44 rules (26%)
 
@@ -173,7 +173,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
 | [exec-output-not-captured](correctness/exec-output-not-captured.md) | Detects EXEC calls that omit OUTPUT when passing an output parameter. | Warning | No |
-| [exec-parameter-type-mismatch](correctness/exec-parameter-type-mismatch.md) | Detects EXEC arguments whose known type may lose information during parameter assignment. | Warning | No |
+| [exec-parameter-type-mismatch](correctness/exec-parameter-type-mismatch.md) | Detects EXEC arguments with a known type that may lose information when assigned to the procedure parameter. | Warning | No |
 | [semantic/alias-scope-violation](correctness/semantic-alias-scope-violation.md) | Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent. | Warning | No |
 | [semantic/join-table-not-referenced-in-on](correctness/semantic-join-table-not-referenced-in-on.md) | Detects JOIN operations where the joined table is not referenced in the ON clause. | Warning | No |
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
@@ -262,14 +262,14 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [circular-object-reference](correctness/circular-object-reference.md) | Detects cycles between cataloged SQL objects. | Warning | No |
-| [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
 | [inconsistent-result-set](correctness/inconsistent-result-set.md) | Detects procedures that return different result-set shapes on different execution paths. | Warning | No |
+| [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
 | [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that use DATALENGTH for termination but LEN to advance the same string variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
-| [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
 | [unreferenced-object](correctness/unreferenced-object.md) | Detects cataloged SQL objects that have no incoming references. | Information | No |
 | [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md) | Detects procedure or function calls that do not resolve in an authoritative object catalog. | Warning | No |
+| [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
 
 #### Performance (16 rules)
 
@@ -364,14 +364,14 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md)
 - [delete-column-not-in-table](schema/delete-column-not-in-table.md)
 - [dml-without-where](safety/dml-without-where.md)
-- [dynamic-sql-taint](security/dynamic-sql-taint.md)
 - [duplicate-column-definition](schema/duplicate-column-definition.md)
 - [duplicate-insert-column](correctness/duplicate-insert-column.md)
-- [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)
-- [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md)
 - [duplicate-table-function-column](schema/duplicate-table-function-column.md)
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
+- [dynamic-sql-taint](security/dynamic-sql-taint.md)
+- [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)
+- [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md)
 - [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
 - [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md)
@@ -416,8 +416,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-top-100-percent-order-by](performance/avoid-top-100-percent-order-by.md)
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
 - [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md)
-- [cross-database-transaction](safety/cross-database-transaction.md)
 - [circular-object-reference](correctness/circular-object-reference.md)
+- [cross-database-transaction](safety/cross-database-transaction.md)
 - [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
 - [deep-view-nesting](performance/deep-view-nesting.md)
@@ -477,8 +477,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
-- [unreachable-statement](correctness/unreachable-statement.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
+- [unreachable-statement](correctness/unreachable-statement.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
 - [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
@@ -529,8 +529,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semicolon-termination](style/semicolon-termination.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
-- [unused-variable](correctness/unused-variable.md)
 - [unreferenced-object](correctness/unreferenced-object.md)
+- [unused-variable](correctness/unused-variable.md)
 
 ## Fixable Rules
 
