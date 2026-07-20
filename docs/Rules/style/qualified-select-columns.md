@@ -124,9 +124,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "qualified-select-columns", "enabled": false }
-  ]
+  "rules": {
+    "qualified-select-columns": "none"
+  }
 }
 ```
 

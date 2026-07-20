@@ -11,11 +11,6 @@ public sealed class CasingContext
     public bool InTableContext { get; set; }
 
     /// <summary>
-    /// Whether we're currently after an AS keyword (expecting an alias).
-    /// </summary>
-    public bool AfterAsKeyword { get; set; }
-
-    /// <summary>
     /// The last schema name seen (for system table detection).
     /// </summary>
     public string? LastSchemaName { get; set; }
@@ -36,16 +31,33 @@ public sealed class CasingContext
     /// </summary>
     public bool InTableColumnList { get; set; }
 
+    internal int TableColumnListParenthesisDepth { get; set; }
+
+    internal bool AwaitingCastParenthesis { get; set; }
+
+    internal int CastParenthesisDepth { get; set; }
+
+    internal bool AwaitingConvertParenthesis { get; set; }
+
+    internal bool ExpectsIdentifierDataType { get; set; }
+
+    internal bool InDeclareStatement { get; set; }
+
     /// <summary>
     /// Resets all context state.
     /// </summary>
     public void Reset()
     {
         InTableContext = false;
-        AfterAsKeyword = false;
         LastSchemaName = null;
         InExecuteContext = false;
         ExecuteProcedureProcessed = false;
         InTableColumnList = false;
+        TableColumnListParenthesisDepth = 0;
+        AwaitingCastParenthesis = false;
+        CastParenthesisDepth = 0;
+        AwaitingConvertParenthesis = false;
+        ExpectsIdentifierDataType = false;
+        InDeclareStatement = false;
     }
 }

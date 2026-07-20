@@ -247,9 +247,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-transaction-without-commit", "enabled": false }
-  ]
+  "rules": {
+    "avoid-transaction-without-commit": "none"
+  }
 }
 ```
 
@@ -262,6 +262,10 @@ This rule has significant limitations due to static analysis constraints:
 3. **Stored procedure calls** - Cannot track if called proc commits/rollbacks
 4. **Complex control flow** - May produce false positives with nested IF/WHILE
 5. **@@TRANCOUNT** logic - Cannot analyze runtime transaction count checks
+
+The rule distinguishes a potential savepoint rollback from an unnamed rollback or a rollback to
+the outer transaction's name. The same transaction-state semantics are shared with the other
+lexical transaction rules.
 
 **Recommendation:** Use this rule to catch obvious errors. For complex scenarios, use runtime monitoring:
 ```sql

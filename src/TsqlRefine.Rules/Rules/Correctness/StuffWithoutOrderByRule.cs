@@ -126,14 +126,14 @@ public sealed class StuffWithoutOrderByRule : DiagnosticVisitorRuleBase
             return string.Empty;
         }
 
-        private static string ExtractColumnName(ScalarExpression expr)
+        private static string ExtractColumnName(ScalarExpression expr) => expr switch
         {
-            return expr switch
-            {
-                ColumnReferenceExpression colRef => colRef.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value ?? string.Empty,
-                BinaryExpression binExpr => ExtractColumnName(binExpr.FirstExpression) ?? ExtractColumnName(binExpr.SecondExpression) ?? string.Empty,
-                _ => string.Empty
-            };
-        }
+            ColumnReferenceExpression colRef =>
+                colRef.MultiPartIdentifier?.Identifiers.LastOrDefault()?.Value ?? string.Empty,
+            BinaryExpression binExpr => ExtractColumnName(binExpr.FirstExpression) is { Length: > 0 } first
+                ? first
+                : ExtractColumnName(binExpr.SecondExpression),
+            _ => string.Empty
+        };
     }
 }

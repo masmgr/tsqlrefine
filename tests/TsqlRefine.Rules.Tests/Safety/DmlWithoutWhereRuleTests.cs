@@ -15,6 +15,10 @@ public sealed class DmlWithoutWhereRuleTests
     [InlineData("delete from orders;")]  // lowercase
     [InlineData("UPDATE users SET active = 1 FROM users LEFT JOIN orders ON users.id = orders.user_id;")]  // LEFT JOIN does NOT exempt
     [InlineData("UPDATE users SET active = 1 FROM users CROSS JOIN orders;")]  // CROSS JOIN does NOT exempt
+    [InlineData("UPDATE u SET active = 1 FROM users u;")]  // alias does not limit affected rows
+    [InlineData("DELETE u FROM users u;")]  // alias does not limit affected rows
+    [InlineData("UPDATE u SET active = 1 FROM dbo.users u;")]  // alias target with schema
+    [InlineData("DELETE u FROM dbo.users AS u;")]  // alias target with AS keyword
     public void Analyze_WhenDmlWithoutWhere_ReturnsDiagnostic(string sql)
     {
         var rule = new DmlWithoutWhereRule();
@@ -42,10 +46,6 @@ public sealed class DmlWithoutWhereRuleTests
     [InlineData("DELETE FROM ##globaltemp;")]  // global temp table
     [InlineData("UPDATE @tablevar SET col = 1;")]  // table variable
     [InlineData("DELETE FROM @tablevar;")]  // table variable
-    [InlineData("UPDATE u SET active = 1 FROM users u;")]  // alias target
-    [InlineData("DELETE u FROM users u;")]  // alias target
-    [InlineData("UPDATE u SET active = 1 FROM dbo.users u;")]  // alias target with schema
-    [InlineData("DELETE u FROM dbo.users AS u;")]  // alias target with AS keyword
     [InlineData("UPDATE users SET active = 1 FROM users INNER JOIN orders ON users.id = orders.user_id;")]  // INNER JOIN
     [InlineData("DELETE FROM users FROM users INNER JOIN orders ON users.id = orders.user_id;")]  // INNER JOIN
     [InlineData("UPDATE u SET active = 1 FROM users u INNER JOIN orders o ON u.id = o.user_id;")]  // alias + INNER JOIN
@@ -153,7 +153,7 @@ DELETE FROM orders;";
     }
 
     [Fact]
-    public void Analyze_UpdateWithAliasTarget_ReturnsEmpty()
+    public void Analyze_UpdateWithAliasTarget_ReturnsDiagnostic()
     {
         var rule = new DmlWithoutWhereRule();
         var sql = "UPDATE u SET active = 1 FROM users u;";
@@ -161,11 +161,11 @@ DELETE FROM orders;";
 
         var diagnostics = rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
     }
 
     [Fact]
-    public void Analyze_DeleteWithAliasTarget_ReturnsEmpty()
+    public void Analyze_DeleteWithAliasTarget_ReturnsDiagnostic()
     {
         var rule = new DmlWithoutWhereRule();
         var sql = "DELETE u FROM users u;";
@@ -173,7 +173,7 @@ DELETE FROM orders;";
 
         var diagnostics = rule.Analyze(context).ToArray();
 
-        Assert.Empty(diagnostics);
+        Assert.Single(diagnostics);
     }
 
     [Fact]

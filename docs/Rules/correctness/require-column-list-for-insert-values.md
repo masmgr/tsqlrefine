@@ -233,9 +233,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-column-list-for-insert-values", "enabled": false }
-  ]
+  "rules": {
+    "require-column-list-for-insert-values": "none"
+  }
 }
 ```
 

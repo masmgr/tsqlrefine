@@ -122,9 +122,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-data-type-length", "enabled": false }
-  ]
+  "rules": {
+    "semantic-data-type-length": "none"
+  }
 }
 ```
 

@@ -69,9 +69,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-float-for-decimal", "enabled": false }
-  ]
+  "rules": {
+    "avoid-float-for-decimal": "none"
+  }
 }
 ```
 

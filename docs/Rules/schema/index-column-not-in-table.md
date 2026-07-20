@@ -74,9 +74,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "index-column-not-in-table", "enabled": false }
-  ]
+  "rules": {
+    "index-column-not-in-table": "none"
+  }
 }
 ```
 

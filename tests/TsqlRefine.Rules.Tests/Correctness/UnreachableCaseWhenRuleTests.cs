@@ -63,6 +63,14 @@ public sealed class UnreachableCaseWhenRuleTests
     }
 
     [Fact]
+    public void Analyze_StringLiteralsDifferOnlyByCase_ReturnsNoDiagnostic()
+    {
+        const string sql = "SELECT CASE @status WHEN 'A' THEN 1 WHEN 'a' THEN 2 END;";
+
+        Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
+    [Fact]
     public void Analyze_SearchedCaseDuplicateComplex_ReturnsDiagnostic()
     {
         const string sql = @"

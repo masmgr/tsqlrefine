@@ -83,9 +83,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-concat-ws", "enabled": false }
-  ]
+  "rules": {
+    "prefer-concat-ws": "none"
+  }
 }
 ```
 

@@ -13,7 +13,6 @@ public sealed class CasingContextTests
         var context = new CasingContext();
 
         Assert.False(context.InTableContext);
-        Assert.False(context.AfterAsKeyword);
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);
@@ -29,13 +28,6 @@ public sealed class CasingContextTests
     {
         var context = new CasingContext { InTableContext = true };
         Assert.True(context.InTableContext);
-    }
-
-    [Fact]
-    public void AfterAsKeyword_CanBeSet()
-    {
-        var context = new CasingContext { AfterAsKeyword = true };
-        Assert.True(context.AfterAsKeyword);
     }
 
     [Fact]
@@ -76,7 +68,6 @@ public sealed class CasingContextTests
         var context = new CasingContext
         {
             InTableContext = true,
-            AfterAsKeyword = true,
             LastSchemaName = "sys",
             InExecuteContext = true,
             ExecuteProcedureProcessed = true,
@@ -86,7 +77,6 @@ public sealed class CasingContextTests
         context.Reset();
 
         Assert.False(context.InTableContext);
-        Assert.False(context.AfterAsKeyword);
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);
@@ -100,7 +90,6 @@ public sealed class CasingContextTests
         context.Reset();
 
         Assert.False(context.InTableContext);
-        Assert.False(context.AfterAsKeyword);
         Assert.Null(context.LastSchemaName);
         Assert.False(context.InExecuteContext);
         Assert.False(context.ExecuteProcedureProcessed);

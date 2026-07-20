@@ -28,6 +28,16 @@ Commands:
 | `print-format-config` | Output effective formatting options |
 | `list-rules` | List available rules (loaded) |
 | `list-plugins` | List loaded plugins (Rule plugins only) |
+| `baseline create` | Record current diagnostics as a baseline |
+| `baseline trim` | Remove resolved diagnostics from a baseline |
+| `report` | Generate diagnostic aggregations and SQL metrics in JSON or HTML |
+| `analyze impact` | Find direct and transitive dependents of a table or column |
+| `analyze graph` | Export the object dependency graph as JSON or DOT |
+| `schema snapshot` | Generate a schema snapshot from SQL Server |
+| `schema collect-relations` | Collect JOIN relation patterns from SQL files |
+| `schema collect-objects` | Collect SQL object signatures and references from SQL files |
+| `schema build` | Generate a snapshot, relation profile, and object catalog in one step |
+| `schema diff` | Compare snapshots and report breaking schema changes |
 
 ---
 
@@ -62,11 +72,20 @@ tsqlrefine lint [options] [paths...]
 | `--ignorelist <path>` | Ignore pattern file |
 | `--detect-encoding` | Auto-detect input encoding |
 | `--stdin` | Read from standard input |
-| `--output <text\|json>` | Output format (default: `text`) |
+| `--output <text\|json\|sarif>` | Output format (default: `text`) |
+| `--baseline <path>` | Suppress diagnostics recorded in a baseline file |
+| `--root <path>` | Validate or set the root used for baseline path normalization |
+| `--show-suppressed` | Include baseline-suppressed diagnostics in text, JSON, or SARIF output |
+| `--changed-only` | Report only diagnostics whose ranges intersect changed Git lines |
+| `--base-ref <ref>` | Git merge-base reference for `--changed-only` (default: `origin/main`) |
+| `--changed-lines-from <path>` | Read changed lines from versioned JSON instead of invoking Git |
 | `--compat-level <100-160>` | SQL Server compatibility level |
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
 | `--ruleset <name\|path>` | Custom ruleset name or file |
+| `--schema <path>` | Schema snapshot for schema-aware analysis |
+| `--relations-profile <path>` | JOIN relation profile for deviation analysis |
+| `--objects-catalog <path>` | Object catalog for cross-object analysis |
 | `--verbose` | Show detailed information (execution time) |
 | `--max-file-size <n>` | Maximum input file size in MB (default: 10) |
 | `-q, --quiet` | Suppress informational stderr output (for IDE/extension integration) |
@@ -93,6 +112,129 @@ Time: 42ms
 ```
 
 With `--quiet` (`-q`), all informational stderr output is suppressed. Only stdout diagnostics and the exit code remain. This is designed for IDE/extension integration where machine-readable output is consumed programmatically.
+
+When a baseline is active, the summary and exit code count only active diagnostics. A separate
+stderr line reports the number of suppressed diagnostics. Parse errors and parser exceptions are
+never suppressed. With `--show-suppressed`, text output adds `Suppressed`, JSON diagnostics add
+`suppressed` and `fingerprint`, and SARIF results add an external suppression.
+
+SARIF output conforms to SARIF 2.1.0 and includes rule metadata, source locations, and stable
+`partialFingerprints` suitable for GitHub Code Scanning and other SARIF consumers.
+
+##### Changed-only lint
+
+`--changed-only` combines added-line ranges from `<base-ref>...HEAD`, the index, and the working
+tree. Renames use the destination path, deleted lines do not create a reportable range, and every
+line of an untracked input file is considered changed. Diagnostics intersecting those 1-based line
+ranges are retained. Parse errors and parser exceptions are always retained, even outside changed
+lines.
+
+When Git is unavailable, `--changed-lines-from` activates the same filtering using JSON relative to
+the JSON file's directory:
+
+```json
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "src/procedures/users.sql",
+      "ranges": [
+        { "startLine": 12, "endLine": 18 }
+      ]
+    }
+  ]
+}
+```
+
+This input conforms to
+[`schemas/changed-lines.schema.json`](../schemas/changed-lines.schema.json). Changed-only lint does
+not support stdin. `--base-ref` and `--changed-lines-from` are mutually exclusive.
+
+#### baseline create
+
+```
+tsqlrefine baseline create --output <path> [options] [paths...]
+```
+
+Runs lint with the selected preset/ruleset and records all non-parse diagnostics. Path input is
+required; stdin is rejected because it has no stable repository-relative identity. If parsing
+fails, the baseline is not written.
+
+| Option | Description |
+|------------|------|
+| `--output <path>` | Required baseline JSON output path |
+| `--root <path>` | Root used to normalize file paths; otherwise Git root or common input directory |
+| `--ignorelist`, `--detect-encoding`, `--max-file-size` | Standard file input options |
+| `--compat-level`, `--severity`, `--preset`, `--ruleset` | Standard lint selection options |
+| `--schema`, `--relations-profile`, `--objects-catalog` | Optional schema-aware and cross-object analysis inputs |
+| `-q, --quiet` | Suppress informational stderr output |
+
+#### baseline trim
+
+```
+tsqlrefine baseline trim --baseline <path> [options] [paths...]
+```
+
+Re-runs lint and removes resolved entries only for files included in the current invocation.
+Entries for files outside the analyzed input remain unchanged. `--remove-missing` additionally
+removes entries whose files no longer exist. Parse failures leave the baseline unchanged.
+
+| Option | Description |
+|------------|------|
+| `--baseline <path>` | Baseline to update; may instead come from `tsqlrefine.json` |
+| `--root <path>` | Assert the root stored by the baseline |
+| `--remove-missing` | Remove entries for files that no longer exist |
+| Other lint options | Same rule, schema, and file-input options as `baseline create` |
+
+#### report
+
+```
+tsqlrefine report [--output-format json|html] [--output <path>] [options] [paths...]
+```
+
+Runs the configured lint rules and creates a point-in-time quality report. The report contains
+diagnostic counts by category, rule, and file, plus the 20 objects or batches with the highest
+cyclomatic complexity. Each ranked object also includes nesting depth, statement count, maximum
+joins per query, and parameter count.
+
+| Option | Description |
+|------------|------|
+| `--output-format <json\|html>` | Report format (default: `json`) |
+| `--output <path>` | Write the report to a file instead of stdout |
+| `--baseline <path>` | Include new, frozen, and resolved diagnostic counts using a baseline |
+| `--root <path>` | Assert the root stored by the baseline |
+| `--ignorelist`, `--detect-encoding`, `--stdin`, `--max-file-size` | Standard input options |
+| `--compat-level`, `--severity`, `--preset`, `--ruleset` | Standard lint selection options |
+| `--schema`, `--relations-profile`, `--objects-catalog` | Optional schema-aware and cross-object analysis inputs |
+| `-q, --quiet` | Suppress the output-file confirmation on stderr |
+
+JSON output conforms to
+[`schemas/report-result.schema.json`](../schemas/report-result.schema.json). HTML output is a
+self-contained document with inline CSS and JavaScript, suitable for storage as a CI artifact.
+The initial report format is a single-run snapshot and does not include historical trends.
+
+#### analyze impact
+
+```
+tsqlrefine analyze impact --table <table> [--column <column>] --catalog <objects.json> [--output <path>]
+```
+
+Reads an object catalog and returns cataloged procedures, functions, and views affected by changing
+the target table or column. `depth: 1` means a direct reference; higher depths are transitive
+dependents. One-, two-, and three-part table names are accepted. Output is JSON on stdout unless
+`--output` is specified and conforms to
+[`schemas/impact-result.schema.json`](../schemas/impact-result.schema.json).
+
+#### analyze graph
+
+```
+tsqlrefine analyze graph --catalog <objects.json> --output <path> [--format json|dot]
+```
+
+Exports catalog definitions as nodes and static references as directed edges. JSON is the default
+and conforms to [`schemas/graph-result.schema.json`](../schemas/graph-result.schema.json). DOT output
+can be rendered with Graphviz. Dynamic references are omitted; unresolved and out-of-scope static
+targets remain visible as edges so incomplete catalog coverage is explicit.
 
 #### format
 
@@ -260,6 +402,76 @@ tsqlrefine list-plugins [options]
 | `--output <text\|json>` | Output format (default: `text`) |
 | `--verbose` | Display detailed information |
 
+#### schema snapshot
+
+```
+tsqlrefine schema snapshot [options]
+```
+
+| Option | Description |
+|------------|------|
+| `--connection-string <value>` | SQL Server connection string. Overrides `TSQLREFINE_CONNECTION_STRING` |
+| `--output <path>` | Required output path for the schema snapshot |
+| `--include-schema <names>` | Comma-separated schemas to include |
+| `--exclude-schema <names>` | Comma-separated schemas to exclude |
+| `--compat-level <100-160>` | SQL Server compatibility level |
+| `-q, --quiet` | Suppress informational stderr output |
+
+#### schema build
+
+```
+tsqlrefine schema build [options] [paths...]
+```
+
+`schema build` accepts `--connection-string` and the schema filters above, plus
+`--output-dir`, `--relations-output`, `--objects-output`, and the standard SQL input options.
+It writes `schema.json`, `relations.json`, and `objects.json` by default. It uses
+`TSQLREFINE_CONNECTION_STRING` when `--connection-string` is omitted.
+
+#### schema diff
+
+```
+tsqlrefine schema diff --from <before-schema.json> --to <after-schema.json> [options]
+```
+
+| Option | Description |
+|------------|------|
+| `--from <path>` | Required baseline schema snapshot |
+| `--to <path>` | Required candidate schema snapshot |
+| `--catalog <path>` | Optional object catalog used to attach transitive impact results |
+| `--output <path>` | Write JSON to a file instead of stdout |
+
+The command reports additions, removals, column type changes, and nullability changes.
+Database, table, view, and column removals, all type changes, and nullable-to-`NOT NULL`
+changes are classified as breaking. It exits with code `1` when at least one breaking
+change is found, making it suitable for CI. The versioned JSON contract is
+[`schemas/schema-diff-result.schema.json`](../schemas/schema-diff-result.schema.json).
+
+#### schema collect-relations
+
+```
+tsqlrefine schema collect-relations --output relations.json [options] [paths...]
+```
+
+Collects JOIN relation patterns (learned column pairings) from SQL files for relation-deviation
+analysis. It accepts the standard SQL input options and `--compat-level`. `--output` is required.
+The generated profile can be supplied to lint and fix commands with `--relations-profile`.
+
+#### schema collect-objects
+
+```
+tsqlrefine schema collect-objects --output objects.json [options] [paths...]
+```
+
+Collects procedure, function, and view definitions plus their static references. It accepts
+the standard SQL input options and `--compat-level`. The generated catalog can be supplied to
+lint, fix, and baseline commands with `--objects-catalog`.
+
+> **Security note:** Avoid placing password-bearing connection strings directly on the
+> command line because process listings, shell history, and CI logs may expose them.
+> Prefer setting `TSQLREFINE_CONNECTION_STRING` through your shell or CI secret store.
+> The command-line option takes precedence when both are provided.
+
 ### 2.3 Option Details
 
 #### Preset (`--preset`)
@@ -330,6 +542,12 @@ This format is similar to ESLint / GCC / rustc and is recognized as clickable li
 
 Based on VSCode `Diagnostic` compatible format, bundled by file.
 
+Machine-readable contracts are available at
+[`schemas/lint-result.schema.json`](../schemas/lint-result.schema.json) and
+[`schemas/fix-result.schema.json`](../schemas/fix-result.schema.json). The report contract is
+defined separately in [`schemas/report-result.schema.json`](../schemas/report-result.schema.json). CI validates
+serialized CLI model output against these Draft 2020-12 schemas.
+
 ### 4.1 Top Level
 
 ```ts
@@ -361,6 +579,8 @@ interface Diagnostic {
     category?: string;
     fixable?: boolean;
   };
+  suppressed?: boolean; // present with --show-suppressed
+  fingerprint?: string; // 64 lowercase hex characters; present with --show-suppressed
 }
 
 interface Range {
@@ -386,19 +606,33 @@ enum DiagnosticTag {
 }
 ```
 
+### 4.3 SARIF Output
+
+`lint --output sarif` emits a SARIF 2.1.0 log. Positions are converted from the internal 0-based
+diagnostic range to SARIF's 1-based region format. Each result contains `ruleId`, `ruleIndex`, level,
+message, artifact URI, region, and—except for parser failures—a `tsqlrefine/v1` partial fingerprint.
+Use `--show-suppressed` to include baseline matches with an external SARIF suppression.
+
 ---
 
 ## 5. Exit Codes
 
 Fixed exit codes by result type for easy CI handling.
 
-- `0`: Success (0 diagnostics, or 0 after `--severity` filter)
+- `0`: Success (0 active diagnostics after severity and baseline filtering)
 - `1`: Rule violations found (diagnostics present)
 - `2`: Parse error (unparseable, `GO` split failure, etc.)
 - `3`: Configuration error (config/ignore load failure, invalid compatibility level, etc.)
 - `4`: Runtime exception (internal error)
 
 For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
+`report` returns `0` after successfully generating an artifact even when diagnostics are present;
+parse failures still return `2`.
+
+`analyze impact` and `analyze graph` return `0` on success and `3` when the object catalog is
+missing, unreadable, or a required option (`--catalog`, `--table` for `impact`, `--output` for
+`graph`) is absent. `schema diff` returns `0` when no breaking change is found, `1` when at least
+one breaking change is found, and `3` on a configuration error such as a missing snapshot file.
 
 ---
 

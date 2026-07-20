@@ -45,6 +45,62 @@ public static class TextPositionHelpers
     }
 
     /// <summary>
+    /// Advances a position by the given text, accounting for \r\n, \r, and \n line breaks.
+    /// This is the single source of truth for computing token end positions; use it
+    /// instead of adding the text length to the start character, which is wrong for
+    /// multi-line tokens such as block comments and multi-line string literals.
+    /// </summary>
+    /// <param name="start">The starting position.</param>
+    /// <param name="text">The text consumed from the starting position.</param>
+    /// <returns>The position immediately after the text.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when start is null.</exception>
+    public static Position AdvancePosition(Position start, string? text)
+    {
+        ArgumentNullException.ThrowIfNull(start);
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return start;
+        }
+
+        // Fast path: most tokens are single-line.
+        if (text.AsSpan().IndexOfAny('\r', '\n') < 0)
+        {
+            return new Position(start.Line, start.Character + text.Length);
+        }
+
+        var line = start.Line;
+        var character = start.Character;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch == '\r')
+            {
+                if (i + 1 < text.Length && text[i + 1] == '\n')
+                {
+                    i++;
+                }
+
+                line++;
+                character = 0;
+                continue;
+            }
+
+            if (ch == '\n')
+            {
+                line++;
+                character = 0;
+                continue;
+            }
+
+            character++;
+        }
+
+        return new Position(line, character);
+    }
+
+    /// <summary>
     /// Gets the leading whitespace (indentation) of the line containing the given offset.
     /// </summary>
     /// <param name="text">The text to search within.</param>

@@ -164,9 +164,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-print-statement", "enabled": false }
-  ]
+  "rules": {
+    "avoid-print-statement": "none"
+  }
 }
 ```
 

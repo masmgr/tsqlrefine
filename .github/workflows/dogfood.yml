@@ -1,0 +1,40 @@
+name: dogfood
+
+on:
+  schedule:
+    - cron: '0 19 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint_samples:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: 10.0.x
+          global-json-file: global.json
+
+      - name: Build tsqlrefine
+        run: dotnet build src/TsqlRefine.sln -c Release
+
+      - name: Lint repository SQL with strict preset
+        shell: bash
+        run: |
+          set +e
+          dotnet run --project src/TsqlRefine.Cli -c Release --no-build -- lint --preset strict --output json samples/sql tests/corpus/sql > dogfood-diagnostics.json
+          status=$?
+          set -e
+          if [ "$status" -gt 1 ]; then exit "$status"; fi
+
+      - name: Upload diagnostics for triage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dogfood-diagnostics
+          path: dogfood-diagnostics.json

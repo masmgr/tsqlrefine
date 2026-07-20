@@ -81,6 +81,15 @@ public sealed class StuffWithoutOrderByRuleTests
     }
 
     [Fact]
+    public void Analyze_ConcatenatedLiteralAndColumn_IncludesColumnHint()
+    {
+        const string sql = "SELECT STUFF((SELECT ',' + name FROM users FOR XML PATH('')), 1, 1, '');";
+        var diagnostic = Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Contains("'name'", diagnostic.Message);
+    }
+
+    [Fact]
     public void Analyze_MixedWithAndWithoutOrderBy_ReturnsOneDiagnostic()
     {
         // Arrange

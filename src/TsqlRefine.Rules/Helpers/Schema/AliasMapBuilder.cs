@@ -13,11 +13,21 @@ public sealed class AliasMap
     private readonly Dictionary<string, ResolvedTable?> _map;
     private readonly List<ResolvedTable> _allTables;
 
-    internal AliasMap(Dictionary<string, ResolvedTable?> map, List<ResolvedTable> allTables)
+    internal AliasMap(Dictionary<string, ResolvedTable?> map, List<ResolvedTable> allTables, bool hasUnresolvableEntries)
     {
         _map = map;
         _allTables = allTables;
+        HasUnresolvableEntries = hasUnresolvableEntries;
     }
+
+    /// <summary>
+    /// True when the FROM clause contains at least one source whose columns cannot be
+    /// verified against the schema snapshot (CTE, derived table, temp table, table variable,
+    /// unknown table, PIVOT, table-valued function, etc.). When true, an unqualified column
+    /// that matches no resolved table may still be valid, so "column not found" conclusions
+    /// must not be drawn.
+    /// </summary>
+    public bool HasUnresolvableEntries { get; }
 
     /// <summary>
     /// Resolves an alias or table name to a <see cref="ResolvedTable"/>.
@@ -56,13 +66,14 @@ public static class AliasMapBuilder
 
         var map = new Dictionary<string, ResolvedTable?>(StringComparer.OrdinalIgnoreCase);
         var allTables = new List<ResolvedTable>();
+        var hasUnresolvableEntries = false;
 
         foreach (var tableRef in tableRefs)
         {
-            ProcessTableReference(tableRef, schema, map, allTables);
+            ProcessTableReference(tableRef, schema, map, allTables, ref hasUnresolvableEntries);
         }
 
-        return new AliasMap(map, allTables);
+        return new AliasMap(map, allTables, hasUnresolvableEntries);
     }
 
     /// <summary>
@@ -75,17 +86,18 @@ public static class AliasMapBuilder
         TableReference tableRef,
         ISchemaProvider schema,
         Dictionary<string, ResolvedTable?> map,
-        List<ResolvedTable> allTables)
+        List<ResolvedTable> allTables,
+        ref bool hasUnresolvableEntries)
     {
         switch (tableRef)
         {
             case JoinTableReference join:
-                ProcessTableReference(join.FirstTableReference, schema, map, allTables);
-                ProcessTableReference(join.SecondTableReference, schema, map, allTables);
+                ProcessTableReference(join.FirstTableReference, schema, map, allTables, ref hasUnresolvableEntries);
+                ProcessTableReference(join.SecondTableReference, schema, map, allTables, ref hasUnresolvableEntries);
                 return;
 
             case JoinParenthesisTableReference joinParenthesis when joinParenthesis.Join is not null:
-                ProcessTableReference(joinParenthesis.Join, schema, map, allTables);
+                ProcessTableReference(joinParenthesis.Join, schema, map, allTables, ref hasUnresolvableEntries);
                 return;
         }
 
@@ -95,6 +107,7 @@ public static class AliasMapBuilder
             var tableName = schemaObject.BaseIdentifier?.Value;
             if (tableName is null)
             {
+                hasUnresolvableEntries = true;
                 return;
             }
 
@@ -103,6 +116,7 @@ public static class AliasMapBuilder
             {
                 var alias = namedTable.Alias?.Value ?? tableName;
                 map.TryAdd(alias, null); // unresolvable
+                hasUnresolvableEntries = true;
                 return;
             }
 
@@ -122,6 +136,11 @@ public static class AliasMapBuilder
             {
                 allTables.Add(resolved);
             }
+            else
+            {
+                // CTE reference or table missing from the snapshot
+                hasUnresolvableEntries = true;
+            }
         }
         else
         {
@@ -131,6 +150,8 @@ public static class AliasMapBuilder
             {
                 map.TryAdd(alias, null);
             }
+
+            hasUnresolvableEntries = true;
         }
     }
 

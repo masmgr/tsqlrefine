@@ -10,6 +10,8 @@ Schemas are available under `schemas/`:
 
 - `schemas/tsqlrefine.schema.json`
 - `schemas/ruleset.schema.json`
+- `schemas/baseline.schema.json`
+- `schemas/objects-catalog.schema.json`
 
 ## Configuration File Discovery
 
@@ -35,6 +37,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 - `ruleset` (string): custom ruleset name or file path. A short name (e.g. `"my-team"`) is resolved from `.tsqlrefine/rulesets/` directories. A file path (containing `/`, `\`, or ending in `.json`) is resolved relative to the working directory or as an absolute path. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection. Paths can be relative (resolved from config file directory) or filename-only (searched in config dir, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`).
 - `rules` (object): per-rule severity overrides (optional). See [Per-Rule Configuration](#per-rule-configuration).
+- `baseline` (string): diagnostic baseline path (optional). Relative paths are resolved from the directory containing `tsqlrefine.json`; `--baseline` takes precedence.
 
 > **Note**: If both `preset` and `ruleset` are specified in the config file, `preset` takes precedence. CLI options (`--preset` or `--ruleset`) always override config-level settings.
 
@@ -44,6 +47,7 @@ Example:
 {
   "compatLevel": 150,
   "preset": "recommended",
+  "baseline": "baseline.json",
   "plugins": [
     { "path": "plugins/custom-rules.dll", "enabled": true }
   ],
@@ -64,6 +68,22 @@ Example:
   }
 }
 ```
+
+### Diagnostic Baseline
+
+Use a baseline to suppress existing diagnostics while continuing to fail lint for newly introduced
+diagnostics:
+
+```powershell
+tsqlrefine baseline create --output .tsqlrefine/baseline.json src
+tsqlrefine lint --baseline .tsqlrefine/baseline.json src
+tsqlrefine baseline trim --baseline .tsqlrefine/baseline.json src
+```
+
+Setting `"baseline": "baseline.json"` in `.tsqlrefine/tsqlrefine.json` applies the same file without
+requiring the CLI option. Baseline paths stored inside the baseline are relative to its recorded root,
+so the file can be shared across machines. Parse errors and parser exceptions are never suppressed.
+See [CLI Specification](cli.md#baseline-create) for creation and trimming behavior.
 
 ### Formatting Configuration
 
@@ -200,11 +220,11 @@ tsqlrefine includes built-in preset rulesets:
 
 | Preset | Rules | Description |
 |--------|-------|-------------|
-| `recommended` | 87 | Balanced production use with semantic analysis (default) |
-| `strict` | 130 | Maximum enforcement including all style/cosmetic rules |
-| `strict-logic` | 107 | Comprehensive correctness and semantic analysis without cosmetic style rules |
-| `pragmatic` | 43 | Production-ready minimum focusing on safety and critical issues |
-| `security-only` | 14 | Security vulnerabilities and critical safety only |
+| `recommended` | 112 | Balanced production use with semantic analysis (default) |
+| `strict` | 169 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic` | 146 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `pragmatic` | 52 | Production-ready minimum focusing on safety and critical issues |
+| `security-only` | 17 | Security vulnerabilities and critical safety only |
 
 Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:
 
@@ -235,9 +255,40 @@ Rules are organized into five importance tiers (Critical, Essential, Recommended
 - Use `strict` for maximum enforcement when you want both logic and style consistency
 - Use `security-only` for security-focused code review or CI gates
 
+## Schema and Object Catalog Configuration
+
+Schema-aware inputs are configured independently. A unified directory is convenient when
+using `schema build`:
+
+```json
+{
+  "schema": {
+    "path": ".tsqlrefine/schema",
+    "defaultSchema": "dbo"
+  }
+}
+```
+
+This derives `schema.json`, `relations.json`, and `objects.json` from the directory. Explicit
+paths override the corresponding derived path:
+
+```json
+{
+  "schema": {
+    "snapshotPath": "artifacts/schema.json",
+    "relationsProfilePath": "artifacts/relations.json",
+    "objectsCatalogPath": "artifacts/objects.json"
+  }
+}
+```
+
+The object catalog is loaded independently, so cross-object rules can run without a database
+snapshot. Relative paths are resolved from the configuration file directory.
+
 ## Per-Rule Configuration
 
-The `rules` property in `tsqlrefine.json` lets you override individual rule severity on top of the selected preset or ruleset.
+The `rules` property in `tsqlrefine.json` lets you override individual rule severity and configure
+options declared by a rule. The existing severity-string form remains supported.
 
 ```json
 {
@@ -259,6 +310,27 @@ Keys are rule IDs (both built-in and plugin). Values are severity levels: `"erro
 | `"info"` | Enable with Information severity |
 | `"inherit"` | Enable with the rule's default severity |
 | `"none"` | Disable the rule |
+
+Rules with declared options also accept an object form:
+
+```json
+{
+  "rules": {
+    "max-cyclomatic-complexity": {
+      "severity": "warning",
+      "options": { "max": 20 }
+    },
+    "unreferenced-object": {
+      "severity": "info",
+      "options": { "entrypoints": "dbo.PublicApi,dbo.NightlyJob" }
+    }
+  }
+}
+```
+
+Option values are typed as Boolean, 32-bit integer, or string values. Specifying options for a rule
+that does not declare them, an unknown option name, a mismatched type, or a value outside the
+declared range is a configuration error. Each rule's documentation lists its supported options.
 
 ### Plugin rules
 

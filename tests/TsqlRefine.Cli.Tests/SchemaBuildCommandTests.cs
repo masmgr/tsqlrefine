@@ -3,21 +3,37 @@ namespace TsqlRefine.Cli.Tests;
 /// <summary>
 /// Tests for the 'schema build' CLI command argument validation.
 /// </summary>
+[Collection("DirectoryChanging")]
 public sealed class SchemaBuildCommandTests
 {
     [Fact]
     public async Task SchemaBuild_MissingConnectionString_ReturnsConfigError()
     {
-        var stdin = new StringReader(string.Empty);
-        var stdout = new StringWriter();
-        var stderr = new StringWriter();
+        var originalValue = Environment.GetEnvironmentVariable(
+            CliParser.ConnectionStringEnvironmentVariable);
 
-        var code = await CliApp.RunAsync(
-            ["schema", "build", "--output-dir", "some/dir"],
-            stdin, stdout, stderr);
+        try
+        {
+            Environment.SetEnvironmentVariable(
+                CliParser.ConnectionStringEnvironmentVariable,
+                null);
+            var stdin = new StringReader(string.Empty);
+            var stdout = new StringWriter();
+            var stderr = new StringWriter();
 
-        Assert.Equal(ExitCodes.ConfigError, code);
-        Assert.Contains("--connection-string", stderr.ToString());
+            var code = await CliApp.RunAsync(
+                ["schema", "build", "--output-dir", "some/dir"],
+                stdin, stdout, stderr);
+
+            Assert.Equal(ExitCodes.ConfigError, code);
+            Assert.Contains("--connection-string", stderr.ToString());
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(
+                CliParser.ConnectionStringEnvironmentVariable,
+                originalValue);
+        }
     }
 
     [Fact]

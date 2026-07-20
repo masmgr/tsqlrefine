@@ -82,9 +82,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-index-definition", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-index-definition": "none"
+  }
 }
 ```
 

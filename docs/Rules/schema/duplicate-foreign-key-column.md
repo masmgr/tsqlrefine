@@ -52,9 +52,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-foreign-key-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-foreign-key-column": "none"
+  }
 }
 ```
 

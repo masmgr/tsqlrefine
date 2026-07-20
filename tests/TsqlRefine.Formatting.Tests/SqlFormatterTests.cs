@@ -428,6 +428,17 @@ WHERE u.status IN (
         Assert.DoesNotContain("\n", result);
     }
 
+    [Fact]
+    public void Format_StandaloneCrInsideStringLiteral_IsPreserved()
+    {
+        var sql = "SELECT 'a\rb'";
+        var options = new FormattingOptions { InsertFinalNewline = false };
+
+        var result = SqlFormatter.Format(sql, options);
+
+        Assert.Contains("'a\rb'", result);
+    }
+
     #endregion
 
     [Fact]

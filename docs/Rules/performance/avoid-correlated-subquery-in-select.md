@@ -85,9 +85,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-correlated-subquery-in-select", "enabled": false }
-  ]
+  "rules": {
+    "avoid-correlated-subquery-in-select": "none"
+  }
 }
 ```
 

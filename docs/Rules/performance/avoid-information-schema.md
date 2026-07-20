@@ -143,9 +143,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-information-schema", "enabled": false }
-  ]
+  "rules": {
+    "avoid-information-schema": "none"
+  }
 }
 ```
 

@@ -126,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-full-text-search", "enabled": false }
-  ]
+  "rules": {
+    "avoid-full-text-search": "none"
+  }
 }
 ```
 

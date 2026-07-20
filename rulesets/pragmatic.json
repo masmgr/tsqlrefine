@@ -1,6 +1,10 @@
 {
   "rules": [
+    { "id": "transaction-not-closed-on-path" },
+    { "id": "exec-parameter-count-mismatch" },
+    { "id": "exec-parameter-name-mismatch" },
     { "id": "dml-without-where" },
+    { "id": "require-semicolon-before-throw" },
     { "id": "top-without-order-by" },
     { "id": "avoid-merge" },
     { "id": "cross-database-transaction" },
@@ -21,6 +25,8 @@
     { "id": "order-by-in-subquery" },
     { "id": "avoid-named-constraint-in-temp-table" },
     { "id": "avoid-exec-dynamic-sql" },
+    { "id": "dynamic-sql-taint" },
+    { "id": "avoid-hardcoded-password" },
     { "id": "avoid-dangerous-procedures" },
     { "id": "avoid-openrowset-opendatasource" },
     { "id": "avoid-execute-as" },

@@ -17,6 +17,42 @@ public static class ScriptDomHelpers
         tableName is not null && tableName.StartsWith('#');
 
     /// <summary>
+    /// Converts a ScriptDom parser token's 1-based start location to a 0-based position.
+    /// </summary>
+    /// <param name="token">The parser token.</param>
+    /// <returns>The 0-based start position of the token.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when token is null.</exception>
+    public static Position GetTokenStartPosition(TSqlParserToken token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+
+        return new Position(token.Line - 1, token.Column - 1);
+    }
+
+    /// <summary>
+    /// Computes the 0-based end position of a ScriptDom parser token,
+    /// accounting for multi-line tokens such as block comments and string literals.
+    /// </summary>
+    /// <param name="token">The parser token.</param>
+    /// <returns>The 0-based position immediately after the token.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when token is null.</exception>
+    public static Position GetTokenEndPosition(TSqlParserToken token)
+    {
+        ArgumentNullException.ThrowIfNull(token);
+
+        return TextPositionHelpers.AdvancePosition(GetTokenStartPosition(token), token.Text);
+    }
+
+    /// <summary>
+    /// Returns the range covered by a single ScriptDom parser token.
+    /// </summary>
+    /// <param name="token">The parser token.</param>
+    /// <returns>A Range covering exactly this token.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when token is null.</exception>
+    public static TsqlRefine.PluginSdk.Range GetTokenRange(TSqlParserToken token) =>
+        new(GetTokenStartPosition(token), GetTokenEndPosition(token));
+
+    /// <summary>
     /// Returns a range covering only the first token of the fragment.
     /// Useful for narrowing diagnostics to the statement keyword (e.g. UPDATE, DELETE, MERGE).
     /// </summary>
@@ -31,11 +67,7 @@ public static class ScriptDomHelpers
             fragment.FirstTokenIndex >= 0 &&
             fragment.FirstTokenIndex < fragment.ScriptTokenStream.Count)
         {
-            var firstToken = fragment.ScriptTokenStream[fragment.FirstTokenIndex];
-            var tokenText = firstToken.Text ?? string.Empty;
-            var start = new Position(firstToken.Line - 1, firstToken.Column - 1);
-            var end = new Position(firstToken.Line - 1, firstToken.Column - 1 + tokenText.Length);
-            return new TsqlRefine.PluginSdk.Range(start, end);
+            return GetTokenRange(fragment.ScriptTokenStream[fragment.FirstTokenIndex]);
         }
 
         return GetRange(fragment);
@@ -60,9 +92,8 @@ public static class ScriptDomHelpers
                 var token = fragment.ScriptTokenStream[i];
                 if (token.TokenType == tokenType)
                 {
-                    var text = token.Text ?? string.Empty;
-                    var start = new Position(token.Line - 1, token.Column - 1);
-                    var end = new Position(token.Line - 1, token.Column - 1 + text.Length);
+                    var start = GetTokenStartPosition(token);
+                    var end = GetTokenEndPosition(token);
                     return new TsqlRefine.PluginSdk.Range(start, end);
                 }
             }
@@ -129,11 +160,8 @@ public static class ScriptDomHelpers
             }
         }
 
-        var startToken = tokens[startIndex];
-        var endToken = tokens[inIndex];
-        var endText = endToken.Text ?? string.Empty;
-        var start = new Position(startToken.Line - 1, startToken.Column - 1);
-        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        var start = GetTokenStartPosition(tokens[startIndex]);
+        var end = GetTokenEndPosition(tokens[inIndex]);
         return new TsqlRefine.PluginSdk.Range(start, end);
     }
 
@@ -195,11 +223,8 @@ public static class ScriptDomHelpers
             return GetFirstTokenRange(node);
         }
 
-        var startToken = tokens[beginIndex];
-        var endToken = tokens[catchIndex];
-        var endText = endToken.Text ?? string.Empty;
-        var start = new Position(startToken.Line - 1, startToken.Column - 1);
-        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        var start = GetTokenStartPosition(tokens[beginIndex]);
+        var end = GetTokenEndPosition(tokens[catchIndex]);
         return new TsqlRefine.PluginSdk.Range(start, end);
     }
 
@@ -250,11 +275,8 @@ public static class ScriptDomHelpers
             return GetFirstTokenRange(fragment);
         }
 
-        var startToken = tokens[firstIndex];
-        var endToken = tokens[secondIndex];
-        var endText = endToken.Text ?? string.Empty;
-        var start = new Position(startToken.Line - 1, startToken.Column - 1);
-        var end = new Position(endToken.Line - 1, endToken.Column - 1 + endText.Length);
+        var start = GetTokenStartPosition(tokens[firstIndex]);
+        var end = GetTokenEndPosition(tokens[secondIndex]);
         return new TsqlRefine.PluginSdk.Range(start, end);
     }
 
@@ -277,12 +299,7 @@ public static class ScriptDomHelpers
             fragment.LastTokenIndex >= 0 &&
             fragment.LastTokenIndex < fragment.ScriptTokenStream.Count)
         {
-            var lastToken = fragment.ScriptTokenStream[fragment.LastTokenIndex];
-            var tokenText = lastToken.Text ?? string.Empty;
-            end = new Position(
-                lastToken.Line - 1,
-                lastToken.Column - 1 + tokenText.Length
-            );
+            end = GetTokenEndPosition(fragment.ScriptTokenStream[fragment.LastTokenIndex]);
         }
 
         return new TsqlRefine.PluginSdk.Range(start, end);

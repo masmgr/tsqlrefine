@@ -7,11 +7,11 @@
 
 ## Description
 
-Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead.
+Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types and recommends modern replacements.
 
 ## Rationale
 
-`TEXT`, `NTEXT`, and `IMAGE` data types have been deprecated since SQL Server 2005. They have several limitations compared to their modern replacements:
+`TEXT`, `NTEXT`, and `IMAGE` data types have been deprecated since SQL Server 2005. `TIMESTAMP` is a deprecated synonym for `ROWVERSION` and does not represent a date or time. These types have limitations or misleading names compared to their modern replacements:
 
 - Cannot be used as local variables
 - Cannot be used with most string functions
@@ -25,6 +25,7 @@ Modern replacements provide the same storage capacity with full T-SQL expression
 | TEXT | VARCHAR(MAX) |
 | NTEXT | NVARCHAR(MAX) |
 | IMAGE | VARBINARY(MAX) |
+| TIMESTAMP | ROWVERSION |
 
 ## Examples
 
@@ -34,7 +35,8 @@ Modern replacements provide the same storage capacity with full T-SQL expression
 CREATE TABLE dbo.Documents (
     Content TEXT NOT NULL,
     Notes NTEXT NULL,
-    Photo IMAGE NULL
+    Photo IMAGE NULL,
+    Version TIMESTAMP NOT NULL
 );
 
 DECLARE @notes NTEXT;
@@ -46,7 +48,8 @@ DECLARE @notes NTEXT;
 CREATE TABLE dbo.Documents (
     Content VARCHAR(MAX) NOT NULL,
     Notes NVARCHAR(MAX) NULL,
-    Photo VARBINARY(MAX) NULL
+    Photo VARBINARY(MAX) NULL,
+    Version ROWVERSION NOT NULL
 );
 
 DECLARE @notes NVARCHAR(MAX);
@@ -58,9 +61,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-deprecated-types", "enabled": false }
-  ]
+  "rules": {
+    "avoid-deprecated-types": "none"
+  }
 }
 ```
 

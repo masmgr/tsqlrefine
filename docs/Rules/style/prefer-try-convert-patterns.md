@@ -136,9 +136,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-try-convert-patterns", "enabled": false }
-  ]
+  "rules": {
+    "prefer-try-convert-patterns": "none"
+  }
 }
 ```
 

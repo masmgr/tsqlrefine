@@ -81,6 +81,18 @@ SELECT * FROM t WHERE x = 1 OR y = 2 AND z = 3;";
     }
 
     [Fact]
+    public void Analyze_MixedOperatorOnBothChildren_ReturnsSingleNarrowDiagnostic()
+    {
+        var rule = new RequireParenthesesForMixedAndOrRule();
+        const string sql = "SELECT * FROM t WHERE a = 1 AND b = 2 OR c = 3 AND d = 4;";
+
+        var diagnostic = Assert.Single(rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Equal(sql.IndexOf("a = 1", StringComparison.Ordinal), diagnostic.Range.Start.Character);
+        Assert.True(diagnostic.Range.End.Character < sql.Length);
+    }
+
+    [Fact]
     public void Analyze_NestedParentheses_RespectsParenthesisBoundaries()
     {
         var rule = new RequireParenthesesForMixedAndOrRule();

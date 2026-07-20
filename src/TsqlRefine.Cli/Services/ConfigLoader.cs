@@ -5,6 +5,7 @@ using TsqlRefine.Core.Config;
 using TsqlRefine.PluginHost;
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules;
+using TsqlRefine.Schema.Catalog;
 using TsqlRefine.Schema.Resolution;
 using TsqlRefine.Schema.Snapshot;
 
@@ -13,6 +14,7 @@ namespace TsqlRefine.Cli.Services;
 /// <summary>
 /// Loads and merges configuration from files, CLI arguments, and presets.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing configuration loading service; tracked as coupling baseline debt.")]
 public sealed class ConfigLoader
 {
     private const string ConfigDirName = ".tsqlrefine";
@@ -176,6 +178,80 @@ public sealed class ConfigLoader
         return withPlugins;
     }
 
+    /// <summary>Validates configured options and creates typed settings for each rule.</summary>
+    public static IReadOnlyDictionary<string, RuleSettings> LoadRuleSettings(
+        TsqlRefineConfig config,
+        IReadOnlyList<IRule> allRules)
+    {
+        var result = new Dictionary<string, RuleSettings>(StringComparer.OrdinalIgnoreCase);
+        if (config.Rules is null)
+        {
+            return result;
+        }
+
+        foreach (var (ruleId, ruleConfig) in config.Rules)
+        {
+            if (ruleConfig.Options is not { Count: > 0 })
+            {
+                continue;
+            }
+
+            var rule = allRules.FirstOrDefault(candidate =>
+                string.Equals(candidate.Metadata.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+            if (rule is null)
+            {
+                throw new ConfigException($"Options are configured for unknown rule '{ruleId}'.");
+            }
+            if (rule is not IRuleOptionsDescriptorProvider descriptorProvider)
+            {
+                throw new ConfigException($"Rule '{ruleId}' does not accept options.");
+            }
+
+            var descriptors = descriptorProvider.OptionDescriptors.ToDictionary(
+                descriptor => descriptor.Name,
+                StringComparer.OrdinalIgnoreCase);
+            foreach (var (optionName, value) in ruleConfig.Options)
+            {
+                if (!descriptors.TryGetValue(optionName, out var descriptor))
+                {
+                    throw new ConfigException($"Unknown option '{optionName}' for rule '{ruleId}'.");
+                }
+                ValidateRuleOption(ruleId, optionName, value, descriptor);
+            }
+            result[ruleId] = new RuleSettings(new RuleOptions(ruleConfig.Options));
+        }
+        return result;
+    }
+
+    private static void ValidateRuleOption(
+        string ruleId,
+        string optionName,
+        RuleOptionValue value,
+        RuleOptionDescriptor descriptor)
+    {
+        var expectedKind = descriptor.Type switch
+        {
+            RuleOptionType.Flag => RuleOptionValueKind.Flag,
+            RuleOptionType.Number => RuleOptionValueKind.Number,
+            RuleOptionType.Text => RuleOptionValueKind.Text,
+            _ => throw new ConfigException($"Unsupported descriptor type for '{ruleId}.{optionName}'.")
+        };
+        if (value.Kind != expectedKind)
+        {
+            throw new ConfigException(
+                $"Option '{optionName}' for rule '{ruleId}' must be {descriptor.Type}.");
+        }
+        if (value.Kind == RuleOptionValueKind.Number &&
+            ((descriptor.MinimumInt32 is { } minimum && value.Int32Value < minimum) ||
+             (descriptor.MaximumInt32 is { } maximum && value.Int32Value > maximum)))
+        {
+            throw new ConfigException(
+                $"Option '{optionName}' for rule '{ruleId}' is outside the allowed range " +
+                $"{descriptor.MinimumInt32?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unbounded"}.." +
+                $"{descriptor.MaximumInt32?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "unbounded"}.");
+        }
+    }
+
     private static Ruleset ResolveBaseRuleset(CliArgs args, TsqlRefineConfig config)
     {
         // CLI --preset always wins (already mutually exclusive with --ruleset via ValidateOptions)
@@ -336,8 +412,9 @@ public sealed class ConfigLoader
             : Directory.GetCurrentDirectory();
 
         var plugins = ResolvePluginDescriptors(pluginConfigs, baseDirectory);
+        var pluginSearchDirectories = GetPluginSearchDirectories(baseDirectory);
 
-        var loaded = PluginLoader.Load(plugins, baseDirectory);
+        var loaded = PluginLoader.Load(plugins, baseDirectory, pluginSearchDirectories);
         try
         {
             if (stderr is not null)
@@ -541,6 +618,54 @@ public sealed class ConfigLoader
         return descriptors;
     }
 
+    /// <summary>
+    /// Resolves the effective baseline path. Command-line paths are relative to the current directory;
+    /// configuration paths are relative to the configuration file.
+    /// </summary>
+    public static string? ResolveBaselinePath(CliArgs args, TsqlRefineConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(args.BaselinePath))
+        {
+            return Path.GetFullPath(args.BaselinePath);
+        }
+
+        if (string.IsNullOrWhiteSpace(config.Baseline))
+        {
+            return null;
+        }
+
+        var configPath = GetConfigPath(args);
+        var baseDirectory = configPath is null
+            ? Directory.GetCurrentDirectory()
+            : Path.GetDirectoryName(configPath)!;
+        return Path.GetFullPath(config.Baseline, baseDirectory);
+    }
+
+    /// <summary>
+    /// Returns the trusted directories used for filename-only plugin resolution.
+    /// </summary>
+    internal static IReadOnlyList<string> GetPluginSearchDirectories(
+        string baseDirectory,
+        string? cwd = null,
+        string? homePath = null)
+    {
+        cwd ??= Directory.GetCurrentDirectory();
+        homePath ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+        var directories = new List<string>
+        {
+            Path.GetFullPath(baseDirectory),
+            Path.GetFullPath(Path.Combine(cwd, ConfigDirName, "plugins"))
+        };
+
+        if (!string.IsNullOrEmpty(homePath))
+        {
+            directories.Add(Path.GetFullPath(Path.Combine(homePath, ConfigDirName, "plugins")));
+        }
+
+        return directories;
+    }
+
     private static bool IsFilenameOnly(string path)
         => Path.GetFileName(path) == path;
 
@@ -594,6 +719,10 @@ public sealed class ConfigLoader
 
         if (!File.Exists(snapshotPath))
         {
+            if (schemaSource == "config (schema.path)")
+            {
+                return null;
+            }
             throw new ConfigException($"Schema snapshot file not found: {snapshotPath}");
         }
 
@@ -737,6 +866,85 @@ public sealed class ConfigLoader
                 ? config.Schema.Path
                 : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
             return (Path.Combine(schemaDir, "relations.json"), "config (schema.path)");
+        }
+
+        return (null, "none");
+    }
+
+    /// <summary>
+    /// Loads the independently configured object catalog, if available.
+    /// </summary>
+    public static IObjectCatalogProvider? LoadObjectCatalog(
+        CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    {
+        var (catalogPath, source) = ResolveObjectCatalogPath(args, config);
+        if (catalogPath is null)
+        {
+            return null;
+        }
+
+        if (!File.Exists(catalogPath))
+        {
+            if (source == "config (schema.path)")
+            {
+                return null;
+            }
+            throw new ConfigException($"Object catalog file not found: {catalogPath}");
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(catalogPath);
+            var catalog = ObjectCatalogSerializer.Deserialize(stream);
+            var provider = new ObjectCatalogProvider(catalog);
+            if (stderr is not null && !args.Quiet)
+            {
+                stderr.WriteLine(
+                    $"Object catalog loaded: {catalog.Objects.Count} objects, "
+                    + $"{catalog.References.Count} references [from {source}]");
+            }
+            return provider;
+        }
+        catch (JsonException ex)
+        {
+            throw new ConfigException($"Failed to parse object catalog: {ex.Message}");
+        }
+        catch (IOException ex)
+        {
+            throw new ConfigException($"Failed to read object catalog: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Resolves the object catalog path independently from the schema snapshot path.
+    /// </summary>
+    internal static (string? Path, string Source) ResolveObjectCatalogPath(
+        CliArgs args, TsqlRefineConfig config)
+    {
+        if (!string.IsNullOrWhiteSpace(args.ObjectsCatalogPath))
+        {
+            return (Path.GetFullPath(args.ObjectsCatalogPath), "--objects-catalog");
+        }
+
+        var configPath = ResolveConfigPath(args);
+        var configDir = configPath is null
+            ? Directory.GetCurrentDirectory()
+            : Path.GetDirectoryName(Path.GetFullPath(configPath))!;
+
+        if (!string.IsNullOrWhiteSpace(config.Schema?.ObjectsCatalogPath))
+        {
+            var resolved = Path.IsPathRooted(config.Schema.ObjectsCatalogPath)
+                ? config.Schema.ObjectsCatalogPath
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.ObjectsCatalogPath));
+            return (resolved, "config");
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.Schema?.Path))
+        {
+            var schemaDir = Path.IsPathRooted(config.Schema.Path)
+                ? config.Schema.Path
+                : Path.GetFullPath(Path.Combine(configDir, config.Schema.Path));
+            return (Path.Combine(schemaDir, "objects.json"), "config (schema.path)");
         }
 
         return (null, "none");

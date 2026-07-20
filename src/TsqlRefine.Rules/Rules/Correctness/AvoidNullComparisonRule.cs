@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
 
@@ -10,6 +11,7 @@ public sealed class AvoidNullComparisonRule : DiagnosticVisitorRuleBase
 {
     private const string RuleId = "avoid-null-comparison";
     private const string Category = "Correctness";
+    private static readonly ConditionalWeakTable<TSqlFragment, Issue[]> s_issueCache = new();
 
     public override RuleMetadata Metadata { get; } = new(
         RuleId: RuleId,
@@ -37,6 +39,11 @@ public sealed class AvoidNullComparisonRule : DiagnosticVisitorRuleBase
             return [];
         }
 
+        if (ContainsComment(issue.ComparisonExpression))
+        {
+            return [];
+        }
+
         var rawSql = context.Ast.RawSql;
         var nonNullExpr = issue.NonNullExpression;
         if (nonNullExpr is NullLiteral)
@@ -54,18 +61,44 @@ public sealed class AvoidNullComparisonRule : DiagnosticVisitorRuleBase
         return [RuleHelpers.CreateReplaceFix("Replace with IS [NOT] NULL", diagnostic.Range, replacement)];
     }
 
-    private sealed record Issue(Diagnostic Diagnostic, TSqlFragment NonNullExpression, bool IsEquals);
+    private sealed record Issue(
+        Diagnostic Diagnostic,
+        TSqlFragment ComparisonExpression,
+        TSqlFragment NonNullExpression,
+        bool IsEquals);
 
-    private static IReadOnlyList<Issue> FindIssues(RuleContext context)
+    private static bool ContainsComment(TSqlFragment fragment)
+    {
+        var tokens = fragment.ScriptTokenStream;
+        if (tokens is null || fragment.FirstTokenIndex < 0 || fragment.LastTokenIndex >= tokens.Count)
+        {
+            return false;
+        }
+
+        for (var i = fragment.FirstTokenIndex; i <= fragment.LastTokenIndex; i++)
+        {
+            if (tokens[i].TokenType is TSqlTokenType.SingleLineComment or TSqlTokenType.MultilineComment)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static Issue[] FindIssues(RuleContext context)
     {
         if (context.Ast.Fragment is null)
         {
             return [];
         }
 
-        var visitor = new AvoidNullComparisonVisitor();
-        context.Ast.Fragment.Accept(visitor);
-        return visitor.Issues;
+        return s_issueCache.GetValue(context.Ast.Fragment, static fragment =>
+        {
+            var visitor = new AvoidNullComparisonVisitor();
+            fragment.Accept(visitor);
+            return visitor.Issues.ToArray();
+        });
     }
 
     private sealed class AvoidNullComparisonVisitor : DiagnosticVisitorBase
@@ -114,6 +147,7 @@ public sealed class AvoidNullComparisonRule : DiagnosticVisitorRuleBase
 
                     _issues.Add(new Issue(
                         Diagnostic: Diagnostics[^1],
+                        ComparisonExpression: node,
                         NonNullExpression: nonNullExpression,
                         IsEquals: isEquals));
                 }

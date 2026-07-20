@@ -1,0 +1,292 @@
+[
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-ansi",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_NULLS ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-ansi-padding",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_PADDING ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-ansi-warnings",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_WARNINGS ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-arithabort",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ARITHABORT ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-concat-null-yields-null",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET CONCAT_NULL_YIELDS_NULL ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-nocount",
+    "Severity": "Information",
+    "Message": "File should start with \u0027SET NOCOUNT ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-quoted-identifier",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET QUOTED_IDENTIFIER ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "set-transaction-isolation-level",
+    "Severity": "Information",
+    "Message": "File should start with \u0027SET TRANSACTION ISOLATION LEVEL\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-data-compression",
+    "Severity": "Information",
+    "Message": "CREATE TABLE statement missing DATA_COMPRESSION option. Consider specifying ROW, PAGE, or NONE for optimal storage.",
+    "StartLine": 0,
+    "StartCharacter": 17,
+    "EndLine": 0,
+    "EndCharacter": 25
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Table \u0027Customer\u0027 should have an MS_Description extended property to document its purpose.",
+    "StartLine": 0,
+    "StartCharacter": 17,
+    "EndLine": 0,
+    "EndCharacter": 25
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027CustomerId\u0027 in table \u0027Customer\u0027 should have an MS_Description extended property.",
+    "StartLine": 2,
+    "StartCharacter": 4,
+    "EndLine": 2,
+    "EndCharacter": 14
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027DisplayName\u0027 in table \u0027Customer\u0027 should have an MS_Description extended property.",
+    "StartLine": 3,
+    "StartCharacter": 4,
+    "EndLine": 3,
+    "EndCharacter": 15
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027CreatedAt\u0027 in table \u0027Customer\u0027 should have an MS_Description extended property.",
+    "StartLine": 4,
+    "StartCharacter": 4,
+    "EndLine": 4,
+    "EndCharacter": 13
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-data-compression",
+    "Severity": "Information",
+    "Message": "CREATE TABLE statement missing DATA_COMPRESSION option. Consider specifying ROW, PAGE, or NONE for optimal storage.",
+    "StartLine": 8,
+    "StartCharacter": 17,
+    "EndLine": 8,
+    "EndCharacter": 27
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Table \u0027SalesOrder\u0027 should have an MS_Description extended property to document its purpose.",
+    "StartLine": 8,
+    "StartCharacter": 17,
+    "EndLine": 8,
+    "EndCharacter": 27
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027SalesOrderId\u0027 in table \u0027SalesOrder\u0027 should have an MS_Description extended property.",
+    "StartLine": 10,
+    "StartCharacter": 4,
+    "EndLine": 10,
+    "EndCharacter": 16
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027CustomerId\u0027 in table \u0027SalesOrder\u0027 should have an MS_Description extended property.",
+    "StartLine": 11,
+    "StartCharacter": 4,
+    "EndLine": 11,
+    "EndCharacter": 14
+  },
+  {
+    "Path": "sql/project/classic-schema-and-query.sql",
+    "RuleId": "require-table-description",
+    "Severity": "Information",
+    "Message": "Column \u0027TotalAmount\u0027 in table \u0027SalesOrder\u0027 should have an MS_Description extended property.",
+    "StartLine": 12,
+    "StartCharacter": 4,
+    "EndLine": 12,
+    "EndCharacter": 15
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-ansi",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_NULLS ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-ansi-padding",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_PADDING ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-ansi-warnings",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ANSI_WARNINGS ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-arithabort",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET ARITHABORT ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-concat-null-yields-null",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET CONCAT_NULL_YIELDS_NULL ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-nocount",
+    "Severity": "Information",
+    "Message": "File should start with \u0027SET NOCOUNT ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-quoted-identifier",
+    "Severity": "Warning",
+    "Message": "File should start with \u0027SET QUOTED_IDENTIFIER ON\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "set-transaction-isolation-level",
+    "Severity": "Information",
+    "Message": "File should start with \u0027SET TRANSACTION ISOLATION LEVEL\u0027 within the first 10 statements.",
+    "StartLine": 0,
+    "StartCharacter": 0,
+    "EndLine": 0,
+    "EndCharacter": 0
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "prefer-unicode-string-literals",
+    "Severity": "Information",
+    "Message": "Prefer Unicode string literals (N\u0027...\u0027) to avoid encoding and collation issues.",
+    "StartLine": 3,
+    "StartCharacter": 24,
+    "EndLine": 3,
+    "EndCharacter": 34
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "prefer-unicode-string-literals",
+    "Severity": "Information",
+    "Message": "Prefer Unicode string literals (N\u0027...\u0027) to avoid encoding and collation issues.",
+    "StartLine": 6,
+    "StartCharacter": 16,
+    "EndLine": 6,
+    "EndCharacter": 22
+  },
+  {
+    "Path": "sql/project/modern-features.sql",
+    "RuleId": "prefer-unicode-string-literals",
+    "Severity": "Information",
+    "Message": "Prefer Unicode string literals (N\u0027...\u0027) to avoid encoding and collation issues.",
+    "StartLine": 7,
+    "StartCharacter": 26,
+    "EndLine": 7,
+    "EndCharacter": 36
+  }
+]

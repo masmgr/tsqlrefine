@@ -69,6 +69,7 @@ public sealed class PreferUnicodeStringLiteralsRule : IRule
         return visitor.Issues;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing type-aware ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class PreferUnicodeStringLiteralsVisitor : TSqlFragmentVisitor
     {
         private readonly IReadOnlyList<Token> _tokens;

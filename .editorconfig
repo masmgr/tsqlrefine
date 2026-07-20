@@ -37,8 +37,62 @@ dotnet_diagnostic.CA1724.severity = none
 # CA1848: Use LoggerMessage delegates
 dotnet_diagnostic.CA1848.severity = none
 
-# CA1502: Avoid excessive complexity (cyclomatic complexity > 25)
+# CA1502: Avoid excessive complexity (threshold configured in CodeMetricsConfig.txt)
 dotnet_diagnostic.CA1502.severity = warning
+
+# CA1505: Avoid unmaintainable code (threshold configured in CodeMetricsConfig.txt)
+dotnet_diagnostic.CA1505.severity = warning
+
+# CA1506: Avoid excessive class coupling (threshold configured in CodeMetricsConfig.txt)
+dotnet_diagnostic.CA1506.severity = warning
+
+# Third-party analyzers are introduced in observation mode. Promote individual
+# rules only after their findings have been reviewed and baselined.
+dotnet_diagnostic.MA0002.severity = suggestion
+dotnet_diagnostic.MA0004.severity = suggestion
+dotnet_diagnostic.MA0006.severity = suggestion
+dotnet_diagnostic.MA0008.severity = suggestion
+dotnet_diagnostic.MA0009.severity = suggestion
+dotnet_diagnostic.MA0011.severity = suggestion
+dotnet_diagnostic.MA0015.severity = suggestion
+dotnet_diagnostic.MA0016.severity = suggestion
+dotnet_diagnostic.MA0023.severity = suggestion
+dotnet_diagnostic.MA0048.severity = suggestion
+dotnet_diagnostic.MA0051.severity = suggestion
+dotnet_diagnostic.MA0074.severity = suggestion
+dotnet_diagnostic.MA0099.severity = suggestion
+dotnet_diagnostic.MA0144.severity = suggestion
+dotnet_diagnostic.S127.severity = suggestion
+dotnet_diagnostic.S927.severity = suggestion
+dotnet_diagnostic.S1066.severity = suggestion
+dotnet_diagnostic.S1075.severity = suggestion
+dotnet_diagnostic.S1118.severity = suggestion
+dotnet_diagnostic.S1172.severity = suggestion
+dotnet_diagnostic.S1185.severity = suggestion
+dotnet_diagnostic.S1450.severity = suggestion
+dotnet_diagnostic.S1481.severity = suggestion
+dotnet_diagnostic.S1854.severity = suggestion
+dotnet_diagnostic.S2234.severity = suggestion
+dotnet_diagnostic.S2699.severity = suggestion
+dotnet_diagnostic.S2933.severity = suggestion
+dotnet_diagnostic.S3218.severity = suggestion
+dotnet_diagnostic.S3260.severity = suggestion
+dotnet_diagnostic.S3267.severity = suggestion
+dotnet_diagnostic.S3358.severity = suggestion
+dotnet_diagnostic.S3398.severity = suggestion
+dotnet_diagnostic.S3626.severity = suggestion
+dotnet_diagnostic.S3776.severity = suggestion
+dotnet_diagnostic.S3981.severity = suggestion
+dotnet_diagnostic.S4036.severity = suggestion
+dotnet_diagnostic.S4136.severity = suggestion
+dotnet_diagnostic.S4144.severity = suggestion
+dotnet_diagnostic.S4201.severity = suggestion
+dotnet_diagnostic.S4456.severity = suggestion
+dotnet_diagnostic.S4487.severity = suggestion
+dotnet_diagnostic.S6444.severity = suggestion
+dotnet_diagnostic.S6608.severity = suggestion
+dotnet_diagnostic.S6610.severity = suggestion
+dotnet_diagnostic.S6966.severity = suggestion
 
 # CA1852: Seal internal types
 dotnet_diagnostic.CA1852.severity = warning

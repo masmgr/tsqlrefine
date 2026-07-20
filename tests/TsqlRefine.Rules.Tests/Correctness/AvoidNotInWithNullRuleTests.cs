@@ -312,4 +312,17 @@ public sealed class AvoidNotInWithNullRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("avoid-not-in-with-null", diagnostics[0].Code);
     }
+
+    [Theory]
+    [InlineData("dbo.Blacklist AS b JOIN dbo.Customers AS c ON c.CustomerId = b.CustomerId")]
+    [InlineData("dbo.Customers AS c JOIN dbo.Blacklist AS b ON b.CustomerId = c.CustomerId")]
+    public void Analyze_AmbiguousUnqualifiedSubqueryColumn_ReturnsDiagnosticRegardlessOfTableOrder(
+        string fromClause)
+    {
+        var sql = $"SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM {fromClause});";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql, CreateSchema())).ToArray();
+
+        Assert.Single(diagnostics);
+    }
 }

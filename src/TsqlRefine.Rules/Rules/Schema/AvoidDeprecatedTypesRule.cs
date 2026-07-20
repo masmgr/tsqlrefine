@@ -5,21 +5,22 @@ using TsqlRefine.PluginSdk;
 namespace TsqlRefine.Rules.Rules.Schema;
 
 /// <summary>
-/// Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead.
+/// Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types.
 /// </summary>
 public sealed class AvoidDeprecatedTypesRule : DiagnosticVisitorRuleBase
 {
-    private static readonly FrozenDictionary<SqlDataTypeOption, string> s_deprecatedTypes =
-        new Dictionary<SqlDataTypeOption, string>
+    private static readonly FrozenDictionary<SqlDataTypeOption, (string TypeName, string Replacement)> s_deprecatedTypes =
+        new Dictionary<SqlDataTypeOption, (string TypeName, string Replacement)>
         {
-            [SqlDataTypeOption.Text] = "VARCHAR(MAX)",
-            [SqlDataTypeOption.NText] = "NVARCHAR(MAX)",
-            [SqlDataTypeOption.Image] = "VARBINARY(MAX)",
+            [SqlDataTypeOption.Text] = ("TEXT", "VARCHAR(MAX)"),
+            [SqlDataTypeOption.NText] = ("NTEXT", "NVARCHAR(MAX)"),
+            [SqlDataTypeOption.Image] = ("IMAGE", "VARBINARY(MAX)"),
+            [SqlDataTypeOption.Timestamp] = ("TIMESTAMP", "ROWVERSION"),
         }.ToFrozenDictionary();
 
     public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-deprecated-types",
-        Description: "Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead.",
+        Description: "Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types and recommends modern replacements.",
         Category: "Schema",
         DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
@@ -35,12 +36,11 @@ public sealed class AvoidDeprecatedTypesRule : DiagnosticVisitorRuleBase
     {
         public override void ExplicitVisit(SqlDataTypeReference node)
         {
-            if (s_deprecatedTypes.TryGetValue(node.SqlDataTypeOption, out var replacement))
+            if (s_deprecatedTypes.TryGetValue(node.SqlDataTypeOption, out var deprecatedType))
             {
-                var typeName = node.SqlDataTypeOption.ToString().ToUpperInvariant();
                 AddDiagnostic(
                     fragment: node,
-                    message: $"Avoid deprecated '{typeName}' data type. Use '{replacement}' instead.",
+                    message: $"Avoid deprecated '{deprecatedType.TypeName}' data type. Use '{deprecatedType.Replacement}' instead.",
                     code: "avoid-deprecated-types",
                     category: "Schema",
                     fixable: false

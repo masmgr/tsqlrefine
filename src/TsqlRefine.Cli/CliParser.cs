@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using TsqlRefine.Core.Config;
@@ -11,20 +12,22 @@ namespace TsqlRefine.Cli;
 /// </summary>
 public static class CliParser
 {
-    private static readonly HashSet<string> HelpVersionTokens = new(StringComparer.Ordinal)
-    {
+    public const string ConnectionStringEnvironmentVariable = "TSQLREFINE_CONNECTION_STRING";
+
+    private static readonly FrozenSet<string> HelpVersionTokens = FrozenSet.ToFrozenSet(
+    [
         "--help", "-h", "-?", "/?",
         "--version"
-    };
+    ], StringComparer.Ordinal);
 
-    private static readonly HashSet<string> OutputFormatCommands = new(StringComparer.Ordinal)
-    {
+    private static readonly FrozenSet<string> OutputFormatCommands = FrozenSet.ToFrozenSet(
+    [
         "lint",
         "fix",
         "list-rules",
         "list-plugins",
         "print-format-config"
-    };
+    ], StringComparer.Ordinal);
 
     // =================================================================
     // Option Definitions
@@ -66,8 +69,95 @@ public static class CliParser
         // Output options
         public static readonly Option<string?> Output = new("--output")
         {
-            Description = "Output format (text/json)",
+            Description = "Output format (text/json/sarif for lint)",
             Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ReportOutputFormat = new("--output-format")
+        {
+            Description = "Report output format (json/html)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ReportOutput = new("--output")
+        {
+            Description = "Report output file path (writes to stdout when omitted)",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeCatalog = new("--catalog")
+        {
+            Description = "Object catalog path",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeTable = new("--table")
+        {
+            Description = "Table name for impact analysis",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeColumn = new("--column")
+        {
+            Description = "Optional column name for impact analysis",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeOutput = new("--output")
+        {
+            Description = "Analysis output file path (writes to stdout when omitted)",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> AnalyzeFormat = new("--format")
+        {
+            Description = "Dependency graph format (json/dot)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> Baseline = new("--baseline")
+        {
+            Description = "Baseline JSON file path",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> ShowSuppressed = new("--show-suppressed")
+        {
+            Description = "Include baseline-suppressed diagnostics in output"
+        };
+
+        public static readonly Option<bool> ChangedOnly = new("--changed-only")
+        {
+            Description = "Report only diagnostics intersecting changed lines"
+        };
+
+        public static readonly Option<string?> BaseRef = new("--base-ref")
+        {
+            Description = "Git base reference for changed-only lint (default: origin/main)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> ChangedLinesFrom = new("--changed-lines-from")
+        {
+            Description = "Read changed line ranges from a JSON file instead of Git",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> BaselineRoot = new("--root")
+        {
+            Description = "Root directory for baseline path normalization",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<bool> RemoveMissing = new("--remove-missing")
+        {
+            Description = "Remove baseline entries for files that no longer exist"
+        };
+
+        public static readonly Option<string?> BaselineOutput = new("--output")
+        {
+            Description = "Baseline JSON output file path",
+            Arity = ArgumentArity.ExactlyOne
         };
 
         // Analysis options
@@ -190,10 +280,16 @@ public static class CliParser
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        public static readonly Option<string?> ObjectsCatalog = new("--objects-catalog")
+        {
+            Description = "Object catalog file path for cross-object analysis",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Schema snapshot options
         public static readonly Option<string?> ConnectionString = new("--connection-string")
         {
-            Description = "SQL Server connection string",
+            Description = $"SQL Server connection string (or set {ConnectionStringEnvironmentVariable})",
             Arity = ArgumentArity.ExactlyOne
         };
 
@@ -217,7 +313,7 @@ public static class CliParser
 
         public static readonly Option<string?> SchemaOutputDir = new("--output-dir")
         {
-            Description = "Output directory for schema.json and relations.json",
+            Description = "Output directory for schema.json, relations.json, and objects.json",
             Arity = ArgumentArity.ExactlyOne
         };
 
@@ -225,6 +321,24 @@ public static class CliParser
         {
             Description = "Output path for relations profile (overrides --output-dir for relations.json)",
             Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> SchemaObjectsOutput = new("--objects-output")
+        {
+            Description = "Output path for object catalog (overrides --output-dir for objects.json)",
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        public static readonly Option<string?> SchemaDiffBefore = new("--from")
+        {
+            Description = "Baseline schema snapshot path",
+            Arity = ArgumentArity.ExactlyOne
+        };
+
+        public static readonly Option<string?> SchemaDiffAfter = new("--to")
+        {
+            Description = "Candidate schema snapshot path",
+            Arity = ArgumentArity.ExactlyOne
         };
 
         // Arguments (factory method because each command needs its own instance)
@@ -286,6 +400,7 @@ public static class CliParser
     {
         command.Options.Add(Options.Schema);
         command.Options.Add(Options.RelationsProfile);
+        command.Options.Add(Options.ObjectsCatalog);
         return command;
     }
 
@@ -310,6 +425,12 @@ public static class CliParser
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);
         command.Options.Add(Options.Quiet);
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.ShowSuppressed);
+        command.Options.Add(Options.ChangedOnly);
+        command.Options.Add(Options.BaseRef);
+        command.Options.Add(Options.ChangedLinesFrom);
         return command;
     }
 
@@ -387,19 +508,102 @@ public static class CliParser
         var schemaCommand = new Command("schema", "Schema management commands");
         schemaCommand.Subcommands.Add(BuildSchemaSnapshotCommand());
         schemaCommand.Subcommands.Add(BuildSchemaCollectRelationsCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaCollectObjectsCommand());
         schemaCommand.Subcommands.Add(BuildSchemaBuildCommand());
+        schemaCommand.Subcommands.Add(BuildSchemaDiffCommand());
         return schemaCommand;
+    }
+
+    private static Command BuildBaselineCommand()
+    {
+        var baselineCommand = new Command("baseline", "Create and maintain diagnostic baselines");
+        baselineCommand.Subcommands.Add(BuildBaselineCreateCommand());
+        baselineCommand.Subcommands.Add(BuildBaselineTrimCommand());
+        return baselineCommand;
+    }
+
+    private static Command BuildReportCommand()
+    {
+        var command = new Command("report", "Generate a diagnostics and SQL metrics report")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.ReportOutputFormat);
+        command.Options.Add(Options.ReportOutput);
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildAnalyzeCommand()
+    {
+        var command = new Command("analyze", "Analyze dependencies in an object catalog");
+        command.Subcommands.Add(BuildAnalyzeImpactCommand());
+        command.Subcommands.Add(BuildAnalyzeGraphCommand());
+        return command;
+    }
+
+    private static Command BuildAnalyzeImpactCommand()
+    {
+        var command = new Command("impact", "Find objects affected by a table or column change");
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeTable);
+        command.Options.Add(Options.AnalyzeColumn);
+        command.Options.Add(Options.AnalyzeOutput);
+        return command;
+    }
+
+    private static Command BuildAnalyzeGraphCommand()
+    {
+        var command = new Command("graph", "Export the object dependency graph");
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeOutput);
+        command.Options.Add(Options.AnalyzeFormat);
+        return command;
+    }
+
+    private static Command BuildBaselineCreateCommand()
+    {
+        var command = new Command("create", "Create a baseline from current diagnostics")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.BaselineOutput);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildBaselineTrimCommand()
+    {
+        var command = new Command("trim", "Remove resolved diagnostics from a baseline")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithRuleOptions()
+            .WithSchemaOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.Baseline);
+        command.Options.Add(Options.BaselineRoot);
+        command.Options.Add(Options.RemoveMissing);
+        command.Options.Add(Options.Quiet);
+        return command;
     }
 
     private static Command BuildSchemaBuildCommand()
     {
-        var command = new Command("build", "Generate schema snapshot and collect JOIN relations in one step")
+        var command = new Command("build", "Generate schema snapshot, JOIN relations, and object catalog in one step")
             .WithInputOptions()
             .WithCompatLevelOption()
             .WithPathsArgument();
         command.Options.Add(Options.ConnectionString);
         command.Options.Add(Options.SchemaOutputDir);
         command.Options.Add(Options.SchemaRelationsOutput);
+        command.Options.Add(Options.SchemaObjectsOutput);
         command.Options.Add(Options.IncludeSchema);
         command.Options.Add(Options.ExcludeSchema);
         command.Options.Add(Options.Quiet);
@@ -417,6 +621,17 @@ public static class CliParser
         return command;
     }
 
+    private static Command BuildSchemaCollectObjectsCommand()
+    {
+        var command = new Command("collect-objects", "Collect SQL object definitions and references from SQL files")
+            .WithInputOptions()
+            .WithCompatLevelOption()
+            .WithPathsArgument();
+        command.Options.Add(Options.SchemaOutput);
+        command.Options.Add(Options.Quiet);
+        return command;
+    }
+
     private static Command BuildSchemaSnapshotCommand()
     {
         var command = new Command("snapshot", "Generate a schema snapshot from a database");
@@ -426,6 +641,16 @@ public static class CliParser
         command.Options.Add(Options.ExcludeSchema);
         command.Options.Add(Options.CompatLevel);
         command.Options.Add(Options.Quiet);
+        return command;
+    }
+
+    private static Command BuildSchemaDiffCommand()
+    {
+        var command = new Command("diff", "Compare two schema snapshots for breaking changes");
+        command.Options.Add(Options.SchemaDiffBefore);
+        command.Options.Add(Options.SchemaDiffAfter);
+        command.Options.Add(Options.AnalyzeCatalog);
+        command.Options.Add(Options.AnalyzeOutput);
         return command;
     }
 
@@ -454,6 +679,9 @@ public static class CliParser
         root.Subcommands.Add(BuildListRulesCommand());
         root.Subcommands.Add(BuildListPluginsCommand());
         root.Subcommands.Add(BuildSchemaCommand());
+        root.Subcommands.Add(BuildBaselineCommand());
+        root.Subcommands.Add(BuildReportCommand());
+        root.Subcommands.Add(BuildAnalyzeCommand());
 
         return root;
     }
@@ -505,7 +733,9 @@ public static class CliParser
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),
             Utf8: GetOptionValue<bool>(parseResult, "--utf8"),
-            Output: ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
+            Output: command == "report"
+                ? "text"
+                : ParseOutput(command, GetOptionValue<string?>(parseResult, "--output")),
             MinimumSeverity: ParseSeverity(GetOptionValue<string?>(parseResult, "--severity")),
             Preset: GetOptionValue<string?>(parseResult, "--preset"),
             CompatLevel: ParseCompatLevel(GetOptionValue<string?>(parseResult, "--compat-level")),
@@ -527,18 +757,44 @@ public static class CliParser
             AllowPlugins: GetOptionValue<bool>(parseResult, "--allow-plugins"),
             SchemaPath: GetOptionValue<string?>(parseResult, "--schema"),
             RelationsProfilePath: GetOptionValue<string?>(parseResult, "--relations-profile"),
-            SchemaConnectionString: GetOptionValue<string?>(parseResult, "--connection-string"),
+            ObjectsCatalogPath: GetOptionValue<string?>(parseResult, "--objects-catalog"),
+            SchemaConnectionString: ResolveSchemaConnectionString(
+                GetOptionValue<string?>(parseResult, "--connection-string")),
             SchemaOutput: GetSchemaOutput(parseResult),
             SchemaIncludeSchemas: GetOptionValue<string?>(parseResult, "--include-schema"),
             SchemaExcludeSchemas: GetOptionValue<string?>(parseResult, "--exclude-schema"),
             SchemaOutputDir: GetOptionValue<string?>(parseResult, "--output-dir"),
-            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output")
+            SchemaRelationsOutput: GetOptionValue<string?>(parseResult, "--relations-output"),
+            SchemaObjectsOutput: GetOptionValue<string?>(parseResult, "--objects-output"),
+            BaselinePath: GetOptionValue<string?>(parseResult, "--baseline"),
+            BaselineOutput: GetBaselineOutput(parseResult),
+            BaselineRoot: GetOptionValue<string?>(parseResult, "--root"),
+            ShowSuppressed: GetOptionValue<bool>(parseResult, "--show-suppressed"),
+            RemoveMissing: GetOptionValue<bool>(parseResult, "--remove-missing"),
+            ReportOutputFormat: ParseReportOutputFormat(
+                GetOptionValue<string?>(parseResult, "--output-format")),
+            ReportOutputPath: GetReportOutput(parseResult),
+            AnalyzeCatalogPath: GetOptionValue<string?>(parseResult, "--catalog"),
+            AnalyzeTable: GetOptionValue<string?>(parseResult, "--table"),
+            AnalyzeColumn: GetOptionValue<string?>(parseResult, "--column"),
+            AnalyzeOutputPath: GetAnalyzeOutput(parseResult),
+            AnalyzeGraphFormat: ParseAnalyzeGraphFormat(GetOptionValue<string?>(parseResult, "--format")),
+            ChangedOnly: GetOptionValue<bool>(parseResult, "--changed-only"),
+            BaseRef: GetOptionValue<string?>(parseResult, "--base-ref"),
+            ChangedLinesFrom: GetOptionValue<string?>(parseResult, "--changed-lines-from"),
+            SchemaDiffBeforePath: GetOptionValue<string?>(parseResult, "--from"),
+            SchemaDiffAfterPath: GetOptionValue<string?>(parseResult, "--to")
         );
     }
 
     // =================================================================
     // Parse Helpers
     // =================================================================
+
+    private static string? ResolveSchemaConnectionString(string? commandLineValue)
+        => !string.IsNullOrWhiteSpace(commandLineValue)
+            ? commandLineValue
+            : Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
 
     private static (string Command, bool IsExplicit) GetCommandName(ParseResult parseResult)
     {
@@ -626,6 +882,55 @@ public static class CliParser
         return null;
     }
 
+    private static string? GetBaselineOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.BaselineOutput)
+        {
+            return parseResult.GetValue(typedOption);
+        }
+
+        return null;
+    }
+
+    private static string? GetReportOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        if (option is Option<string?> typedOption && option == Options.ReportOutput)
+        {
+            return parseResult.GetValue(typedOption);
+        }
+
+        return null;
+    }
+
+    private static string ParseReportOutputFormat(string? value) => value?.ToLowerInvariant() switch
+    {
+        null or "json" => "json",
+        "html" => "html",
+        _ => throw new ConfigException(
+            $"Invalid --output-format value: '{value}'. Expected one of: json, html.")
+    };
+
+    private static string? GetAnalyzeOutput(ParseResult parseResult)
+    {
+        var commandResult = parseResult.CommandResult;
+        var option = commandResult.Command.Options.FirstOrDefault(o => o.Name == "--output");
+        return option is Option<string?> typedOption && option == Options.AnalyzeOutput
+            ? parseResult.GetValue(typedOption)
+            : null;
+    }
+
+    private static string ParseAnalyzeGraphFormat(string? value) => value?.ToLowerInvariant() switch
+    {
+        null or "json" => "json",
+        "dot" => "dot",
+        _ => throw new ConfigException(
+            $"Invalid --format value: '{value}'. Expected one of: json, dot.")
+    };
+
     private static string ParseOutput(string command, string? value)
     {
         if (!OutputFormatCommands.Contains(command))
@@ -642,8 +947,10 @@ public static class CliParser
         {
             "text" => "text",
             "json" => "json",
+            "sarif" when command == "lint" => "sarif",
             _ => throw new ConfigException(
-                $"Invalid --output value: '{value}'. Expected one of: text, json.")
+                $"Invalid --output value: '{value}'. Expected one of: " +
+                (command == "lint" ? "text, json, sarif." : "text, json."))
         };
     }
 

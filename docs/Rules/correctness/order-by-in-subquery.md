@@ -92,9 +92,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "order-by-in-subquery", "enabled": false }
-  ]
+  "rules": {
+    "order-by-in-subquery": "none"
+  }
 }
 ```
 

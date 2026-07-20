@@ -75,9 +75,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-schema-qualify-exec", "enabled": false }
-  ]
+  "rules": {
+    "require-schema-qualify-exec": "none"
+  }
 }
 ```
 

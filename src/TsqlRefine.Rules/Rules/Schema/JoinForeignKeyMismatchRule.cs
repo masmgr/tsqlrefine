@@ -36,7 +36,7 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
                 var previousResolver = _resolver;
 
                 _resolver = new SchemaColumnResolver(schema, AliasMapBuilder.Build(tableRefs, schema));
-                node.FromClause.Accept(this);
+                QuerySpecificationChildVisitor.VisitChildren(this, node);
 
                 _resolver = previousResolver;
                 return;

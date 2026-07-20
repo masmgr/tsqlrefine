@@ -15,7 +15,7 @@ namespace TsqlRefine.Formatting.Helpers.Whitespace;
 /// - Preserves operators inside strings, comments, brackets
 ///
 /// Supported operators: =, &lt;&gt;, !=, &lt;, &gt;, &lt;=, &gt;=, +, -, *, /, %, &amp;, |, ^
-/// Supported compound operators: &lt;&gt;, !=, &lt;=, &gt;=, &amp;=, |=, ^=
+/// Supported compound operators: &lt;&gt;, !=, !&lt;, !&gt;, &lt;=, &gt;=, &amp;=, |=, ^=
 ///
 /// Known limitations:
 /// - Cannot distinguish all edge cases without full parsing
@@ -149,6 +149,10 @@ public static class OperatorSpaceNormalizer
         return output.ToString();
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing operator classification decision tree; tracked as complexity baseline debt.")]
     private static bool TryProcessCompoundOperator(string line, StringBuilder output, ref int index)
     {
         if (index + 1 >= line.Length)
@@ -159,9 +163,11 @@ public static class OperatorSpaceNormalizer
         var c1 = line[index];
         var c2 = line[index + 1];
 
-        // Check for compound operators: <>, !=, <=, >=, &=, |=, ^=
+        // Check for compound operators: <>, !=, !<, !>, <=, >=, &=, |=, ^=
         var isCompound = (c1 == '<' && c2 == '>') ||
                          (c1 == '!' && c2 == '=') ||
+                         (c1 == '!' && c2 == '<') ||
+                         (c1 == '!' && c2 == '>') ||
                          (c1 == '<' && c2 == '=') ||
                          (c1 == '>' && c2 == '=') ||
                          (c1 == '&' && c2 == '=') ||

@@ -32,7 +32,7 @@ function findRuleFiles(dir) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       results = results.concat(findRuleFiles(full));
-    } else if (entry.name.endsWith('Rule.cs')) {
+    } else if (entry.name.endsWith('.cs')) {
       results.push(full);
     }
   }
@@ -59,17 +59,66 @@ function extractBalancedParens(text, startIdx) {
   return null;
 }
 
+function splitTopLevelArguments(block) {
+  const args = [];
+  let start = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let inString = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < block.length; i++) {
+    const ch = block[i];
+    if (escapeNext) { escapeNext = false; continue; }
+    if (ch === '\\' && inString) { escapeNext = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+
+    if (ch === '(') parenDepth++;
+    else if (ch === ')') parenDepth--;
+    else if (ch === '[') bracketDepth++;
+    else if (ch === ']') bracketDepth--;
+    else if (ch === '{') braceDepth++;
+    else if (ch === '}') braceDepth--;
+    else if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      args.push(block.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+
+  args.push(block.substring(start).trim());
+  return args;
+}
+
+function extractStringValue(expression, content) {
+  const literalMatch = expression.match(/^"((?:[^"\\]|\\.)*)"/s);
+  if (literalMatch) return literalMatch[1];
+
+  const constNameMatch = expression.match(/^(\w+)/);
+  if (!constNameMatch) return null;
+  const constMatch = content.match(new RegExp('const\\s+string\\s+' + constNameMatch[1] + '\\s*=\\s*"((?:[^"\\\\]|\\\\.)*)"'));
+  return constMatch ? constMatch[1] : null;
+}
+
+function extractSeverity(expression) {
+  const match = expression.match(/(?:\w+\.)*RuleSeverity\.(\w+)/);
+  return match ? match[1] : null;
+}
+
 const ruleFiles = findRuleFiles(RULES_DIR);
 const rules = [];
 
 for (const filePath of ruleFiles) {
   const content = fs.readFileSync(filePath, 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const metaStart = content.match(/RuleMetadata\s+Metadata\s*\{[^}]*\}\s*=\s*new\s*\(/);
-  if (!metaStart) continue;
+  const metadataPattern = /RuleMetadata\s+Metadata\s*\{[^}]*\}\s*=\s*new\s*\(/g;
+  const metadataMatches = [...content.matchAll(metadataPattern)];
 
+  for (const metaStart of metadataMatches) {
   const openParenIdx = metaStart.index + metaStart[0].length - 1;
   const block = extractBalancedParens(content, openParenIdx);
   if (!block) continue;
+  const args = splitTopLevelArguments(block);
 
   // Extract RuleId
   const ruleIdMatch = block.match(/RuleId:\s*(?:"([^"]+)"|(\w+))/);
@@ -80,6 +129,9 @@ for (const filePath of ruleFiles) {
       const constMatch = content.match(new RegExp('const\\s+string\\s+' + ruleIdMatch[2] + '\\s*=\\s*"([^"]+)"'));
       ruleId = constMatch ? constMatch[1] : ruleIdMatch[2];
     }
+  }
+  if (!ruleId && args.length >= 5) {
+    ruleId = extractStringValue(args[0], content);
   }
   if (!ruleId) continue;
 
@@ -104,6 +156,9 @@ for (const filePath of ruleFiles) {
       }
     }
   }
+  if (!description && args.length >= 5) {
+    description = extractStringValue(args[1], content);
+  }
 
   // Extract Category
   let category = null;
@@ -121,12 +176,15 @@ for (const filePath of ruleFiles) {
       }
     }
   }
+  if (!category && args.length >= 5) {
+    category = extractStringValue(args[2], content);
+  }
 
   const sevMatch = block.match(/DefaultSeverity:\s*RuleSeverity\.(\w+)/);
-  const severity = sevMatch ? sevMatch[1] : 'Unknown';
+  const severity = sevMatch ? sevMatch[1] : (args.length >= 5 ? extractSeverity(args[3]) : null) || 'Unknown';
 
   const fixMatch = block.match(/Fixable:\s*(true|false)/);
-  const fixable = fixMatch ? fixMatch[1] === 'true' : false;
+  const fixable = fixMatch ? fixMatch[1] === 'true' : args.length >= 5 && args[4] === 'true';
 
   const tier = tierMap.get(ruleId) || 'UNASSIGNED';
   const docCategory = (category || 'unknown').toLowerCase();
@@ -148,6 +206,76 @@ for (const filePath of ruleFiles) {
     fixable,
     docLink,
   });
+  }
+
+  const preamblePattern = /:\s*SetOptionPreambleRuleBase\s*\(/g;
+  for (const preambleStart of content.matchAll(preamblePattern)) {
+    const openParenIdx = preambleStart.index + preambleStart[0].length - 1;
+    const block = extractBalancedParens(content, openParenIdx);
+    if (!block) continue;
+    const args = splitTopLevelArguments(block);
+    if (args.length < 4) continue;
+    const ruleId = extractStringValue(args[0], content);
+    const optionDisplayName = extractStringValue(args[1], content);
+    const severity = extractSeverity(args[2]);
+    if (!ruleId || !optionDisplayName || !severity) continue;
+    const requirementDisplayName = /SetOptions\./.test(args[3])
+      ? `SET ${optionDisplayName} ON`
+      : optionDisplayName;
+    rules.push({
+      tier: tierMap.get(ruleId) || 'UNASSIGNED',
+      category: 'Transactions',
+      ruleId,
+      displayName: ruleId,
+      description: `Files should start with ${requirementDisplayName} within the first 10 statements.`,
+      severity,
+      fixable: false,
+      docLink: `transactions/${ruleId}.md`,
+    });
+  }
+
+  const metricPattern = /:\s*MetricThresholdRuleBase\s*\(/g;
+  for (const metricStart of content.matchAll(metricPattern)) {
+    const openParenIdx = metricStart.index + metricStart[0].length - 1;
+    const block = extractBalancedParens(content, openParenIdx);
+    if (!block) continue;
+    const args = splitTopLevelArguments(block);
+    if (args.length < 4) continue;
+    const ruleId = extractStringValue(args[0], content);
+    const description = extractStringValue(args[1], content);
+    const severity = extractSeverity(args[2]);
+    if (!ruleId || !description || !severity) continue;
+    rules.push({
+      tier: tierMap.get(ruleId) || 'UNASSIGNED',
+      category: 'Performance',
+      ruleId,
+      displayName: ruleId,
+      description,
+      severity,
+      fixable: false,
+      docLink: `performance/${ruleId}.md`,
+    });
+  }
+}
+
+// The strict preset contains every built-in rule. Fail loudly when source parsing
+// misses a declaration instead of silently replacing the reference with a partial list.
+const strictRuleIds = new Set(
+  JSON.parse(fs.readFileSync(path.join(RULESETS_DIR, 'strict.json'), 'utf8')).rules.map(rule => rule.id));
+const generatedRuleIds = new Set(rules.map(rule => rule.ruleId));
+const duplicateRuleIds = rules
+  .map(rule => rule.ruleId)
+  .filter((ruleId, index, all) => all.indexOf(ruleId) !== index);
+const missingRuleIds = [...strictRuleIds].filter(ruleId => !generatedRuleIds.has(ruleId));
+const unexpectedRuleIds = [...generatedRuleIds].filter(ruleId => !strictRuleIds.has(ruleId));
+
+if (duplicateRuleIds.length || missingRuleIds.length || unexpectedRuleIds.length) {
+  const details = [
+    duplicateRuleIds.length ? `duplicate: ${[...new Set(duplicateRuleIds)].sort().join(', ')}` : null,
+    missingRuleIds.length ? `missing: ${missingRuleIds.sort().join(', ')}` : null,
+    unexpectedRuleIds.length ? `unexpected: ${unexpectedRuleIds.sort().join(', ')}` : null,
+  ].filter(Boolean).join('\n');
+  throw new Error(`Generated rule IDs do not match rulesets/strict.json:\n${details}`);
 }
 
 // Sort by tier, category, ruleId

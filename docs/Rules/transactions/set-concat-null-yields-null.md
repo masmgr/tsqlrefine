@@ -102,9 +102,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-concat-null-yields-null", "enabled": false }
-  ]
+  "rules": {
+    "set-concat-null-yields-null": "none"
+  }
 }
 ```
 

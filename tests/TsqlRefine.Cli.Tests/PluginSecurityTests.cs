@@ -6,6 +6,7 @@ using TsqlRefine.PluginSdk;
 
 namespace TsqlRefine.Cli.Tests;
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing end-to-end plugin security coverage; tracked as coupling baseline debt.")]
 public sealed class PluginSecurityTests
 {
     // ================================================================
@@ -73,6 +74,53 @@ public sealed class PluginSecurityTests
             if (Directory.Exists(parentDir))
                 Directory.Delete(parentDir, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ValidatePluginPath_CaseDifferentSibling_IsRejectedOnCaseSensitivePlatforms()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var baseDirectory = Path.Combine(root, "project");
+
+        var result = PluginLoader.ValidatePluginPath("../PROJECT/plugin.dll", baseDirectory);
+
+        Assert.NotNull(result);
+        Assert.Contains("escapes", result);
+    }
+
+    [Fact]
+    public void ValidateResolvedPluginPath_WithinTrustedDirectory_ReturnsNull()
+    {
+        var trustedDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var resolvedPath = Path.Combine(trustedDirectory, "plugin.dll");
+
+        var result = PluginLoader.ValidateResolvedPluginPath(resolvedPath, [trustedDirectory]);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ValidateResolvedPluginPath_OutsideTrustedDirectory_ReturnsError()
+    {
+        var trustedDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var resolvedPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString(), "plugin.dll");
+
+        var result = PluginLoader.ValidateResolvedPluginPath(resolvedPath, [trustedDirectory]);
+
+        Assert.NotNull(result);
+        Assert.Contains("outside", result);
+    }
+
+    [Fact]
+    public void ValidateResolvedPluginPath_RelativePath_ReturnsError()
+    {
+        var result = PluginLoader.ValidateResolvedPluginPath("plugin.dll", [Path.GetTempPath()]);
+
+        Assert.NotNull(result);
+        Assert.Contains("absolute", result);
     }
 
     // ================================================================
@@ -372,7 +420,7 @@ public sealed class PluginSecurityTests
     }
 
     [Fact]
-    public void Load_WithResolvedFullPath_SkipsValidation()
+    public void Load_WithResolvedFullPath_OutsideTrustedDirectory_IsRejected()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         var otherDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -386,13 +434,12 @@ public sealed class PluginSecurityTests
             File.WriteAllBytes(pluginFile, [0x00]);
 
             // Path "test.dll" would normally be resolved relative to tempDir,
-            // but ResolvedFullPath points to otherDir — should NOT be rejected
+            // but ResolvedFullPath points outside the trusted directory.
             var descriptor = new PluginDescriptor("test.dll", true, pluginFile);
             var result = PluginLoader.Load([descriptor], tempDir);
 
             Assert.Single(result);
-            Assert.NotEqual(PluginLoadStatus.PathRejected, result[0].Diagnostic.Status);
-            Assert.NotEqual(PluginLoadStatus.FileNotFound, result[0].Diagnostic.Status);
+            Assert.Equal(PluginLoadStatus.PathRejected, result[0].Diagnostic.Status);
         }
         finally
         {
@@ -400,6 +447,35 @@ public sealed class PluginSecurityTests
                 Directory.Delete(tempDir, recursive: true);
             if (Directory.Exists(otherDir))
                 Directory.Delete(otherDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Load_WithResolvedFullPath_InAdditionalTrustedDirectory_IsAllowed()
+    {
+        var baseDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var pluginDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(baseDir);
+        Directory.CreateDirectory(pluginDir);
+
+        try
+        {
+            var pluginFile = Path.Combine(pluginDir, "test.dll");
+            File.WriteAllBytes(pluginFile, [0x00]);
+
+            var descriptor = new PluginDescriptor("test.dll", true, pluginFile);
+            var result = PluginLoader.Load([descriptor], baseDir, [pluginDir]);
+
+            Assert.Single(result);
+            Assert.NotEqual(PluginLoadStatus.PathRejected, result[0].Diagnostic.Status);
+            Assert.NotEqual(PluginLoadStatus.FileNotFound, result[0].Diagnostic.Status);
+        }
+        finally
+        {
+            if (Directory.Exists(baseDir))
+                Directory.Delete(baseDir, recursive: true);
+            if (Directory.Exists(pluginDir))
+                Directory.Delete(pluginDir, recursive: true);
         }
     }
 

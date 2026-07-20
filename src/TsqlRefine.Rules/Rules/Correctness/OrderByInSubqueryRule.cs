@@ -30,6 +30,7 @@ public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
         private const int InvalidOrderByInSubqueryParseErrorNumber = 46047;
         private readonly HashSet<QuerySpecification> _rootQuerySpecifications = [];
         private int _selectStatementDepth;
+        private int _viewDefinitionDepth;
 
         public OrderByInSubqueryVisitor(RuleContext context)
         {
@@ -49,7 +50,7 @@ public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
 
         public override void ExplicitVisit(SelectStatement node)
         {
-            var isRootSelectStatement = _selectStatementDepth == 0;
+            var isRootSelectStatement = _selectStatementDepth == 0 && _viewDefinitionDepth == 0;
             _selectStatementDepth++;
 
             if (isRootSelectStatement && node.QueryExpression is QuerySpecification querySpecification)
@@ -61,6 +62,12 @@ public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
 
             _selectStatementDepth--;
         }
+
+        public override void ExplicitVisit(CreateViewStatement node) => VisitViewDefinition(() => base.ExplicitVisit(node));
+
+        public override void ExplicitVisit(AlterViewStatement node) => VisitViewDefinition(() => base.ExplicitVisit(node));
+
+        public override void ExplicitVisit(CreateOrAlterViewStatement node) => VisitViewDefinition(() => base.ExplicitVisit(node));
 
         public override void ExplicitVisit(QuerySpecification node)
         {
@@ -97,6 +104,13 @@ public sealed class OrderByInSubqueryRule : DiagnosticVisitorRuleBase
             node.TopRowFilter != null ||
             node.OffsetClause != null ||
             node.ForClause is XmlForClause or JsonForClause;
+
+        private void VisitViewDefinition(Action visitChildren)
+        {
+            _viewDefinitionDepth++;
+            visitChildren();
+            _viewDefinitionDepth--;
+        }
 
         private void AddDiagnosticsFromParseErrors(RuleContext context)
         {

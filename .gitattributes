@@ -1,0 +1,2 @@
+# Repository-owned corpus checksums are calculated from LF-normalized files.
+/tests/corpus/sql/project/*.sql text eol=lf

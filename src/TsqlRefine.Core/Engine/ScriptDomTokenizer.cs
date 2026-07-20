@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Runtime.CompilerServices;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
@@ -14,7 +15,7 @@ internal sealed record ScriptDomAnalysis(ScriptDomAst Ast, IReadOnlyList<Token> 
 /// </summary>
 internal static class ScriptDomTokenizer
 {
-    private static readonly Dictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
+    private static readonly FrozenDictionary<TSqlTokenType, string> TokenTypeNameCache = BuildTokenTypeNameCache();
 
     public static ScriptDomAnalysis Analyze(string sql, int compatLevel)
     {
@@ -95,7 +96,7 @@ internal static class ScriptDomTokenizer
     private static string GetTokenTypeName(TSqlTokenType tokenType) =>
         TokenTypeNameCache.TryGetValue(tokenType, out var name) ? name : tokenType.ToString();
 
-    private static Dictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
+    private static FrozenDictionary<TSqlTokenType, string> BuildTokenTypeNameCache()
     {
         var values = Enum.GetValues<TSqlTokenType>();
         var map = new Dictionary<TSqlTokenType, string>(values.Length);
@@ -104,6 +105,6 @@ internal static class ScriptDomTokenizer
             map[value] = value.ToString();
         }
 
-        return map;
+        return map.ToFrozenDictionary();
     }
 }

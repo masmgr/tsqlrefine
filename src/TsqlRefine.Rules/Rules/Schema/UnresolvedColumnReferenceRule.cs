@@ -23,6 +23,8 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
     private sealed class UnresolvedColumnReferenceVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private AliasMap? _currentAliasMap;
+        private HashSet<string>? _currentSelectAliases;
+        private bool _selectAliasesAllowed;
         private readonly List<AliasMap> _outerAliasMaps = [];
         private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
             new(ResolvedTableComparers.TableColumnKeyComparer.Instance);
@@ -31,6 +33,11 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
         public override void ExplicitVisit(QuerySpecification node)
         {
+            var previousSelectAliases = _currentSelectAliases;
+            var previousSelectAliasesAllowed = _selectAliasesAllowed;
+            _currentSelectAliases = CollectSelectAliases(node.SelectElements);
+            _selectAliasesAllowed = false;
+
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
@@ -48,15 +55,8 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
                 try
                 {
-                    // Visit SELECT list, WHERE, etc. with the alias map in scope
-                    VisitSelectElements(node.SelectElements);
-                    node.WhereClause?.Accept(this);
-                    node.HavingClause?.Accept(this);
-                    node.OrderByClause?.Accept(this);
-                    node.GroupByClause?.Accept(this);
-
-                    // Visit FROM clause for join conditions
-                    node.FromClause.Accept(this);
+                    // Visit all clauses with the alias map in scope
+                    QuerySpecificationChildVisitor.VisitChildren(this, node);
                 }
                 finally
                 {
@@ -66,6 +66,8 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                     }
 
                     _currentAliasMap = previousMap;
+                    _currentSelectAliases = previousSelectAliases;
+                    _selectAliasesAllowed = previousSelectAliasesAllowed;
                     _columnExistsCache = previousColumnExistsCache;
                     _unqualifiedColumnMatchesCache = previousUnqualifiedColumnMatchesCache;
                 }
@@ -73,7 +75,32 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 return; // We manually visited children
             }
 
-            base.ExplicitVisit(node);
+            try
+            {
+                // Keep the outer alias map for correlated references, but do not let
+                // output aliases from the outer query leak into this query.
+                QuerySpecificationChildVisitor.VisitChildren(this, node);
+            }
+            finally
+            {
+                _currentSelectAliases = previousSelectAliases;
+                _selectAliasesAllowed = previousSelectAliasesAllowed;
+            }
+        }
+
+        public override void ExplicitVisit(OrderByClause node)
+        {
+            var previousSelectAliasesAllowed = _selectAliasesAllowed;
+            _selectAliasesAllowed = true;
+
+            try
+            {
+                base.ExplicitVisit(node);
+            }
+            finally
+            {
+                _selectAliasesAllowed = previousSelectAliasesAllowed;
+            }
         }
 
         public override void ExplicitVisit(CommonTableExpression node)
@@ -83,106 +110,120 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             base.ExplicitVisit(node);
         }
 
-        private void VisitSelectElements(IList<SelectElement>? elements)
+        private static HashSet<string>? CollectSelectAliases(IList<SelectElement>? elements)
         {
             if (elements is null)
             {
-                return;
+                return null;
             }
 
+            HashSet<string>? aliases = null;
             foreach (var element in elements)
             {
-                element.Accept(this);
+                if (element is SelectScalarExpression { ColumnName.Value: { } aliasName })
+                {
+                    aliases ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    aliases.Add(aliasName);
+                }
             }
+
+            return aliases;
         }
 
         public override void ExplicitVisit(ColumnReferenceExpression node)
         {
-            if (_currentAliasMap is null)
+            if (_currentAliasMap is not null && node.ColumnType != ColumnType.Wildcard)
             {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            if (node.ColumnType == ColumnType.Wildcard)
-            {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            var identifiers = node.MultiPartIdentifier?.Identifiers;
-            if (identifiers is null or { Count: 0 })
-            {
-                base.ExplicitVisit(node);
-                return;
-            }
-
-            if (identifiers.Count >= 2)
-            {
-                var columnName = identifiers[identifiers.Count - 1].Value;
-
-                if (!TryResolveQualifiedTable(identifiers, out var resolvedTable))
+                var identifiers = node.MultiPartIdentifier?.Identifiers;
+                if (identifiers is { Count: 1 })
                 {
-                    // Qualifier not in current scope — skip (may be outer scope)
-                    base.ExplicitVisit(node);
-                    return;
+                    ValidateUnqualifiedColumn(node, identifiers[0].Value);
                 }
-
-                if (resolvedTable is null)
+                else if (identifiers is { Count: > 1 })
                 {
-                    // Unresolvable (CTE, derived table, temp table) — skip
-                    base.ExplicitVisit(node);
-                    return;
-                }
-
-                if (!ColumnExists(resolvedTable, columnName))
-                {
-                    AddDiagnostic(
-                        fragment: node,
-                        message: $"Column '{columnName}' not found in '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
-                        code: "unresolved-column-reference",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
-            }
-            else
-            {
-                // Unqualified column — search all tables
-                var columnName = identifiers[0].Value;
-                var matches = FindTablesContainingColumn(columnName);
-
-                if (matches.Count == 0 && _currentAliasMap.AllTables.Count > 0)
-                {
-                    var outerMatches = FindTablesContainingColumnInNearestOuterScope(columnName);
-                    if (outerMatches.Count == 1)
-                    {
-                        base.ExplicitVisit(node);
-                        return;
-                    }
-
-                    if (outerMatches.Count > 1)
-                    {
-                        ReportAmbiguousColumn(node, columnName, outerMatches);
-                        base.ExplicitVisit(node);
-                        return;
-                    }
-
-                    AddDiagnostic(
-                        fragment: node,
-                        message: $"Column '{columnName}' not found in any table in the current scope.",
-                        code: "unresolved-column-reference",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
-                else if (matches.Count > 1)
-                {
-                    ReportAmbiguousColumn(node, columnName, matches);
+                    ValidateQualifiedColumn(node, identifiers);
                 }
             }
 
             base.ExplicitVisit(node);
+        }
+
+        private void ValidateQualifiedColumn(ColumnReferenceExpression node, IList<Identifier> identifiers)
+        {
+            var columnName = identifiers[identifiers.Count - 1].Value;
+
+            if (!TryResolveQualifiedTable(identifiers, out var resolvedTable))
+            {
+                // Qualifier not in current scope — skip (may be outer scope)
+                return;
+            }
+
+            if (resolvedTable is null)
+            {
+                // Unresolvable (CTE, derived table, temp table) — skip
+                return;
+            }
+
+            if (!ColumnExists(resolvedTable, columnName))
+            {
+                AddDiagnostic(
+                    fragment: node,
+                    message: $"Column '{columnName}' not found in '{resolvedTable.SchemaName}.{resolvedTable.TableName}'.",
+                    code: "unresolved-column-reference",
+                    category: "Schema",
+                    fixable: false
+                );
+            }
+        }
+
+        private void ValidateUnqualifiedColumn(ColumnReferenceExpression node, string columnName)
+        {
+            // SELECT aliases are visible in ORDER BY and take precedence over
+            // source-column resolution there.
+            if (_selectAliasesAllowed && _currentSelectAliases?.Contains(columnName) == true)
+            {
+                return;
+            }
+
+            var matches = FindTablesContainingColumn(columnName);
+
+            if (matches.Count > 1)
+            {
+                ReportAmbiguousColumn(node, columnName, matches);
+                return;
+            }
+
+            if (matches.Count == 1 || _currentAliasMap!.AllTables.Count == 0)
+            {
+                return;
+            }
+
+            // The column may belong to an unverifiable source (CTE, derived table,
+            // temp table, ...) — no conclusion can be drawn.
+            if (_currentAliasMap.HasUnresolvableEntries)
+            {
+                return;
+            }
+
+            var (outerMatches, outerIndeterminate) = FindColumnInOuterScopes(columnName);
+            if (outerMatches.Count == 1 || outerIndeterminate)
+            {
+                return;
+            }
+
+            if (outerMatches.Count > 1)
+            {
+                ReportAmbiguousColumn(node, columnName, outerMatches);
+                return;
+            }
+
+            AddDiagnostic(
+                fragment: node,
+                message: $"Column '{columnName}' not found in any table in the current scope.",
+                code: "unresolved-column-reference",
+                category: "Schema",
+                fixable: false
+            );
         }
 
         private bool TryResolveQualifiedTable(IList<Identifier> identifiers, out ResolvedTable? resolvedTable)
@@ -236,7 +277,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             return cached;
         }
 
-        private IReadOnlyList<ResolvedTable> FindTablesContainingColumnInNearestOuterScope(string columnName)
+        private (IReadOnlyList<ResolvedTable> Matches, bool Indeterminate) FindColumnInOuterScopes(string columnName)
         {
             for (var i = _outerAliasMaps.Count - 1; i >= 0; i--)
             {
@@ -251,11 +292,17 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
                 if (matches.Count > 0)
                 {
-                    return matches;
+                    return (matches, false);
+                }
+
+                if (_outerAliasMaps[i].HasUnresolvableEntries)
+                {
+                    // The column may come from an unverifiable source in this scope.
+                    return (Array.Empty<ResolvedTable>(), true);
                 }
             }
 
-            return Array.Empty<ResolvedTable>();
+            return (Array.Empty<ResolvedTable>(), false);
         }
 
         private void ReportAmbiguousColumn(

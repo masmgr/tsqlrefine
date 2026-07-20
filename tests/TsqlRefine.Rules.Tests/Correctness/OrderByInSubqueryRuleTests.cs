@@ -85,6 +85,24 @@ public sealed class OrderByInSubqueryRuleTests
     }
 
     [Fact]
+    public void Analyze_ViewOrderByWithoutAllowedException_ReturnsDiagnostic()
+    {
+        const string sql = "CREATE VIEW dbo.OrderedUsers AS SELECT id FROM dbo.Users ORDER BY id;";
+
+        var diagnostic = Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Equal("order-by-in-subquery", diagnostic.Code);
+    }
+
+    [Fact]
+    public void Analyze_CursorSelectOrderBy_ReturnsNoDiagnostic()
+    {
+        const string sql = "DECLARE users_cursor CURSOR FOR SELECT id FROM dbo.Users ORDER BY id;";
+
+        Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
+    [Fact]
     public void Analyze_DerivedTableWithOrderByForBrowse_ReturnsDiagnostic()
     {
         const string sql = @"

@@ -59,9 +59,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "implicit-conversion-in-predicate-schema", "enabled": false }
-  ]
+  "rules": {
+    "implicit-conversion-in-predicate-schema": "none"
+  }
 }
 ```
 

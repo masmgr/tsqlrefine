@@ -269,12 +269,76 @@ public sealed class UpdateJoinCardinalityMismatchRuleTests
     }
 
     [Fact]
-    public void Analyze_TempTable_ReturnsEmpty()
+    public void Analyze_TempTableTargetWithNonUniqueJoin_ReturnsDiagnostic()
     {
         const string sql = """
             UPDATE #Temp SET val = oi.Quantity
             FROM #Temp
             INNER JOIN dbo.OrderItems AS oi ON oi.OrderId = #Temp.OrderId;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("#Temp", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_TempTableAliasTargetWithReversedJoin_ReturnsDiagnostic()
+    {
+        const string sql = """
+            UPDATE t SET t.val = oi.Quantity
+            FROM #Temp AS t
+            INNER JOIN dbo.OrderItems AS oi ON t.OrderId = oi.OrderId;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TableVariableTargetWithNonUniqueJoin_ReturnsDiagnostic()
+    {
+        const string sql = """
+            DECLARE @Target TABLE (OrderId int, val int);
+            UPDATE t SET t.val = oi.Quantity
+            FROM @Target AS t
+            INNER JOIN dbo.OrderItems AS oi ON oi.OrderId = t.OrderId;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("@Target", diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void Analyze_TempTableTargetWithUniqueJoin_ReturnsEmpty()
+    {
+        const string sql = """
+            UPDATE t SET t.val = s.TotalAmount
+            FROM #Temp AS t
+            INNER JOIN dbo.OrderSummary AS s ON s.OrderId = t.OrderId;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TempTableTargetWithCompositeUniqueJoin_ReturnsEmpty()
+    {
+        const string sql = """
+            UPDATE t SET t.val = p.UnitPrice
+            FROM #Temp AS t
+            INNER JOIN dbo.OrderItemPricing AS p
+                ON p.OrderId = t.OrderId AND p.ProductId = t.ProductId;
             """;
         var context = RuleTestContext.CreateContext(sql, CreateSchema());
 

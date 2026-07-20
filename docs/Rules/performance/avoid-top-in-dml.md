@@ -99,9 +99,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-top-in-dml", "enabled": false }
-  ]
+  "rules": {
+    "avoid-top-in-dml": "none"
+  }
 }
 ```
 

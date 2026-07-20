@@ -111,9 +111,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-concat-over-plus", "enabled": false }
-  ]
+  "rules": {
+    "prefer-concat-over-plus": "none"
+  }
 }
 ```
 

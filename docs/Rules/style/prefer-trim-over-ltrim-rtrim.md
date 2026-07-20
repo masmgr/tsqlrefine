@@ -119,9 +119,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-trim-over-ltrim-rtrim", "enabled": false }
-  ]
+  "rules": {
+    "prefer-trim-over-ltrim-rtrim": "none"
+  }
 }
 ```
 

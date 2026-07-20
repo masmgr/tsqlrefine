@@ -76,9 +76,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-scalar-udf-in-query", "enabled": false }
-  ]
+  "rules": {
+    "avoid-scalar-udf-in-query": "none"
+  }
 }
 ```
 

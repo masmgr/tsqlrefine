@@ -136,9 +136,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "escape-keyword-identifier", "enabled": false }
-  ]
+  "rules": {
+    "escape-keyword-identifier": "none"
+  }
 }
 ```
 

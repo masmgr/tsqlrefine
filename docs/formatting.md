@@ -226,7 +226,7 @@ var options = new FormattingOptions
     ColumnCasing = ElementCasing.Lower
 };
 
-var cased = ScriptDomElementCaser.Apply(sql, options, compatLevel: 150);
+var cased = ScriptDomElementCaser.Apply(sql, options);
 ```
 
 **Features**:

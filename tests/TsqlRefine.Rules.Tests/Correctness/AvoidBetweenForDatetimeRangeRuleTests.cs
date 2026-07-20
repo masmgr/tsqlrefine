@@ -160,6 +160,14 @@ public sealed class AvoidBetweenForDatetimeRangeRuleTests
         Assert.Equal("avoid-between-for-datetime-range", diagnostics[0].Code);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM dbo.Orders WHERE OrderDate BETWEEN (CAST(@from AS DATETIME)) AND @to;")]
+    [InlineData("SELECT * FROM dbo.Orders WHERE OrderDate BETWEEN CAST(@from AS DATETIME) + 1 AND @to;")]
+    public void Analyze_BetweenWithNestedDatetimeCast_ReturnsDiagnostic(string sql)
+    {
+        Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+    }
+
     // === Multiple diagnostics ===
 
     [Fact]

@@ -47,9 +47,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-begin-end-for-while", "enabled": false }
-  ]
+  "rules": {
+    "require-begin-end-for-while": "none"
+  }
 }
 ```
 

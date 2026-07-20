@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/impact-result.schema.json",
+  "title": "tsqlrefine impact analysis result",
+  "type": "object",
+  "required": ["schemaVersion", "tool", "version", "target", "impactedObjects"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": { "const": "tsqlrefine" },
+    "version": { "type": "string" },
+    "target": {
+      "type": "object",
+      "required": ["schemaName", "name"],
+      "properties": {
+        "databaseName": { "type": "string" },
+        "schemaName": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "column": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "impactedObjects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "definedInFile", "definedAt", "depth"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "$ref": "#/$defs/kind" },
+          "definedInFile": { "type": "string" },
+          "definedAt": { "$ref": "#/$defs/range" },
+          "depth": { "type": "integer", "minimum": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "kind": { "enum": ["Procedure", "ScalarFunction", "TableValuedFunction", "View"] },
+    "position": {
+      "type": "object",
+      "required": ["line", "character"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 0 },
+        "character": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -104,9 +104,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-transaction-isolation-level", "enabled": false }
-  ]
+  "rules": {
+    "set-transaction-isolation-level": "none"
+  }
 }
 ```
 

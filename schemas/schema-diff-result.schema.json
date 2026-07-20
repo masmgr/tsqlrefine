@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/schema-diff-result.schema.json",
+  "title": "tsqlrefine schema diff result",
+  "type": "object",
+  "required": ["schemaVersion", "tool", "version", "beforeHash", "afterHash", "summary", "changes"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": { "const": "tsqlrefine" },
+    "version": { "type": "string" },
+    "beforeHash": { "type": "string" },
+    "afterHash": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": ["total", "breaking", "nonBreaking"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "breaking": { "type": "integer", "minimum": 0 },
+        "nonBreaking": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "isBreaking", "databaseName", "impactedObjects"],
+        "properties": {
+          "kind": {
+            "enum": [
+              "databaseAdded", "databaseRemoved", "tableAdded", "tableRemoved",
+              "viewAdded", "viewRemoved", "columnAdded", "columnRemoved",
+              "columnTypeChanged", "columnNullabilityChanged"
+            ]
+          },
+          "isBreaking": { "type": "boolean" },
+          "databaseName": { "type": "string", "minLength": 1 },
+          "schemaName": { "type": "string", "minLength": 1 },
+          "objectName": { "type": "string", "minLength": 1 },
+          "objectKind": { "enum": ["table", "view"] },
+          "columnName": { "type": "string", "minLength": 1 },
+          "before": { "type": "string" },
+          "after": { "type": "string" },
+          "impactedObjects": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/impactedObject" }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "impactedObject": {
+      "type": "object",
+      "required": ["id", "kind", "definedInFile", "definedAt", "depth"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["Procedure", "ScalarFunction", "TableValuedFunction", "View"] },
+        "definedInFile": { "type": "string" },
+        "definedAt": { "$ref": "#/$defs/range" },
+        "depth": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "position": {
+      "type": "object",
+      "required": ["line", "character"],
+      "properties": {
+        "line": { "type": "integer", "minimum": 0 },
+        "character": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/position" },
+        "end": { "$ref": "#/$defs/position" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

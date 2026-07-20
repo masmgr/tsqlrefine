@@ -71,11 +71,16 @@ public sealed class AvoidExecuteAsRule : DiagnosticVisitorRuleBase
                 return;
             }
 
-            var optionText = executeAsClause.ExecuteAsOption.ToString().ToUpperInvariant();
-            if (executeAsClause.Literal is not null)
-            {
-                optionText = $"'{executeAsClause.Literal.Value}'";
-            }
+            var optionText = executeAsClause.Literal is not null
+                ? $"'{executeAsClause.Literal.Value}'"
+                : executeAsClause.ExecuteAsOption switch
+                {
+                    ExecuteAsOption.Caller => "CALLER",
+                    ExecuteAsOption.Self => "SELF",
+                    ExecuteAsOption.Owner => "OWNER",
+                    ExecuteAsOption.String => "STRING",
+                    _ => executeAsClause.ExecuteAsOption.ToString().ToUpperInvariant()
+                };
 
             AddDiagnostic(
                 fragment: executeAsClause,

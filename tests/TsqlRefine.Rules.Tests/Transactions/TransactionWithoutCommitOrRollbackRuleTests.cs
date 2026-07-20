@@ -61,6 +61,47 @@ ROLLBACK;";
         Assert.Empty(diagnostics);
     }
 
+    [Fact]
+    public void Analyze_TwoBeginsWithOneCommit_ReturnsOneDiagnostic()
+    {
+        const string sql = "BEGIN TRANSACTION; BEGIN TRANSACTION; COMMIT;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal(0, diagnostics[0].Range.Start.Character);
+    }
+
+    [Fact]
+    public void Analyze_RollbackToSavepoint_DoesNotCloseTransaction()
+    {
+        const string sql = "BEGIN TRANSACTION; SAVE TRANSACTION s; ROLLBACK TRANSACTION s;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UnnamedRollbackClosesAllNestedTransactions()
+    {
+        const string sql = "BEGIN TRANSACTION; BEGIN TRANSACTION; ROLLBACK TRANSACTION;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_RollbackToNamedTransaction_ClosesTransaction()
+    {
+        const string sql = "BEGIN TRANSACTION outer_transaction; ROLLBACK TRANSACTION outer_transaction;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM dbo.Users;")]
     [InlineData("")]

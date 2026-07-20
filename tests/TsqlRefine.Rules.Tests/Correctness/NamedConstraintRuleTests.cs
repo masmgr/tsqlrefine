@@ -91,6 +91,17 @@ public sealed class NamedConstraintRuleTests
     }
 
     [Fact]
+    public void Analyze_AlterTempTableAddNamedConstraint_ReturnsDiagnostic()
+    {
+        const string sql = "ALTER TABLE #TempTable ADD CONSTRAINT PK_TempTable PRIMARY KEY (Id);";
+
+        var diagnostic = Assert.Single(new NamedConstraintRule().Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.Equal("avoid-named-constraint-in-temp-table", diagnostic.Code);
+        Assert.Equal(sql.IndexOf("PK_TempTable", StringComparison.Ordinal), diagnostic.Range.Start.Character);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsNoFixes()
     {
         var rule = new NamedConstraintRule();

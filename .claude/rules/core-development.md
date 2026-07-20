@@ -16,12 +16,14 @@ The contract layer that defines all public interfaces and data types. **Zero dep
 Key types:
 - `IRule`: Interface all rules must implement (Analyze + GetFixes)
 - `IRuleProvider`: Discovers rules in an assembly
-- `RuleContext`: Data passed to rules (AST, tokens, file path, compat level, settings)
+- `RuleContext`: Data passed to rules (AST, tokens, file path, compat level, settings, optional schema context and object catalog)
 - `RuleMetadata`: Rule identity (ID, category, severity, fixability)
 - `Diagnostic`: Issue report (range, message, severity, code)
 - `Fix` / `TextEdit`: Auto-fix proposals
 - `ScriptDomAst`: Wrapper around Microsoft ScriptDom's TSqlFragment
 - `Token`: SQL token with type and location
+- `IRuleOptions` / `IRuleOptionsDescriptorProvider`: Typed per-rule configuration access and descriptor declaration
+- `ISchemaContext` / `ISchemaProvider` / `IObjectCatalogProvider`: Optional schema-aware and cross-object analysis contracts (`SchemaContracts.cs`)
 
 ### Stability Requirements
 
@@ -93,10 +95,12 @@ Rules get both:
 ```csharp
 public sealed record RuleContext(
     string FilePath,
-    int CompatLevel,           // 100-160 (SQL Server 2008-2022)
-    ScriptDomAst Ast,          // Parsed AST (TSqlFragment)
-    IReadOnlyList<Token> Tokens, // Flat token stream
-    RuleSettings Settings       // Per-rule config
+    int CompatLevel,                          // 100-160 (SQL Server 2008-2022)
+    ScriptDomAst Ast,                          // Parsed AST (TSqlFragment)
+    IReadOnlyList<Token> Tokens,               // Flat token stream
+    RuleSettings Settings,                     // Per-rule config (typed options)
+    ISchemaContext? SchemaContext = null,      // Null unless a schema snapshot is configured
+    IObjectCatalogProvider? ObjectCatalog = null // Null unless an object catalog is configured
 );
 ```
 

@@ -7,11 +7,11 @@
 
 ## Description
 
-Detects `EXEC` with dynamic SQL (using variables or string literals) which can be vulnerable to SQL injection attacks.
+Detects `EXEC` with dynamic SQL variables and constant SQL text. Variable execution carries an injection risk; constant text is reported separately as a maintainability and analyzability issue.
 
 ## Rationale
 
-Dynamic SQL executed with `EXEC(@variable)` or `EXEC('string')` poses serious security risks:
+Dynamic SQL executed with `EXEC(@variable)` poses serious security risks. Constant `EXEC('string')` cannot introduce input-based SQL injection by itself, but static SQL is easier to analyze, audit, and track for dependencies.
 
 - **SQL Injection vulnerability**: If the SQL string contains user input, attackers can inject malicious SQL commands
 - **Privilege escalation**: Injected SQL runs with the permissions of the executing context
@@ -32,7 +32,7 @@ Dynamic SQL executed with `EXEC(@variable)` or `EXEC('string')` poses serious se
 -- Variable execution - vulnerable to SQL injection
 EXEC(@sql);
 
--- String literal execution
+-- Constant string execution (reported with a lower-risk message)
 EXEC('SELECT * FROM users');
 
 -- Concatenated variables - highly vulnerable
@@ -74,9 +74,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-exec-dynamic-sql", "enabled": false }
-  ]
+  "rules": {
+    "avoid-exec-dynamic-sql": "none"
+  }
 }
 ```
 

@@ -49,6 +49,40 @@ FROM users";
     }
 
     [Fact]
+    public void GetRange_WithMultiLineLastToken_EndsOnTheLastLineOfTheToken()
+    {
+        // Arrange: the statement's last token is a string literal spanning two lines.
+        var sql = "SELECT 'a\nb'";
+        var parser = new TSql160Parser(true);
+        var fragment = parser.Parse(new System.IO.StringReader(sql), out _);
+
+        // Act
+        var range = ScriptDomHelpers.GetRange(fragment);
+
+        // Assert: the end must be on line 1 after the closing quote,
+        // not past the end of line 0.
+        Assert.Equal(new TsqlRefine.PluginSdk.Position(1, 2), range.End);
+    }
+
+    [Fact]
+    public void GetTokenRange_WithMultiLineToken_EndsOnTheLastLineOfTheToken()
+    {
+        // Arrange
+        var sql = "/* block\ncomment */ SELECT 1";
+        var parser = new TSql160Parser(true);
+        using var reader = new System.IO.StringReader(sql);
+        var tokens = parser.GetTokenStream(reader, out _);
+        var commentToken = tokens.First(t => t.TokenType == TSqlTokenType.MultilineComment);
+
+        // Act
+        var range = ScriptDomHelpers.GetTokenRange(commentToken);
+
+        // Assert
+        Assert.Equal(new TsqlRefine.PluginSdk.Position(0, 0), range.Start);
+        Assert.Equal(new TsqlRefine.PluginSdk.Position(1, 10), range.End);
+    }
+
+    [Fact]
     public void GetRange_WithFragmentNoTokenStream_ReturnsStartPositionOnly()
     {
         // Arrange

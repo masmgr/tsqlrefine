@@ -76,9 +76,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "unresolved-column-reference", "enabled": false }
-  ]
+  "rules": {
+    "unresolved-column-reference": "none"
+  }
 }
 ```
 

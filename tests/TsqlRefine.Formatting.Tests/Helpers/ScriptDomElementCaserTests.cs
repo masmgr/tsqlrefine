@@ -6,6 +6,18 @@ namespace TsqlRefine.Formatting.Tests.Helpers;
 public sealed class ScriptDomElementCaserTests
 {
     [Fact]
+    public void Apply_NullInput_ReturnsNull()
+    {
+        Assert.Null(ScriptDomElementCaser.Apply(null!, new FormattingOptions()));
+    }
+
+    [Fact]
+    public void Apply_EmptyInput_ReturnsEmpty()
+    {
+        Assert.Equal(string.Empty, ScriptDomElementCaser.Apply(string.Empty, new FormattingOptions()));
+    }
+
+    [Fact]
     public void Apply_KeywordElementCasing_Upper_UppercasesKeywords()
     {
         var sql = "select id from users where active = 1";
@@ -99,6 +111,63 @@ public sealed class ScriptDomElementCaserTests
         Assert.Contains("INT", result);
         Assert.Contains("VARCHAR", result);
         Assert.Contains("DATETIME", result);
+    }
+
+    [Fact]
+    public void Apply_DataTypeNamedColumns_DefaultOptionsPreserveIdentifierCase()
+    {
+        var sql = "SELECT Date, Text, Time, Image FROM t";
+
+        var result = ScriptDomElementCaser.Apply(sql, new FormattingOptions());
+
+        Assert.Equal(sql, result);
+    }
+
+    [Fact]
+    public void Apply_IdentifierDataTypes_InTypeContextsUseDataTypeCasing()
+    {
+        var sql = "DECLARE @d DATE; SELECT CAST(x AS DATE), CONVERT(TEXT, x);";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            DataTypeCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        Assert.Contains("@d date", result);
+        Assert.Contains("AS date", result);
+        Assert.Contains("CONVERT(text, x)", result);
+    }
+
+    [Fact]
+    public void Apply_CaseExpression_UsesKeywordCasingNotFunctionCasing()
+    {
+        var sql = "select case (x) when 1 then 1 end";
+        var options = new FormattingOptions
+        {
+            KeywordElementCasing = ElementCasing.Upper,
+            BuiltInFunctionCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        Assert.Contains("CASE (x)", result);
+    }
+
+    [Fact]
+    public void Apply_NestedTableConstraint_DoesNotEndColumnListContext()
+    {
+        var sql = "CREATE TABLE t (a int CHECK (a > 0), Date int)";
+        var options = new FormattingOptions
+        {
+            ColumnCasing = ElementCasing.Upper,
+            DataTypeCasing = ElementCasing.Lower
+        };
+
+        var result = ScriptDomElementCaser.Apply(sql, options);
+
+        Assert.Contains(", DATE int)", result);
     }
 
     [Fact]

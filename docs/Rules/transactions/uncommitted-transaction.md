@@ -19,7 +19,10 @@ Uncommitted transactions can cause serious production issues:
 - **Database blocking** - Can cascade and block other operations
 - **Difficult troubleshooting** - Hard to identify the source of open transactions
 
-This rule uses a greedy matching algorithm to pair each `BEGIN TRANSACTION` with the first available `COMMIT` or `ROLLBACK` statement that appears after it in the file.
+This rule tracks transaction depth in lexical statement order. `COMMIT` closes the innermost
+open transaction, an unnamed `ROLLBACK` closes all open transactions, and a rollback to a
+savepoint does not close a transaction. A rollback using the outer transaction's name is treated
+as a full rollback.
 
 ## Examples
 
@@ -79,13 +82,13 @@ COMMIT TRANSACTION;
 
 ## Matching Algorithm
 
-This rule uses a **greedy matching algorithm**:
+This rule uses a shared **transaction-state tracker**:
 
-1. Collects all `BEGIN TRANSACTION`, `COMMIT TRANSACTION`, and `ROLLBACK TRANSACTION` statements
-2. For each `BEGIN TRANSACTION` (in order):
-   - Finds the first unused `COMMIT` or `ROLLBACK` that appears after it
-   - Marks that `COMMIT`/`ROLLBACK` as used
-   - If no match is found, reports a diagnostic
+1. `BEGIN TRANSACTION` increases the tracked depth.
+2. `COMMIT TRANSACTION` closes the innermost tracked transaction.
+3. An unnamed `ROLLBACK TRANSACTION`, or rollback to the outer transaction's name, closes all tracked transactions.
+4. `ROLLBACK TRANSACTION savepoint` leaves the transaction depth unchanged.
+5. Every transaction still open at the end of the file is reported.
 
 This approach works well for most common patterns but has limitations (see below).
 
@@ -103,9 +106,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "uncommitted-transaction", "enabled": false }
-  ]
+  "rules": {
+    "uncommitted-transaction": "none"
+  }
 }
 ```
 
@@ -113,7 +116,7 @@ In `custom-ruleset.json`:
 
 This rule has limitations due to static analysis constraints:
 
-1. **Simple matching** - Uses greedy first-available matching, not true control flow analysis
+1. **Lexical state tracking** - Tracks statement order, not true control flow analysis
 2. **No control flow awareness** - Cannot detect conditional paths (IF/ELSE, WHILE, etc.)
 3. **No stored procedure tracking** - Cannot follow `EXEC` calls to other procedures
 4. **Dynamic SQL** - Cannot analyze `EXEC('BEGIN TRAN ...')`
@@ -130,8 +133,10 @@ IF @condition = 1
 -- ELSE branch has no COMMIT/ROLLBACK (rule won't detect this!)
 ```
 
-**Recommendation:** Use this rule as a first-pass check for obvious errors. For complete coverage, also use:
-- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - More sophisticated batch-level analysis
+**Recommendation:** Use this rule as a file-level first-pass check for obvious errors. For stronger coverage, also use:
+
+- [avoid-transaction-without-commit](avoid-transaction-without-commit.md) - Matches transaction counts independently in each batch
+- [transaction-not-closed-on-path](transaction-not-closed-on-path.md) - Uses control-flow analysis to check every reachable exit path
 - Runtime monitoring with `@@TRANCOUNT` checks
 
 ## Best Practices
@@ -145,7 +150,8 @@ IF @condition = 1
 ## Comparison with Similar Rules
 
 - **uncommitted-transaction** (this rule) - File-level greedy matching, Warning severity
-- **avoid-transaction-without-commit** - Batch-level analysis with control flow awareness, Error severity
+- **avoid-transaction-without-commit** - Batch-level transaction-depth matching, Error severity
+- **transaction-not-closed-on-path** - CFG path-level analysis, Error severity
 
 Use both rules together for comprehensive transaction checking.
 

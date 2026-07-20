@@ -9,6 +9,8 @@
 
 Detects `SELECT TOP ... INTO` statements without `ORDER BY` clause, which creates permanent tables with non-deterministic data.
 
+For UNION, INTERSECT, and EXCEPT queries, each direct query branch containing `TOP` is checked. A constant `TOP 100 PERCENT` is excluded because it selects all rows; variable percentages and constants below 100 remain subject to the rule.
+
 ## Rationale
 
 Unlike regular `SELECT TOP` (which is a runtime issue affecting result display), `SELECT TOP ... INTO` **persists non-deterministic data to storage**. This creates serious problems:
@@ -39,6 +41,14 @@ FROM Customers;
 SELECT TOP 1000 OrderId, CustomerId, OrderDate
 INTO #RecentOrders
 FROM Orders;
+
+-- TOP is evaluated in this UNION branch before the final set is produced
+SELECT TOP 100 CustomerId
+INTO #SelectedCustomers
+FROM Customers
+UNION ALL
+SELECT CustomerId
+FROM ArchivedCustomers;
 ```
 
 ### Good
@@ -55,6 +65,11 @@ SELECT TOP 1000 OrderId, CustomerId, OrderDate
 INTO #RecentOrders
 FROM Orders
 ORDER BY OrderDate DESC, OrderId DESC;
+
+-- All rows are selected, so row membership is deterministic
+SELECT TOP (100) PERCENT OrderId, CustomerId
+INTO #AllOrders
+FROM Orders;
 ```
 
 ## Common Patterns
@@ -111,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-top-without-order-by-in-select-into", "enabled": false }
-  ]
+  "rules": {
+    "avoid-top-without-order-by-in-select-into": "none"
+  }
 }
 ```
 

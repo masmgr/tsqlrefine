@@ -83,14 +83,14 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "require-throw-or-raiserror-in-catch", "enabled": false }
-  ]
+  "rules": {
+    "require-throw-or-raiserror-in-catch": "none"
+  }
 }
 ```
 
 ## See Also
 
-- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Detects empty CATCH blocks that suppress errors
+- [avoid-catch-swallowing](avoid-catch-swallowing.md) - Stricter variant that requires THROW or RAISERROR and does not accept RETURN
 - [require-try-catch-for-transaction](require-try-catch-for-transaction.md) - Requires TRY/CATCH for transactions
 - [TsqlRefine Rules Documentation](../README.md)

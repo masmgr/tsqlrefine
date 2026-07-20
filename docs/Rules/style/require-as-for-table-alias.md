@@ -126,9 +126,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-as-for-table-alias", "enabled": false }
-  ]
+  "rules": {
+    "require-as-for-table-alias": "none"
+  }
 }
 ```
 

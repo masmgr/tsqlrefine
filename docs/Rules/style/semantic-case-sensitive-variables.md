@@ -112,9 +112,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-case-sensitive-variables", "enabled": false }
-  ]
+  "rules": {
+    "semantic-case-sensitive-variables": "none"
+  }
 }
 ```
 

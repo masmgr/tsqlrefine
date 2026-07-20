@@ -81,7 +81,6 @@ This rule does **not** flag UPDATE/DELETE without WHERE on:
 - **Local temporary tables** (`#temp`) - Session-scoped, automatically dropped
 - **Global temporary tables** (`##globaltemp`) - Temporary by nature
 - **Table variables** (`@tablevar`) - Batch-scoped, no persistence risk
-- **Alias-targeted DML** - When the target uses an alias from the FROM clause
 - **INNER JOIN present** - When the FROM clause contains an INNER JOIN
 
 ### Temporary Objects
@@ -93,17 +92,6 @@ These temporary objects don't pose the same data safety risk as permanent tables
 DELETE FROM #tempResults;
 UPDATE ##globalCache SET processed = 1;
 DELETE FROM @batchItems;
-```
-
-### Alias-Targeted DML
-
-When a DML statement targets an alias defined in the FROM clause, it indicates more complex, intentional logic. The developer is explicitly thinking about table relationships.
-
-```sql
--- These are allowed (alias target)
-UPDATE u SET active = 1 FROM users u;
-DELETE u FROM users u;
-UPDATE u SET u.name = o.name FROM users u INNER JOIN other_users o ON u.id = o.id;
 ```
 
 ### INNER JOIN Present
@@ -134,6 +122,9 @@ DELETE FROM Transactions;
 
 -- Common mistake: forgot to add WHERE clause
 UPDATE Products SET Price = Price * 1.1;  -- Increases ALL product prices
+
+-- An alias alone does not limit the affected rows
+DELETE u FROM Users AS u;
 ```
 
 ### Good
@@ -169,9 +160,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "dml-without-where", "enabled": false }
-  ]
+  "rules": {
+    "dml-without-where": "none"
+  }
 }
 ```
 

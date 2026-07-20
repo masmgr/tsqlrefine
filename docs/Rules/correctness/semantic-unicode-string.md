@@ -208,9 +208,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-unicode-string", "enabled": false }
-  ]
+  "rules": {
+    "semantic-unicode-string": "none"
+  }
 }
 ```
 

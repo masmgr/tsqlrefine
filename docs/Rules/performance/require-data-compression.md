@@ -115,9 +115,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "require-data-compression", "enabled": false }
-  ]
+  "rules": {
+    "require-data-compression": "none"
+  }
 }
 ```
 

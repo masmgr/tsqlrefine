@@ -24,6 +24,7 @@ public sealed class DuplicateIndexColumnRule : DiagnosticVisitorRuleBase
 
     private sealed class DuplicateIndexColumnVisitor : DiagnosticVisitorBase
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing index validation traversal; tracked as complexity baseline debt.")]
         public override void ExplicitVisit(CreateTableStatement node)
         {
             if (node.Definition == null)

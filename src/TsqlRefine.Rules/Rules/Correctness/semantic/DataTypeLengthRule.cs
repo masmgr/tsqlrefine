@@ -131,7 +131,16 @@ public sealed class DataTypeLengthRule : DiagnosticVisitorRuleBase
             // Parameters.Count > 0 means length is specified (could be a number or MAX)
             if (sqlDataType.Parameters.Count == 0)
             {
-                var typeName = sqlDataType.SqlDataTypeOption.ToString().ToUpperInvariant();
+                var typeName = sqlDataType.SqlDataTypeOption switch
+                {
+                    SqlDataTypeOption.VarChar => "VARCHAR",
+                    SqlDataTypeOption.NVarChar => "NVARCHAR",
+                    SqlDataTypeOption.Char => "CHAR",
+                    SqlDataTypeOption.NChar => "NCHAR",
+                    SqlDataTypeOption.VarBinary => "VARBINARY",
+                    SqlDataTypeOption.Binary => "BINARY",
+                    _ => sqlDataType.SqlDataTypeOption.ToString().ToUpperInvariant()
+                };
                 AddDiagnostic(
                     fragment: sqlDataType,
                     message: $"Variable-length data type '{typeName}' must have an explicit length specification. Use {typeName}(n) or {typeName}(MAX).",

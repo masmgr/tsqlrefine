@@ -227,9 +227,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-ambiguous-datetime-literal", "enabled": false }
-  ]
+  "rules": {
+    "avoid-ambiguous-datetime-literal": "none"
+  }
 }
 ```
 

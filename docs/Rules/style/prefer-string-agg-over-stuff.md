@@ -140,9 +140,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-string-agg-over-stuff", "enabled": false }
-  ]
+  "rules": {
+    "prefer-string-agg-over-stuff": "none"
+  }
 }
 ```
 

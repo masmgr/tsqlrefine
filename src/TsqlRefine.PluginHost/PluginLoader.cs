@@ -184,7 +184,7 @@ public sealed class PluginLoader
             fullBaseDir += Path.DirectorySeparatorChar;
         }
 
-        if (!fullPath.StartsWith(fullBaseDir, StringComparison.OrdinalIgnoreCase))
+        if (!fullPath.StartsWith(fullBaseDir, PathComparison))
         {
             return $"Plugin path escapes the project directory: {pluginPath}";
         }
@@ -193,13 +193,56 @@ public sealed class PluginLoader
     }
 
     /// <summary>
+    /// Validates a pre-resolved plugin path against trusted search directories.
+    /// </summary>
+    /// <param name="resolvedFullPath">The absolute path produced by search-path resolution.</param>
+    /// <param name="trustedDirectories">Directories from which resolved plugins may be loaded.</param>
+    /// <returns>Null if valid; an error message if rejected.</returns>
+    public static string? ValidateResolvedPluginPath(
+        string resolvedFullPath,
+        IEnumerable<string> trustedDirectories)
+    {
+        ArgumentNullException.ThrowIfNull(resolvedFullPath);
+        ArgumentNullException.ThrowIfNull(trustedDirectories);
+
+        if (resolvedFullPath.StartsWith(@"\\", StringComparison.Ordinal) ||
+            resolvedFullPath.StartsWith("//", StringComparison.Ordinal))
+        {
+            return $"UNC paths are not allowed for plugins: {resolvedFullPath}";
+        }
+
+        if (!Path.IsPathFullyQualified(resolvedFullPath))
+        {
+            return $"Resolved plugin paths must be absolute: {resolvedFullPath}";
+        }
+
+        var fullPath = Path.GetFullPath(resolvedFullPath);
+        foreach (var directory in trustedDirectories)
+        {
+            var fullDirectory = Path.GetFullPath(directory);
+            if (!fullDirectory.EndsWith(Path.DirectorySeparatorChar))
+            {
+                fullDirectory += Path.DirectorySeparatorChar;
+            }
+
+            if (fullPath.StartsWith(fullDirectory, PathComparison))
+            {
+                return null;
+            }
+        }
+
+        return $"Resolved plugin path is outside the trusted search directories: {resolvedFullPath}";
+    }
+
+    /// <summary>
     /// Loads plugins and returns both the loaded plugins and a summary of the load operation.
     /// </summary>
     public static (IReadOnlyList<LoadedPlugin> Plugins, PluginLoadSummary Summary) LoadWithSummary(
         IEnumerable<PluginDescriptor> plugins,
-        string? baseDirectory = null)
+        string? baseDirectory = null,
+        IEnumerable<string>? resolvedPathDirectories = null)
     {
-        var loadedPlugins = Load(plugins, baseDirectory);
+        var loadedPlugins = Load(plugins, baseDirectory, resolvedPathDirectories);
         var summary = PluginLoadSummary.Create(loadedPlugins);
         return (loadedPlugins, summary);
     }
@@ -209,11 +252,26 @@ public sealed class PluginLoader
     /// </summary>
     /// <param name="plugins">Plugin descriptors to load.</param>
     /// <param name="baseDirectory">Base directory for plugin path validation. When provided, paths are validated before loading.</param>
-    public static IReadOnlyList<LoadedPlugin> Load(IEnumerable<PluginDescriptor> plugins, string? baseDirectory = null)
+    /// <param name="resolvedPathDirectories">Trusted search directories for pre-resolved plugin paths.
+    /// The base directory is always included when provided.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing plugin validation and loading workflow; tracked as complexity baseline debt.")]
+    public static IReadOnlyList<LoadedPlugin> Load(
+        IEnumerable<PluginDescriptor> plugins,
+        string? baseDirectory = null,
+        IEnumerable<string>? resolvedPathDirectories = null)
     {
         var results = new List<LoadedPlugin>();
 
         ArgumentNullException.ThrowIfNull(plugins);
+
+        var trustedResolvedPathDirectories = resolvedPathDirectories?.ToList() ?? [];
+        if (baseDirectory is not null)
+        {
+            trustedResolvedPathDirectories.Add(baseDirectory);
+        }
 
         foreach (var plugin in plugins)
         {
@@ -231,7 +289,21 @@ public sealed class PluginLoader
 
             if (plugin.ResolvedFullPath is not null)
             {
-                // Path was pre-resolved by search-path logic; use directly.
+                var validationError = ValidateResolvedPluginPath(
+                    plugin.ResolvedFullPath,
+                    trustedResolvedPathDirectories);
+                if (validationError is not null)
+                {
+                    results.Add(new LoadedPlugin(
+                        plugin.Path,
+                        true,
+                        Array.Empty<IRuleProvider>(),
+                        new PluginLoadDiagnostic(
+                            PluginLoadStatus.PathRejected,
+                            validationError)));
+                    continue;
+                }
+
                 fullPath = plugin.ResolvedFullPath;
             }
             else
@@ -380,6 +452,10 @@ public sealed class PluginLoader
 
         return results;
     }
+
+    private static StringComparison PathComparison => OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
 
     private static (IReadOnlyList<IRuleProvider> Compatible, IReadOnlyList<IRuleProvider> Incompatible) DiscoverProviders(Assembly assembly)
     {

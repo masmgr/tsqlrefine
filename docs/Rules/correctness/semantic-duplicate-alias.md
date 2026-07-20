@@ -138,9 +138,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-duplicate-alias", "enabled": false }
-  ]
+  "rules": {
+    "semantic-duplicate-alias": "none"
+  }
 }
 ```
 

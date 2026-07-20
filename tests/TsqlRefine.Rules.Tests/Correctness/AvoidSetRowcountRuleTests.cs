@@ -27,6 +27,7 @@ public sealed class AvoidSetRowcountRuleTests
         Assert.Single(diagnostics);
         Assert.Equal("avoid-set-rowcount", diagnostics[0].Code);
         Assert.Contains("SET ROWCOUNT", diagnostics[0].Message);
+        Assert.Equal(3, diagnostics[0].Range.End.Character - diagnostics[0].Range.Start.Character);
     }
 
     [Fact]

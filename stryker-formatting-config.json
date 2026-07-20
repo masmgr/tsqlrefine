@@ -1,0 +1,19 @@
+{
+  "stryker-config": {
+    "project": "src/TsqlRefine.Formatting/TsqlRefine.Formatting.csproj",
+    "test-projects": [
+      "tests/TsqlRefine.Formatting.Tests/TsqlRefine.Formatting.Tests.csproj"
+    ],
+    "target-framework": "net10.0",
+    "reporters": ["progress", "html", "json"],
+    "thresholds": {
+      "high": 80,
+      "low": 77,
+      "break": 77
+    },
+    "mutate": [
+      "**/*.cs",
+      "!**/obj/**/*.cs"
+    ]
+  }
+}

@@ -248,4 +248,63 @@ public sealed class JoinForeignKeyMismatchRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    // ===== Complex query scenarios =====
+
+    [Fact]
+    public void Analyze_MismatchInsideExistsSubquery_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT b.Value
+            FROM dbo.TableB AS b
+            WHERE EXISTS (
+                SELECT 1
+                FROM dbo.TableA AS a
+                INNER JOIN dbo.TableC AS c ON c.Id = a.ID_B
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-foreign-key-mismatch");
+    }
+
+    [Fact]
+    public void Analyze_MismatchInsideSelectListSubquery_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT b.Value,
+                (SELECT TOP (1) a.Name
+                 FROM dbo.TableA AS a
+                 INNER JOIN dbo.TableC AS c ON c.Id = a.ID_B) AS FirstName
+            FROM dbo.TableB AS b;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-foreign-key-mismatch");
+    }
+
+    [Fact]
+    public void Analyze_MismatchInsideDerivedTable_ReturnsDiagnostic()
+    {
+        const string sql = """
+            SELECT d.Name
+            FROM (
+                SELECT a.Name
+                FROM dbo.TableA AS a
+                INNER JOIN dbo.TableC AS c ON c.Id = a.ID_B
+            ) AS d;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.NotEmpty(diagnostics);
+        Assert.Contains(diagnostics, d => d.Code == "join-foreign-key-mismatch");
+    }
 }

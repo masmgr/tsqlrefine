@@ -32,6 +32,10 @@ public static class FunctionParenSpaceNormalizer
     /// <param name="input">SQL text to normalize.</param>
     /// <param name="options">Formatting options.</param>
     /// <returns>SQL text with normalized function-parenthesis spacing.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing token normalization loop; tracked as complexity baseline debt.")]
     public static string Normalize(string input, FormattingOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -55,7 +59,8 @@ public static class FunctionParenSpaceNormalizer
             return input;
         }
 
-        var nextNonTriviaIndexes = ScriptDomTokenHelper.BuildNextNonTriviaIndexes(tokens);
+        var (previousNonTriviaIndexes, nextNonTriviaIndexes) =
+            ScriptDomTokenHelper.BuildNonTriviaNeighborIndexes(tokens);
 
         // Build a set of whitespace token indexes that should be removed
         // (whitespace between a function name and its opening parenthesis)
@@ -75,7 +80,7 @@ public static class FunctionParenSpaceNormalizer
                 continue;
             }
 
-            if (!IsFunctionNameToken(token))
+            if (!IsFunctionNameToken(tokens, previousNonTriviaIndexes, i))
             {
                 continue;
             }
@@ -98,7 +103,7 @@ public static class FunctionParenSpaceNormalizer
             {
                 var between = tokens[j];
                 if (ScriptDomTokenHelper.TriviaTokenTypes.Contains(between.TokenType) &&
-                    IsInlineWhitespaceOnly(between.Text ?? string.Empty))
+                    ScriptDomTokenHelper.IsInlineWhitespaceOnly(between.Text ?? string.Empty))
                 {
                     skipIndexes.Add(j);
                 }
@@ -133,8 +138,12 @@ public static class FunctionParenSpaceNormalizer
     /// <summary>
     /// Determines if a token represents a function name (built-in or user-defined identifier).
     /// </summary>
-    private static bool IsFunctionNameToken(TSqlParserToken token)
+    private static bool IsFunctionNameToken(
+        IList<TSqlParserToken> tokens,
+        int[] previousNonTriviaIndexes,
+        int index)
     {
+        var token = tokens[index];
         var text = token.Text;
         if (string.IsNullOrEmpty(text))
         {
@@ -143,6 +152,12 @@ public static class FunctionParenSpaceNormalizer
 
         // Exclude keywords that are in the function registry but are not functions
         if (ExcludedKeywords.Contains(text))
+        {
+            return false;
+        }
+
+        if (token.TokenType == TSqlTokenType.Identifier &&
+            IsTableNameBeforeColumnList(tokens, previousNonTriviaIndexes, index))
         {
             return false;
         }
@@ -163,19 +178,31 @@ public static class FunctionParenSpaceNormalizer
         return false;
     }
 
-    /// <summary>
-    /// Checks if whitespace text contains only spaces and tabs (no line breaks).
-    /// </summary>
-    private static bool IsInlineWhitespaceOnly(string text)
+    private static bool IsTableNameBeforeColumnList(
+        IList<TSqlParserToken> tokens,
+        int[] previousNonTriviaIndexes,
+        int index)
     {
-        foreach (var c in text)
+        var previousIndex = previousNonTriviaIndexes[index];
+
+        // Walk back over a multipart table name (database.schema.table).
+        while (previousIndex >= 0 && tokens[previousIndex].Text == ".")
         {
-            if (c is not (' ' or '\t'))
+            var qualifierIndex = previousNonTriviaIndexes[previousIndex];
+            if (qualifierIndex < 0)
             {
                 return false;
             }
+
+            previousIndex = previousNonTriviaIndexes[qualifierIndex];
         }
 
-        return text.Length > 0;
+        var previousText = previousIndex >= 0 ? tokens[previousIndex].Text : null;
+        return previousText is not null &&
+               (previousText.Equals("INTO", StringComparison.OrdinalIgnoreCase) ||
+                previousText.Equals("TABLE", StringComparison.OrdinalIgnoreCase) ||
+                previousText.Equals("FROM", StringComparison.OrdinalIgnoreCase) ||
+                previousText.Equals("JOIN", StringComparison.OrdinalIgnoreCase) ||
+                previousText.Equals("UPDATE", StringComparison.OrdinalIgnoreCase));
     }
 }

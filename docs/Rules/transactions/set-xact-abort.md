@@ -141,9 +141,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-xact-abort", "enabled": false }
-  ]
+  "rules": {
+    "set-xact-abort": "none"
+  }
 }
 ```
 

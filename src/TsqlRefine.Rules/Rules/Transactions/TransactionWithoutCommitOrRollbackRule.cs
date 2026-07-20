@@ -22,115 +22,62 @@ public sealed class TransactionWithoutCommitOrRollbackRule : DiagnosticVisitorRu
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class TransactionWithoutCommitOrRollbackVisitor : DiagnosticVisitorBase
+    private sealed class TransactionWithoutCommitOrRollbackVisitor : ProcedureScopeDiagnosticVisitorBase
     {
-        private readonly List<BeginTransactionStatement> _beginTransactions = new();
-        private bool _hasCommitOrRollback;
+        private readonly LinearTransactionState _transactions = new();
 
         public override void ExplicitVisit(TSqlBatch node)
         {
             // Reset for each batch (GO separator creates new batch)
-            _beginTransactions.Clear();
-            _hasCommitOrRollback = false;
+            _transactions.Reset();
 
             base.ExplicitVisit(node);
-
-            // After visiting the batch, check if any BEGIN TRAN lacks termination
-            foreach (var beginTran in _beginTransactions)
-            {
-                if (!_hasCommitOrRollback)
-                {
-                    AddDiagnostic(
-                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
-                        message: "BEGIN TRANSACTION without corresponding COMMIT or ROLLBACK in the same batch. Orphaned transactions hold locks indefinitely and cause blocking issues. Ensure all transaction paths have proper termination.",
-                        code: "avoid-transaction-without-commit",
-                        category: "Transactions",
-                        fixable: false
-                    );
-                }
-            }
+            ReportOpenTransactions(
+                "BEGIN TRANSACTION without corresponding COMMIT or ROLLBACK in the same batch. Orphaned transactions hold locks indefinitely and cause blocking issues. Ensure all transaction paths have proper termination.");
         }
 
         public override void ExplicitVisit(BeginTransactionStatement node)
         {
-            _beginTransactions.Add(node);
+            _transactions.Begin(node);
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(CommitTransactionStatement node)
         {
-            _hasCommitOrRollback = true;
+            _transactions.Commit();
             base.ExplicitVisit(node);
         }
 
         public override void ExplicitVisit(RollbackTransactionStatement node)
         {
-            _hasCommitOrRollback = true;
+            _transactions.Rollback(node);
             base.ExplicitVisit(node);
         }
 
-        // Special handling for CREATE PROCEDURE/FUNCTION - analyze as separate scope
-        public override void ExplicitVisit(CreateProcedureStatement node)
+        protected override void VisitProcedureScope(Action visitChildren)
         {
-            // Save parent batch state
-            var parentBeginTransactions = new List<BeginTransactionStatement>(_beginTransactions);
-            var parentHasCommitOrRollback = _hasCommitOrRollback;
+            var parentState = _transactions.Capture();
+            _transactions.Reset();
 
-            // Reset for procedure scope
-            _beginTransactions.Clear();
-            _hasCommitOrRollback = false;
+            visitChildren();
 
-            base.ExplicitVisit(node);
-
-            // Check procedure scope
-            foreach (var beginTran in _beginTransactions)
-            {
-                if (!_hasCommitOrRollback)
-                {
-                    AddDiagnostic(
-                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
-                        message: "BEGIN TRANSACTION in stored procedure without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
-                        code: "avoid-transaction-without-commit",
-                        category: "Transactions",
-                        fixable: false
-                    );
-                }
-            }
-
-            // Restore parent batch state
-            _beginTransactions.Clear();
-            _beginTransactions.AddRange(parentBeginTransactions);
-            _hasCommitOrRollback = parentHasCommitOrRollback;
+            ReportOpenTransactions(
+                "BEGIN TRANSACTION in stored procedure without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.");
+            _transactions.Restore(parentState);
         }
 
-        public override void ExplicitVisit(CreateFunctionStatement node)
+        private void ReportOpenTransactions(string message)
         {
-            // Similar handling for functions
-            var parentBeginTransactions = new List<BeginTransactionStatement>(_beginTransactions);
-            var parentHasCommitOrRollback = _hasCommitOrRollback;
-
-            _beginTransactions.Clear();
-            _hasCommitOrRollback = false;
-
-            base.ExplicitVisit(node);
-
-            foreach (var beginTran in _beginTransactions)
+            foreach (var beginTransaction in _transactions.OpenTransactions)
             {
-                if (!_hasCommitOrRollback)
-                {
-                    AddDiagnostic(
-                        range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTran),
-                        message: "BEGIN TRANSACTION in function without COMMIT or ROLLBACK. Ensure all code paths properly terminate the transaction.",
-                        code: "avoid-transaction-without-commit",
-                        category: "Transactions",
-                        fixable: false
-                    );
-                }
+                AddDiagnostic(
+                    range: ScriptDomHelpers.GetLeadingKeywordPairRange(beginTransaction),
+                    message: message,
+                    code: "avoid-transaction-without-commit",
+                    category: "Transactions",
+                    fixable: false
+                );
             }
-
-            _beginTransactions.Clear();
-            _beginTransactions.AddRange(parentBeginTransactions);
-            _hasCommitOrRollback = parentHasCommitOrRollback;
         }
     }
 }

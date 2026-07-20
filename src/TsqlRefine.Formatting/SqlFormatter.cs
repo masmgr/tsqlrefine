@@ -47,7 +47,7 @@ public static class SqlFormatter
         var keywordNormalized = KeywordSpaceNormalizer.Normalize(sql, options);
 
         // Apply granular element-based casing
-        var casedSql = ScriptDomElementCaser.Apply(keywordNormalized, options, compatLevel: options.CompatLevel);
+        var casedSql = ScriptDomElementCaser.Apply(keywordNormalized, options);
 
         var whitespaceNormalized = WhitespaceNormalizer.Normalize(casedSql, options);
 

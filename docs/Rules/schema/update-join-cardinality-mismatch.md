@@ -17,7 +17,7 @@ When an `UPDATE...FROM...JOIN` statement joins the target table to another table
 - The query may appear to work correctly in development but produce wrong results in production
 - The behavior can change silently after index rebuilds, statistics updates, or plan changes
 
-This rule uses schema information (primary keys, unique constraints, and unique indexes) to determine join cardinality. It flags joins where the joined table's columns in the ON clause are not covered by a uniqueness guarantee, meaning multiple rows could match each target row.
+This rule uses schema information (primary keys, unique constraints, and unique indexes) to determine join cardinality. It flags joins where the joined table's columns in the ON clause are not covered by a uniqueness guarantee, meaning multiple rows could match each target row. The update target may be a persistent table, temporary table, or table variable; only the joined side needs to resolve through the configured schema.
 
 ## Examples
 
@@ -43,6 +43,11 @@ INNER JOIN dbo.OrderLog AS ol ON ol.Action = o.Status;
 UPDATE o1 SET o1.Amount = o2.Amount
 FROM dbo.Orders AS o1
 INNER JOIN dbo.Orders AS o2 ON o2.CustomerId = o1.CustomerId;
+
+-- A temporary target is unsafe when the joined key is not unique.
+UPDATE w SET w.Amount = oi.Quantity
+FROM #Work AS w
+INNER JOIN dbo.OrderItems AS oi ON oi.OrderId = w.OrderId;
 ```
 
 ### Good
@@ -75,6 +80,9 @@ INNER JOIN (
     FROM dbo.OrderItems
     GROUP BY OrderId
 ) AS sub ON sub.OrderId = o.OrderId;
+
+-- Alternatively, join on every column in a composite unique key, or use
+-- ROW_NUMBER with a deterministic ORDER BY to select exactly one source row.
 ```
 
 ## Configuration
@@ -83,9 +91,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "update-join-cardinality-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "update-join-cardinality-mismatch": "none"
+  }
 }
 ```
 

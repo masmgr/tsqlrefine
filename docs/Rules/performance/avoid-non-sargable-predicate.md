@@ -100,9 +100,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-non-sargable-predicate", "enabled": false }
-  ]
+  "rules": {
+    "avoid-non-sargable-predicate": "none"
+  }
 }
 ```
 

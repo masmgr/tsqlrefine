@@ -26,6 +26,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
         new JoinColumnDeviationVisitor(context.Schema!, context.RelationDeviations!);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing schema-aware ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class JoinColumnDeviationVisitor(
         ISchemaProvider schema,
         IRelationDeviationProvider deviations) : DiagnosticVisitorBase
@@ -66,7 +67,7 @@ public sealed class JoinColumnDeviationRule : SchemaAndDeviationAwareVisitorRule
                 var previousResolver = _resolver;
 
                 _resolver = new SchemaColumnResolver(schema, AliasMapBuilder.Build(tableRefs, schema));
-                node.FromClause.Accept(this);
+                QuerySpecificationChildVisitor.VisitChildren(this, node);
 
                 _resolver = previousResolver;
                 return;

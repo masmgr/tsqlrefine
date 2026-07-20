@@ -95,6 +95,7 @@ public static class TableReferenceHelpers
     /// </summary>
     /// <param name="tableRef">The table reference to get the alias from.</param>
     /// <returns>The alias or table name, or null if not available.</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing ScriptDOM table-reference dispatch; tracked as complexity baseline debt.")]
     public static string? GetAliasOrTableName(TableReference tableRef)
     {
         return tableRef switch

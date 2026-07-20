@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/masmgr/tsqlrefine/schemas/report-result.schema.json",
+  "title": "tsqlrefine report result",
+  "type": "object",
+  "required": [
+    "schemaVersion", "tool", "version", "generatedAt", "summary",
+    "diagnosticsByCategory", "diagnosticsByRule", "diagnosticsByFile", "topComplexObjects"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tool": { "const": "tsqlrefine" },
+    "version": { "type": "string" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "diagnosticsByCategory": { "$ref": "#/$defs/counts" },
+    "diagnosticsByRule": { "$ref": "#/$defs/counts" },
+    "diagnosticsByFile": { "$ref": "#/$defs/counts" },
+    "topComplexObjects": {
+      "type": "array",
+      "maxItems": 20,
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "baseline": { "$ref": "#/$defs/baseline" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "nonNegativeInteger": { "type": "integer", "minimum": 0 },
+    "positiveInteger": { "type": "integer", "minimum": 1 },
+    "summary": {
+      "type": "object",
+      "required": ["fileCount", "diagnosticCount", "errorCount", "warningCount", "informationCount", "hintCount"],
+      "properties": {
+        "fileCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "diagnosticCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "errorCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "warningCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "informationCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "hintCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "counts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "count"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "count": { "$ref": "#/$defs/positiveInteger" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "filePath", "name", "kind", "line", "cyclomaticComplexity", "nestingDepth",
+        "statementCount", "maxJoinsPerQuery", "parameterCount"
+      ],
+      "properties": {
+        "filePath": { "type": "string" },
+        "name": { "type": "string" },
+        "kind": { "enum": ["Procedure", "Function", "View", "Trigger", "Batch"] },
+        "line": { "$ref": "#/$defs/positiveInteger" },
+        "cyclomaticComplexity": { "$ref": "#/$defs/positiveInteger" },
+        "nestingDepth": { "$ref": "#/$defs/nonNegativeInteger" },
+        "statementCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxJoinsPerQuery": { "$ref": "#/$defs/nonNegativeInteger" },
+        "parameterCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "baseline": {
+      "type": "object",
+      "required": ["newCount", "frozenCount", "resolvedCount"],
+      "properties": {
+        "newCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "frozenCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "resolvedCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

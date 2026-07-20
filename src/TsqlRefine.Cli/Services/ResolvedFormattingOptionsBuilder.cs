@@ -70,6 +70,7 @@ internal sealed class ResolvedFormattingOptionsBuilder
     /// <summary>
     /// Applies values from tsqlrefine.json config, only overriding values that differ from defaults.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing formatting option mapping; tracked as complexity baseline debt.")]
     public ResolvedFormattingOptionsBuilder ApplyConfig(FormattingOptions configOptions)
     {
         if (configOptions.CompatLevel != _defaults.CompatLevel)

@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 143
-- **Fixable Rules**: 14 (10%)
+- **Total Rules**: 169
+- **Fixable Rules**: 14 (8%)
 - **By Importance Tier**:
-  - Critical (security-only): 14 rules
-  - Essential (pragmatic): 32 rules
-  - Recommended (recommended): 52 rules
-  - Thorough (strict-logic): 22 rules
+  - Critical (security-only): 17 rules
+  - Essential (pragmatic): 35 rules
+  - Recommended (recommended): 60 rules
+  - Thorough (strict-logic): 34 rules
   - Cosmetic (strict): 23 rules
 - **By Severity**:
-  - Error: 23 rules (16%)
-  - Warning: 81 rules (57%)
-  - Information: 39 rules (27%)
+  - Error: 28 rules (17%)
+  - Warning: 97 rules (57%)
+  - Information: 44 rules (26%)
 
 ## Importance Tiers
 
@@ -42,21 +42,21 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
-| **Critical** | security-only | 14 | 14 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 32 | 46 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 52 | 98 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 22 | 120 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 143 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
+| **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 60 | 112 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 34 | 146 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 23 | 169 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
 | Category | Rules | Description |
 |----------|-------|-------------|
-| **Security** | 5 | Identifies security vulnerabilities like SQL injection |
+| **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 41 | Detects code that may produce incorrect results or runtime errors |
-| **Performance** | 23 | Flags patterns that can cause performance issues |
-| **Transactions** | 15 | Ensures proper transaction handling and session settings |
+| **Correctness** | 57 | Detects code that may produce incorrect results or runtime errors |
+| **Performance** | 30 | Flags patterns that can cause performance issues |
+| **Transactions** | 16 | Ensures proper transaction handling and session settings |
 | **Schema** | 21 | Enforces database schema best practices |
 | **Style** | 32 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
@@ -65,16 +65,18 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Critical (security-only)
 
-**14 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
+**17 rules** — Security vulnerabilities and critical safety issues that can cause data loss or security breaches. These rules should never be disabled in production code.
 
-#### Security (5 rules)
+#### Security (7 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-dangerous-procedures](security/avoid-dangerous-procedures.md) | Detects usage of dangerous extended stored procedures (xp_cmdshell, xp_reg*, sp_OA*) that pose security risks. | Warning | No |
 | [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md) | Detects EXEC with dynamic SQL (EXEC(...) pattern) which can be vulnerable to SQL injection | Warning | No |
 | [avoid-execute-as](security/avoid-execute-as.md) | Detects EXECUTE AS usage for privilege escalation. EXECUTE AS can change the security context and may lead to unintended privilege escalation. | Warning | No |
+| [avoid-hardcoded-password](security/avoid-hardcoded-password.md) | Detects hardcoded passwords in login DDL and ad hoc data-source connection strings. | Warning | No |
 | [avoid-openrowset-opendatasource](security/avoid-openrowset-opendatasource.md) | Detects OPENROWSET and OPENDATASOURCE usage, which can be exploited for unauthorized remote data access. | Warning | No |
+| [dynamic-sql-taint](security/dynamic-sql-taint.md) | Detects untrusted values that flow into dynamically executed SQL text. | Error | No |
 | [require-parameterized-sp-executesql](security/require-parameterized-sp-executesql.md) | Detects sp_executesql calls without proper parameterization or with string concatenation. | Warning | No |
 
 #### Safety (4 rules)
@@ -86,21 +88,22 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [dangerous-ddl](safety/dangerous-ddl.md) | Detects destructive DDL operations (DROP, TRUNCATE, ALTER TABLE DROP) that can cause irreversible data loss. | Warning | No |
 | [dml-without-where](safety/dml-without-where.md) | Detects UPDATE/DELETE statements without WHERE clause to prevent unintended mass data modifications. | Error | No |
 
-#### Correctness (5 rules)
+#### Correctness (6 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [require-column-list-for-insert-select](correctness/require-column-list-for-insert-select.md) | INSERT SELECT statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
 | [require-column-list-for-insert-values](correctness/require-column-list-for-insert-values.md) | INSERT VALUES statements must explicitly specify the column list to avoid errors when table schema changes | Warning | No |
+| [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md) | Requires the statement immediately before THROW to be terminated with a semicolon. | Error | No |
 | [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md) | Detects duplicate table aliases in the same scope, which causes ambiguous references. | Error | No |
 | [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md) | Detects column count mismatches between the target column list and the source in INSERT statements. | Error | No |
 | [semantic/undefined-alias](correctness/semantic-undefined-alias.md) | Detects references to undefined table aliases in column qualifiers. | Error | No |
 
 ### Essential (pragmatic)
 
-**32 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
+**35 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
 
-#### Correctness (22 rules)
+#### Correctness (24 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -115,6 +118,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-set-rowcount](correctness/avoid-set-rowcount.md) | Detects SET ROWCOUNT statements which are deprecated and can cause unexpected behavior with triggers and nested statements. | Warning | No |
 | [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data. | Error | No |
 | [duplicate-insert-column](correctness/duplicate-insert-column.md) | Detects duplicate column names in INSERT column lists; duplicate columns always cause a runtime error. | Error | No |
+| [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md) | Detects EXEC calls with missing required or extra positional arguments. | Error | No |
+| [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md) | Detects named EXEC arguments that are absent from the procedure signature. | Error | No |
 | [group-by-column-mismatch](correctness/group-by-column-mismatch.md) | Detects SELECT columns not contained in GROUP BY or an aggregate function. | Warning | No |
 | [having-column-mismatch](correctness/having-column-mismatch.md) | Detects columns in HAVING clause not in GROUP BY and not wrapped in an aggregate function. | Warning | No |
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
@@ -133,17 +138,18 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [top-without-order-by](performance/top-without-order-by.md) | Detects TOP clause without ORDER BY, which produces non-deterministic results. | Warning | No |
 
-#### Transactions (1 rules)
+#### Transactions (2 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
+| [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md) | Detects execution paths that leave a transaction opened by the current scope unclosed. | Error | No |
 
 #### Schema (8 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
-| [avoid-deprecated-types](schema/avoid-deprecated-types.md) | Detects deprecated TEXT, NTEXT, and IMAGE data types. Use VARCHAR(MAX), NVARCHAR(MAX), or VARBINARY(MAX) instead. | Warning | No |
+| [avoid-deprecated-types](schema/avoid-deprecated-types.md) | Detects deprecated TEXT, NTEXT, IMAGE, and TIMESTAMP data types and recommends modern replacements. | Warning | No |
 | [delete-column-not-in-table](schema/delete-column-not-in-table.md) | Detects DELETE statements whose WHERE clause references columns not found in the target table. | Error | No |
 | [duplicate-column-definition](schema/duplicate-column-definition.md) | Detects duplicate column names in CREATE TABLE definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-table-function-column](schema/duplicate-table-function-column.md) | Detects duplicate column names in table-valued function definitions; duplicate columns always cause a runtime error. | Error | No |
@@ -154,25 +160,32 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**52 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**60 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
-#### Correctness (11 rules)
+#### Correctness (18 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md) | Detects FLOAT/REAL data types which have binary rounding issues. Use DECIMAL/NUMERIC for exact precision. | Warning | No |
+| [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md) | Detects MAX(...) plus a positive integer in assignments or DML values, which is unsafe for key generation. | Warning | No |
 | [avoid-nolock](correctness/avoid-nolock.md) | Avoid using NOLOCK hint or READ UNCOMMITTED isolation level | Warning | No |
+| [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md) | Detects execution paths where an opened cursor is not deallocated. | Warning | No |
 | [duplicate-select-column](correctness/duplicate-select-column.md) | Detects duplicate output column names in SELECT queries; may cause ambiguous column references. | Warning | No |
 | [escape-keyword-identifier](correctness/escape-keyword-identifier.md) | Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it. | Warning | **Yes** |
+| [exec-output-not-captured](correctness/exec-output-not-captured.md) | Detects EXEC calls that omit OUTPUT when passing an output parameter. | Warning | No |
+| [exec-parameter-type-mismatch](correctness/exec-parameter-type-mismatch.md) | Detects EXEC arguments with a known type that may lose information when assigned to the procedure parameter. | Warning | No |
 | [semantic/alias-scope-violation](correctness/semantic-alias-scope-violation.md) | Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent. | Warning | No |
 | [semantic/join-table-not-referenced-in-on](correctness/semantic-join-table-not-referenced-in-on.md) | Detects JOIN operations where the joined table is not referenced in the ON clause. | Warning | No |
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
 | [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 | [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md) | Detects STRING_AGG whose first argument is not explicitly cast to NVARCHAR(MAX), which risks intermediate result truncation (8000-byte / 4000-char limit). | Warning | No |
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
+| [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md) | Detects string assignments whose statically known maximum length exceeds the destination capacity. | Warning | No |
 | [stuff-without-order-by](correctness/stuff-without-order-by.md) | Detects STUFF with FOR XML PATH that lacks ORDER BY, which may produce non-deterministic string concatenation results. | Warning | No |
+| [unreachable-statement](correctness/unreachable-statement.md) | Detects statements that are unreachable after control transfer or in constant-false branches. | Warning | No |
+| [variable-used-before-assignment](correctness/variable-used-before-assignment.md) | Detects variables read before assignment on every path reaching the use. | Warning | No |
 
-#### Performance (12 rules)
+#### Performance (13 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -188,6 +201,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-top-in-dml](performance/avoid-top-in-dml.md) | Disallows TOP in UPDATE/DELETE; it is frequently non-deterministic and easy to misuse without a carefully designed ordering strategy. | Warning | No |
 | [like-leading-wildcard](performance/like-leading-wildcard.md) | Detects LIKE patterns with a leading wildcard (%, _, [) in predicates, which prevents index usage and causes full table scans. | Warning | No |
 | [prefer-exists-over-in-subquery](performance/prefer-exists-over-in-subquery.md) | Detects WHERE column IN (SELECT ...) patterns and recommends using EXISTS instead for better performance with large datasets. | Information | No |
+| [redundant-semi-join](performance/redundant-semi-join.md) | Detects IN or EXISTS predicates that duplicate an existing INNER JOIN to the same table and key. | Information | No |
 
 #### Transactions (13 rules)
 
@@ -235,7 +249,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Thorough (strict-logic)
 
-**22 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
+**34 rules** — Comprehensive correctness, performance, and schema checks without cosmetic style enforcement.
 
 #### Safety (1 rules)
 
@@ -243,15 +257,21 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |---------|-------------|----------|---------|
 | [require-drop-if-exists](safety/require-drop-if-exists.md) | Requires IF EXISTS on DROP statements for idempotent deployment scripts. | Information | No |
 
-#### Correctness (3 rules)
+#### Correctness (9 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
+| [circular-object-reference](correctness/circular-object-reference.md) | Detects cycles between cataloged SQL objects. | Warning | No |
+| [inconsistent-result-set](correctness/inconsistent-result-set.md) | Detects procedures that return different result-set shapes on different execution paths. | Warning | No |
 | [len-for-emptiness-check](correctness/len-for-emptiness-check.md) | Warns when LEN() is used in an emptiness comparison; trailing spaces are ignored, so use DATALENGTH() to detect whitespace-only values. | Warning | No |
+| [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md) | Detects WHILE loops that use DATALENGTH for termination but LEN to advance the same string variable. | Warning | No |
 | [multi-row-update-from](correctness/multi-row-update-from.md) | Warns on UPDATE...FROM with a JOIN, which can match multiple rows per target row and produce non-deterministic updates. | Warning | No |
 | [semantic/set-variable](correctness/semantic-set-variable.md) | Recommends using SELECT for variable assignment instead of SET for consistency. | Warning | No |
+| [unreferenced-object](correctness/unreferenced-object.md) | Detects cataloged SQL objects that have no incoming references. | Information | No |
+| [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md) | Detects procedure or function calls that do not resolve in an authoritative object catalog. | Warning | No |
+| [unused-variable](correctness/unused-variable.md) | Detects local variables and routine parameters that are never read. | Information | No |
 
-#### Performance (10 rules)
+#### Performance (16 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -263,6 +283,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-select-distinct](performance/avoid-select-distinct.md) | Flags SELECT DISTINCT usage which often masks JOIN bugs or missing GROUP BY, and has performance implications. | Information | No |
 | [avoid-select-into](performance/avoid-select-into.md) | Warns on SELECT ... INTO; it implicitly creates schema and can produce fragile, environment-dependent results. | Information | No |
 | [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md) | Detects UPPER or LOWER functions applied to columns in WHERE, JOIN ON, or HAVING predicates which prevents index usage | Warning | No |
+| [deep-view-nesting](performance/deep-view-nesting.md) | Detects views whose dependency nesting exceeds a configured maximum. | Warning | No |
+| [max-cyclomatic-complexity](performance/max-cyclomatic-complexity.md) | Limits cyclomatic complexity per SQL object or batch. | Warning | No |
+| [max-joins-per-query](performance/max-joins-per-query.md) | Limits the number of joins in a single query. | Warning | No |
+| [max-nesting-depth](performance/max-nesting-depth.md) | Limits control-flow nesting depth per SQL object or batch. | Warning | No |
+| [max-parameter-count](performance/max-parameter-count.md) | Limits parameter count per procedure or function. | Information | No |
+| [max-statement-count](performance/max-statement-count.md) | Limits executable statement count per SQL object or batch. | Information | No |
 | [prefer-utc-datetime](performance/prefer-utc-datetime.md) | Detects local datetime functions (GETDATE, SYSDATETIME, CURRENT_TIMESTAMP, SYSDATETIMEOFFSET) and suggests UTC alternatives for consistency across time zones | Warning | No |
 | [require-data-compression](performance/require-data-compression.md) | Recommend specifying DATA_COMPRESSION option in CREATE TABLE for storage optimization | Information | No |
 
@@ -328,7 +354,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (23 rules)
+### Error (28 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -343,18 +369,23 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-table-function-column](schema/duplicate-table-function-column.md)
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
+- [dynamic-sql-taint](security/dynamic-sql-taint.md)
+- [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)
+- [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md)
 - [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
+- [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
 - [semantic/duplicate-alias](correctness/semantic-duplicate-alias.md)
 - [semantic/insert-column-count-mismatch](correctness/semantic-insert-column-count-mismatch.md)
 - [semantic/undefined-alias](correctness/semantic-undefined-alias.md)
 - [semantic/unicode-string](correctness/semantic-unicode-string.md)
+- [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md)
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (81 rules)
+### Warning (97 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -367,8 +398,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-exec-dynamic-sql](security/avoid-exec-dynamic-sql.md)
 - [avoid-execute-as](security/avoid-execute-as.md)
 - [avoid-float-for-decimal](correctness/avoid-float-for-decimal.md)
+- [avoid-hardcoded-password](security/avoid-hardcoded-password.md)
 - [avoid-heap-table](schema/avoid-heap-table.md)
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
+- [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md)
 - [avoid-merge](safety/avoid-merge.md)
 - [avoid-nolock](correctness/avoid-nolock.md)
 - [avoid-non-sargable-predicate](performance/avoid-non-sargable-predicate.md)
@@ -383,20 +416,30 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-top-100-percent-order-by](performance/avoid-top-100-percent-order-by.md)
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
 - [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md)
+- [circular-object-reference](correctness/circular-object-reference.md)
 - [cross-database-transaction](safety/cross-database-transaction.md)
+- [cursor-not-deallocated-on-path](correctness/cursor-not-deallocated-on-path.md)
 - [dangerous-ddl](safety/dangerous-ddl.md)
+- [deep-view-nesting](performance/deep-view-nesting.md)
 - [duplicate-foreign-key-column](schema/duplicate-foreign-key-column.md)
 - [duplicate-index-column](schema/duplicate-index-column.md)
 - [duplicate-index-definition](schema/duplicate-index-definition.md)
 - [duplicate-select-column](correctness/duplicate-select-column.md)
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
+- [exec-output-not-captured](correctness/exec-output-not-captured.md)
+- [exec-parameter-type-mismatch](correctness/exec-parameter-type-mismatch.md)
 - [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
 - [having-column-mismatch](correctness/having-column-mismatch.md)
 - [implicit-conversion-in-predicate-schema](schema/implicit-conversion-in-predicate-schema.md)
+- [inconsistent-result-set](correctness/inconsistent-result-set.md)
 - [join-column-deviation](schema/join-column-deviation.md)
 - [join-foreign-key-mismatch](schema/join-foreign-key-mismatch.md)
 - [len-for-emptiness-check](correctness/len-for-emptiness-check.md)
 - [like-leading-wildcard](performance/like-leading-wildcard.md)
+- [max-cyclomatic-complexity](performance/max-cyclomatic-complexity.md)
+- [max-joins-per-query](performance/max-joins-per-query.md)
+- [max-nesting-depth](performance/max-nesting-depth.md)
+- [mixed-string-length-functions-in-loop](correctness/mixed-string-length-functions-in-loop.md)
 - [multi-row-update-from](correctness/multi-row-update-from.md)
 - [nested-block-comments](style/nested-block-comments.md)
 - [order-by-in-subquery](correctness/order-by-in-subquery.md)
@@ -430,15 +473,19 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [set-xact-abort](transactions/set-xact-abort.md)
 - [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md)
 - [string-agg-without-order-by](correctness/string-agg-without-order-by.md)
+- [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md)
 - [stuff-without-order-by](correctness/stuff-without-order-by.md)
 - [top-without-order-by](performance/top-without-order-by.md)
 - [uncommitted-transaction](transactions/uncommitted-transaction.md)
 - [unreachable-case-when](correctness/unreachable-case-when.md)
+- [unreachable-statement](correctness/unreachable-statement.md)
 - [unresolved-column-reference](schema/unresolved-column-reference.md)
+- [unresolved-procedure-reference](correctness/unresolved-procedure-reference.md)
 - [unresolved-table-reference](schema/unresolved-table-reference.md)
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
+- [variable-used-before-assignment](correctness/variable-used-before-assignment.md)
 
-### Information (39 rules)
+### Information (44 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -452,6 +499,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-empty-line](style/duplicate-empty-line.md)
 - [duplicate-go](style/duplicate-go.md)
 - [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md)
+- [max-parameter-count](performance/max-parameter-count.md)
+- [max-statement-count](performance/max-statement-count.md)
 - [normalize-execute-keyword](style/normalize-execute-keyword.md)
 - [normalize-inequality-operator](style/normalize-inequality-operator.md)
 - [normalize-procedure-keyword](style/normalize-procedure-keyword.md)
@@ -467,6 +516,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [prefer-try-convert-patterns](style/prefer-try-convert-patterns.md)
 - [prefer-unicode-string-literals](style/prefer-unicode-string-literals.md)
 - [qualified-select-columns](style/qualified-select-columns.md)
+- [redundant-semi-join](performance/redundant-semi-join.md)
 - [require-as-for-column-alias](style/require-as-for-column-alias.md)
 - [require-as-for-table-alias](style/require-as-for-table-alias.md)
 - [require-begin-end-strict](style/require-begin-end-strict.md)
@@ -479,6 +529,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [semicolon-termination](style/semicolon-termination.md)
 - [set-nocount](transactions/set-nocount.md)
 - [set-transaction-isolation-level](transactions/set-transaction-isolation-level.md)
+- [unreferenced-object](correctness/unreferenced-object.md)
+- [unused-variable](correctness/unused-variable.md)
 
 ## Fixable Rules
 

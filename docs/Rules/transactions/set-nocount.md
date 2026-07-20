@@ -84,9 +84,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "set-nocount", "enabled": false }
-  ]
+  "rules": {
+    "set-nocount": "none"
+  }
 }
 ```
 

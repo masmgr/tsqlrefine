@@ -251,6 +251,18 @@ UPDATE users SET active = 0 WHERE last_login = NULL;";
         Assert.Equal("COALESCE(a.name, b.name) IS NULL", edit.NewText);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM users WHERE name /* keep */ = NULL;")]
+    [InlineData("SELECT * FROM users WHERE NULL /* keep */ = name;")]
+    public void GetFixes_ComparisonContainsComment_ReturnsEmpty(string sql)
+    {
+        var rule = new AvoidNullComparisonRule();
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostic = rule.Analyze(context).Single();
+
+        Assert.Empty(rule.GetFixes(context, diagnostic));
+    }
+
     [Fact]
     public void GetFixes_FixRangeMatchesDiagnosticRange()
     {

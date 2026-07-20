@@ -44,6 +44,8 @@ ScaffoldingReadMe.txt
 ~$*
 *~
 CodeCoverage/
+BenchmarkDotNet.Artifacts/
+StrykerOutput/
 
 # MSBuild Binary and Structured Log
 *.binlog

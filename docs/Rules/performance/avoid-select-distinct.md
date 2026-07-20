@@ -60,14 +60,14 @@ JOIN Categories cat ON p.CategoryId = cat.Id
 WHERE cat.CategoryName = 'Electronics';
 ```
 
-## Legitimate Uses
+## Intentional Uses
 
-Some scenarios where `DISTINCT` is appropriate:
+Some scenarios use `DISTINCT` intentionally. The rule still reports these cases because it cannot infer intent; suppress or disable the rule where the deduplication is deliberate.
 
 ### Set Operations
 
 ```sql
--- Get unique values for a dropdown/filter
+-- Intentional, but still reported by this rule
 SELECT DISTINCT Country
 FROM Customers
 ORDER BY Country;
@@ -163,9 +163,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-select-distinct", "enabled": false }
-  ]
+  "rules": {
+    "avoid-select-distinct": "none"
+  }
 }
 ```
 

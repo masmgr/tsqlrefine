@@ -87,7 +87,7 @@ using TsqlRefine.Formatting.Helpers.Whitespace;
 using TsqlRefine.Formatting.Helpers.Transformation;
 
 // Apply only granular element casing
-var cased = ScriptDomElementCaser.Apply(sql, options, compatLevel: 150);
+var cased = ScriptDomElementCaser.Apply(sql, options);
 
 // Apply only whitespace normalization
 var normalized = WhitespaceNormalizer.Normalize(sql, options);

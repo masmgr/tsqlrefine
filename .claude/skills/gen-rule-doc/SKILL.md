@@ -115,9 +115,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "{rule-id}", "enabled": false }
-  ]
+  "rules": {
+    "{rule-id}": "none"
+  }
 }
 ```
 

@@ -78,6 +78,10 @@ public static class KeywordSpaceNormalizer
     /// <param name="input">SQL text to normalize</param>
     /// <param name="options">Formatting options</param>
     /// <returns>SQL text with normalized keyword spacing</returns>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing compound-keyword normalization loop; tracked as complexity baseline debt.")]
     public static string Normalize(string input, FormattingOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -119,7 +123,7 @@ public static class KeywordSpaceNormalizer
 
             // Check if this is a whitespace token eligible for normalization
             if (ScriptDomTokenHelper.TriviaTokenTypes.Contains(token.TokenType) &&
-                IsInlineWhitespaceOnly(text))
+                ScriptDomTokenHelper.IsInlineWhitespaceOnly(text))
             {
                 var prevIdx = previousNonTriviaIndexes[i];
                 var nextIdx = nextNonTriviaIndexes[i];
@@ -144,21 +148,5 @@ public static class KeywordSpaceNormalizer
         }
 
         return sb.ToString();
-    }
-
-    /// <summary>
-    /// Checks if whitespace text contains only spaces and tabs (no line breaks).
-    /// </summary>
-    private static bool IsInlineWhitespaceOnly(string text)
-    {
-        foreach (var c in text)
-        {
-            if (c is not (' ' or '\t'))
-            {
-                return false;
-            }
-        }
-
-        return text.Length > 0;
     }
 }

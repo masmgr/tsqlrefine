@@ -140,9 +140,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "normalize-transaction-keyword", "enabled": false }
-  ]
+  "rules": {
+    "normalize-transaction-keyword": "none"
+  }
 }
 ```
 

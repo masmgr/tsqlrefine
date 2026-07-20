@@ -67,9 +67,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "delete-column-not-in-table", "enabled": false }
-  ]
+  "rules": {
+    "delete-column-not-in-table": "none"
+  }
 }
 ```
 

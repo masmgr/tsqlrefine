@@ -123,9 +123,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-go", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-go": "none"
+  }
 }
 ```
 

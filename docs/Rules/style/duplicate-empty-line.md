@@ -108,9 +108,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-empty-line", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-empty-line": "none"
+  }
 }
 ```
 

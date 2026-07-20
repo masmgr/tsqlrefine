@@ -385,6 +385,160 @@ public interface IRelationDeviationProvider
     IReadOnlyList<RelationTablePairSummary> GetAllSummaries();
 }
 
+// =============================================================================
+// Object Catalog Contracts
+// =============================================================================
+
+/// <summary>Identifies the kind of a cataloged SQL object.</summary>
+public enum CatalogObjectKind
+{
+    /// <summary>A stored procedure.</summary>
+    Procedure,
+    /// <summary>A scalar-valued function.</summary>
+    ScalarFunction,
+    /// <summary>A table-valued function.</summary>
+    TableValuedFunction,
+    /// <summary>A view.</summary>
+    View
+}
+
+/// <summary>Filters object kinds during catalog resolution.</summary>
+[Flags]
+public enum CatalogObjectKindFilter
+{
+    /// <summary>No object kinds.</summary>
+    None = 0,
+    /// <summary>Stored procedures.</summary>
+    Procedure = 1,
+    /// <summary>Scalar-valued functions.</summary>
+    ScalarFunction = 2,
+    /// <summary>Table-valued functions.</summary>
+    TableValuedFunction = 4,
+    /// <summary>Views.</summary>
+    View = 8,
+    /// <summary>All function kinds.</summary>
+    Function = ScalarFunction | TableValuedFunction,
+    /// <summary>All supported object kinds.</summary>
+    All = Procedure | ScalarFunction | TableValuedFunction | View
+}
+
+/// <summary>Identifies the kind of a cross-object reference.</summary>
+public enum CatalogReferenceKind
+{
+    /// <summary>An EXEC/EXECUTE procedure invocation.</summary>
+    Execute,
+    /// <summary>A scalar or table-valued function invocation.</summary>
+    FunctionCall,
+    /// <summary>A table or view reference.</summary>
+    Table,
+    /// <summary>A column reference.</summary>
+    Column
+}
+
+/// <summary>Describes whether a catalog reference could be resolved.</summary>
+public enum CatalogResolutionStatus
+{
+    /// <summary>The reference resolves to exactly one collected object.</summary>
+    Resolved,
+    /// <summary>The reference does not resolve inside an authoritative catalog scope.</summary>
+    Unresolved,
+    /// <summary>The reference matches more than one collected object.</summary>
+    Ambiguous,
+    /// <summary>The reference is outside the catalog's supported or authoritative scope.</summary>
+    OutOfScope
+}
+
+/// <summary>Stable identity of a cataloged SQL object.</summary>
+/// <param name="DatabaseName">Database name, or null for the current database.</param>
+/// <param name="SchemaName">Schema name.</param>
+/// <param name="Name">Object name.</param>
+public sealed record CatalogObjectIdInfo(string? DatabaseName, string SchemaName, string Name);
+
+/// <summary>Parameter metadata exposed to analysis rules.</summary>
+/// <param name="Name">Parameter name including the leading at sign.</param>
+/// <param name="TypeName">Formatted SQL type name.</param>
+/// <param name="Type">Normalized type information.</param>
+/// <param name="IsOutput">Whether the parameter is declared OUTPUT.</param>
+/// <param name="HasDefault">Whether the parameter has a default value.</param>
+public sealed record CatalogParameterInfo(
+    string Name,
+    string TypeName,
+    SchemaTypeInfo Type,
+    bool IsOutput,
+    bool HasDefault);
+
+/// <summary>Definition metadata for a cataloged SQL object.</summary>
+/// <param name="Id">Object identity.</param>
+/// <param name="Kind">Object kind.</param>
+/// <param name="Parameters">Declared parameters.</param>
+/// <param name="ResultColumns">Known result columns, or null when not inferred.</param>
+/// <param name="DefinedInFile">Source file containing the definition.</param>
+/// <param name="DefinedAt">Source range of the object name.</param>
+public sealed record CatalogObjectInfo(
+    CatalogObjectIdInfo Id,
+    CatalogObjectKind Kind,
+    IReadOnlyList<CatalogParameterInfo> Parameters,
+    IReadOnlyList<SchemaColumnInfo>? ResultColumns,
+    string DefinedInFile,
+    Range DefinedAt);
+
+/// <summary>Cross-object reference metadata exposed to analysis rules.</summary>
+/// <param name="FromObject">Containing object, or null for script-level references.</param>
+/// <param name="ToObject">Referenced object identity.</param>
+/// <param name="ToColumn">Referenced column, when known. Resolution validates it only when the target exposes known result columns.</param>
+/// <param name="Kind">Reference kind.</param>
+/// <param name="Resolution">Resolution status.</param>
+/// <param name="ReferencedInFile">Source file containing the reference.</param>
+/// <param name="ReferencedAt">Source range of the reference.</param>
+/// <param name="IsDynamic">Whether the target name is dynamically computed.</param>
+public sealed record CatalogReferenceInfo(
+    CatalogObjectIdInfo? FromObject,
+    CatalogObjectIdInfo ToObject,
+    string? ToColumn,
+    CatalogReferenceKind Kind,
+    CatalogResolutionStatus Resolution,
+    string ReferencedInFile,
+    Range ReferencedAt,
+    bool IsDynamic);
+
+/// <summary>Describes the authority and supported boundary of an object catalog.</summary>
+/// <param name="Databases">Database names explicitly covered by the catalog.</param>
+/// <param name="IsAuthoritative">Whether missing objects inside the scope may be treated as unresolved.</param>
+/// <param name="IncludesExternalReferences">Whether external references were retained.</param>
+/// <param name="DefaultSchema">Schema used to normalize unqualified names.</param>
+public sealed record CatalogScopeInfo(
+    IReadOnlyList<string> Databases,
+    bool IsAuthoritative,
+    bool IncludesExternalReferences,
+    string DefaultSchema);
+
+/// <summary>Provides collected SQL object definitions and cross-object references.</summary>
+public interface IObjectCatalogProvider
+{
+    /// <summary>Gets whether the catalog contains any object definitions.</summary>
+    bool HasData { get; }
+
+    /// <summary>Gets the catalog authority and normalization scope.</summary>
+    CatalogScopeInfo Scope { get; }
+
+    /// <summary>Resolves an object by database, schema, name, and kind.</summary>
+    CatalogObjectInfo? ResolveObject(
+        string? database,
+        string? schema,
+        string name,
+        CatalogObjectKindFilter kind);
+
+    /// <summary>Gets references to an object or one of its columns.</summary>
+    IReadOnlyList<CatalogReferenceInfo> GetReferencesTo(
+        string? database,
+        string schema,
+        string name,
+        string? column = null);
+
+    /// <summary>Gets every collected object definition.</summary>
+    IReadOnlyList<CatalogObjectInfo> GetAllObjects();
+}
+
 /// <summary>
 /// Unified schema context that combines schema and relation deviation information.
 /// Rules use this single interface instead of accessing two separate providers.

@@ -40,7 +40,13 @@ public abstract class DiagnosticVisitorRuleBase<TFragment> : IRule
             return [];
         }
 
+        if (!ShouldAnalyze(context))
+        {
+            return [];
+        }
+
         var visitor = CreateVisitor(context, fragment);
+        visitor.RuleMetadata = Metadata;
         fragment.Accept(visitor);
         return visitor.Diagnostics;
     }
@@ -49,6 +55,11 @@ public abstract class DiagnosticVisitorRuleBase<TFragment> : IRule
     /// Creates a visitor for the current rule execution.
     /// </summary>
     protected abstract DiagnosticVisitorBase CreateVisitor(RuleContext context, TFragment fragment);
+
+    /// <summary>
+    /// Determines whether this rule should analyze the current context.
+    /// </summary>
+    protected virtual bool ShouldAnalyze(RuleContext context) => true;
 
     /// <inheritdoc />
     public virtual IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>

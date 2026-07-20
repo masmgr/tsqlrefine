@@ -121,9 +121,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-heap-table", "enabled": false }
-  ]
+  "rules": {
+    "avoid-heap-table": "none"
+  }
 }
 ```
 

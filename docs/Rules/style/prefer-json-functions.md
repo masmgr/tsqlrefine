@@ -146,9 +146,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-json-functions", "enabled": false }
-  ]
+  "rules": {
+    "prefer-json-functions": "none"
+  }
 }
 ```
 

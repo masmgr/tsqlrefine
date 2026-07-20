@@ -22,6 +22,7 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class QualifiedSelectColumnsVisitor : DiagnosticVisitorBase
     {
         public override void ExplicitVisit(QuerySpecification node)
@@ -62,6 +63,7 @@ public sealed class QualifiedSelectColumnsRule : DiagnosticVisitorRuleBase
             base.ExplicitVisit(node);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing ScriptDOM expression traversal; tracked as complexity baseline debt.")]
         private void CheckExpressionForUnqualifiedColumns(TSqlFragment? fragment)
         {
             if (fragment is null or ScalarSubquery)

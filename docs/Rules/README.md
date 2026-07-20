@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **130 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **169 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -32,10 +32,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 | Tier | Preset | Rules | Description |
 |------|--------|-------|-------------|
-| **Critical** | security-only | 14 | Security vulnerabilities and critical safety issues |
-| **Essential** | pragmatic | 29 | Production-ready minimum for correctness and runtime error prevention |
-| **Recommended** | recommended | 44 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 20 | Comprehensive correctness, performance, and schema checks |
+| **Critical** | security-only | 17 | Security vulnerabilities and critical safety issues |
+| **Essential** | pragmatic | 35 | Production-ready minimum for correctness and runtime error prevention |
+| **Recommended** | recommended | 60 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 34 | Comprehensive correctness, performance, and schema checks |
 | **Cosmetic** | strict | 23 | Style consistency, formatting, and naming conventions |
 
 See [REFERENCE.md](REFERENCE.md#importance-tiers) for the complete tier breakdown with all rules listed.
@@ -126,11 +126,11 @@ TsqlRefine provides five preset rulesets:
 
 | Preset | Rules | Cumulative | Use Case |
 |--------|-------|------------|----------|
-| **security-only** | 14 | 14 | Security vulnerabilities and critical safety only |
-| **pragmatic** | 43 | 43 | Production-ready minimum for legacy codebases |
-| **recommended** | 87 | 87 | Balanced production use with semantic analysis (default) |
-| **strict-logic** | 107 | 107 | Comprehensive correctness without cosmetic style rules |
-| **strict** | 130 | 130 | Maximum enforcement including all style/cosmetic rules |
+| **security-only** | 17 | 17 | Security vulnerabilities and critical safety only |
+| **pragmatic** | 52 | 52 | Production-ready minimum for legacy codebases |
+| **recommended** | 112 | 112 | Balanced production use with semantic analysis (default) |
+| **strict-logic** | 146 | 146 | Comprehensive correctness without cosmetic style rules |
+| **strict** | 169 | 169 | Maximum enforcement including all style/cosmetic rules |
 
 ```powershell
 # Use recommended preset (default)

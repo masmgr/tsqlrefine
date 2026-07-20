@@ -35,12 +35,31 @@ namespace TsqlRefine.Cli;
 /// <param name="AllowPlugins">Whether to allow loading plugin DLLs from configuration.</param>
 /// <param name="SchemaPath">Path to schema snapshot file for schema-aware analysis.</param>
 /// <param name="RelationsProfilePath">Path to relations profile JSON file for JOIN pattern deviation analysis.</param>
+/// <param name="ObjectsCatalogPath">Path to object catalog JSON file for cross-object analysis.</param>
 /// <param name="SchemaConnectionString">Connection string for schema snapshot generation.</param>
 /// <param name="SchemaOutput">Output path for schema snapshot generation.</param>
 /// <param name="SchemaIncludeSchemas">Comma-separated schema names to include in snapshot generation.</param>
 /// <param name="SchemaExcludeSchemas">Comma-separated schema names to exclude from snapshot generation.</param>
 /// <param name="SchemaOutputDir">Output directory for 'schema build' command (writes schema.json and relations.json).</param>
 /// <param name="SchemaRelationsOutput">Output path for relations profile in 'schema build' command (overrides SchemaOutputDir for relations.json).</param>
+/// <param name="SchemaObjectsOutput">Output path for object catalog in 'schema build' command (overrides SchemaOutputDir for objects.json).</param>
+/// <param name="BaselinePath">Path to a baseline JSON file.</param>
+/// <param name="BaselineOutput">Output path for the 'baseline create' command.</param>
+/// <param name="BaselineRoot">Root directory used to normalize baseline file paths.</param>
+/// <param name="ShowSuppressed">Whether suppressed diagnostics are included in output.</param>
+/// <param name="RemoveMissing">Whether baseline trim removes entries for missing files.</param>
+/// <param name="ReportOutputFormat">Report output format (json or html).</param>
+/// <param name="ReportOutputPath">Optional report output file path.</param>
+/// <param name="AnalyzeCatalogPath">Object catalog path for analyze commands.</param>
+/// <param name="AnalyzeTable">Table target for impact analysis.</param>
+/// <param name="AnalyzeColumn">Optional column target for impact analysis.</param>
+/// <param name="AnalyzeOutputPath">Optional analyze output file path.</param>
+/// <param name="AnalyzeGraphFormat">Dependency graph format (json or dot).</param>
+/// <param name="ChangedOnly">Whether lint output is limited to changed lines.</param>
+/// <param name="BaseRef">Git base reference used by changed-only lint.</param>
+/// <param name="ChangedLinesFrom">Optional changed-lines JSON file used instead of Git.</param>
+/// <param name="SchemaDiffBeforePath">Baseline schema snapshot for schema diff.</param>
+/// <param name="SchemaDiffAfterPath">Candidate schema snapshot for schema diff.</param>
 public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
@@ -71,10 +90,29 @@ public sealed record CliArgs(
     bool AllowPlugins,
     string? SchemaPath = null,
     string? RelationsProfilePath = null,
+    string? ObjectsCatalogPath = null,
     string? SchemaConnectionString = null,
     string? SchemaOutput = null,
     string? SchemaIncludeSchemas = null,
     string? SchemaExcludeSchemas = null,
     string? SchemaOutputDir = null,
-    string? SchemaRelationsOutput = null
+    string? SchemaRelationsOutput = null,
+    string? SchemaObjectsOutput = null,
+    string? BaselinePath = null,
+    string? BaselineOutput = null,
+    string? BaselineRoot = null,
+    bool ShowSuppressed = false,
+    bool RemoveMissing = false,
+    string ReportOutputFormat = "json",
+    string? ReportOutputPath = null,
+    string? AnalyzeCatalogPath = null,
+    string? AnalyzeTable = null,
+    string? AnalyzeColumn = null,
+    string? AnalyzeOutputPath = null,
+    string AnalyzeGraphFormat = "json",
+    bool ChangedOnly = false,
+    string? BaseRef = null,
+    string? ChangedLinesFrom = null,
+    string? SchemaDiffBeforePath = null,
+    string? SchemaDiffAfterPath = null
 );

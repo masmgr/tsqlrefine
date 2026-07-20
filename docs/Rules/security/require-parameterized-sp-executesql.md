@@ -53,9 +53,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "require-parameterized-sp-executesql", "enabled": false }
-  ]
+  "rules": {
+    "require-parameterized-sp-executesql": "none"
+  }
 }
 ```
 

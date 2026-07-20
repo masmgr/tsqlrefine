@@ -136,9 +136,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-linked-server", "enabled": false }
-  ]
+  "rules": {
+    "avoid-linked-server": "none"
+  }
 }
 ```
 

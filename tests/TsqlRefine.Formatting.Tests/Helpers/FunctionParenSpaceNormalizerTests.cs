@@ -136,6 +136,18 @@ public sealed class FunctionParenSpaceNormalizerTests
         Assert.Equal("SELECT MyFunc(1) FROM t", result);
     }
 
+    [Theory]
+    [InlineData("INSERT INTO t (a, b) VALUES (1, 2)")]
+    [InlineData("INSERT INTO dbo.t (a, b) VALUES (1, 2)")]
+    [InlineData("CREATE TABLE t (a int)")]
+    [InlineData("ALTER TABLE dbo.t (a int)")]
+    [InlineData("SELECT * FROM t (NOLOCK)")]
+    [InlineData("SELECT * FROM a JOIN b (NOLOCK) ON a.id = b.id")]
+    public void Normalize_TableNameBeforeColumnList_PreservesSpace(string input)
+    {
+        Assert.Equal(input, FunctionParenSpaceNormalizer.Normalize(input, _defaultOptions));
+    }
+
     // --- Idempotency ---
 
     [Fact]

@@ -65,9 +65,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-or-on-different-columns", "enabled": false }
-  ]
+  "rules": {
+    "avoid-or-on-different-columns": "none"
+  }
 }
 ```
 

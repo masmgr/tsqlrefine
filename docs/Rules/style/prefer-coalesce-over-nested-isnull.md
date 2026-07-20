@@ -94,9 +94,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-coalesce-over-nested-isnull", "enabled": false }
-  ]
+  "rules": {
+    "prefer-coalesce-over-nested-isnull": "none"
+  }
 }
 ```
 

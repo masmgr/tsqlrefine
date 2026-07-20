@@ -117,9 +117,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-schema-qualify", "enabled": false }
-  ]
+  "rules": {
+    "semantic-schema-qualify": "none"
+  }
 }
 ```
 

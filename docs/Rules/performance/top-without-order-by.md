@@ -91,9 +91,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "top-without-order-by", "enabled": false }
-  ]
+  "rules": {
+    "top-without-order-by": "none"
+  }
 }
 ```
 

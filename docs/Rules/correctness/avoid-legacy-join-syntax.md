@@ -9,6 +9,8 @@
 
 Detects legacy outer join syntax (`*=`, `=*`) which is deprecated since SQL Server 2000 and produces incorrect results.
 
+The `*=` token is also valid as a compound assignment operator. The rule excludes legal assignments in `SET`, `SELECT`, and `UPDATE ... SET` statements.
+
 ## Rationale
 
 The `*=` (left outer join) and `=*` (right outer join) operators are:
@@ -47,6 +49,11 @@ LEFT JOIN Customers c ON o.CustomerId = c.Id;
 SELECT *
 FROM Orders o
 RIGHT JOIN Customers c ON o.CustomerId = c.Id;
+
+-- Legal compound assignments are not legacy joins
+SET @Quantity *= 2;
+SELECT @Quantity *= 2;
+UPDATE Products SET Price *= 1.1;
 ```
 
 ## Common Patterns
@@ -83,9 +90,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-legacy-join-syntax", "enabled": false }
-  ]
+  "rules": {
+    "avoid-legacy-join-syntax": "none"
+  }
 }
 ```
 

@@ -1,0 +1,47 @@
+name: performance
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
+        with:
+          dotnet-version: 10.0.x
+          global-json-file: global.json
+
+      - name: Run lint benchmark
+        run: dotnet run --project benchmarks/TsqlRefine.Benchmarks -c Release -- --filter '*'
+
+      - name: Restore benchmark history
+        uses: actions/cache@v4
+        with:
+          path: .benchmark-cache
+          key: benchmark-${{ runner.os }}
+
+      - name: Check performance regression
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: benchmarkdotnet
+          output-file-path: BenchmarkDotNet.Artifacts/results/TsqlRefine.Benchmarks.LintBenchmarks-report-full-compressed.json
+          external-data-json-path: .benchmark-cache/benchmark-data.json
+          alert-threshold: '150%'
+          fail-on-alert: true
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-results
+          path: BenchmarkDotNet.Artifacts

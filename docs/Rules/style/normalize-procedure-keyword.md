@@ -109,9 +109,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "normalize-procedure-keyword", "enabled": false }
-  ]
+  "rules": {
+    "normalize-procedure-keyword": "none"
+  }
 }
 ```
 

@@ -199,4 +199,130 @@ public sealed class DiagnosticVisitorBaseTests
             AddDiagnostic(fragment, message, code, category, fixable, severity);
         }
     }
+
+    private static readonly RuleMetadata TestMetadata = new(
+        RuleId: "test-rule",
+        Description: "Test rule",
+        Category: "Correctness",
+        DefaultSeverity: RuleSeverity.Warning,
+        Fixable: true
+    );
+
+    private sealed class MetadataTestVisitor : DiagnosticVisitorBase
+    {
+        public void TestAddDiagnostic(
+            TSqlFragment fragment,
+            string message,
+            PluginSdk.DiagnosticSeverity? severity = null,
+            bool? fixable = null)
+        {
+            AddDiagnostic(fragment, message, severity, fixable);
+        }
+
+        public void TestAddDiagnostic(TsqlRefine.PluginSdk.Range range, string message)
+        {
+            AddDiagnostic(range, message);
+        }
+    }
+
+    private static TSqlFragment ParseFragment(string sql)
+    {
+        var parser = new TSql160Parser(true);
+        return parser.Parse(new StringReader(sql), out _);
+    }
+
+    [Fact]
+    public void AddDiagnostic_MetadataBased_DerivesCodeCategoryAndFixableFromMetadata()
+    {
+        var visitor = new MetadataTestVisitor { RuleMetadata = TestMetadata };
+
+        visitor.TestAddDiagnostic(ParseFragment("SELECT 1"), "Test message");
+
+        var diagnostic = Assert.Single(visitor.Diagnostics);
+        Assert.Equal("test-rule", diagnostic.Code);
+        Assert.NotNull(diagnostic.Data);
+        Assert.Equal("test-rule", diagnostic.Data.RuleId);
+        Assert.Equal("Correctness", diagnostic.Data.Category);
+        Assert.True(diagnostic.Data.Fixable);
+        Assert.Null(diagnostic.Severity);
+    }
+
+    [Fact]
+    public void AddDiagnostic_MetadataBased_WithOverrides_AppliesSeverityAndFixable()
+    {
+        var visitor = new MetadataTestVisitor { RuleMetadata = TestMetadata };
+
+        visitor.TestAddDiagnostic(
+            ParseFragment("SELECT 1"),
+            "Test message",
+            severity: PluginSdk.DiagnosticSeverity.Error,
+            fixable: false);
+
+        var diagnostic = Assert.Single(visitor.Diagnostics);
+        Assert.Equal(PluginSdk.DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.False(diagnostic.Data!.Fixable);
+    }
+
+    [Fact]
+    public void AddDiagnostic_MetadataBased_WithRange_UsesGivenRange()
+    {
+        var visitor = new MetadataTestVisitor { RuleMetadata = TestMetadata };
+        var range = new TsqlRefine.PluginSdk.Range(new Position(1, 2), new Position(1, 5));
+
+        visitor.TestAddDiagnostic(range, "Test message");
+
+        var diagnostic = Assert.Single(visitor.Diagnostics);
+        Assert.Equal(range, diagnostic.Range);
+        Assert.Equal("test-rule", diagnostic.Code);
+    }
+
+    [Fact]
+    public void AddDiagnostic_MetadataBased_WithoutMetadata_ThrowsInvalidOperationException()
+    {
+        var visitor = new MetadataTestVisitor();
+
+        Assert.Throws<InvalidOperationException>(() =>
+            visitor.TestAddDiagnostic(ParseFragment("SELECT 1"), "Test message"));
+    }
+
+    [Fact]
+    public void Analyze_VisitorHasDifferentMetadata_UsesDrivingRuleMetadata()
+    {
+        const string sql = "SELECT 1";
+        var fragment = ParseFragment(sql);
+        var context = new RuleContext(
+            "test.sql",
+            160,
+            new ScriptDomAst(sql, fragment, [], []),
+            [],
+            new RuleSettings());
+        var rule = new MetadataInjectionRule();
+
+        var diagnostic = Assert.Single(rule.Analyze(context));
+
+        Assert.Equal(rule.Metadata.RuleId, diagnostic.Code);
+        Assert.Equal(rule.Metadata.RuleId, diagnostic.Data!.RuleId);
+        Assert.Equal(rule.Metadata.Category, diagnostic.Data.Category);
+        Assert.Equal(rule.Metadata.Fixable, diagnostic.Data.Fixable);
+    }
+
+    private sealed class MetadataInjectionRule : DiagnosticVisitorRuleBase
+    {
+        public override RuleMetadata Metadata => TestMetadata;
+
+        protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+            new PreconfiguredMetadataVisitor
+            {
+                RuleMetadata = new RuleMetadata(
+                    "wrong-rule", "Wrong metadata", "Style", RuleSeverity.Error, Fixable: false)
+            };
+    }
+
+    private sealed class PreconfiguredMetadataVisitor : DiagnosticVisitorBase
+    {
+        public override void ExplicitVisit(TSqlScript node)
+        {
+            AddDiagnostic(node, "Test message");
+        }
+    }
 }

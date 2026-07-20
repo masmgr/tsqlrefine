@@ -106,7 +106,7 @@ public sealed class DuplicateIndexDefinitionRule : DiagnosticVisitorRuleBase
                     {
                         // Column-level constraint with no explicit column list — implies the column itself
                         var sig = BuildSignature(uniqueConstraint.Columns)
-                            ?? column.ColumnIdentifier?.Value?.ToUpperInvariant() + ":asc";
+                            ?? column.ColumnIdentifier?.Value + ":asc";
 
                         var label = FormatConstraintLabel(uniqueConstraint);
                         entries.Add((sig!, label, constraint));
@@ -117,7 +117,7 @@ public sealed class DuplicateIndexDefinitionRule : DiagnosticVisitorRuleBase
 
         private void ReportDuplicates(List<(string Signature, string Label, TSqlFragment Fragment)> entries)
         {
-            var seen = new Dictionary<string, (string Label, TSqlFragment Fragment)>(StringComparer.Ordinal);
+            var seen = new Dictionary<string, (string Label, TSqlFragment Fragment)>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var (signature, label, fragment) in entries)
             {
@@ -162,7 +162,7 @@ public sealed class DuplicateIndexDefinitionRule : DiagnosticVisitorRuleBase
                 }
 
                 var sort = columns[i].SortOrder == SortOrder.Descending ? "desc" : "asc";
-                parts[i] = colName.ToUpperInvariant() + ":" + sort;
+                parts[i] = colName + ":" + sort;
             }
 
             return string.Join(",", parts);

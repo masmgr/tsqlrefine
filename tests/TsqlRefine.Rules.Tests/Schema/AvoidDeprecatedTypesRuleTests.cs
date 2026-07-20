@@ -57,6 +57,19 @@ public sealed class AvoidDeprecatedTypesRuleTests
     }
 
     [Fact]
+    public void Analyze_TimestampColumn_ReturnsDiagnostic()
+    {
+        const string sql = "CREATE TABLE dbo.Docs (Version TIMESTAMP NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal("avoid-deprecated-types", diagnostics[0].Code);
+        Assert.Contains("TIMESTAMP", diagnostics[0].Message);
+        Assert.Contains("ROWVERSION", diagnostics[0].Message);
+    }
+
+    [Fact]
     public void Analyze_TextVariable_ReturnsDiagnostic()
     {
         const string sql = "DECLARE @v NTEXT;";
@@ -123,6 +136,7 @@ public sealed class AvoidDeprecatedTypesRuleTests
     [InlineData("CREATE TABLE dbo.Docs (Photo VARBINARY(MAX) NOT NULL);")]
     [InlineData("CREATE TABLE dbo.Docs (Name NVARCHAR(100) NOT NULL);")]
     [InlineData("CREATE TABLE dbo.Docs (Id INT NOT NULL);")]
+    [InlineData("CREATE TABLE dbo.Docs (Version ROWVERSION NOT NULL);")]
     [InlineData("DECLARE @v NVARCHAR(MAX);")]
     [InlineData("DECLARE @amount DECIMAL(18,2);")]
     [InlineData("")]

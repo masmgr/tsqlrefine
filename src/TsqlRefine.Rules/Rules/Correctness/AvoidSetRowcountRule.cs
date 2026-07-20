@@ -34,7 +34,7 @@ public sealed class AvoidSetRowcountRule : DiagnosticVisitorRuleBase
             }
 
             AddDiagnostic(
-                fragment: node,
+                range: ScriptDomHelpers.GetFirstTokenRange(node),
                 message: "Avoid SET ROWCOUNT for limiting rows. It is deprecated and affects triggers and nested statements. Use TOP for SELECT or redesign for DML.",
                 code: "avoid-set-rowcount",
                 category: "Correctness",

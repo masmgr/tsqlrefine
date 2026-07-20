@@ -81,9 +81,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-not-in-with-null", "enabled": false }
-  ]
+  "rules": {
+    "avoid-not-in-with-null": "none"
+  }
 }
 ```
 

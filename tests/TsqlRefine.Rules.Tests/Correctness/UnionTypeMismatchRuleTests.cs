@@ -15,12 +15,14 @@ public sealed class UnionTypeMismatchRuleTests
             .AddTable("dbo", "Users", t => t
                 .AddColumn("Id", "int")
                 .AddColumn("Name", "nvarchar", maxLength: 100)
+                .AddColumn("SharedValue", "int")
                 .AddColumn("Email", "varchar", maxLength: 200)
                 .AddColumn("CreatedAt", "datetime2")
                 .AddColumn("ExternalId", "uniqueidentifier"))
             .AddTable("dbo", "Products", t => t
                 .AddColumn("Id", "int")
                 .AddColumn("Title", "nvarchar", maxLength: 200)
+                .AddColumn("SharedValue", "nvarchar", maxLength: 100)
                 .AddColumn("Price", "decimal", precision: 10, scale: 2))
             .Build());
 
@@ -358,5 +360,17 @@ public sealed class UnionTypeMismatchRuleTests
         Assert.Single(diagnostics);
         Assert.Contains("numeric", diagnostics[0].Message);
         Assert.Contains("string", diagnostics[0].Message);
+    }
+
+    [Theory]
+    [InlineData("dbo.Users AS u JOIN dbo.Products AS p ON p.Id = u.Id")]
+    [InlineData("dbo.Products AS p JOIN dbo.Users AS u ON u.Id = p.Id")]
+    public void Analyze_AmbiguousUnqualifiedColumn_DoesNotInferTypeFromTableOrder(string fromClause)
+    {
+        var sql = $"SELECT SharedValue FROM {fromClause} UNION ALL SELECT 1;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql, CreateSchema())).ToArray();
+
+        Assert.Empty(diagnostics);
     }
 }

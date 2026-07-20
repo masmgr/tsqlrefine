@@ -26,4 +26,8 @@
     <ProjectReference Include="..\..\src\TsqlRefine.Formatting\TsqlRefine.Formatting.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\TestSupport\SqlGrammarGenerator.cs" Link="TestSupport\SqlGrammarGenerator.cs" />
+  </ItemGroup>
+
 </Project>

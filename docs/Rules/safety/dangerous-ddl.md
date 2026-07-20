@@ -130,9 +130,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "dangerous-ddl", "enabled": false }
-  ]
+  "rules": {
+    "dangerous-ddl": "none"
+  }
 }
 ```
 

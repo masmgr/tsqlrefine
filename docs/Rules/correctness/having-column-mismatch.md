@@ -73,9 +73,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "having-column-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "having-column-mismatch": "none"
+  }
 }
 ```
 

@@ -22,6 +22,7 @@ public sealed class UndefinedAliasRule : DiagnosticVisitorRuleBase
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing scope-aware ScriptDOM visitor; tracked as coupling baseline debt.")]
     private sealed class UndefinedAliasVisitor : DiagnosticVisitorBase
     {
         private static readonly string[] InsertedPseudoAliases = ["inserted"];

@@ -68,9 +68,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "stuff-without-order-by", "enabled": false }
-  ]
+  "rules": {
+    "stuff-without-order-by": "none"
+  }
 }
 ```
 

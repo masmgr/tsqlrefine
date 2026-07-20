@@ -112,9 +112,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "prefer-concat-with-nullable", "enabled": false }
-  ]
+  "rules": {
+    "prefer-concat-with-nullable": "none"
+  }
 }
 ```
 

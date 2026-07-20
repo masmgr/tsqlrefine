@@ -79,9 +79,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "semantic-join-condition-always-true", "enabled": false }
-  ]
+  "rules": {
+    "semantic-join-condition-always-true": "none"
+  }
 }
 ```
 

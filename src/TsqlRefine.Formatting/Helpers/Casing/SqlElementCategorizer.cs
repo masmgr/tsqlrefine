@@ -135,6 +135,10 @@ public static class SqlElementCategorizer
         return category;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Maintainability",
+        "CA1502:Avoid excessive complexity",
+        Justification = "Existing token classification decision tree; tracked as complexity baseline debt.")]
     private static ElementCategory CategorizeCore(
         TSqlParserToken token,
         TSqlParserToken? previousToken,
@@ -189,7 +193,9 @@ public static class SqlElementCategorizer
         }
 
         // 5. Data types
-        if (DataTypeRegistry.IsDataType(text))
+        if (DataTypeRegistry.IsDataType(text) &&
+            (tokenCategory != TokenTypeCategory.Identifier ||
+             IsIdentifierDataTypeContext(previousToken, context)))
         {
             return ElementCategory.DataType;
         }
@@ -225,12 +231,24 @@ public static class SqlElementCategorizer
     {
         var text = token.Text ?? "";
 
+        if (text.Equals("DECLARE", StringComparison.OrdinalIgnoreCase))
+        {
+            context.InDeclareStatement = true;
+        }
+        else if (text.Equals("SELECT", StringComparison.OrdinalIgnoreCase) ||
+                 text.Equals(";", StringComparison.Ordinal))
+        {
+            context.InDeclareStatement = false;
+        }
+
+        UpdateDataTypeContext(token, context);
+
         // Track when we enter table context (FROM, JOIN, INTO, UPDATE)
         if (IsTableContextKeyword(text))
         {
             context.InTableContext = true;
             context.InTableColumnList = false;
-            context.AfterAsKeyword = false;
+            context.TableColumnListParenthesisDepth = 0;
             context.InExecuteContext = false;
             context.ExecuteProcedureProcessed = false;
             context.LastSchemaName = null;
@@ -240,7 +258,7 @@ public static class SqlElementCategorizer
         {
             context.InTableContext = false;
             context.InTableColumnList = false;
-            context.AfterAsKeyword = false;
+            context.TableColumnListParenthesisDepth = 0;
             context.InExecuteContext = false;
             context.ExecuteProcedureProcessed = false;
             context.LastSchemaName = null;
@@ -250,21 +268,12 @@ public static class SqlElementCategorizer
         else if (context.InTableContext && text.Equals("(", StringComparison.Ordinal))
         {
             context.InTableColumnList = true;
+            context.TableColumnListParenthesisDepth++;
         }
         else if (context.InTableContext && text.Equals(")", StringComparison.Ordinal))
         {
-            context.InTableColumnList = false;
-        }
-        // Track AS keyword
-        else if (text.Equals("AS", StringComparison.OrdinalIgnoreCase))
-        {
-            context.AfterAsKeyword = true;
-        }
-        // After processing an identifier following AS, reset the flag
-        else if (context.AfterAsKeyword &&
-                 TokenTypeCategoryCache.GetValueOrDefault(token.TokenType) == TokenTypeCategory.Identifier)
-        {
-            context.AfterAsKeyword = false;
+            context.TableColumnListParenthesisDepth = Math.Max(0, context.TableColumnListParenthesisDepth - 1);
+            context.InTableColumnList = context.TableColumnListParenthesisDepth > 0;
         }
         // Track EXEC/EXECUTE for procedure calls
         else if (text.Equals("EXEC", StringComparison.OrdinalIgnoreCase) ||
@@ -280,6 +289,110 @@ public static class SqlElementCategorizer
             context.ExecuteProcedureProcessed = false;
             context.LastSchemaName = null;
             context.InTableColumnList = false;
+            context.TableColumnListParenthesisDepth = 0;
+        }
+    }
+
+    private static bool IsIdentifierDataTypeContext(
+        TSqlParserToken? previousToken,
+        CasingContext context)
+    {
+        if (context.ExpectsIdentifierDataType)
+        {
+            return true;
+        }
+
+        if (!context.InTableColumnList || context.TableColumnListParenthesisDepth != 1)
+        {
+            return false;
+        }
+
+        // In a CREATE TABLE column definition, a type follows the column identifier.
+        var previousText = previousToken?.Text ?? string.Empty;
+        var previousCategory = previousToken is null
+            ? TokenTypeCategory.Other
+            : TokenTypeCategoryCache.GetValueOrDefault(previousToken.TokenType, TokenTypeCategory.Other);
+        return previousCategory == TokenTypeCategory.Identifier ||
+               previousText.StartsWith('[') || previousText.StartsWith('"');
+    }
+
+    private static void UpdateDataTypeContext(TSqlParserToken token, CasingContext context)
+    {
+        var text = token.Text ?? string.Empty;
+
+        if (ShouldClearExpectedDataType(token, text, context))
+        {
+            context.ExpectsIdentifierDataType = false;
+        }
+
+        if (context.InDeclareStatement && IsUserVariable(token, text))
+        {
+            context.ExpectsIdentifierDataType = true;
+            return;
+        }
+
+        if (IsAnyKeyword(text, "CAST", "TRY_CAST"))
+        {
+            context.AwaitingCastParenthesis = true;
+            return;
+        }
+
+        if (IsAnyKeyword(text, "CONVERT", "TRY_CONVERT"))
+        {
+            context.AwaitingConvertParenthesis = true;
+            return;
+        }
+
+        if (text == "(")
+        {
+            UpdateForOpeningParenthesis(context);
+        }
+        else if (text == ")" && context.CastParenthesisDepth > 0)
+        {
+            context.CastParenthesisDepth--;
+        }
+        else if (text.Equals("AS", StringComparison.OrdinalIgnoreCase) && context.CastParenthesisDepth > 0)
+        {
+            context.ExpectsIdentifierDataType = true;
+        }
+        else if (text.Equals("RETURNS", StringComparison.OrdinalIgnoreCase))
+        {
+            context.ExpectsIdentifierDataType = true;
+        }
+    }
+
+    private static bool ShouldClearExpectedDataType(
+        TSqlParserToken token,
+        string text,
+        CasingContext context) =>
+        context.ExpectsIdentifierDataType &&
+        !ScriptDomTokenHelper.IsTrivia(token) &&
+        text is not "(" and not ")";
+
+    private static bool IsUserVariable(TSqlParserToken token, string text) =>
+        token.TokenType.ToString().Contains("Variable", StringComparison.Ordinal) ||
+        (text.StartsWith('@') && !text.StartsWith("@@", StringComparison.Ordinal));
+
+    private static bool IsAnyKeyword(string text, string first, string second) =>
+        text.Equals(first, StringComparison.OrdinalIgnoreCase) ||
+        text.Equals(second, StringComparison.OrdinalIgnoreCase);
+
+    private static void UpdateForOpeningParenthesis(CasingContext context)
+    {
+        if (context.AwaitingCastParenthesis)
+        {
+            context.AwaitingCastParenthesis = false;
+            context.CastParenthesisDepth = 1;
+        }
+        else if (context.CastParenthesisDepth > 0)
+        {
+            context.CastParenthesisDepth++;
+        }
+
+        if (context.AwaitingConvertParenthesis)
+        {
+            context.AwaitingConvertParenthesis = false;
+            context.ExpectsIdentifierDataType = true;
         }
     }
 

@@ -107,15 +107,8 @@ jobs:
       - name: Install TsqlRefine
         run: dotnet tool install --global TsqlRefine
 
-      - name: Get changed SQL files
-        id: changed
-        run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- '*.sql' | tr '\n' ' ')
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
-
-      - name: Lint changed files
-        if: steps.changed.outputs.files != ''
-        run: tsqlrefine lint ${{ steps.changed.outputs.files }}
+      - name: Lint changed SQL lines
+        run: tsqlrefine lint --changed-only --base-ref origin/${{ github.base_ref }} .
 ```
 
 ### Multi-Preset Strategy
@@ -249,9 +242,36 @@ Speed up CI with tool caching:
 - run: dotnet tool restore
 ```
 
-## Future: SARIF Output
+## SARIF Output and Code Scanning
 
-SARIF (Static Analysis Results Interchange Format) support is planned for a future release. This will enable native GitHub Code Scanning integration and inline PR annotations. Currently, use `--output json` for machine-readable results.
+`tsqlrefine lint --output sarif` emits a SARIF 2.1.0 log with rule metadata, source locations, and
+stable fingerprints, suitable for GitHub Code Scanning and other SARIF consumers:
+
+```yaml
+- name: Lint SQL (SARIF)
+  run: tsqlrefine lint --output sarif src/**/*.sql > results.sarif
+  continue-on-error: true
+
+- name: Upload SARIF to GitHub Code Scanning
+  uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: results.sarif
+```
+
+See [SARIF Output](cli.md#43-sarif-output) for details.
+
+## Diagnostic Baselines
+
+Use `tsqlrefine baseline create` to record existing diagnostics as a baseline, then pass
+`--baseline` to `lint`, `fix`, or `baseline trim` so only new diagnostics fail the build:
+
+```yaml
+- name: Lint SQL against baseline
+  run: tsqlrefine lint --baseline .tsqlrefine/baseline.json src/**/*.sql
+```
+
+Re-run `baseline create` (or `baseline trim`) periodically to drop entries for resolved
+diagnostics and deleted files. See [baseline commands](cli.md#baseline-create) for details.
 
 ## See Also
 

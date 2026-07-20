@@ -56,9 +56,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "join-foreign-key-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "join-foreign-key-mismatch": "none"
+  }
 }
 ```
 

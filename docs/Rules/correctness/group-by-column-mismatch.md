@@ -91,9 +91,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "group-by-column-mismatch", "enabled": false }
-  ]
+  "rules": {
+    "group-by-column-mismatch": "none"
+  }
 }
 ```
 

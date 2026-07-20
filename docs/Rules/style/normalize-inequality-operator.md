@@ -76,9 +76,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "normalize-inequality-operator", "enabled": false }
-  ]
+  "rules": {
+    "normalize-inequality-operator": "none"
+  }
 }
 ```
 

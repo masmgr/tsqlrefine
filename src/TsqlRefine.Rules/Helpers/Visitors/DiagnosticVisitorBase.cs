@@ -17,6 +17,55 @@ public abstract class DiagnosticVisitorBase : TSqlFragmentVisitor
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
 
     /// <summary>
+    /// Gets or sets the metadata of the rule driving this visitor.
+    /// Assigned automatically by <see cref="DiagnosticVisitorRuleBase{TFragment}"/> before traversal.
+    /// Enables the AddDiagnostic overloads that derive code, category, and fixability
+    /// from the rule metadata instead of repeating them as string literals per call site.
+    /// </summary>
+    public RuleMetadata? RuleMetadata { get; set; }
+
+    /// <summary>
+    /// Creates and adds a diagnostic whose code, category, and fixability come from
+    /// <see cref="RuleMetadata"/>, eliminating per-call literals that can drift from the rule.
+    /// </summary>
+    /// <param name="fragment">The TSqlFragment to get the range from.</param>
+    /// <param name="message">The diagnostic message.</param>
+    /// <param name="severity">Optional severity override. If null, the rule's default severity is used.</param>
+    /// <param name="fixable">Optional fixability override for this diagnostic. If null, the metadata value is used.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="RuleMetadata"/> has not been assigned.</exception>
+    protected void AddDiagnostic(
+        TSqlFragment fragment,
+        string message,
+        DiagnosticSeverity? severity = null,
+        bool? fixable = null)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+
+        AddDiagnostic(ScriptDomHelpers.GetRange(fragment), message, severity, fixable);
+    }
+
+    /// <summary>
+    /// Creates and adds a diagnostic with a pre-computed range whose code, category, and
+    /// fixability come from <see cref="RuleMetadata"/>.
+    /// </summary>
+    /// <param name="range">The exact range for the diagnostic.</param>
+    /// <param name="message">The diagnostic message.</param>
+    /// <param name="severity">Optional severity override. If null, the rule's default severity is used.</param>
+    /// <param name="fixable">Optional fixability override for this diagnostic. If null, the metadata value is used.</param>
+    /// <exception cref="InvalidOperationException">Thrown when <see cref="RuleMetadata"/> has not been assigned.</exception>
+    protected void AddDiagnostic(
+        PluginSdk.Range range,
+        string message,
+        DiagnosticSeverity? severity = null,
+        bool? fixable = null)
+    {
+        var metadata = RuleMetadata ?? throw new InvalidOperationException(
+            $"{nameof(RuleMetadata)} must be assigned before the metadata-based AddDiagnostic overloads can be used.");
+
+        AddDiagnostic(range, message, metadata.RuleId, metadata.Category, fixable ?? metadata.Fixable, severity);
+    }
+
+    /// <summary>
     /// Adds a diagnostic to the collection.
     /// </summary>
     /// <param name="diagnostic">The diagnostic to add.</param>

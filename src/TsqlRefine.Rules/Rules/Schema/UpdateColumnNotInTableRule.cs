@@ -22,6 +22,7 @@ public sealed class UpdateColumnNotInTableRule : SchemaAwareVisitorRuleBase
 
     private sealed class UpdateColumnNotInTableVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing schema-aware UPDATE validation; tracked as complexity baseline debt.")]
         public override void ExplicitVisit(UpdateStatement node)
         {
             var updateSpec = node.UpdateSpecification;

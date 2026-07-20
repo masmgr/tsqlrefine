@@ -62,9 +62,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "join-column-deviation", "enabled": false }
-  ]
+  "rules": {
+    "join-column-deviation": "none"
+  }
 }
 ```
 

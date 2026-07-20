@@ -15,16 +15,20 @@ Development patterns for the TsqlRefine.Rules project - T-SQL lint rules impleme
 Create `src/TsqlRefine.Rules/Rules/{Category}/{RuleName}Rule.cs`:
 
 **AST-based rule (recommended for structural analysis):**
+
+Derive from `DiagnosticVisitorRuleBase` — it handles the null-fragment guard, context
+null check, and traversal, and injects `RuleMetadata` into the visitor so diagnostics
+cannot drift from the rule metadata:
+
 ```csharp
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
-using TsqlRefine.Rules.Helpers;
 
 namespace TsqlRefine.Rules.Rules;
 
-public sealed class MyRule : IRule
+public sealed class MyRule : DiagnosticVisitorRuleBase
 {
-    public RuleMetadata Metadata { get; } = new(
+    public override RuleMetadata Metadata { get; } = new(
         RuleId: "my-rule",
         Description: "Detects [issue description]",
         Category: "Performance",  // Safety|Correctness|Performance|Style|Security|Transactions|Schema|Debug
@@ -32,26 +36,8 @@ public sealed class MyRule : IRule
         Fixable: false
     );
 
-    public IEnumerable<Diagnostic> Analyze(RuleContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-
-        if (context.Ast.Fragment is null)
-        {
-            yield break;
-        }
-
-        var visitor = new MyVisitor();
-        context.Ast.Fragment.Accept(visitor);
-
-        foreach (var diagnostic in visitor.Diagnostics)
-        {
-            yield return diagnostic;
-        }
-    }
-
-    public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
-        RuleHelpers.NoFixes(context, diagnostic);
+    protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
+        new MyVisitor();
 
     private sealed class MyVisitor : DiagnosticVisitorBase
     {
@@ -59,19 +45,21 @@ public sealed class MyRule : IRule
         {
             if (/* violation condition */)
             {
-                AddDiagnostic(
-                    fragment: node,
-                    message: "Your diagnostic message",
-                    code: "my-rule",
-                    category: "Performance",
-                    fixable: false
-                );
+                // Code, category, and fixability come from the rule metadata.
+                // Do NOT pass them as string literals; literals can silently
+                // drift from the metadata (caught by RuleDiagnosticIntegrityTests).
+                AddDiagnostic(node, "Your diagnostic message");
             }
             base.ExplicitVisit(node);  // CRITICAL: Continue traversal
         }
     }
 }
 ```
+
+`DiagnosticVisitorRuleBase` variants: `DiagnosticVisitorRuleBase<TFragment>` (requires a
+specific root fragment type), `SchemaAwareVisitorRuleBase`, `DeviationAwareVisitorRuleBase`,
+`SchemaAndDeviationAwareVisitorRuleBase` (schema-dependent rules). Only implement `IRule`
+directly for token-based rules or rules with custom fix pipelines.
 
 **Token-based rule (for pattern matching):**
 ```csharp
@@ -165,23 +153,27 @@ Helpers/
 
 ### Visitors/DiagnosticVisitorBase
 
-Base class for AST visitors with automatic diagnostic collection:
+Base class for AST visitors with automatic diagnostic collection. When driven by
+`DiagnosticVisitorRuleBase`, the visitor's `RuleMetadata` property is assigned before
+traversal, so prefer the metadata-based overloads:
+
 ```csharp
 private sealed class MyVisitor : DiagnosticVisitorBase
 {
     public override void ExplicitVisit(UpdateStatement node)
     {
-        AddDiagnostic(
-            fragment: node,
-            message: "Message",
-            code: "rule-id",
-            category: "Category",
-            fixable: false
-        );
+        AddDiagnostic(node, "Message");                     // code/category/fixable from metadata
+        AddDiagnostic(range, "Message");                    // pre-computed range
+        AddDiagnostic(node, "Message", severity: DiagnosticSeverity.Error);  // severity override
+        AddDiagnostic(node, "Message", fixable: false);     // per-diagnostic fixability override
         base.ExplicitVisit(node);
     }
 }
 ```
+
+The legacy overloads taking explicit `code`/`category`/`fixable` arguments remain for
+visitors that are not driven by a rule base class; avoid them in new code because the
+literals can drift from the rule metadata.
 
 ### Visitors/PredicateAwareVisitorBase
 

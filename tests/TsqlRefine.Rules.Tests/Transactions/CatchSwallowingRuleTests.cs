@@ -56,6 +56,68 @@ END CATCH;";
     }
 
     [Fact]
+    public void Analyze_ThrowInTryWithEmptyCatch_ReturnsDiagnostic()
+    {
+        const string sql = "BEGIN TRY THROW 50000, 'Error', 1; END TRY BEGIN CATCH END CATCH;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NestedSwallowingCatch_ReturnsDiagnosticForInnerCatch()
+    {
+        const string sql = """
+            BEGIN TRY
+                BEGIN TRY SELECT 1; END TRY
+                BEGIN CATCH PRINT 'inner'; END CATCH;
+            END TRY
+            BEGIN CATCH THROW; END CATCH;
+            """;
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal(2, diagnostics[0].Range.Start.Line);
+    }
+
+    [Fact]
+    public void Analyze_OuterPropagationIsPreservedAcrossNestedCatch()
+    {
+        const string sql = """
+            BEGIN TRY SELECT 1; END TRY
+            BEGIN CATCH
+                RAISERROR('outer', 16, 1);
+                BEGIN TRY SELECT 2; END TRY
+                BEGIN CATCH PRINT 'inner'; END CATCH;
+            END CATCH;
+            """;
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Equal(4, diagnostics[0].Range.Start.Line);
+    }
+
+    [Fact]
+    public void Analyze_ThrowCaughtByNestedCatch_DoesNotCountAsOuterPropagation()
+    {
+        const string sql = """
+            BEGIN TRY SELECT 1; END TRY
+            BEGIN CATCH
+                BEGIN TRY THROW 50000, 'nested', 1; END TRY
+                BEGIN CATCH PRINT 'swallowed'; END CATCH;
+            END CATCH;
+            """;
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Equal(2, diagnostics.Length);
+        Assert.Equal([1, 3], diagnostics.Select(diagnostic => diagnostic.Range.Start.Line));
+    }
+
+    [Fact]
     public void Analyze_CatchWithThrow_NoDiagnostic()
     {
         const string sql = @"

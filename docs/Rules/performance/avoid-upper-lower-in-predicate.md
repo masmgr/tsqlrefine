@@ -107,9 +107,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-upper-lower-in-predicate", "enabled": false }
-  ]
+  "rules": {
+    "avoid-upper-lower-in-predicate": "none"
+  }
 }
 ```
 

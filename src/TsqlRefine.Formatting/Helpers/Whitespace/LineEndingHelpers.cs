@@ -1,4 +1,5 @@
 using System.Text;
+using TsqlRefine.Formatting.Helpers.Protection;
 
 namespace TsqlRefine.Formatting.Helpers.Whitespace;
 
@@ -49,8 +50,9 @@ internal static class LineEndingHelpers
     }
 
     /// <summary>
-    /// Removes standalone CR characters (\r not followed by \n) from the input.
-    /// CRLF sequences (\r\n) are preserved intact.
+    /// Removes standalone CR characters (\r not followed by \n) outside protected
+    /// regions. CRLF sequences and content in strings, quoted identifiers, and
+    /// comments are preserved intact.
     /// </summary>
     /// <param name="input">The input string to process</param>
     /// <returns>String with standalone CR characters removed</returns>
@@ -68,8 +70,31 @@ internal static class LineEndingHelpers
         }
 
         var sb = new StringBuilder(input.Length);
-        for (var i = 0; i < input.Length; i++)
+        var tracker = new ProtectedRegionTracker();
+        var i = 0;
+        while (i < input.Length)
         {
+            var startIndex = i;
+            if (tracker.TryAdvance(input, ref i))
+            {
+                sb.Append(input.AsSpan(startIndex, i - startIndex));
+                continue;
+            }
+
+            if (ProtectedRegionTracker.IsLineCommentStart(input, i))
+            {
+                var lineEnd = input.IndexOf('\n', i);
+                if (lineEnd < 0)
+                {
+                    sb.Append(input.AsSpan(i));
+                    break;
+                }
+
+                sb.Append(input.AsSpan(i, lineEnd - i + 1));
+                i = lineEnd + 1;
+                continue;
+            }
+
             var c = input[i];
             if (c == '\r')
             {
@@ -78,13 +103,13 @@ internal static class LineEndingHelpers
                 {
                     sb.Append('\r');
                 }
-
-                // else: standalone CR, skip it
             }
             else
             {
                 sb.Append(c);
             }
+
+            i++;
         }
 
         return sb.ToString();

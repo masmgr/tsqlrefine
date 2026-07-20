@@ -44,6 +44,16 @@ COMMIT TRANSACTION;
     }
 
     [Fact]
+    public void Analyze_BeginAndCommitOnSameLine_NoDiagnostic()
+    {
+        const string sql = "BEGIN TRANSACTION; UPDATE Users SET Name = 'test'; COMMIT TRANSACTION;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public void Analyze_BeginWithRollback_NoDiagnostic()
     {
         var sql = @"
@@ -56,6 +66,26 @@ ROLLBACK TRANSACTION;
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_UnnamedRollbackClosesAllNestedTransactions()
+    {
+        const string sql = "BEGIN TRANSACTION; BEGIN TRANSACTION; ROLLBACK TRANSACTION;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_RollbackToSavepoint_DoesNotCloseTransaction()
+    {
+        const string sql = "BEGIN TRANSACTION; SAVE TRANSACTION s; ROLLBACK TRANSACTION s;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
     }
 
     [Fact]

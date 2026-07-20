@@ -52,9 +52,9 @@ This rule can be disabled in your ruleset configuration:
 
 ```json
 {
-  "rules": [
-    { "id": "duplicate-table-variable-column", "enabled": false }
-  ]
+  "rules": {
+    "duplicate-table-variable-column": "none"
+  }
 }
 ```
 

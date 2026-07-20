@@ -97,9 +97,9 @@ In `custom-ruleset.json`:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-objectproperty", "enabled": false }
-  ]
+  "rules": {
+    "avoid-objectproperty": "none"
+  }
 }
 ```
 

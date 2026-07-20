@@ -24,6 +24,7 @@ public sealed class RequirePrimaryKeyOrUniqueConstraintRule : DiagnosticVisitorR
 
     private sealed class RequirePrimaryKeyOrUniqueConstraintVisitor : DiagnosticVisitorBase
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1502", Justification = "Existing table constraint validation; tracked as complexity baseline debt.")]
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Skip temporary tables (#temp, ##temp)

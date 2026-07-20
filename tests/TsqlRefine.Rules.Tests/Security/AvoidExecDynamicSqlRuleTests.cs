@@ -63,6 +63,8 @@ public sealed class AvoidExecDynamicSqlRuleTests
         // Assert
         Assert.Single(diagnostics);
         Assert.Equal("avoid-exec-dynamic-sql", diagnostics[0].Code);
+        Assert.Contains("constant SQL text", diagnostics[0].Message);
+        Assert.DoesNotContain("SQL injection", diagnostics[0].Message);
     }
 
     [Fact]

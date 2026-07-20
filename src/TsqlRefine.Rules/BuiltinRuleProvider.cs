@@ -15,6 +15,7 @@ namespace TsqlRefine.Rules;
 /// <summary>
 /// Provides all built-in T-SQL lint rules included with TsqlRefine.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Built-in rule composition root necessarily references every rule; tracked as coupling baseline debt.")]
 public sealed class BuiltinRuleProvider : IRuleProvider
 {
     private const string BaseDocUrl = "https://github.com/masmgr/tsqlrefine/blob/main/docs/Rules/";
@@ -39,6 +40,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         return new RuleWithMetadata(rule, m with { DocumentationUri = uri });
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Built-in rule composition root necessarily constructs every rule; tracked as coupling baseline debt.")]
     private static IRule[] CreateRawRules() =>
     [
         // === Correctness ===
@@ -65,6 +67,22 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new HavingColumnMismatchRule(),
         new MultiRowUpdateFromRule(),
         new LenForEmptinessCheckRule(),
+        new AvoidMaxPlusOneKeyGenerationRule(),
+        new StringAssignmentLengthMismatchRule(),
+        new MixedStringLengthFunctionsInLoopRule(),
+        new RequireSemicolonBeforeThrowRule(),
+        new ExecParameterCountMismatchRule(),
+        new ExecParameterNameMismatchRule(),
+        new ExecParameterTypeMismatchRule(),
+        new ExecOutputNotCapturedRule(),
+        new CursorNotDeallocatedOnPathRule(),
+        new VariableUsedBeforeAssignmentRule(),
+        new UnusedVariableRule(),
+        new UnreachableStatementRule(),
+        new InconsistentResultSetRule(),
+        new UnresolvedProcedureReferenceRule(),
+        new UnreferencedObjectRule(),
+        new CircularObjectReferenceRule(),
 
         // === Correctness (Semantic) ===
         new DuplicateAliasRule(),
@@ -79,10 +97,17 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new DisallowSelectDistinctRule(),
         new LikeLeadingWildcardRule(),
         new PreferExistsOverInSubqueryRule(),
+        new RedundantSemiJoinRule(),
         new AvoidOptionalParameterPatternRule(),
         new AvoidScalarUdfInQueryRule(),
         new AvoidCorrelatedScalarSubqueryInSelectRule(),
         new AvoidOrOnDifferentColumnsRule(),
+        new MaxCyclomaticComplexityRule(),
+        new MaxNestingDepthRule(),
+        new MaxStatementCountRule(),
+        new MaxJoinsPerQueryRule(),
+        new MaxParameterCountRule(),
+        new DeepViewNestingRule(),
 
         // === Safety ===
         new DmlWithoutWhereRule(),
@@ -96,12 +121,14 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         // === Security ===
         new AvoidExecDynamicSqlRule(),
+        new DynamicSqlTaintRule(),
         new AvoidDangerousProceduresRule(),
         new AvoidOpenrowsetOpendatasourceRule(),
         new AvoidNolockRule(),
         new LinkedServerRule(),
         new AvoidExecuteAsRule(),
         new RequireParameterizedSpExecutesqlRule(),
+        new AvoidHardcodedPasswordRule(),
 
         // === Schema ===
         new NamedConstraintRule(),
@@ -170,6 +197,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         // === Transactions ===
         new CrossDatabaseTransactionRule(),
+        new TransactionNotClosedOnPathRule(),
         new RequireTryCatchForTransactionRule(),
         new RequireXactAbortOnRule(),
         new TransactionWithoutCommitOrRollbackRule(),
@@ -211,7 +239,8 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new PrintStatementRule()
     ];
 
-    private sealed class RuleWithMetadata(IRule inner, RuleMetadata metadata) : IRule
+    private sealed class RuleWithMetadata(IRule inner, RuleMetadata metadata)
+        : IRule, IRuleOptionsDescriptorProvider
     {
         public RuleMetadata Metadata => metadata;
 
@@ -219,6 +248,9 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
             inner.GetFixes(context, diagnostic);
+
+        public IReadOnlyList<RuleOptionDescriptor> OptionDescriptors =>
+            inner is IRuleOptionsDescriptorProvider provider ? provider.OptionDescriptors : [];
     }
 }
 

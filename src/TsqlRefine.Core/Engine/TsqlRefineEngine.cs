@@ -8,6 +8,7 @@ namespace TsqlRefine.Core.Engine;
 /// <summary>
 /// Main analysis engine that runs rules against SQL files and produces lint or fix results.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing engine orchestration; tracked as coupling baseline debt.")]
 public sealed class TsqlRefineEngine
 {
     private readonly IRule[] _rules;
@@ -18,7 +19,11 @@ public sealed class TsqlRefineEngine
         _rules = rules?.ToArray() ?? Array.Empty<IRule>();
     }
 
-    public LintResult Run(string command, IEnumerable<SqlInput> inputs, EngineOptions options)
+    public LintResult Run(
+        string command,
+        IEnumerable<SqlInput> inputs,
+        EngineOptions options,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
         ArgumentNullException.ThrowIfNull(inputs);
@@ -27,9 +32,25 @@ public sealed class TsqlRefineEngine
         var activeRules = GetActiveRules(options);
         var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
         var files = new FileResult[inputList.Count];
-        for (var i = 0; i < inputList.Count; i++)
+        if (inputList.Count < 2)
         {
-            files[i] = AnalyzeFile(inputList[i], activeRules, options);
+            for (var i = 0; i < inputList.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                files[i] = AnalyzeFile(inputList[i], activeRules, options);
+            }
+        }
+        else
+        {
+            Parallel.For(
+                0,
+                inputList.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken
+                },
+                index => files[index] = AnalyzeFile(inputList[index], activeRules, options));
         }
         return new LintResult(
             Tool: "tsqlrefine",
@@ -39,7 +60,10 @@ public sealed class TsqlRefineEngine
         );
     }
 
-    public FixResult Fix(IEnumerable<SqlInput> inputs, EngineOptions options)
+    public FixResult Fix(
+        IEnumerable<SqlInput> inputs,
+        EngineOptions options,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentNullException.ThrowIfNull(options);
@@ -47,9 +71,25 @@ public sealed class TsqlRefineEngine
         var activeRules = GetActiveRules(options);
         var inputList = inputs as IList<SqlInput> ?? inputs.ToList();
         var files = new FixedFileResult[inputList.Count];
-        for (var i = 0; i < inputList.Count; i++)
+        if (inputList.Count < 2)
         {
-            files[i] = FixFile(inputList[i], activeRules, options);
+            for (var i = 0; i < inputList.Count; i++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                files[i] = FixFile(inputList[i], activeRules, options);
+            }
+        }
+        else
+        {
+            Parallel.For(
+                0,
+                inputList.Count,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount,
+                    CancellationToken = cancellationToken
+                },
+                index => files[index] = FixFile(inputList[index], activeRules, options));
         }
         return new FixResult(
             Tool: "tsqlrefine",
@@ -99,7 +139,8 @@ public sealed class TsqlRefineEngine
 
         foreach (var rule in rules)
         {
-            AppendDiagnostics(rule, context, options, diagnostics, fixGroups, disabledRanges);
+            var ruleContext = context with { Settings = GetRuleSettings(rule, options) };
+            AppendDiagnostics(rule, ruleContext, options, diagnostics, fixGroups, disabledRanges);
         }
 
         IReadOnlyList<DiagnosticFixGroup> collectedFixGroups =
@@ -237,8 +278,19 @@ public sealed class TsqlRefineEngine
             Ast: analysis.Ast,
             Tokens: analysis.Tokens,
             Settings: ruleSettings,
-            SchemaContext: options.SchemaContext
+            SchemaContext: options.SchemaContext,
+            ObjectCatalog: options.ObjectCatalog
         );
+    }
+
+    private static RuleSettings GetRuleSettings(IRule rule, EngineOptions options)
+    {
+        if (options.RuleSettingsByRule is not null &&
+            options.RuleSettingsByRule.TryGetValue(rule.Metadata.RuleId, out var settings))
+        {
+            return settings;
+        }
+        return options.RuleSettings ?? DefaultRuleSettings;
     }
 
     private static void AppendDiagnostics(

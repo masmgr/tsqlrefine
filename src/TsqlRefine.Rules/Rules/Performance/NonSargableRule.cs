@@ -43,10 +43,11 @@ public sealed class NonSargableRule : DiagnosticVisitorRuleBase
             // Check for functions on columns (excluding CAST/CONVERT which are handled by avoid-implicit-conversion-in-predicate)
             if (expression is FunctionCall functionCall)
             {
-                var functionName = functionCall.FunctionName?.Value?.ToUpperInvariant();
+                var functionName = functionCall.FunctionName?.Value;
 
                 // CAST/CONVERT are covered by avoid-implicit-conversion-in-predicate rule
-                if (functionName is "CAST" or "CONVERT")
+                if (string.Equals(functionName, "CAST", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(functionName, "CONVERT", StringComparison.OrdinalIgnoreCase))
                 {
                     return;
                 }
@@ -56,7 +57,7 @@ public sealed class NonSargableRule : DiagnosticVisitorRuleBase
                 {
                     AddDiagnostic(
                         fragment: functionCall,
-                        message: $"Avoid applying function '{functionName ?? "function"}' to columns in predicates. This prevents index usage (non-sargable) and causes performance issues. Consider using computed columns with indexes or rewriting the query.",
+                        message: $"Avoid applying function '{functionName?.ToUpperInvariant() ?? "function"}' to columns in predicates. This prevents index usage (non-sargable) and causes performance issues. Consider using computed columns with indexes or rewriting the query.",
                         code: "avoid-non-sargable-predicate",
                         category: "Performance",
                         fixable: false

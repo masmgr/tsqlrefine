@@ -43,7 +43,6 @@ internal static class BuiltInFunctionRegistry
         "ROW_NUMBER", "RANK", "DENSE_RANK", "NTILE", "PERCENT_RANK", "CUME_DIST",
 
         // System functions
-        "@@IDENTITY", "@@ROWCOUNT", "@@ERROR", "@@TRANCOUNT", "@@VERSION",
         "SCOPE_IDENTITY", "IDENT_CURRENT", "IDENT_INCR", "IDENT_SEED",
         "NEWID", "NEWSEQUENTIALID", "SERVERPROPERTY", "CONNECTIONPROPERTY",
         "CURRENT_USER", "SESSION_USER", "SYSTEM_USER", "USER_NAME", "SUSER_NAME",
@@ -52,13 +51,13 @@ internal static class BuiltInFunctionRegistry
 
         // JSON functions (SQL Server 2016+)
         "ISJSON", "JSON_VALUE", "JSON_QUERY", "JSON_MODIFY",
-        "OPENJSON", "FOR JSON",
+        "OPENJSON",
 
         // XML functions
-        "OPENXML", "FOR XML",
+        "OPENXML",
 
         // Other functions
-        "IIF", "CHOOSE", "CASE", "HASHBYTES", "CHECKSUM", "BINARY_CHECKSUM"
+        "IIF", "CHOOSE", "HASHBYTES", "CHECKSUM", "BINARY_CHECKSUM"
     }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

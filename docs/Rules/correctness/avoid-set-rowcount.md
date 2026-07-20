@@ -53,9 +53,9 @@ To disable this rule:
 
 ```json
 {
-  "rules": [
-    { "id": "avoid-set-rowcount", "enabled": false }
-  ]
+  "rules": {
+    "avoid-set-rowcount": "none"
+  }
 }
 ```
 

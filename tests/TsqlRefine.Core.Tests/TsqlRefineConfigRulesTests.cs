@@ -23,9 +23,9 @@ public sealed class TsqlRefineConfigRulesTests
 
         Assert.NotNull(config.Rules);
         Assert.Equal(3, config.Rules.Count);
-        Assert.Equal("none", config.Rules["avoid-select-star"]);
-        Assert.Equal("error", config.Rules["dml-without-where"]);
-        Assert.Equal("warning", config.Rules["avoid-nolock"]);
+        Assert.Equal("none", config.Rules["avoid-select-star"].Severity);
+        Assert.Equal("error", config.Rules["dml-without-where"].Severity);
+        Assert.Equal("warning", config.Rules["avoid-nolock"].Severity);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class TsqlRefineConfigRulesTests
     public void Validate_WithValidRules_ReturnsNull()
     {
         var config = new TsqlRefineConfig(
-            Rules: new Dictionary<string, string>
+            Rules: new Dictionary<string, RuleConfig>
             {
                 ["rule-a"] = "error",
                 ["rule-b"] = "warning",
@@ -58,7 +58,7 @@ public sealed class TsqlRefineConfigRulesTests
     public void Validate_WithInvalidSeverity_ReturnsError()
     {
         var config = new TsqlRefineConfig(
-            Rules: new Dictionary<string, string>
+            Rules: new Dictionary<string, RuleConfig>
             {
                 ["rule-a"] = "critical"
             });
@@ -76,5 +76,45 @@ public sealed class TsqlRefineConfigRulesTests
         var config = new TsqlRefineConfig(Rules: null);
 
         Assert.Null(config.Validate());
+    }
+
+    [Fact]
+    public void Deserialize_WithRuleOptions_PopulatesTypedValues()
+    {
+        var json = """
+        {
+          "rules": {
+            "metric-rule": {
+              "severity": "warning",
+              "options": { "max": 12, "enabled": true, "label": "team" }
+            }
+          }
+        }
+        """;
+
+        var config = JsonSerializer.Deserialize<TsqlRefineConfig>(json, JsonDefaults.Options)!;
+        var rule = config.Rules!["metric-rule"];
+
+        Assert.Equal("warning", rule.Severity);
+        Assert.Equal(12, rule.Options!["max"].Int32Value);
+        Assert.True(rule.Options["enabled"].BooleanValue);
+        Assert.Equal("team", rule.Options["label"].StringValue);
+    }
+
+    [Fact]
+    public void Serialize_WithRuleOptions_WritesObjectForm()
+    {
+        var config = new TsqlRefineConfig(Rules: new Dictionary<string, RuleConfig>
+        {
+            ["metric-rule"] = new("warning", new Dictionary<string, RuleOptionValue>
+            {
+                ["max"] = RuleOptionValue.FromInt32(12)
+            })
+        });
+
+        var json = JsonSerializer.Serialize(config, JsonDefaults.Options);
+
+        Assert.Contains("\"options\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"max\": 12", json, StringComparison.Ordinal);
     }
 }

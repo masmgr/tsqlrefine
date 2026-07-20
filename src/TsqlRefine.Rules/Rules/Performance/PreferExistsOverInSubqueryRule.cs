@@ -24,10 +24,31 @@ public sealed class PreferExistsOverInSubqueryRule : DiagnosticVisitorRuleBase
 
     private sealed class PreferExistsOverInSubqueryVisitor : PredicateAwareVisitorBase
     {
+        private readonly HashSet<InPredicate> _redundantPredicates = new(ReferenceEqualityComparer.Instance);
+
+        public override void ExplicitVisit(QuerySpecification node)
+        {
+            var redundant = RedundantSemiJoinAnalysisHelpers.FindMatches(node)
+                .Where(match => match.InPredicate is not null)
+                .Select(match => match.InPredicate!)
+                .ToArray();
+            _redundantPredicates.UnionWith(redundant);
+            try
+            {
+                base.ExplicitVisit(node);
+            }
+            finally
+            {
+                _redundantPredicates.ExceptWith(redundant);
+            }
+        }
+
         public override void ExplicitVisit(InPredicate node)
         {
             // Only flag IN with subquery, not IN with value lists
-            if (IsInPredicate && node.Subquery is not null && !HasIsNotNullOnSelectColumn(node.Subquery))
+            if (IsInPredicate && node.Subquery is not null &&
+                !_redundantPredicates.Contains(node) &&
+                !HasIsNotNullOnSelectColumn(node.Subquery))
             {
                 AddDiagnostic(
                     range: ScriptDomHelpers.GetInKeywordRange(node),

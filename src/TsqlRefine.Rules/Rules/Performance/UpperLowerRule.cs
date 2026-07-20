@@ -42,16 +42,18 @@ public sealed class UpperLowerRule : DiagnosticVisitorRuleBase
 
             if (expression is FunctionCall functionCall)
             {
-                var functionName = functionCall.FunctionName?.Value?.ToUpperInvariant();
+                var functionName = functionCall.FunctionName?.Value;
+                var isUpper = string.Equals(functionName, "UPPER", StringComparison.OrdinalIgnoreCase);
+                var isLower = string.Equals(functionName, "LOWER", StringComparison.OrdinalIgnoreCase);
 
-                if (functionName is "UPPER" or "LOWER")
+                if (isUpper || isLower)
                 {
                     // Check if function is applied to a column reference
                     if (functionCall.Parameters != null && functionCall.Parameters.Any(ExpressionAnalysisHelpers.ContainsColumnReference))
                     {
                         AddDiagnostic(
                             fragment: functionCall,
-                            message: $"Avoid using {functionName}() on columns in predicates. This prevents index usage and causes performance issues. Consider using a case-insensitive collation or computed column with index instead.",
+                            message: $"Avoid using {(isUpper ? "UPPER" : "LOWER")}() on columns in predicates. This prevents index usage and causes performance issues. Consider using a case-insensitive collation or computed column with index instead.",
                             code: "avoid-upper-lower-in-predicate",
                             category: "Performance",
                             fixable: false

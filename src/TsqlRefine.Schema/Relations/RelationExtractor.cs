@@ -6,6 +6,10 @@ namespace TsqlRefine.Schema.Relations;
 /// <summary>
 /// Extracts JOIN patterns from a parsed SQL AST.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Maintainability",
+    "CA1506:Avoid excessive class coupling",
+    Justification = "Existing ScriptDOM relation extraction pipeline; tracked as coupling baseline debt.")]
 internal static class RelationExtractor
 {
     private static readonly FrozenDictionary<QualifiedJoinType, string> JoinTypeNames =
