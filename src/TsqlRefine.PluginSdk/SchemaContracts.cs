@@ -522,6 +522,10 @@ public interface IObjectCatalogProvider
     CatalogScopeInfo Scope { get; }
 
     /// <summary>Resolves an object by database, schema, name, and kind.</summary>
+    /// <returns>
+    /// The single matching object, or null when no object matches or when multiple objects match.
+    /// Narrow <paramref name="kind"/> when null may represent an ambiguous match.
+    /// </returns>
     CatalogObjectInfo? ResolveObject(
         string? database,
         string? schema,

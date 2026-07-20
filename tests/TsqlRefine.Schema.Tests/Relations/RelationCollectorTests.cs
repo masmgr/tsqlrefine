@@ -21,20 +21,20 @@ public sealed class RelationCollectorTests
     }
 
     [Fact]
-    public void Collect_ParseError_SkipsGracefully()
+    public void Collect_ParseErrors_ThrowsWithEveryFileLocation()
     {
         var inputs = new (string Sql, string FilePath)[]
         {
             ("THIS IS NOT VALID SQL !!!", "bad.sql"),
             ("SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId", "good.sql"),
+            ("SELECT * FROM", "also-bad.sql"),
         };
 
-        var profile = RelationCollector.Collect(inputs, 150);
+        var exception = Assert.Throws<InvalidDataException>(() => RelationCollector.Collect(inputs, 150));
 
-        // Should still produce results from the valid file
-        // The invalid SQL may still parse partially, so just check it doesn't throw
-        Assert.Equal(2, profile.Metadata.FileCount);
-        Assert.True(profile.Metadata.TotalJoinCount >= 1);
+        Assert.Contains("bad.sql(", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("also-bad.sql(", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("good.sql(", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

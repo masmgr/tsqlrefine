@@ -158,6 +158,38 @@ public sealed class ObjectCatalogCollectorTests
     }
 
     [Fact]
+    public void Collect_SameSourceWithDifferentCasingAcrossScopes_ResolvesUnqualifiedColumn()
+    {
+        const string sql = """
+            CREATE VIEW dbo.UserEmails AS
+            SELECT outer_user.Id
+            FROM dbo.Users AS outer_user
+            WHERE EXISTS (
+                SELECT 1
+                FROM DBO.USERS AS inner_user
+                WHERE Email = outer_user.Email);
+            """;
+
+        var catalog = ObjectCatalogCollector.Collect([(sql, "case.sql")], 160);
+
+        var reference = Assert.Single(catalog.References, item =>
+            item.Kind == CatalogReferenceKind.Column && item.ToColumn == "Email" &&
+            item.ReferencedAt.Start is { Line: 6, Character: 10 });
+        Assert.Equal("dbo", reference.ToObject.SchemaName, ignoreCase: true);
+        Assert.Equal("Users", reference.ToObject.Name, ignoreCase: true);
+    }
+
+    [Fact]
+    public void Collect_ParseErrors_ThrowsWithSourceLocation()
+    {
+        var exception = Assert.Throws<InvalidDataException>(() =>
+            ObjectCatalogCollector.Collect([("CREATE PROCEDURE dbo.Bad AS SELECT * FROM", "bad.sql")], 160));
+
+        Assert.Contains("bad.sql(", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("SQL", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Collect_KnownViewColumnIsValidatedDuringResolution()
     {
         var catalog = ObjectCatalogCollector.Collect(
@@ -202,6 +234,22 @@ public sealed class ObjectCatalogCollectorTests
         Assert.NotNull(resolved);
         Assert.True(provider.HasData);
         Assert.Equal("@id", Assert.Single(resolved.Parameters).Name);
+    }
+
+    [Fact]
+    public void ResolveObject_MissingOrAmbiguous_ReturnsNull()
+    {
+        var catalog = ObjectCatalogCollector.Collect(
+            [
+                ("CREATE PROCEDURE dbo.Shared AS SELECT 1;", "procedure.sql"),
+                ("CREATE VIEW dbo.Shared AS SELECT 1 AS Value;", "view.sql")
+            ],
+            160);
+        var provider = new ObjectCatalogProvider(catalog);
+
+        Assert.Null(provider.ResolveObject(null, "dbo", "Missing", CatalogObjectKindFilter.All));
+        Assert.Null(provider.ResolveObject(null, "dbo", "Shared", CatalogObjectKindFilter.All));
+        Assert.NotNull(provider.ResolveObject(null, "dbo", "Shared", CatalogObjectKindFilter.Procedure));
     }
 
     [Fact]

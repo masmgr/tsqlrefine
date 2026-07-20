@@ -456,6 +456,8 @@ tsqlrefine schema collect-relations --output relations.json [options] [paths...]
 Collects JOIN relation patterns (learned column pairings) from SQL files for relation-deviation
 analysis. It accepts the standard SQL input options and `--compat-level`. `--output` is required.
 The generated profile can be supplied to lint and fix commands with `--relations-profile`.
+If any input contains a parse error, all errors are reported with file locations, the command exits
+with code `2`, and no partial profile is written.
 
 #### schema collect-objects
 
@@ -466,6 +468,8 @@ tsqlrefine schema collect-objects --output objects.json [options] [paths...]
 Collects procedure, function, and view definitions plus their static references. It accepts
 the standard SQL input options and `--compat-level`. The generated catalog can be supplied to
 lint, fix, and baseline commands with `--objects-catalog`.
+If any input contains a parse error, all errors are reported with file locations, the command exits
+with code `2`, and no partial catalog is written.
 
 > **Security note:** Avoid placing password-bearing connection strings directly on the
 > command line because process listings, shell history, and CI logs may expose them.
@@ -625,7 +629,7 @@ Fixed exit codes by result type for easy CI handling.
 - `3`: Configuration error (config/ignore load failure, invalid compatibility level, etc.)
 - `4`: Runtime exception (internal error)
 
-For `format`/`fix`, if parse errors occur during processing, exit code is `2`.
+For `format`/`fix` and SQL-based schema collection, if parse errors occur during processing, exit code is `2`.
 `report` returns `0` after successfully generating an artifact even when diagnostics are present;
 parse failures still return `2`.
 

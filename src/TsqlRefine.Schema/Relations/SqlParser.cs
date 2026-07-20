@@ -8,14 +8,28 @@ namespace TsqlRefine.Schema.Relations;
 internal static class SqlParser
 {
     /// <summary>
-    /// Parses a SQL string and returns the AST fragment, or null if parsing fails.
+    /// Parses a SQL string and returns both the best-effort AST and all parse errors.
     /// </summary>
-    internal static TSqlFragment? Parse(string sql, int compatLevel)
+    internal static SqlParseResult Parse(string sql, int compatLevel)
     {
         var parser = CreateParser(compatLevel);
         using var reader = new StringReader(sql);
-        var fragment = parser.Parse(reader, out _);
-        return fragment;
+        var fragment = parser.Parse(reader, out var errors);
+        return new SqlParseResult(fragment, errors.ToArray());
+    }
+
+    /// <summary>Formats a ScriptDOM parse error with its source file location.</summary>
+    internal static string FormatError(string filePath, ParseError error) =>
+        $"{filePath}({error.Line},{error.Column}): SQL{error.Number}: {error.Message}";
+
+    /// <summary>Throws a single failure containing every collected parse error.</summary>
+    internal static void ThrowIfErrors(IReadOnlyList<string> errors)
+    {
+        if (errors.Count > 0)
+        {
+            throw new InvalidDataException(
+                $"SQL parsing failed:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}");
+        }
     }
 
     private static TSqlParser CreateParser(int compatLevel) =>
@@ -30,3 +44,6 @@ internal static class SqlParser
             _ => new TSql100Parser(initialQuotedIdentifiers: true)
         };
 }
+
+/// <summary>Best-effort ScriptDOM output together with any syntax errors.</summary>
+internal sealed record SqlParseResult(TSqlFragment? Fragment, IReadOnlyList<ParseError> Errors);

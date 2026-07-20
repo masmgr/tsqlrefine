@@ -866,7 +866,16 @@ public sealed class CommandExecutor
         }
 
         var inputs = read.Inputs.Select(i => (i.Text, i.FilePath));
-        var profile = RelationCollector.Collect(inputs, compatLevel);
+        RelationProfile profile;
+        try
+        {
+            profile = RelationCollector.Collect(inputs, compatLevel);
+        }
+        catch (InvalidDataException ex)
+        {
+            await stderr.WriteLineAsync($"Parse error: {ex.Message}");
+            return ExitCodes.AnalysisError;
+        }
 
         var json = RelationProfileSerializer.Serialize(profile);
         var outputPath = Path.GetFullPath(args.SchemaOutput);
@@ -912,7 +921,16 @@ public sealed class CommandExecutor
         }
 
         var inputs = read.Inputs.Select(i => (i.Text, i.FilePath));
-        var catalog = ObjectCatalogCollector.Collect(inputs, compatLevel);
+        ObjectCatalog catalog;
+        try
+        {
+            catalog = ObjectCatalogCollector.Collect(inputs, compatLevel);
+        }
+        catch (InvalidDataException ex)
+        {
+            await stderr.WriteLineAsync($"Parse error: {ex.Message}");
+            return ExitCodes.AnalysisError;
+        }
         var json = ObjectCatalogSerializer.Serialize(catalog);
         var outputPath = Path.GetFullPath(args.SchemaOutput);
         var directory = Path.GetDirectoryName(outputPath);

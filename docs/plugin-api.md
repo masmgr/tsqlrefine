@@ -161,6 +161,10 @@ public interface IObjectCatalogProvider
 }
 ```
 
+`ResolveObject` returns the object only when exactly one candidate matches. It returns `null` both
+when no candidate exists and when multiple candidates match; callers can narrow the kind filter to
+avoid ambiguity.
+
 `RuleContext.Schema` and `RuleContext.RelationDeviations` are shorthand properties derived from
 `SchemaContext`, kept for source compatibility with rules written before `ISchemaContext` was
 introduced.
