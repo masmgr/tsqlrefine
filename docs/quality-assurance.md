@@ -81,12 +81,11 @@ Release builds continue to test every supported target framework.
 
 - `performance.yml` runs the all-rule corpus benchmark on pushes to `main` and
   alerts when the cached result regresses by more than 50 percent.
-- `mutation.yml` runs Stryker.NET against Rules, Core, and Formatting weekly and
-  runs changed-code mutation analysis for pull requests. Core is gated at 51
-  (56.71% measured baseline) and Formatting at 77 (82.31% measured baseline).
-  Rules remains report-only until the corrected full-run configuration produces
-  its first valid score; its previous repository-relative mutate glob excluded
-  all runnable mutants.
+- `mutation.yml` runs Stryker.NET against Rules weekly and remains report-only.
+  Mutation testing is intentionally excluded from pull request checks because
+  changes to rule tests can cause a large portion of the rule mutants to be
+  reevaluated. Core and Formatting configurations remain available for focused
+  local runs.
 - `dogfood.yml` runs the strict preset over repository SQL monthly and uploads the
   diagnostics for human triage. Private SQL estates can reuse this workflow in an
   access-controlled repository; do not copy customer or sensitive SQL into the
