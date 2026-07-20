@@ -74,6 +74,9 @@ CI merges Cobertura results and compares line and branch coverage with
 `scripts/coverage-baseline.json`. Update the baseline only after reviewing the
 coverage report and tests added for the changed behavior.
 
+Pull request and push CI builds, tests, and collects coverage on `net10.0`.
+Release builds continue to test every supported target framework.
+
 ## Scheduled checks
 
 - `performance.yml` runs the all-rule corpus benchmark on pushes to `main` and

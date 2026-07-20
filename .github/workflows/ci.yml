@@ -27,13 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup .NET SDKs
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
-            10.0.x
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
@@ -47,7 +43,7 @@ jobs:
         run: dotnet restore src/TsqlRefine.sln
 
       - name: Build (Release)
-        run: dotnet build src/TsqlRefine.sln -c Release --no-restore
+        run: dotnet build src/TsqlRefine.sln -c Release --framework net10.0 --no-restore
 
       - name: Verify generated rule reference
         run: |
@@ -55,7 +51,7 @@ jobs:
           git diff --exit-code -- docs/Rules/REFERENCE.md
 
       - name: Test with coverage
-        run: dotnet test src/TsqlRefine.sln -c Release --no-build --collect:"XPlat Code Coverage" --logger "trx" --results-directory TestResults
+        run: dotnet test src/TsqlRefine.sln -c Release --framework net10.0 --no-build --collect:"XPlat Code Coverage" --logger "trx" --results-directory TestResults
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -101,13 +97,9 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Setup .NET SDKs
+      - name: Setup .NET SDK
         uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5.4.0
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
-            10.0.x
           global-json-file: global.json
 
       - name: Restore
