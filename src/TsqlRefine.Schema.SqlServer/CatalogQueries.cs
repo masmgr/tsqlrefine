@@ -129,7 +129,12 @@ internal static class CatalogQueries
         SELECT
             DB_NAME() AS DatabaseName,
             SERVERPROPERTY('ServerName') AS ServerName,
-            compatibility_level AS CompatLevel
+            compatibility_level AS CompatLevel,
+            CAST(DATABASEPROPERTYEX(DB_NAME(), 'Collation') AS nvarchar(128)) AS DatabaseCollation,
+            CONVERT(int, COLLATIONPROPERTY(
+                CAST(DATABASEPROPERTYEX(DB_NAME(), 'Collation') AS nvarchar(128)), 'LCID')) AS CollationLcid,
+            CONVERT(int, COLLATIONPROPERTY(
+                CAST(DATABASEPROPERTYEX(DB_NAME(), 'Collation') AS nvarchar(128)), 'ComparisonStyle')) AS CollationComparisonStyle
         FROM sys.databases
         WHERE database_id = DB_ID()
         """;

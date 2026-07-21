@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TsqlRefine.Schema.Model;
@@ -25,6 +24,9 @@ public static class SchemaSnapshotSerializer
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
+    private static readonly SchemaJsonSerializerContext SerializerContext = new(SerializerOptions);
+    private static readonly SchemaJsonSerializerContext DeserializerContext = new(DeserializerOptions);
+
     /// <summary>
     /// Serializes a <see cref="SchemaSnapshot"/> to a JSON string.
     /// </summary>
@@ -33,7 +35,28 @@ public static class SchemaSnapshotSerializer
     public static string Serialize(SchemaSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
-        return JsonSerializer.Serialize(snapshot, SerializerOptions);
+        return JsonSerializer.Serialize(snapshot, SerializerContext.SchemaSnapshot);
+    }
+
+    /// <summary>
+    /// Asynchronously serializes a <see cref="SchemaSnapshot"/> to a UTF-8 JSON stream.
+    /// </summary>
+    /// <param name="utf8Json">The destination UTF-8 stream.</param>
+    /// <param name="snapshot">The snapshot to serialize.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    public static Task SerializeAsync(
+        Stream utf8Json,
+        SchemaSnapshot snapshot,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(utf8Json);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return JsonSerializer.SerializeAsync(
+            utf8Json,
+            snapshot,
+            SerializerContext.SchemaSnapshot,
+            cancellationToken);
     }
 
     /// <summary>
@@ -45,7 +68,7 @@ public static class SchemaSnapshotSerializer
     public static SchemaSnapshot Deserialize(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
-        return JsonSerializer.Deserialize<SchemaSnapshot>(json, DeserializerOptions)
+        return JsonSerializer.Deserialize(json, DeserializerContext.SchemaSnapshot)
             ?? throw new JsonException("Failed to deserialize schema snapshot: result was null.");
     }
 
@@ -58,7 +81,7 @@ public static class SchemaSnapshotSerializer
     public static SchemaSnapshot Deserialize(Stream utf8Json)
     {
         ArgumentNullException.ThrowIfNull(utf8Json);
-        return JsonSerializer.Deserialize<SchemaSnapshot>(utf8Json, DeserializerOptions)
+        return JsonSerializer.Deserialize(utf8Json, DeserializerContext.SchemaSnapshot)
             ?? throw new JsonException("Failed to deserialize schema snapshot: result was null.");
     }
 
@@ -70,8 +93,46 @@ public static class SchemaSnapshotSerializer
     public static string ComputeContentHash(IReadOnlyList<DatabaseSchema> databases)
     {
         ArgumentNullException.ThrowIfNull(databases);
-        var json = JsonSerializer.Serialize(databases, SerializerOptions);
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(json));
-        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var stream = new IncrementalHashStream(hash);
+        JsonSerializer.Serialize(
+            stream,
+            databases,
+            SerializerContext.IReadOnlyListDatabaseSchema);
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    private sealed class IncrementalHashStream(IncrementalHash hash) : Stream
+    {
+        public override bool CanRead => false;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => true;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            hash.AppendData(buffer, offset, count);
+
+        public override void Write(ReadOnlySpan<byte> buffer) => hash.AppendData(buffer);
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
     }
 }

@@ -14,4 +14,14 @@ public sealed record SnapshotMetadata(
     string DatabaseName,
     int CompatLevel,
     string ContentHash
-);
+)
+{
+    /// <summary>Gets the database default collation used for identifier resolution.</summary>
+    public string? DatabaseCollation { get; init; }
+
+    /// <summary>Gets the locale identifier reported by COLLATIONPROPERTY for the database collation.</summary>
+    public int? CollationLcid { get; init; }
+
+    /// <summary>Gets the SQL Server comparison-style bitmask for the database collation.</summary>
+    public int? CollationComparisonStyle { get; init; }
+}

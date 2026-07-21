@@ -746,7 +746,6 @@ public sealed class CommandExecutor
             var snapshot = await SchemaSnapshotGenerator.GenerateAsync(
                 args.SchemaConnectionString, options, cancellationToken);
 
-            var json = SchemaSnapshotSerializer.Serialize(snapshot);
             var outputPath = Path.GetFullPath(args.SchemaOutput);
 
             var dir = Path.GetDirectoryName(outputPath);
@@ -755,7 +754,17 @@ public sealed class CommandExecutor
                 Directory.CreateDirectory(dir);
             }
 
-            await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8, cancellationToken);
+            await using (var output = new FileStream(
+                outputPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                useAsync: true))
+            {
+                await output.WriteAsync(Encoding.UTF8.GetPreamble(), cancellationToken);
+                await SchemaSnapshotSerializer.SerializeAsync(output, snapshot, cancellationToken);
+            }
 
             var tableCount = snapshot.Databases.Sum(db => db.Tables.Count);
             var viewCount = snapshot.Databases.Sum(db => db.Views.Count);

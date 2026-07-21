@@ -7,7 +7,7 @@ namespace TsqlRefine.Schema.Resolution;
 
 /// <summary>
 /// Resolves table and column names against a <see cref="SchemaSnapshot"/>.
-/// Supports 1-part, 2-part, and 3-part naming conventions with case-insensitive matching.
+/// Supports 1-part, 2-part, and 3-part naming conventions using snapshot collation metadata.
 /// </summary>
 internal sealed class NameResolver
 {
@@ -19,8 +19,12 @@ internal sealed class NameResolver
     {
         _defaultSchema = defaultSchema;
         _defaultDatabaseName = snapshot.Databases.Count > 0 ? snapshot.Databases[0].Name : null;
+        var identifierComparer = SqlIdentifierComparer.Create(snapshot.Metadata);
         _databases = snapshot.Databases
-            .ToFrozenDictionary(db => db.Name, db => new DatabaseLookup(db), StringComparer.OrdinalIgnoreCase);
+            .ToFrozenDictionary(
+                db => db.Name,
+                db => new DatabaseLookup(db, identifierComparer),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -94,34 +98,52 @@ internal sealed class NameResolver
         return dbLookup.GetColumns(table.SchemaName, table.TableName, table.IsView);
     }
 
+    internal bool IsColumnLookupCreated(ResolvedTable table) =>
+        _databases.TryGetValue(table.DatabaseName, out var dbLookup) &&
+        dbLookup.IsColumnLookupCreated(table.SchemaName, table.TableName, table.IsView);
+
     /// <summary>
-    /// Internal lookup structure for a single database, providing fast case-insensitive
+    /// Internal lookup structure for a single database, providing collation-aware
     /// table and view resolution by schema.table key.
     /// </summary>
     private sealed class DatabaseLookup
     {
-        private readonly FrozenDictionary<(string SchemaName, string TableName), TableLookup> _tables;
-        private readonly FrozenDictionary<(string SchemaName, string TableName), TableLookup> _views;
-        private readonly FrozenDictionary<(string SchemaName, string TableName), IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> _referencingFks;
+        private readonly FrozenDictionary<(string SchemaName, string TableName), TableLookup> _objects;
+        private readonly Lazy<FrozenDictionary<(string SchemaName, string TableName), IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>>> _referencingFks;
 
-        internal DatabaseLookup(DatabaseSchema db)
+        internal DatabaseLookup(DatabaseSchema db, IEqualityComparer<string> identifierComparer)
         {
-            _tables = db.Tables
-                .ToFrozenDictionary(
-                    t => (t.SchemaName, t.Name),
-                    t => new TableLookup(db.Name, t, isView: false),
-                    TableNameKeyComparer.Instance);
-
-            _views = db.Views
-                .ToFrozenDictionary(
-                    v => (v.SchemaName, v.Name),
-                    v => new TableLookup(db.Name, v, isView: true),
-                    TableNameKeyComparer.Instance);
-
-            // Build reverse FK index: target table key → list of (source table, FK)
-            var referencingFksBuilder = new Dictionary<(string, string), List<(TableSchema, ForeignKeyInfo)>>(
-                TableNameKeyComparer.Instance);
+            var tableNameComparer = new TableNameKeyComparer(identifierComparer);
+            var objects = new Dictionary<(string SchemaName, string TableName), TableLookup>(
+                db.Tables.Count + db.Views.Count,
+                tableNameComparer);
             foreach (var table in db.Tables)
+            {
+                objects.Add(
+                    (table.SchemaName, table.Name),
+                    new TableLookup(db.Name, table, isView: false, identifierComparer));
+            }
+
+            foreach (var view in db.Views)
+            {
+                objects.Add(
+                    (view.SchemaName, view.Name),
+                    new TableLookup(db.Name, view, isView: true, identifierComparer));
+            }
+
+            _objects = objects.ToFrozenDictionary(tableNameComparer);
+            _referencingFks = new Lazy<FrozenDictionary<(string SchemaName, string TableName), IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>>>(
+                () => BuildReferencingForeignKeys(db.Tables, tableNameComparer),
+                LazyThreadSafetyMode.ExecutionAndPublication);
+        }
+
+        private static FrozenDictionary<(string SchemaName, string TableName), IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>> BuildReferencingForeignKeys(
+            IReadOnlyList<TableSchema> tables,
+            TableNameKeyComparer tableNameComparer)
+        {
+            var referencingFksBuilder = new Dictionary<(string, string), List<(TableSchema, ForeignKeyInfo)>>(
+                tableNameComparer);
+            foreach (var table in tables)
             {
                 if (table.ForeignKeys is null)
                 {
@@ -141,33 +163,23 @@ internal sealed class NameResolver
                 }
             }
 
-            _referencingFks = referencingFksBuilder
+            return referencingFksBuilder
                 .ToFrozenDictionary(
                     kvp => kvp.Key,
                     kvp => (IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)>)kvp.Value,
-                    TableNameKeyComparer.Instance);
+                    tableNameComparer);
         }
 
         internal ResolvedTable? ResolveTable(string schemaName, string tableName)
         {
-            var key = (schemaName, tableName);
-            if (_tables.TryGetValue(key, out var tableLookup))
-            {
-                return tableLookup.ResolvedTable;
-            }
-
-            if (_views.TryGetValue(key, out var viewLookup))
-            {
-                return viewLookup.ResolvedTable;
-            }
-
-            return null;
+            return _objects.TryGetValue((schemaName, tableName), out var lookup)
+                ? lookup.ResolvedTable
+                : null;
         }
 
         internal TableSchema? FindTableSchema(string schemaName, string tableName, bool isView)
         {
-            var lookup = isView ? _views : _tables;
-            return lookup.TryGetValue((schemaName, tableName), out var tableLookup)
+            return TryGetTableLookup(schemaName, tableName, isView, out var tableLookup)
                 ? tableLookup.TableSchema
                 : null;
         }
@@ -197,7 +209,13 @@ internal sealed class NameResolver
         internal IReadOnlyList<(TableSchema SourceTable, ForeignKeyInfo ForeignKey)> GetReferencingForeignKeys(
             string schemaName, string tableName)
         {
-            return _referencingFks.TryGetValue((schemaName, tableName), out var list) ? list : [];
+            return _referencingFks.Value.TryGetValue((schemaName, tableName), out var list) ? list : [];
+        }
+
+        internal bool IsColumnLookupCreated(string schemaName, string tableName, bool isView)
+        {
+            return TryGetTableLookup(schemaName, tableName, isView, out var tableLookup) &&
+                tableLookup.IsColumnLookupCreated;
         }
 
         private bool TryGetTableLookup(
@@ -206,8 +224,8 @@ internal sealed class NameResolver
             bool isView,
             [NotNullWhen(true)] out TableLookup? tableLookup)
         {
-            var lookup = isView ? _views : _tables;
-            if (lookup.TryGetValue((schemaName, tableName), out var found))
+            if (_objects.TryGetValue((schemaName, tableName), out var found) &&
+                found.ResolvedTable.IsView == isView)
             {
                 tableLookup = found;
                 return true;
@@ -220,10 +238,13 @@ internal sealed class NameResolver
 
     private sealed class TableLookup
     {
-        private readonly FrozenDictionary<string, ResolvedColumn> _columns;
-        private readonly SchemaColumnInfo[] _columnList;
+        private readonly Lazy<ColumnLookup> _columns;
 
-        internal TableLookup(string databaseName, TableSchema tableSchema, bool isView)
+        internal TableLookup(
+            string databaseName,
+            TableSchema tableSchema,
+            bool isView,
+            IEqualityComparer<string> identifierComparer)
         {
             TableSchema = tableSchema;
             ResolvedTable = new ResolvedTable(
@@ -232,47 +253,62 @@ internal sealed class NameResolver
                 tableSchema.Name,
                 isView);
 
-            _columnList = new SchemaColumnInfo[tableSchema.Columns.Count];
-            // Build a temp dict first to handle duplicate column names (keep first occurrence).
-            var columnsBuilder = new Dictionary<string, ResolvedColumn>(
-                tableSchema.Columns.Count, StringComparer.OrdinalIgnoreCase);
-
-            for (var i = 0; i < tableSchema.Columns.Count; i++)
-            {
-                var dto = tableSchema.Columns[i].ToDto();
-                _columnList[i] = dto;
-                // Keep the first entry when duplicate names exist in metadata.
-                columnsBuilder.TryAdd(dto.Name, new ResolvedColumn(ResolvedTable, dto));
-            }
-
-            _columns = columnsBuilder.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+            _columns = new Lazy<ColumnLookup>(
+                () => new ColumnLookup(ResolvedTable, tableSchema.Columns, identifierComparer),
+                LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         internal TableSchema TableSchema { get; }
 
         internal ResolvedTable ResolvedTable { get; }
 
-        internal IReadOnlyList<SchemaColumnInfo> Columns => _columnList;
+        internal IReadOnlyList<SchemaColumnInfo> Columns => _columns.Value.ColumnList;
+
+        internal bool IsColumnLookupCreated => _columns.IsValueCreated;
 
         internal ResolvedColumn? ResolveColumn(string columnName) =>
-            _columns.GetValueOrDefault(columnName);
+            _columns.Value.Columns.GetValueOrDefault(columnName);
     }
 
-    private sealed class TableNameKeyComparer : IEqualityComparer<(string SchemaName, string TableName)>
+    private sealed class ColumnLookup
     {
-        public static TableNameKeyComparer Instance { get; } = new();
+        internal ColumnLookup(
+            ResolvedTable resolvedTable,
+            IReadOnlyList<ColumnSchema> columns,
+            IEqualityComparer<string> identifierComparer)
+        {
+            ColumnList = new SchemaColumnInfo[columns.Count];
+            var columnsBuilder = new Dictionary<string, ResolvedColumn>(columns.Count, identifierComparer);
 
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var dto = columns[i].ToDto();
+                ColumnList[i] = dto;
+                columnsBuilder.TryAdd(dto.Name, new ResolvedColumn(resolvedTable, dto));
+            }
+
+            Columns = columnsBuilder.ToFrozenDictionary(identifierComparer);
+        }
+
+        internal FrozenDictionary<string, ResolvedColumn> Columns { get; }
+
+        internal SchemaColumnInfo[] ColumnList { get; }
+    }
+
+    private sealed class TableNameKeyComparer(IEqualityComparer<string> identifierComparer)
+        : IEqualityComparer<(string SchemaName, string TableName)>
+    {
         public bool Equals(
             (string SchemaName, string TableName) x,
             (string SchemaName, string TableName) y) =>
-            string.Equals(x.SchemaName, y.SchemaName, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(x.TableName, y.TableName, StringComparison.OrdinalIgnoreCase);
+            identifierComparer.Equals(x.SchemaName, y.SchemaName) &&
+            identifierComparer.Equals(x.TableName, y.TableName);
 
         public int GetHashCode((string SchemaName, string TableName) obj)
         {
             var hash = new HashCode();
-            hash.Add(obj.SchemaName, StringComparer.OrdinalIgnoreCase);
-            hash.Add(obj.TableName, StringComparer.OrdinalIgnoreCase);
+            hash.Add(obj.SchemaName, identifierComparer);
+            hash.Add(obj.TableName, identifierComparer);
             return hash.ToHashCode();
         }
     }

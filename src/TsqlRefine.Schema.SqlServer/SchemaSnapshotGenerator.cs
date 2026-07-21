@@ -38,7 +38,8 @@ public static class SchemaSnapshotGenerator
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
-        var (dbName, serverName, dbCompatLevel) = await ReadDatabaseInfoAsync(connection, cancellationToken);
+        var (dbName, serverName, dbCompatLevel, databaseCollation, collationLcid, collationComparisonStyle) =
+            await ReadDatabaseInfoAsync(connection, cancellationToken);
         var compatLevel = options.CompatLevel > 0 ? options.CompatLevel : dbCompatLevel;
 
         var excludeSchemas = BuildExcludeSet(options);
@@ -47,13 +48,17 @@ public static class SchemaSnapshotGenerator
             : null;
 
         var tables = await ReadTablesAndViewsAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
-        var columns = await ReadColumnsAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
-        var primaryKeys = await ReadPrimaryKeysAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
-        var uniqueConstraints = await ReadUniqueConstraintsAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
-        var foreignKeys = await ReadForeignKeysAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
-        var indexes = await ReadIndexesAsync(connection, includeSchemas, excludeSchemas, cancellationToken);
+        var accumulators = tables.ToDictionary(
+            t => (t.SchemaName, t.ObjectName),
+            t => new TableAccumulator(t),
+            TableKeyComparer.Instance);
+        await ReadColumnsAsync(connection, includeSchemas, excludeSchemas, accumulators, cancellationToken);
+        await ReadPrimaryKeysAsync(connection, includeSchemas, excludeSchemas, accumulators, cancellationToken);
+        await ReadUniqueConstraintsAsync(connection, includeSchemas, excludeSchemas, accumulators, cancellationToken);
+        await ReadForeignKeysAsync(connection, includeSchemas, excludeSchemas, accumulators, cancellationToken);
+        await ReadIndexesAsync(connection, includeSchemas, excludeSchemas, accumulators, cancellationToken);
 
-        var tableSchemas = BuildTableSchemas(tables, columns, primaryKeys, uniqueConstraints, foreignKeys, indexes);
+        var tableSchemas = tables.Select(t => accumulators[(t.SchemaName, t.ObjectName)].Build()).ToArray();
 
         var tableList = tableSchemas.Where(t => !t.IsView).Select(t => t.Schema).ToArray();
         var viewList = tableSchemas.Where(t => t.IsView).Select(t => t.Schema).ToArray();
@@ -70,7 +75,12 @@ public static class SchemaSnapshotGenerator
             DatabaseName: dbName,
             CompatLevel: compatLevel,
             ContentHash: contentHash
-        );
+        )
+        {
+            DatabaseCollation = databaseCollation,
+            CollationLcid = collationLcid,
+            CollationComparisonStyle = collationComparisonStyle
+        };
 
         return new SchemaSnapshot(metadata, databases);
     }
@@ -164,7 +174,13 @@ public static class SchemaSnapshotGenerator
             .AppendLine(")");
     }
 
-    private static async Task<(string DbName, string ServerName, int CompatLevel)> ReadDatabaseInfoAsync(
+    private static async Task<(
+        string DbName,
+        string ServerName,
+        int CompatLevel,
+        string? DatabaseCollation,
+        int? CollationLcid,
+        int? CollationComparisonStyle)> ReadDatabaseInfoAsync(
         SqlConnection connection, CancellationToken cancellationToken)
     {
         await using var cmd = new SqlCommand(CatalogQueries.DatabaseInfo, connection);
@@ -178,11 +194,17 @@ public static class SchemaSnapshotGenerator
         var databaseNameOrdinal = reader.GetOrdinal("DatabaseName");
         var serverNameOrdinal = reader.GetOrdinal("ServerName");
         var compatLevelOrdinal = reader.GetOrdinal("CompatLevel");
+        var databaseCollationOrdinal = reader.GetOrdinal("DatabaseCollation");
+        var collationLcidOrdinal = reader.GetOrdinal("CollationLcid");
+        var collationComparisonStyleOrdinal = reader.GetOrdinal("CollationComparisonStyle");
 
         return (
             reader.GetString(databaseNameOrdinal),
             reader.IsDBNull(serverNameOrdinal) ? string.Empty : reader.GetString(serverNameOrdinal),
-            reader.GetByte(compatLevelOrdinal)
+            reader.GetByte(compatLevelOrdinal),
+            reader.IsDBNull(databaseCollationOrdinal) ? null : reader.GetString(databaseCollationOrdinal),
+            reader.IsDBNull(collationLcidOrdinal) ? null : reader.GetInt32(collationLcidOrdinal),
+            reader.IsDBNull(collationComparisonStyleOrdinal) ? null : reader.GetInt32(collationComparisonStyleOrdinal)
         );
     }
 
@@ -225,16 +247,16 @@ public static class SchemaSnapshotGenerator
         bool IsNullable, bool IsIdentity, bool IsComputed,
         string? DefaultExpression, string? Collation);
 
-    private static async Task<List<ColumnEntry>> ReadColumnsAsync(
+    private static async Task ReadColumnsAsync(
         SqlConnection connection,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas,
+        Dictionary<(string SchemaName, string TableName), TableAccumulator> accumulators,
         CancellationToken cancellationToken)
     {
         await using var cmd = CreateCatalogCommand(CatalogQueries.Columns, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<ColumnEntry>();
         var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
         var objectNameOrdinal = reader.GetOrdinal("ObjectName");
         var columnNameOrdinal = reader.GetOrdinal("ColumnName");
@@ -255,37 +277,40 @@ public static class SchemaSnapshotGenerator
                 continue;
             }
 
-            result.Add(new ColumnEntry(
-                schemaName,
-                reader.GetString(objectNameOrdinal),
+            var objectName = reader.GetString(objectNameOrdinal);
+            if (!accumulators.TryGetValue((schemaName, objectName), out var accumulator))
+            {
+                continue;
+            }
+
+            accumulator.Columns.Add(new ColumnSchema(
                 reader.GetString(columnNameOrdinal),
-                reader.GetString(typeNameOrdinal),
-                reader.GetInt16(maxLengthOrdinal),
-                reader.GetByte(precisionOrdinal),
-                reader.GetByte(scaleOrdinal),
+                CreateSqlTypeInfo(
+                    reader.GetString(typeNameOrdinal),
+                    reader.GetInt16(maxLengthOrdinal),
+                    reader.GetByte(precisionOrdinal),
+                    reader.GetByte(scaleOrdinal)),
                 reader.GetBoolean(isNullableOrdinal),
-                reader.GetBoolean(isIdentityOrdinal),
-                reader.GetBoolean(isComputedOrdinal),
-                reader.IsDBNull(defaultExpressionOrdinal) ? null : reader.GetString(defaultExpressionOrdinal),
-                reader.IsDBNull(collationOrdinal) ? null : reader.GetString(collationOrdinal)
+                IsIdentity: reader.GetBoolean(isIdentityOrdinal),
+                IsComputed: reader.GetBoolean(isComputedOrdinal),
+                DefaultExpression: reader.IsDBNull(defaultExpressionOrdinal) ? null : reader.GetString(defaultExpressionOrdinal),
+                Collation: reader.IsDBNull(collationOrdinal) ? null : reader.GetString(collationOrdinal)
             ));
         }
-
-        return result;
     }
 
     internal sealed record PkEntry(string SchemaName, string TableName, bool IsClustered, string ColumnName);
 
-    private static async Task<List<PkEntry>> ReadPrimaryKeysAsync(
+    private static async Task ReadPrimaryKeysAsync(
         SqlConnection connection,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas,
+        Dictionary<(string SchemaName, string TableName), TableAccumulator> accumulators,
         CancellationToken cancellationToken)
     {
         await using var cmd = CreateCatalogCommand(CatalogQueries.PrimaryKeys, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<PkEntry>();
         var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
         var tableNameOrdinal = reader.GetOrdinal("TableName");
         var indexTypeOrdinal = reader.GetOrdinal("IndexType");
@@ -298,29 +323,27 @@ public static class SchemaSnapshotGenerator
                 continue;
             }
 
-            result.Add(new PkEntry(
-                schemaName,
-                reader.GetString(tableNameOrdinal),
-                reader.GetString(indexTypeOrdinal) == "CLUSTERED",
-                reader.GetString(columnNameOrdinal)
-            ));
+            var tableName = reader.GetString(tableNameOrdinal);
+            if (accumulators.TryGetValue((schemaName, tableName), out var accumulator))
+            {
+                accumulator.PrimaryKeyIsClustered ??= reader.GetString(indexTypeOrdinal) == "CLUSTERED";
+                accumulator.PrimaryKeyColumns.Add(reader.GetString(columnNameOrdinal));
+            }
         }
-
-        return result;
     }
 
     internal sealed record UqEntry(string SchemaName, string TableName, string ConstraintName, string ColumnName);
 
-    private static async Task<List<UqEntry>> ReadUniqueConstraintsAsync(
+    private static async Task ReadUniqueConstraintsAsync(
         SqlConnection connection,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas,
+        Dictionary<(string SchemaName, string TableName), TableAccumulator> accumulators,
         CancellationToken cancellationToken)
     {
         await using var cmd = CreateCatalogCommand(CatalogQueries.UniqueConstraints, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<UqEntry>();
         var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
         var tableNameOrdinal = reader.GetOrdinal("TableName");
         var constraintNameOrdinal = reader.GetOrdinal("ConstraintName");
@@ -333,31 +356,35 @@ public static class SchemaSnapshotGenerator
                 continue;
             }
 
-            result.Add(new UqEntry(
-                schemaName,
-                reader.GetString(tableNameOrdinal),
-                reader.GetString(constraintNameOrdinal),
-                reader.GetString(columnNameOrdinal)
-            ));
-        }
+            var tableName = reader.GetString(tableNameOrdinal);
+            if (accumulators.TryGetValue((schemaName, tableName), out var accumulator))
+            {
+                var constraintName = reader.GetString(constraintNameOrdinal);
+                if (!accumulator.UniqueConstraints.TryGetValue(constraintName, out var columns))
+                {
+                    columns = [];
+                    accumulator.UniqueConstraints.Add(constraintName, columns);
+                }
 
-        return result;
+                columns.Add(reader.GetString(columnNameOrdinal));
+            }
+        }
     }
 
     internal sealed record FkEntry(
         string SchemaName, string TableName, string ForeignKeyName,
         string SourceColumn, string TargetSchema, string TargetTable, string TargetColumn);
 
-    private static async Task<List<FkEntry>> ReadForeignKeysAsync(
+    private static async Task ReadForeignKeysAsync(
         SqlConnection connection,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas,
+        Dictionary<(string SchemaName, string TableName), TableAccumulator> accumulators,
         CancellationToken cancellationToken)
     {
         await using var cmd = CreateCatalogCommand(CatalogQueries.ForeignKeys, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<FkEntry>();
         var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
         var tableNameOrdinal = reader.GetOrdinal("TableName");
         var foreignKeyNameOrdinal = reader.GetOrdinal("ForeignKeyName");
@@ -373,34 +400,38 @@ public static class SchemaSnapshotGenerator
                 continue;
             }
 
-            result.Add(new FkEntry(
-                schemaName,
-                reader.GetString(tableNameOrdinal),
-                reader.GetString(foreignKeyNameOrdinal),
-                reader.GetString(sourceColumnOrdinal),
-                reader.GetString(targetSchemaOrdinal),
-                reader.GetString(targetTableOrdinal),
-                reader.GetString(targetColumnOrdinal)
-            ));
-        }
+            var tableName = reader.GetString(tableNameOrdinal);
+            if (accumulators.TryGetValue((schemaName, tableName), out var accumulator))
+            {
+                var foreignKeyName = reader.GetString(foreignKeyNameOrdinal);
+                if (!accumulator.ForeignKeys.TryGetValue(foreignKeyName, out var foreignKey))
+                {
+                    foreignKey = new ForeignKeyAccumulator(
+                        reader.GetString(targetSchemaOrdinal),
+                        reader.GetString(targetTableOrdinal));
+                    accumulator.ForeignKeys.Add(foreignKeyName, foreignKey);
+                }
 
-        return result;
+                foreignKey.SourceColumns.Add(reader.GetString(sourceColumnOrdinal));
+                foreignKey.TargetColumns.Add(reader.GetString(targetColumnOrdinal));
+            }
+        }
     }
 
     internal sealed record IdxEntry(
         string SchemaName, string TableName, string IndexName,
         bool IsUnique, bool IsClustered, string ColumnName);
 
-    private static async Task<List<IdxEntry>> ReadIndexesAsync(
+    private static async Task ReadIndexesAsync(
         SqlConnection connection,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas,
+        Dictionary<(string SchemaName, string TableName), TableAccumulator> accumulators,
         CancellationToken cancellationToken)
     {
         await using var cmd = CreateCatalogCommand(CatalogQueries.Indexes, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        var result = new List<IdxEntry>();
         var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
         var tableNameOrdinal = reader.GetOrdinal("TableName");
         var indexNameOrdinal = reader.GetOrdinal("IndexName");
@@ -415,17 +446,108 @@ public static class SchemaSnapshotGenerator
                 continue;
             }
 
-            result.Add(new IdxEntry(
-                schemaName,
-                reader.GetString(tableNameOrdinal),
-                reader.GetString(indexNameOrdinal),
-                reader.GetBoolean(isUniqueOrdinal),
-                reader.GetString(indexTypeOrdinal) == "CLUSTERED",
-                reader.GetString(columnNameOrdinal)
-            ));
-        }
+            var tableName = reader.GetString(tableNameOrdinal);
+            if (accumulators.TryGetValue((schemaName, tableName), out var accumulator))
+            {
+                var indexName = reader.GetString(indexNameOrdinal);
+                if (!accumulator.Indexes.TryGetValue(indexName, out var index))
+                {
+                    index = new IndexAccumulator(
+                        reader.GetBoolean(isUniqueOrdinal),
+                        reader.GetString(indexTypeOrdinal) == "CLUSTERED");
+                    accumulator.Indexes.Add(indexName, index);
+                }
 
-        return result;
+                index.Columns.Add(reader.GetString(columnNameOrdinal));
+            }
+        }
+    }
+
+    private static SqlTypeInfo CreateSqlTypeInfo(
+        string typeName,
+        short maxLength,
+        byte precision,
+        byte scale) =>
+        new(
+            typeName,
+            TypeCategoryMapper.FromTypeName(typeName),
+            maxLength == 0 ? null : (int)maxLength,
+            precision == 0 ? null : (int)precision,
+            scale == 0 && precision == 0 ? null : (int)scale);
+
+    private sealed class TableAccumulator(TableEntry table)
+    {
+        internal List<ColumnSchema> Columns { get; } = [];
+
+        internal List<string> PrimaryKeyColumns { get; } = [];
+
+        internal bool? PrimaryKeyIsClustered { get; set; }
+
+        internal Dictionary<string, List<string>> UniqueConstraints { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        internal Dictionary<string, ForeignKeyAccumulator> ForeignKeys { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        internal Dictionary<string, IndexAccumulator> Indexes { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        internal TableBuildResult Build()
+        {
+            var primaryKey = PrimaryKeyColumns.Count == 0
+                ? null
+                : new PrimaryKeyInfo(PrimaryKeyColumns.ToArray(), PrimaryKeyIsClustered.GetValueOrDefault());
+            var uniqueConstraints = UniqueConstraints.Count == 0
+                ? null
+                : UniqueConstraints.Select(static item =>
+                    new UniqueConstraintInfo(item.Key, item.Value.ToArray())).ToArray();
+            var foreignKeys = ForeignKeys.Count == 0
+                ? null
+                : ForeignKeys.Select(static item => new ForeignKeyInfo(
+                    item.Key,
+                    item.Value.SourceColumns.ToArray(),
+                    item.Value.TargetSchema,
+                    item.Value.TargetTable,
+                    item.Value.TargetColumns.ToArray())).ToArray();
+            var indexes = Indexes.Count == 0
+                ? null
+                : Indexes.Select(static item => new IndexInfo(
+                    item.Key,
+                    item.Value.Columns.ToArray(),
+                    item.Value.IsUnique,
+                    item.Value.IsClustered)).ToArray();
+
+            return new TableBuildResult(
+                new TableSchema(
+                    table.SchemaName,
+                    table.ObjectName,
+                    Columns.ToArray(),
+                    primaryKey,
+                    uniqueConstraints,
+                    foreignKeys,
+                    indexes),
+                table.IsView);
+        }
+    }
+
+    private sealed class ForeignKeyAccumulator(string targetSchema, string targetTable)
+    {
+        internal string TargetSchema { get; } = targetSchema;
+
+        internal string TargetTable { get; } = targetTable;
+
+        internal List<string> SourceColumns { get; } = [];
+
+        internal List<string> TargetColumns { get; } = [];
+    }
+
+    private sealed class IndexAccumulator(bool isUnique, bool isClustered)
+    {
+        internal bool IsUnique { get; } = isUnique;
+
+        internal bool IsClustered { get; } = isClustered;
+
+        internal List<string> Columns { get; } = [];
     }
 
     internal sealed record TableBuildResult(TableSchema Schema, bool IsView);
@@ -438,102 +560,78 @@ public static class SchemaSnapshotGenerator
         List<FkEntry> foreignKeys,
         List<IdxEntry> indexes)
     {
-        var columnsByTable = columns.GroupBy(c => (c.SchemaName, c.ObjectName), TableKeyComparer.Instance)
-            .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
-
-        var pkByTable = primaryKeys.GroupBy(p => (p.SchemaName, p.TableName), TableKeyComparer.Instance)
-            .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
-
-        var uqByTable = uniqueConstraints.GroupBy(u => (u.SchemaName, u.TableName), TableKeyComparer.Instance)
-            .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
-
-        var fkByTable = foreignKeys.GroupBy(f => (f.SchemaName, f.TableName), TableKeyComparer.Instance)
-            .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
-
-        var idxByTable = indexes.GroupBy(i => (i.SchemaName, i.TableName), TableKeyComparer.Instance)
-            .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
-
-        var result = new List<TableBuildResult>(tables.Count);
-        foreach (var table in tables)
+        var accumulators = tables.ToDictionary(
+            table => (table.SchemaName, table.ObjectName),
+            table => new TableAccumulator(table),
+            TableKeyComparer.Instance);
+        foreach (var column in columns)
         {
-            var key = (table.SchemaName, table.ObjectName);
-
-            var cols = columnsByTable.TryGetValue(key, out var colList)
-                ? colList.Select(c => new ColumnSchema(
-                    c.ColumnName,
-                    new SqlTypeInfo(
-                        c.TypeName,
-                        TypeCategoryMapper.FromTypeName(c.TypeName),
-                        c.MaxLength == 0 ? null : (int)c.MaxLength,
-                        c.Precision == 0 ? null : (int)c.Precision,
-                        c.Scale == 0 && c.Precision == 0 ? null : (int)c.Scale
-                    ),
-                    c.IsNullable,
-                    IsIdentity: c.IsIdentity,
-                    IsComputed: c.IsComputed,
-                    DefaultExpression: c.DefaultExpression,
-                    Collation: c.Collation
-                )).ToArray()
-                : Array.Empty<ColumnSchema>();
-
-            PrimaryKeyInfo? pk = null;
-            if (pkByTable.TryGetValue(key, out var pkList))
+            if (accumulators.TryGetValue((column.SchemaName, column.ObjectName), out var accumulator))
             {
-                var pkColumns = pkList.Select(p => p.ColumnName).ToArray();
-                pk = new PrimaryKeyInfo(pkColumns, pkList[0].IsClustered);
+                accumulator.Columns.Add(new ColumnSchema(
+                    column.ColumnName,
+                    CreateSqlTypeInfo(column.TypeName, column.MaxLength, column.Precision, column.Scale),
+                    column.IsNullable,
+                    column.IsIdentity,
+                    column.IsComputed,
+                    column.DefaultExpression,
+                    column.Collation));
             }
-
-            var uqs = uqByTable.TryGetValue(key, out var uqList)
-                ? uqList.GroupBy(u => u.ConstraintName, StringComparer.OrdinalIgnoreCase)
-                    .Select(g => new UniqueConstraintInfo(g.Key, g.Select(u => u.ColumnName).ToArray()))
-                    .ToArray()
-                : null;
-
-            var fks = fkByTable.TryGetValue(key, out var fkList)
-                ? fkList.GroupBy(f => f.ForeignKeyName, StringComparer.OrdinalIgnoreCase)
-                    .Select(g =>
-                    {
-                        var first = g.First();
-                        return new ForeignKeyInfo(
-                            g.Key,
-                            g.Select(f => f.SourceColumn).ToArray(),
-                            first.TargetSchema,
-                            first.TargetTable,
-                            g.Select(f => f.TargetColumn).ToArray()
-                        );
-                    })
-                    .ToArray()
-                : null;
-
-            var idxs = idxByTable.TryGetValue(key, out var idxList)
-                ? idxList.GroupBy(i => i.IndexName, StringComparer.OrdinalIgnoreCase)
-                    .Select(g =>
-                    {
-                        var first = g.First();
-                        return new IndexInfo(
-                            g.Key,
-                            g.Select(i => i.ColumnName).ToArray(),
-                            first.IsUnique,
-                            first.IsClustered
-                        );
-                    })
-                    .ToArray()
-                : null;
-
-            var schema = new TableSchema(
-                table.SchemaName,
-                table.ObjectName,
-                cols,
-                pk,
-                uqs,
-                fks,
-                idxs
-            );
-
-            result.Add(new TableBuildResult(schema, table.IsView));
         }
 
-        return result;
+        foreach (var primaryKey in primaryKeys)
+        {
+            if (accumulators.TryGetValue((primaryKey.SchemaName, primaryKey.TableName), out var accumulator))
+            {
+                accumulator.PrimaryKeyIsClustered ??= primaryKey.IsClustered;
+                accumulator.PrimaryKeyColumns.Add(primaryKey.ColumnName);
+            }
+        }
+
+        foreach (var uniqueConstraint in uniqueConstraints)
+        {
+            if (accumulators.TryGetValue((uniqueConstraint.SchemaName, uniqueConstraint.TableName), out var accumulator))
+            {
+                if (!accumulator.UniqueConstraints.TryGetValue(uniqueConstraint.ConstraintName, out var constraintColumns))
+                {
+                    constraintColumns = [];
+                    accumulator.UniqueConstraints.Add(uniqueConstraint.ConstraintName, constraintColumns);
+                }
+
+                constraintColumns.Add(uniqueConstraint.ColumnName);
+            }
+        }
+
+        foreach (var foreignKey in foreignKeys)
+        {
+            if (accumulators.TryGetValue((foreignKey.SchemaName, foreignKey.TableName), out var accumulator))
+            {
+                if (!accumulator.ForeignKeys.TryGetValue(foreignKey.ForeignKeyName, out var foreignKeyAccumulator))
+                {
+                    foreignKeyAccumulator = new ForeignKeyAccumulator(foreignKey.TargetSchema, foreignKey.TargetTable);
+                    accumulator.ForeignKeys.Add(foreignKey.ForeignKeyName, foreignKeyAccumulator);
+                }
+
+                foreignKeyAccumulator.SourceColumns.Add(foreignKey.SourceColumn);
+                foreignKeyAccumulator.TargetColumns.Add(foreignKey.TargetColumn);
+            }
+        }
+
+        foreach (var index in indexes)
+        {
+            if (accumulators.TryGetValue((index.SchemaName, index.TableName), out var accumulator))
+            {
+                if (!accumulator.Indexes.TryGetValue(index.IndexName, out var indexAccumulator))
+                {
+                    indexAccumulator = new IndexAccumulator(index.IsUnique, index.IsClustered);
+                    accumulator.Indexes.Add(index.IndexName, indexAccumulator);
+                }
+
+                indexAccumulator.Columns.Add(index.ColumnName);
+            }
+        }
+
+        return tables.Select(table => accumulators[(table.SchemaName, table.ObjectName)].Build()).ToList();
     }
 
     private sealed class TableKeyComparer : IEqualityComparer<(string, string)>

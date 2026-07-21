@@ -1,5 +1,6 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Snapshot;
 using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Schema.Tests.Resolution;
@@ -746,5 +747,124 @@ public sealed class SchemaProviderTests
             orderItems, ["OrderId"], orders, ["OrderId"]);
 
         Assert.Equal(JoinCardinality.ManyToOne, cardinality);
+    }
+
+    [Fact]
+    public void ResolveColumn_WidthInsensitiveCollation_MatchesHalfAndFullWidthCharacters()
+    {
+        var snapshot = TestSchemaBuilder.Create()
+            .WithDatabaseCollation("Japanese_CI_AS", 1041, comparisonStyle: 1 | 65536 | 131072)
+            .AddView("dbo", "V_NIPPOU_KYUKA", view => view
+                .AddColumn("日付の種類（承認済）", "nvarchar", maxLength: 100))
+            .Build();
+        var provider = new SchemaProvider(snapshot);
+        var view = provider.ResolveTable(null, "dbo", "V_NIPPOU_KYUKA")!;
+
+        var column = provider.ResolveColumn(view, "日付の種類(承認済)");
+
+        Assert.NotNull(column);
+    }
+
+    [Fact]
+    public void ResolveColumn_WidthSensitiveCollation_DoesNotMatchDifferentWidthCharacters()
+    {
+        var snapshot = TestSchemaBuilder.Create()
+            .WithDatabaseCollation("Japanese_CI_AS_WS", 1041, comparisonStyle: 1 | 65536)
+            .AddView("dbo", "V_NIPPOU_KYUKA", view => view
+                .AddColumn("日付の種類（承認済）", "nvarchar", maxLength: 100))
+            .Build();
+        var provider = new SchemaProvider(snapshot);
+        var view = provider.ResolveTable(null, "dbo", "V_NIPPOU_KYUKA")!;
+
+        var column = provider.ResolveColumn(view, "日付の種類(承認済)");
+
+        Assert.Null(column);
+    }
+
+    [Fact]
+    public void Constructor_DoesNotCreateColumnLookupsUntilTableIsReferenced()
+    {
+        var snapshot = TestSchemaBuilder.Create()
+            .AddTable("dbo", "Referenced", table => table.AddColumn("Id", "int"))
+            .AddTable("dbo", "Unreferenced", table => table.AddColumn("Id", "int"))
+            .Build();
+        var provider = new SchemaProvider(snapshot);
+        var referenced = provider.ResolveTable(null, null, "Referenced")!;
+        var unreferenced = provider.ResolveTable(null, null, "Unreferenced")!;
+
+        Assert.False(provider.IsColumnLookupCreated(referenced));
+        Assert.False(provider.IsColumnLookupCreated(unreferenced));
+
+        Assert.NotNull(provider.ResolveColumn(referenced, "Id"));
+
+        Assert.True(provider.IsColumnLookupCreated(referenced));
+        Assert.False(provider.IsColumnLookupCreated(unreferenced));
+    }
+
+    [Fact]
+    public void ResolveColumn_ParallelFirstAccess_BuildsThreadSafeLookup()
+    {
+        var snapshot = TestSchemaBuilder.Create()
+            .AddTable("dbo", "Users", table =>
+            {
+                for (var i = 0; i < 100; i++)
+                {
+                    table.AddColumn($"Column{i}", "int");
+                }
+            })
+            .Build();
+        var provider = new SchemaProvider(snapshot);
+        var table = provider.ResolveTable(null, null, "Users")!;
+        var results = new ResolvedColumn?[100];
+
+        Parallel.For(0, results.Length, i =>
+        {
+            results[i] = provider.ResolveColumn(table, $"Column{i}");
+        });
+
+        Assert.All(results, Assert.NotNull);
+        Assert.True(provider.IsColumnLookupCreated(table));
+        Assert.Equal(100, provider.GetColumns(table).Count);
+    }
+
+    [Theory]
+    [InlineData("Latin1_General_100_BIN", "Column", "column")]
+    [InlineData("Latin1_General_100_BIN2", "Column", "column")]
+    public void ResolveColumn_BinaryCollation_UsesOrdinalComparison(
+        string collation,
+        string actual,
+        string lookup)
+    {
+        var snapshot = TestSchemaBuilder.Create()
+            .WithDatabaseCollation(collation, 1033, comparisonStyle: 0)
+            .AddTable("dbo", "Users", table => table.AddColumn(actual, "int"))
+            .Build();
+        var provider = new SchemaProvider(snapshot);
+        var table = provider.ResolveTable(null, null, "Users")!;
+
+        Assert.Null(provider.ResolveColumn(table, lookup));
+    }
+
+    [Fact]
+    public void SqlIdentifierComparer_WarmComparison_DoesNotAllocate()
+    {
+        var metadata = new SnapshotMetadata("date", "server", "database", 150, "hash")
+        {
+            DatabaseCollation = "Japanese_CI_AI_KS_WS",
+            CollationLcid = 1041,
+            CollationComparisonStyle = 1 | 2
+        };
+        var comparer = SqlIdentifierComparer.Create(metadata);
+        _ = comparer.Equals("CustomerName", "customername");
+        _ = comparer.GetHashCode("CustomerName");
+        var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+
+        for (var i = 0; i < 10_000; i++)
+        {
+            _ = comparer.Equals("CustomerName", "customername");
+            _ = comparer.GetHashCode("CustomerName");
+        }
+
+        Assert.InRange(GC.GetAllocatedBytesForCurrentThread() - allocatedBefore, 0, 256);
     }
 }

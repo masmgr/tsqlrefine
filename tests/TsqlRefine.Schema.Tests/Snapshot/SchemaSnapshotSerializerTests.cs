@@ -1,4 +1,7 @@
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using TsqlRefine.Schema.Model;
 using TsqlRefine.Schema.Snapshot;
 using TsqlRefine.Schema.Tests.Helpers;
@@ -8,6 +11,14 @@ namespace TsqlRefine.Schema.Tests.Snapshot;
 
 public sealed class SchemaSnapshotSerializerTests
 {
+    private static readonly JsonSerializerOptions LegacySerializerOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
     [Fact]
     public void RoundTrip_MinimalSnapshot_Preserves()
     {
@@ -127,6 +138,25 @@ public sealed class SchemaSnapshotSerializerTests
     }
 
     [Fact]
+    public void RoundTrip_DatabaseCollationMetadata_Preserves()
+    {
+        var metadata = new SnapshotMetadata("2026-01-01T00:00:00Z", "srv", "Db", 150, "hash")
+        {
+            DatabaseCollation = "Japanese_CI_AS",
+            CollationLcid = 1041,
+            CollationComparisonStyle = 196609
+        };
+        var snapshot = new SchemaSnapshot(metadata, [new DatabaseSchema("Db", [], [])]);
+
+        var deserialized = SchemaSnapshotSerializer.Deserialize(
+            SchemaSnapshotSerializer.Serialize(snapshot));
+
+        Assert.Equal("Japanese_CI_AS", deserialized.Metadata.DatabaseCollation);
+        Assert.Equal(1041, deserialized.Metadata.CollationLcid);
+        Assert.Equal(196609, deserialized.Metadata.CollationComparisonStyle);
+    }
+
+    [Fact]
     public void Serialize_ProducesCamelCaseJson()
     {
         var snapshot = TestSchemaBuilder.Create()
@@ -238,6 +268,38 @@ public sealed class SchemaSnapshotSerializerTests
         Assert.Equal(snapshot.Metadata.DatabaseName, deserialized.Metadata.DatabaseName);
         Assert.Single(deserialized.Databases);
         Assert.Single(deserialized.Databases[0].Tables);
+    }
+
+    [Fact]
+    public async Task SerializeAsync_Stream_ProducesSameJsonAsStringOverload()
+    {
+        var snapshot = TestSchemaBuilder.Create("TestDb")
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Name", "nvarchar", maxLength: 100, nullable: true))
+            .Build();
+
+        await using var stream = new MemoryStream();
+        await SchemaSnapshotSerializer.SerializeAsync(stream, snapshot, CancellationToken.None);
+
+        Assert.Equal(
+            SchemaSnapshotSerializer.Serialize(snapshot),
+            Encoding.UTF8.GetString(stream.ToArray()));
+    }
+
+    [Fact]
+    public void ComputeContentHash_MatchesLegacyStringImplementation()
+    {
+        var snapshot = TestSchemaBuilder.Create("TestDb")
+            .AddTable("dbo", "Users", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("Name", "nvarchar", maxLength: 100, nullable: true))
+            .Build();
+        var legacyJson = JsonSerializer.Serialize(snapshot.Databases, LegacySerializerOptions);
+        var legacyHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(legacyJson)))
+            .ToLowerInvariant();
+
+        Assert.Equal(legacyHash, SchemaSnapshotSerializer.ComputeContentHash(snapshot.Databases));
     }
 
     [Fact]

@@ -8,7 +8,7 @@ namespace TsqlRefine.Schema.Resolution;
 /// Implements <see cref="ISchemaProvider"/> using a <see cref="SchemaSnapshot"/>.
 /// Resolves table and column references against the snapshot data.
 /// </summary>
-public sealed class SchemaProvider : ISchemaProvider
+public sealed class SchemaProvider : ISchemaProvider, IColumnSchemaProvider
 {
     private readonly NameResolver _resolver;
     private readonly SchemaSnapshotMetadata _metadata;
@@ -61,6 +61,21 @@ public sealed class SchemaProvider : ISchemaProvider
         ArgumentNullException.ThrowIfNull(table);
         return _resolver.GetColumns(table);
     }
+
+    /// <summary>
+    /// Gets the complete snapshot column models for a resolved table or view.
+    /// This exposes metadata used by built-in rules that is intentionally not part of the Plugin SDK contract.
+    /// </summary>
+    /// <param name="table">The resolved table or view.</param>
+    /// <returns>The snapshot column models, or an empty list when the object cannot be resolved.</returns>
+    public IReadOnlyList<ColumnSchema> GetColumnSchemas(ResolvedTable table)
+    {
+        ArgumentNullException.ThrowIfNull(table);
+        return _resolver.GetTableSchema(table)?.Columns ?? [];
+    }
+
+    internal bool IsColumnLookupCreated(ResolvedTable table) =>
+        _resolver.IsColumnLookupCreated(table);
 
     /// <inheritdoc />
     public SchemaPrimaryKeyInfo? GetPrimaryKey(ResolvedTable table)

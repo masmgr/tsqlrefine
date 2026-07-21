@@ -408,6 +408,8 @@ tsqlrefine list-plugins [options]
 tsqlrefine schema snapshot [options]
 ```
 
+The snapshot includes the database collation and its comparison metadata so schema-aware rules resolve identifiers with the same case, accent, kana, and width sensitivity as SQL Server. Snapshots created by older versions remain supported with the legacy case-insensitive behavior.
+
 | Option | Description |
 |------------|------|
 | `--connection-string <value>` | SQL Server connection string. Overrides `TSQLREFINE_CONNECTION_STRING` |

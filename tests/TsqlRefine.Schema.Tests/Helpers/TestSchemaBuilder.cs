@@ -12,10 +12,21 @@ public sealed class TestSchemaBuilder
     private readonly string _databaseName;
     private readonly List<TableSchema> _tables = [];
     private readonly List<TableSchema> _views = [];
+    private string? _databaseCollation;
+    private int? _collationLcid;
+    private int? _collationComparisonStyle;
 
     private TestSchemaBuilder(string databaseName) => _databaseName = databaseName;
 
     public static TestSchemaBuilder Create(string databaseName = "TestDb") => new(databaseName);
+
+    public TestSchemaBuilder WithDatabaseCollation(string name, int lcid, int comparisonStyle)
+    {
+        _databaseCollation = name;
+        _collationLcid = lcid;
+        _collationComparisonStyle = comparisonStyle;
+        return this;
+    }
 
     public TestSchemaBuilder AddTable(string schemaName, string tableName, Action<TableBuilder> configure)
     {
@@ -46,7 +57,12 @@ public sealed class TestSchemaBuilder
             DatabaseName: _databaseName,
             CompatLevel: 150,
             ContentHash: hash
-        );
+        )
+        {
+            DatabaseCollation = _databaseCollation,
+            CollationLcid = _collationLcid,
+            CollationComparisonStyle = _collationComparisonStyle
+        };
         return new SchemaSnapshot(metadata, databases);
     }
 

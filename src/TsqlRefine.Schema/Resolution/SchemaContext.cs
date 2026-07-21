@@ -1,4 +1,5 @@
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Schema.Model;
 
 namespace TsqlRefine.Schema.Resolution;
 
@@ -6,7 +7,7 @@ namespace TsqlRefine.Schema.Resolution;
 /// Combines <see cref="ISchemaProvider"/> and an optional <see cref="IRelationDeviationProvider"/>
 /// into a single <see cref="ISchemaContext"/> for use by analysis rules.
 /// </summary>
-public sealed class SchemaContext : ISchemaContext
+public sealed class SchemaContext : ISchemaContext, IColumnSchemaProvider
 {
     private readonly ISchemaProvider _schema;
 
@@ -42,6 +43,10 @@ public sealed class SchemaContext : ISchemaContext
     /// <inheritdoc />
     public IReadOnlyList<SchemaColumnInfo> GetColumns(ResolvedTable table)
         => _schema.GetColumns(table);
+
+    /// <inheritdoc />
+    public IReadOnlyList<ColumnSchema> GetColumnSchemas(ResolvedTable table)
+        => _schema is IColumnSchemaProvider provider ? provider.GetColumnSchemas(table) : [];
 
     /// <inheritdoc />
     public SchemaPrimaryKeyInfo? GetPrimaryKey(ResolvedTable table)

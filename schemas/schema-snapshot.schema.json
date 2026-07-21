@@ -38,6 +38,18 @@
           "type": "integer",
           "description": "The SQL Server compatibility level."
         },
+        "databaseCollation": {
+          "type": "string",
+          "description": "The database default collation used for identifier resolution."
+        },
+        "collationLcid": {
+          "type": "integer",
+          "description": "The locale identifier reported by COLLATIONPROPERTY for the database collation."
+        },
+        "collationComparisonStyle": {
+          "type": "integer",
+          "description": "The SQL Server comparison-style bitmask for the database collation."
+        },
         "contentHash": {
           "type": "string",
           "description": "SHA-256 hash of the serialized snapshot content."
