@@ -26,6 +26,7 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "The visitor combines existing TOP, query-shape, and schema analyses; this rule-specific coupling is intentional.")]
     private sealed class TopWithoutOrderByVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
         private readonly HashSet<QuerySpecification> _selectIntoQueries = [];
@@ -62,7 +63,9 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
                 !_selectIntoQueries.Contains(node) &&
                 node.TopRowFilter != null &&
                 node.OrderByClause == null &&
-                !IsTopZero(node.TopRowFilter.Expression))
+                !IsTopZero(node.TopRowFilter.Expression) &&
+                !IsTopOneHundredPercent(node.TopRowFilter) &&
+                !IsSingleRowAggregateQuery(node))
             {
                 if (!IsWhereOnUniqueColumns(node))
                 {
@@ -199,6 +202,45 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
         private static bool IsTopZero(ScalarExpression expression) =>
             expression is IntegerLiteral lit && lit.Value == "0" ||
             expression is ParenthesisExpression paren && IsTopZero(paren.Expression);
+
+        private static bool IsTopOneHundredPercent(TopRowFilter topRowFilter) =>
+            topRowFilter.Percent &&
+            TryGetLiteralValue(topRowFilter.Expression, out var value) &&
+            value == 100m;
+
+        private static bool TryGetLiteralValue(ScalarExpression expression, out decimal value)
+        {
+            if (expression is ParenthesisExpression parenthesis)
+            {
+                return TryGetLiteralValue(parenthesis.Expression, out value);
+            }
+
+            if (expression is not Literal literal)
+            {
+                value = default;
+                return false;
+            }
+
+            return decimal.TryParse(literal.Value, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out value);
+        }
+
+        private static bool IsSingleRowAggregateQuery(QuerySpecification node)
+        {
+            if (node.GroupByClause is not null || node.SelectElements.Count == 0)
+            {
+                return false;
+            }
+
+            return node.SelectElements.All(selectElement => selectElement switch
+            {
+                SelectScalarExpression { Expression: FunctionCall function } => IsNonWindowAggregate(function),
+                SelectSetVariable { Expression: FunctionCall function } => IsNonWindowAggregate(function),
+                _ => false
+            });
+        }
+
+        private static bool IsNonWindowAggregate(FunctionCall function) =>
+            function.OverClause is null && TsqlRefine.Rules.Helpers.Analysis.AggregateFunctionHelpers.IsAggregateFunction(function);
 
     }
 }

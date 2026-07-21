@@ -52,6 +52,10 @@ public sealed class TopWithoutOrderByRuleTests
     [InlineData("SELECT * FROM users ORDER BY id;")]  // no TOP
     [InlineData("SELECT TOP 0 * FROM users;")]  // TOP 0
     [InlineData("SELECT TOP (0) * FROM users;")]  // TOP (0)
+    [InlineData("SELECT TOP 100 PERCENT * FROM users;")]  // all rows are returned
+    [InlineData("SELECT TOP (100.00) PERCENT * FROM users;")]  // all rows are returned
+    [InlineData("SELECT TOP 1 MAX(id) FROM users;")]  // aggregate without GROUP BY returns one row
+    [InlineData("SELECT TOP 1 @maxId = MAX(id) FROM users;")]  // aggregate variable assignment returns one row
     public void Analyze_WhenNotViolating_ReturnsEmpty(string sql)
     {
         var rule = new TopWithoutOrderByRule();
@@ -155,6 +159,17 @@ SELECT TOP 5 * FROM orders;";
     {
         var rule = new TopWithoutOrderByRule();
         var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TopOneHundredPercent_WithoutOrderBy_ReturnsEmpty()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var context = RuleTestContext.CreateContext("SELECT TOP 100 PERCENT id FROM users;");
 
         var diagnostics = rule.Analyze(context).ToArray();
 

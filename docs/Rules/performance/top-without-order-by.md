@@ -45,6 +45,8 @@ SELECT TOP 10 * FROM Users;  -- Still non-deterministic per SQL standard
 
 TOP clauses inside `EXISTS` or `NOT EXISTS` are not reported because row ordering cannot change the Boolean result. `SELECT TOP ... INTO` is handled by the more specific `avoid-top-without-order-by-in-select-into` rule and is not reported twice by this rule.
 
+`TOP 100 PERCENT` is also excluded because it returns all rows, and `TOP 1` over a query containing only aggregate expressions without `GROUP BY` is excluded because that query always returns at most one row.
+
 **Best practice**: Always use ORDER BY with TOP for production code to ensure reproducible results.
 
 ## Examples
