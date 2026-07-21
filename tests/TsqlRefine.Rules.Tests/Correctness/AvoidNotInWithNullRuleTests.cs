@@ -268,10 +268,60 @@ public sealed class AvoidNotInWithNullRuleTests
     }
 
     [Fact]
-    public void Analyze_NotInWithSubquery_ExpressionInSelect_ReturnsDiagnostic()
+    public void Analyze_NotInWithSubquery_IsNullWithNonNullFallback_ReturnsEmpty()
     {
         const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT ISNULL(CustomerId, 0) FROM dbo.NullableList);";
         var context = RuleTestContext.CreateContext(sql, CreateSchema());
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_SelectedColumnFilteredNotNull_ReturnsEmpty()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.NullableList WHERE CustomerId IS NOT NULL);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_SelectedColumnFilteredNotNullInAnd_ReturnsEmpty()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT n.CustomerId FROM dbo.NullableList n WHERE n.CustomerId IS NOT NULL AND n.CustomerId > 0);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_SelectedColumnFilteredNotNullInOr_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT CustomerId FROM dbo.NullableList WHERE CustomerId IS NOT NULL OR CustomerId = @id);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_CoalesceWithNonNullFallback_ReturnsEmpty()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT COALESCE(CustomerId, 0) FROM dbo.NullableList);";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_NotInWithSubquery_IsNullWithNullableFallback_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT ISNULL(CustomerId, OtherId) FROM dbo.NullableList);";
+        var context = RuleTestContext.CreateContext(sql);
         var diagnostics = _rule.Analyze(context).ToArray();
 
         Assert.Single(diagnostics);

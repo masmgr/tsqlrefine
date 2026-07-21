@@ -28,9 +28,39 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
 
     private sealed class TopWithoutOrderByVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
+        private readonly HashSet<QuerySpecification> _selectIntoQueries = [];
+        private int _existsDepth;
+
+        public override void ExplicitVisit(ExistsPredicate node)
+        {
+            _existsDepth++;
+            base.ExplicitVisit(node);
+            _existsDepth--;
+        }
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            if (node.Into is null)
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            var added = QueryExpressionAnalysisHelpers.EnumerateQuerySpecifications(node.QueryExpression)
+                .Where(_selectIntoQueries.Add)
+                .ToArray();
+            base.ExplicitVisit(node);
+            foreach (var query in added)
+            {
+                _selectIntoQueries.Remove(query);
+            }
+        }
+
         public override void ExplicitVisit(QuerySpecification node)
         {
-            if (node.TopRowFilter != null &&
+            if (_existsDepth == 0 &&
+                !_selectIntoQueries.Contains(node) &&
+                node.TopRowFilter != null &&
                 node.OrderByClause == null &&
                 !IsTopZero(node.TopRowFilter.Expression))
             {
@@ -169,5 +199,6 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
         private static bool IsTopZero(ScalarExpression expression) =>
             expression is IntegerLiteral lit && lit.Value == "0" ||
             expression is ParenthesisExpression paren && IsTopZero(paren.Expression);
+
     }
 }

@@ -148,6 +148,31 @@ SELECT TOP 5 * FROM orders;";
         Assert.Equal("top-without-order-by", diagnostics[0].Data?.RuleId);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM users WHERE EXISTS (SELECT TOP 1 1 FROM orders WHERE orders.user_id = users.id);")]
+    [InlineData("SELECT * FROM users WHERE NOT EXISTS (SELECT TOP 1 * FROM orders WHERE orders.user_id = users.id);")]
+    public void Analyze_TopInsideExists_ReturnsEmpty(string sql)
+    {
+        var rule = new TopWithoutOrderByRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TopInSelectInto_IsLeftToSpecializedRule()
+    {
+        var rule = new TopWithoutOrderByRule();
+        const string sql = "SELECT TOP 1 * INTO #result FROM users;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Fact]
     public void Analyze_UnionBranchWithTopWithoutOrderBy_ReturnsDiagnostic()
     {

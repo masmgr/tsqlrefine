@@ -41,12 +41,15 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
                 // Check for literal comparisons like 1=1, 0=0, 'a'='a'
                 if (AreLiteralsEqual(comparison.FirstExpression, comparison.SecondExpression))
                 {
+                    if (CanReturnAtMostOneRow(join.SecondTableReference))
+                    {
+                        return;
+                    }
+
                     AddDiagnostic(
-                        fragment: comparison,
-                        message: "JOIN condition is always true (e.g., '1=1'). This likely indicates a missing or incorrect join condition and may result in a Cartesian product.",
-                        code: "semantic-join-condition-always-true",
-                        category: "Correctness",
-                        fixable: false
+                        comparison,
+                        message: "JOIN uses an always-true literal condition (e.g., '1=1'). Verify that the Cartesian semantics are intentional.",
+                        severity: DiagnosticSeverity.Information
                     );
                     return;
                 }
@@ -57,11 +60,9 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
                     ColumnReferenceHelpers.AreColumnReferencesEqual(firstCol, secondCol))
                 {
                     AddDiagnostic(
-                        fragment: comparison,
+                        comparison,
                         message: "JOIN condition compares a column to itself (e.g., 't1.col = t1.col'). This is always true and likely incorrect.",
-                        code: "semantic-join-condition-always-true",
-                        category: "Correctness",
-                        fixable: false
+                        severity: DiagnosticSeverity.Warning
                     );
                     return;
                 }
@@ -100,6 +101,60 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
             }
 
             return false;
+        }
+
+        private static bool CanReturnAtMostOneRow(TableReference tableReference)
+        {
+            if (tableReference is not QueryDerivedTable { QueryExpression: QuerySpecification query })
+            {
+                return false;
+            }
+
+            if (query.TopRowFilter is { Percent: false } top && IsAtMostOne(top.Expression))
+            {
+                return true;
+            }
+
+            if (query.GroupByClause is not null)
+            {
+                return false;
+            }
+
+            var aggregateCollector = new AggregateFunctionCollector();
+            foreach (var element in query.SelectElements.OfType<SelectScalarExpression>())
+            {
+                element.Expression.Accept(aggregateCollector);
+            }
+
+            return aggregateCollector.HasAggregate;
+        }
+
+        private static bool IsAtMostOne(ScalarExpression expression)
+        {
+            expression = expression is ParenthesisExpression parenthesis
+                ? parenthesis.Expression
+                : expression;
+            return expression is IntegerLiteral literal &&
+                   int.TryParse(literal.Value, out var value) &&
+                   value <= 1;
+        }
+
+        private sealed class AggregateFunctionCollector : TSqlFragmentVisitor
+        {
+            public bool HasAggregate { get; private set; }
+
+            public override void ExplicitVisit(FunctionCall node)
+            {
+                if (node.OverClause is null && AggregateFunctionHelpers.IsAggregateFunction(node))
+                {
+                    HasAggregate = true;
+                }
+            }
+
+            public override void ExplicitVisit(ScalarSubquery node)
+            {
+                // An aggregate in a nested scalar subquery does not constrain the derived table.
+            }
         }
     }
 }

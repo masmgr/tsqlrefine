@@ -45,7 +45,18 @@ EXCEPT
 SELECT CustomerId FROM dbo.Blacklist;
 ```
 
-## Schema-Aware Suppression
+## Safe Suppression
+
+The warning is suppressed without schema metadata when the subquery itself proves that its selected value cannot be NULL. Supported proofs include:
+
+- A conjunctive `selected_column IS NOT NULL` predicate
+- `ISNULL` or `COALESCE` with a provably non-NULL fallback
+- Non-NULL literals
+- `COUNT` and `COUNT_BIG`
+
+An `IS NOT NULL` condition under `OR` does not prove that every returned row is non-NULL and is not suppressed.
+
+### Schema-aware suppression
 
 When a schema snapshot is available (via `--schema` CLI option or configuration), this rule performs additional analysis. If the subquery's SELECT column is provably `NOT NULL` according to the schema, the warning is suppressed because the NULL problem cannot occur.
 

@@ -31,6 +31,43 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM t1 JOIN t2 ON 1=1")]
+    [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON 'a'='a'")]
+    public void Analyze_LiteralAlwaysTrueCondition_UsesInformationSeverity(string sql)
+    {
+        var rule = new JoinConditionAlwaysTrueRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostic = Assert.Single(rule.Analyze(context));
+
+        Assert.Equal(DiagnosticSeverity.Information, diagnostic.Severity);
+    }
+
+    [Fact]
+    public void Analyze_SelfComparison_UsesWarningSeverity()
+    {
+        var rule = new JoinConditionAlwaysTrueRule();
+        var context = RuleTestContext.CreateContext("SELECT * FROM t1 JOIN t2 ON t1.id = t1.id");
+
+        var diagnostic = Assert.Single(rule.Analyze(context));
+
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+    }
+
+    [Theory]
+    [InlineData("SELECT * FROM t1 LEFT JOIN (SELECT TOP 1 value FROM settings) s ON 1=1")]
+    [InlineData("SELECT * FROM t1 LEFT JOIN (SELECT MAX(value) AS value FROM settings) s ON 1=1")]
+    public void Analyze_LiteralAlwaysTrueWithAtMostOneRowRightSide_ReturnsEmpty(string sql)
+    {
+        var rule = new JoinConditionAlwaysTrueRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Theory]
     [InlineData("SELECT * FROM t1 JOIN t2 ON t1.id = t2.id")]  // valid join
     [InlineData("SELECT * FROM t1 JOIN t2 ON t1.status = 1")]  // valid filter (not always true)
     [InlineData("SELECT * FROM t1 a JOIN t2 b ON a.id = b.id")]  // valid join with aliases

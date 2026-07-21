@@ -2,16 +2,16 @@
 
 **Rule ID:** `semantic/join-condition-always-true`
 **Category:** Correctness
-**Severity:** Warning
+**Severity:** Warning for self-comparisons; Information for literal true conditions
 **Fixable:** No
 
 ## Description
 
-Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons.
+Detects JOIN conditions that are always true or likely incorrect, such as `ON 1=1` or self-comparisons. Self-comparisons remain warnings because they commonly indicate a mistyped alias. Literal true conditions are informational because they are also used intentionally to attach configuration or aggregate values.
 
 ## Rationale
 
-JOIN conditions that are always true (like `ON 1=1`) create **Cartesian products**, which are almost always unintentional and have severe consequences:
+JOIN conditions that are always true (like `ON 1=1`) can create **Cartesian products** when the joined input returns multiple rows:
 
 1. **Massive result sets**: Every row in the first table matches every row in the second table
    - 1,000 rows × 1,000 rows = 1,000,000 result rows
@@ -30,6 +30,8 @@ JOIN conditions that are always true (like `ON 1=1`) create **Cartesian products
 - Forgot to add the actual join condition
 - Intended to use CROSS JOIN but wrote INNER/LEFT JOIN instead
 - Copy-paste error from WHERE-based filtering patterns
+
+The literal-condition diagnostic is suppressed when the right side is statically guaranteed to return at most one row, such as a derived table with `TOP 1` or a scalar aggregate without GROUP BY. In those cases the condition cannot multiply each left row by multiple right rows.
 
 ## Examples
 

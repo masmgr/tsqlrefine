@@ -262,6 +262,51 @@ public sealed class GroupByColumnMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_WindowedCountStarPartitionedByGroupedColumn_ReturnsEmpty()
+    {
+        const string sql = "SELECT a, COUNT(*) OVER(PARTITION BY a) FROM t GROUP BY a;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupByFunctionWithMixedQualification_ReturnsEmpty()
+    {
+        const string sql = "SELECT YEAR(t.created_at) FROM t GROUP BY YEAR(created_at);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_GroupByCaseWithMixedQualification_ReturnsEmpty()
+    {
+        const string sql = "SELECT CASE WHEN t.kind = 1 THEN t.code ELSE '' END FROM t GROUP BY CASE WHEN kind = 1 THEN code ELSE '' END;";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_DifferentQualifiedColumnsInEquivalentShape_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT YEAR(a.created_at) FROM a JOIN b ON a.id = b.id GROUP BY YEAR(b.created_at);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+        Assert.Contains("a.created_at", diagnostics[0].Message);
+    }
+
+    [Fact]
     public void Analyze_CountStarWithAlias_ReturnsEmpty()
     {
         const string sql = "SELECT a, COUNT(*) AS cnt FROM t GROUP BY a;";

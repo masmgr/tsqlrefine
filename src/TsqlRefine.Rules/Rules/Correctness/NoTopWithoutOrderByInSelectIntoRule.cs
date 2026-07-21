@@ -29,7 +29,7 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
         {
             if (node.Into is not null)
             {
-                foreach (var querySpec in EnumerateQuerySpecifications(node.QueryExpression))
+                foreach (var querySpec in QueryExpressionAnalysisHelpers.EnumerateQuerySpecifications(node.QueryExpression))
                 {
                     if (querySpec.TopRowFilter is not null &&
                         querySpec.OrderByClause is null &&
@@ -45,33 +45,6 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
             }
 
             base.ExplicitVisit(node);
-        }
-
-        private static IEnumerable<QuerySpecification> EnumerateQuerySpecifications(QueryExpression queryExpression)
-        {
-            switch (queryExpression)
-            {
-                case QuerySpecification querySpecification:
-                    yield return querySpecification;
-                    break;
-                case BinaryQueryExpression binaryQueryExpression:
-                    foreach (var querySpecification in EnumerateQuerySpecifications(binaryQueryExpression.FirstQueryExpression))
-                    {
-                        yield return querySpecification;
-                    }
-
-                    foreach (var querySpecification in EnumerateQuerySpecifications(binaryQueryExpression.SecondQueryExpression))
-                    {
-                        yield return querySpecification;
-                    }
-                    break;
-                case QueryParenthesisExpression parenthesisExpression:
-                    foreach (var querySpecification in EnumerateQuerySpecifications(parenthesisExpression.QueryExpression))
-                    {
-                        yield return querySpecification;
-                    }
-                    break;
-            }
         }
 
         private static bool IsTopOneHundredPercent(TopRowFilter topRowFilter)

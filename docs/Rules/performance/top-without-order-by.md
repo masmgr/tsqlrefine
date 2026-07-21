@@ -43,6 +43,8 @@ SELECT TOP 10 * FROM Users;  -- Still non-deterministic per SQL standard
 - Performance testing: Getting sample rows for testing purposes
 - Existence checks: `SELECT TOP 1 1 FROM Table WHERE ...` (only checking if rows exist)
 
+TOP clauses inside `EXISTS` or `NOT EXISTS` are not reported because row ordering cannot change the Boolean result. `SELECT TOP ... INTO` is handled by the more specific `avoid-top-without-order-by-in-select-into` rule and is not reported twice by this rule.
+
 **Best practice**: Always use ORDER BY with TOP for production code to ensure reproducible results.
 
 ## Examples

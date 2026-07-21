@@ -13,7 +13,7 @@ Detects SELECT columns not contained in GROUP BY or an aggregate function. When 
 
 Including a non-aggregated column that is not part of the GROUP BY clause is a common mistake that always results in a runtime error. Unlike MySQL's permissive behavior, SQL Server strictly enforces this rule. Detecting this statically saves a round-trip to the server and catches the error earlier in the development cycle.
 
-The rule handles qualified and unqualified column references flexibly: `t.a` in SELECT matches `a` in GROUP BY (and vice versa). Columns inside aggregate functions, window functions (with OVER clause), scalar subqueries, and constant literals are correctly excluded from the check.
+The rule handles qualified and unqualified column references flexibly, including inside functions and CASE expressions: `YEAR(t.created_at)` in SELECT matches `YEAR(created_at)` in GROUP BY. Scalar subqueries and constant literals are excluded from the check. Window-function PARTITION BY and ORDER BY expressions are validated against the grouped result, while the wildcard in `COUNT(*) OVER (...)` is not treated as a column reference.
 
 ## Examples
 

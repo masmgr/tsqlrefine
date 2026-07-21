@@ -51,9 +51,9 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
         /// </summary>
         private bool IsSubqueryColumnNotNullable(ScalarSubquery subquery)
         {
-            if (schema is null)
+            if (NotInNullabilityAnalysisHelpers.IsSubqueryResultProvablyNonNull(subquery))
             {
-                return false;
+                return true;
             }
 
             if (subquery.QueryExpression is not QuerySpecification querySpec)
@@ -61,7 +61,12 @@ public sealed class AvoidNotInWithNullRule : DiagnosticVisitorRuleBase
                 return false;
             }
 
-            if (querySpec.SelectElements is not [SelectScalarExpression { Expression: ColumnReferenceExpression colRef }])
+            if (querySpec.SelectElements is not [SelectScalarExpression { Expression: { } selectedExpression }])
+            {
+                return false;
+            }
+
+            if (schema is null || selectedExpression is not ColumnReferenceExpression colRef)
             {
                 return false;
             }

@@ -38,6 +38,10 @@ public static class GroupByColumnAnalysisHelpers
             case null:
                 return;
             case ColumnReferenceExpression columnReference:
+                if (columnReference.ColumnType == ColumnType.Wildcard)
+                {
+                    return;
+                }
                 result.Add(columnReference);
                 return;
             case FunctionCall function:
@@ -204,6 +208,9 @@ public static class GroupByColumnAnalysisHelpers
         return false;
     }
 
+    public static bool AreEquivalentExpressions(ScalarExpression left, ScalarExpression right) =>
+        ExpressionsMatch(left, right);
+
     public static string GetColumnDisplayName(ColumnReferenceExpression columnReference)
     {
         var identifiers = columnReference.MultiPartIdentifier?.Identifiers;
@@ -313,8 +320,31 @@ public static class GroupByColumnAnalysisHelpers
             return ColumnsMatch(leftColumn, rightColumn);
         }
 
-        var leftText = GetNormalizedExpressionText(left);
-        var rightText = GetNormalizedExpressionText(right);
+        var leftText = GetNormalizedExpressionText(left, unqualifyColumns: false);
+        var rightText = GetNormalizedExpressionText(right, unqualifyColumns: false);
+        if (leftText is not null && rightText is not null &&
+            string.Equals(leftText, rightText, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var leftColumns = CollectAllColumnReferences(left);
+        var rightColumns = CollectAllColumnReferences(right);
+        if (leftColumns.Count == 0 || leftColumns.Count != rightColumns.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < leftColumns.Count; index++)
+        {
+            if (!ColumnsMatch(leftColumns[index], rightColumns[index]))
+            {
+                return false;
+            }
+        }
+
+        leftText = GetNormalizedExpressionText(left, unqualifyColumns: true);
+        rightText = GetNormalizedExpressionText(right, unqualifyColumns: true);
         return leftText is not null && rightText is not null &&
             string.Equals(leftText, rightText, StringComparison.OrdinalIgnoreCase);
     }
@@ -328,7 +358,7 @@ public static class GroupByColumnAnalysisHelpers
         return expression;
     }
 
-    private static string? GetNormalizedExpressionText(TSqlFragment fragment)
+    private static string? GetNormalizedExpressionText(TSqlFragment fragment, bool unqualifyColumns)
     {
         var tokens = fragment.ScriptTokenStream;
         if (tokens is null || fragment.FirstTokenIndex < 0 || fragment.LastTokenIndex < fragment.FirstTokenIndex)
@@ -336,9 +366,26 @@ public static class GroupByColumnAnalysisHelpers
             return null;
         }
 
+        var columnsByStartToken = unqualifyColumns
+            ? CollectAllColumnReferences(fragment).ToDictionary(column => column.FirstTokenIndex)
+            : null;
         var builder = new StringBuilder();
         for (var index = fragment.FirstTokenIndex; index <= fragment.LastTokenIndex && index < tokens.Count; index++)
         {
+            if (columnsByStartToken is not null &&
+                columnsByStartToken.TryGetValue(index, out var column))
+            {
+                var identifiers = column.MultiPartIdentifier?.Identifiers;
+                if (identifiers is not { Count: > 0 })
+                {
+                    return null;
+                }
+
+                builder.Append(identifiers[^1].Value);
+                index = column.LastTokenIndex;
+                continue;
+            }
+
             if (tokens[index].TokenType is TSqlTokenType.WhiteSpace or
                 TSqlTokenType.SingleLineComment or TSqlTokenType.MultilineComment)
             {
@@ -347,6 +394,26 @@ public static class GroupByColumnAnalysisHelpers
             builder.Append(NormalizeTokenText(tokens[index]));
         }
         return builder.ToString();
+    }
+
+    private static List<ColumnReferenceExpression> CollectAllColumnReferences(TSqlFragment fragment)
+    {
+        var visitor = new ColumnReferenceCollector();
+        fragment.Accept(visitor);
+        return visitor.Columns;
+    }
+
+    private sealed class ColumnReferenceCollector : TSqlFragmentVisitor
+    {
+        public List<ColumnReferenceExpression> Columns { get; } = [];
+
+        public override void ExplicitVisit(ColumnReferenceExpression node)
+        {
+            if (node.ColumnType != ColumnType.Wildcard)
+            {
+                Columns.Add(node);
+            }
+        }
     }
 
     private static string NormalizeTokenText(TSqlParserToken token) =>
