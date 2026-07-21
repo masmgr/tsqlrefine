@@ -1,4 +1,4 @@
 using BenchmarkDotNet.Running;
 using TsqlRefine.Benchmarks;
 
-BenchmarkRunner.Run<LintBenchmarks>();
+BenchmarkSwitcher.FromAssembly(typeof(LintBenchmarks).Assembly).Run(args);

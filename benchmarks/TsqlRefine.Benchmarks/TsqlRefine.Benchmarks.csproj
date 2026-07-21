@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TsqlRefine.Core\TsqlRefine.Core.csproj" />
     <ProjectReference Include="..\..\src\TsqlRefine.Rules\TsqlRefine.Rules.csproj" />
+    <ProjectReference Include="..\..\src\TsqlRefine.Schema\TsqlRefine.Schema.csproj" />
   </ItemGroup>
 
 </Project>
