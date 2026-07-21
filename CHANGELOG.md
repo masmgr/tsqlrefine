@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `avoid-top-without-order-by-in-select-into` no longer reports constant `TOP 0`, uses table-neutral wording, and defaults to Warning
+- `avoid-named-constraint-in-temp-table` now defaults to Warning
+- `semantic-data-type-length` no longer offers arbitrary length autofixes; lengths must be selected explicitly
+
 ## [2.0.0] - 2026-07-20
 
 ### Added

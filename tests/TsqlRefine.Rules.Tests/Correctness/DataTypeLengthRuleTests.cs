@@ -186,7 +186,7 @@ DECLARE @Data VARBINARY;";
     }
 
     [Fact]
-    public void GetFixes_VarcharWithoutLength_ReturnsFix()
+    public void GetFixes_VarcharWithoutLength_ReturnsEmpty()
     {
         // Arrange
         var sql = "DECLARE @Name VARCHAR;";
@@ -197,137 +197,7 @@ DECLARE @Data VARBINARY;";
         var fixes = _rule.GetFixes(context, diagnostic).ToArray();
 
         // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (50) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(50)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_NvarcharWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = "DECLARE @Name NVARCHAR;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (50) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(50)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_CharWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = "DECLARE @Code CHAR;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (1) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(1)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_VarbinaryWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = "DECLARE @Data VARBINARY;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (50) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(50)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_BinaryWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = "DECLARE @Data BINARY;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (1) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(1)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_NcharWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = "DECLARE @Code NCHAR;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (1) length specification", fix.Title);
-        var edit = Assert.Single(fix.Edits);
-        Assert.Equal("(1)", edit.NewText);
-    }
-
-    [Fact]
-    public void GetFixes_MultipleViolations_ReturnsFixesForEach()
-    {
-        // Arrange
-        var sql = @"
-DECLARE @Name VARCHAR;
-DECLARE @Code CHAR;
-DECLARE @Data VARBINARY;";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostics = _rule.Analyze(context).ToArray();
-
-        // Act
-        var fixes = diagnostics.Select(d => _rule.GetFixes(context, d).ToArray()).ToArray();
-
-        // Assert
-        Assert.Equal(3, fixes.Length);
-        Assert.All(fixes, f => Assert.Single(f));
-    }
-
-    [Fact]
-    public void GetFixes_ColumnDefinitionWithoutLength_ReturnsFix()
-    {
-        // Arrange
-        var sql = @"
-CREATE TABLE Users (
-    Name VARCHAR
-);";
-        var context = RuleTestContext.CreateContext(sql);
-        var diagnostic = _rule.Analyze(context).Single();
-
-        // Act
-        var fixes = _rule.GetFixes(context, diagnostic).ToArray();
-
-        // Assert
-        var fix = Assert.Single(fixes);
-        Assert.Equal("Add (50) length specification", fix.Title);
+        Assert.Empty(fixes);
+        Assert.False(_rule.Metadata.Fixable);
     }
 }

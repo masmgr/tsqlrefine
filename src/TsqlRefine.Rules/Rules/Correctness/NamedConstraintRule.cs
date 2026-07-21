@@ -12,7 +12,7 @@ public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
         RuleId: "avoid-named-constraint-in-temp-table",
         Description: "Prohibit named constraints in temp tables to avoid naming conflicts",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Error,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
@@ -67,9 +67,6 @@ public sealed class NamedConstraintRule : DiagnosticVisitorRuleBase
 
         private void AddNamedConstraintDiagnostic(Identifier identifier) => AddDiagnostic(
             fragment: identifier,
-            message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.",
-            code: "avoid-named-constraint-in-temp-table",
-            category: "Correctness",
-            fixable: false);
+            message: "Named constraint found in temp table. Remove constraint names to avoid naming conflicts.");
     }
 }

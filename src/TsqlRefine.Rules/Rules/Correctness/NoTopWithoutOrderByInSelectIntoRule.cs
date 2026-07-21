@@ -5,15 +5,15 @@ using TsqlRefine.PluginSdk;
 namespace TsqlRefine.Rules.Rules.Correctness;
 
 /// <summary>
-/// Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.
+/// Detects SELECT TOP ... INTO without ORDER BY, which may select non-deterministic rows.
 /// </summary>
 public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
         RuleId: "avoid-top-without-order-by-in-select-into",
-        Description: "Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data.",
+        Description: "Detects SELECT TOP ... INTO without ORDER BY, which may select non-deterministic rows.",
         Category: "Correctness",
-        DefaultSeverity: RuleSeverity.Error,
+        DefaultSeverity: RuleSeverity.Warning,
         Fixable: false
     );
 
@@ -33,14 +33,12 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
                 {
                     if (querySpec.TopRowFilter is not null &&
                         querySpec.OrderByClause is null &&
+                        !IsTopZero(querySpec.TopRowFilter) &&
                         !IsTopOneHundredPercent(querySpec.TopRowFilter))
                     {
                         AddDiagnostic(
                             fragment: querySpec.TopRowFilter,
-                            message: "SELECT TOP ... INTO without ORDER BY creates a permanent table with non-deterministic data. Add an ORDER BY clause to ensure reproducible results.",
-                            code: "avoid-top-without-order-by-in-select-into",
-                            category: "Correctness",
-                            fixable: false
+                            message: "SELECT TOP ... INTO without ORDER BY may select non-deterministic rows. Add an ORDER BY clause to ensure reproducible results."
                         );
                     }
                 }
@@ -78,13 +76,23 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
 
         private static bool IsTopOneHundredPercent(TopRowFilter topRowFilter)
         {
-            if (!topRowFilter.Percent || GetLiteral(topRowFilter.Expression) is not { } literal)
+            return topRowFilter.Percent && TryGetLiteralValue(topRowFilter, out var value) && value == 100m;
+        }
+
+        private static bool IsTopZero(TopRowFilter topRowFilter)
+        {
+            return TryGetLiteralValue(topRowFilter, out var value) && value == 0m;
+        }
+
+        private static bool TryGetLiteralValue(TopRowFilter topRowFilter, out decimal value)
+        {
+            if (GetLiteral(topRowFilter.Expression) is not { } literal)
             {
+                value = default;
                 return false;
             }
 
-            return decimal.TryParse(literal.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) &&
-                value == 100m;
+            return decimal.TryParse(literal.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
         }
 
         private static Literal? GetLiteral(ScalarExpression expression) =>

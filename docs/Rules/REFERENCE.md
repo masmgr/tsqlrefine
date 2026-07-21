@@ -112,11 +112,11 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-atat-identity](correctness/avoid-atat-identity.md) | Disallows @@IDENTITY; it can return values from triggers - prefer SCOPE_IDENTITY() or OUTPUT. | Warning | No |
 | [avoid-between-for-datetime-range](correctness/avoid-between-for-datetime-range.md) | Detects BETWEEN for datetime ranges. BETWEEN includes both endpoints, which can cause boundary issues with time components. | Warning | No |
 | [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md) | Detects legacy outer join syntax (*=, =*) which is deprecated and produces incorrect results. | Error | No |
-| [avoid-named-constraint-in-temp-table](correctness/avoid-named-constraint-in-temp-table.md) | Prohibit named constraints in temp tables to avoid naming conflicts | Error | No |
+| [avoid-named-constraint-in-temp-table](correctness/avoid-named-constraint-in-temp-table.md) | Prohibit named constraints in temp tables to avoid naming conflicts | Warning | No |
 | [avoid-not-in-with-null](correctness/avoid-not-in-with-null.md) | Detects NOT IN with subquery which can produce unexpected empty results when the subquery returns NULL values. | Warning | No |
 | [avoid-null-comparison](correctness/avoid-null-comparison.md) | Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN. | Error | **Yes** |
 | [avoid-set-rowcount](correctness/avoid-set-rowcount.md) | Detects SET ROWCOUNT statements which are deprecated and can cause unexpected behavior with triggers and nested statements. | Warning | No |
-| [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which creates permanent tables with non-deterministic data. | Error | No |
+| [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which may select non-deterministic rows. | Warning | No |
 | [duplicate-insert-column](correctness/duplicate-insert-column.md) | Detects duplicate column names in INSERT column lists; duplicate columns always cause a runtime error. | Error | No |
 | [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md) | Detects EXEC calls with missing required or extra positional arguments. | Error | No |
 | [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md) | Detects named EXEC arguments that are absent from the procedure signature. | Error | No |
@@ -126,7 +126,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [order-by-in-subquery](correctness/order-by-in-subquery.md) | Detects ORDER BY in subqueries without TOP, OFFSET, FOR XML, or FOR JSON, which is wasteful as the optimizer may ignore it. | Warning | No |
 | [require-parentheses-for-mixed-and-or](correctness/require-parentheses-for-mixed-and-or.md) | Detects mixed AND/OR operators at same precedence level without explicit parentheses to prevent precedence confusion. | Warning | No |
 | [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md) | Detects CTE name conflicts with other CTEs or table aliases in the same scope. | Error | No |
-| [semantic/data-type-length](correctness/semantic-data-type-length.md) | Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY). | Error | **Yes** |
+| [semantic/data-type-length](correctness/semantic-data-type-length.md) | Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY). | Error | No |
 | [semantic/join-condition-always-true](correctness/semantic-join-condition-always-true.md) | Detects JOIN conditions that are always true or likely incorrect, such as 'ON 1=1' or self-comparisons. | Warning | No |
 | [semantic/left-join-filtered-by-where](correctness/semantic-left-join-filtered-by-where.md) | Detects LEFT JOIN operations where the WHERE clause filters the right-side table, effectively making it an INNER JOIN. | Warning | No |
 | [union-type-mismatch](correctness/union-type-mismatch.md) | Detects UNION/UNION ALL where corresponding columns have obviously different literal types, which may cause implicit conversion or data truncation. | Error | No |
@@ -534,7 +534,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Fixable Rules
 
-The following 14 rules support automatic fixing:
+The following 13 rules support automatic fixing:
 
 1. [avoid-null-comparison](correctness/avoid-null-comparison.md) - Detects NULL comparisons using = or <> instead of IS NULL/IS NOT NULL, which always evaluate to UNKNOWN.
 2. [escape-keyword-identifier](correctness/escape-keyword-identifier.md) - Warns when a T-SQL soft keyword is used as a table/column identifier without escaping, and offers an autofix to bracket it.
@@ -547,9 +547,8 @@ The following 14 rules support automatic fixing:
 9. [require-as-for-table-alias](style/require-as-for-table-alias.md) - Table aliases should use the AS keyword
 10. [require-begin-end-strict](style/require-begin-end-strict.md) - Require BEGIN/END blocks in conditional statements for clarity and maintainability
 11. [require-explicit-join-type](style/require-explicit-join-type.md) - Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
-12. [semantic/data-type-length](correctness/semantic-data-type-length.md) - Requires explicit length specification for variable-length data types (VARCHAR, NVARCHAR, CHAR, NCHAR, VARBINARY, BINARY).
-13. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
-14. [semicolon-termination](style/semicolon-termination.md) - SQL statements should be terminated with a semicolon
+12. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
+13. [semicolon-termination](style/semicolon-termination.md) - SQL statements should be terminated with a semicolon
 
 To apply auto-fixes, use the `fix` command:
 

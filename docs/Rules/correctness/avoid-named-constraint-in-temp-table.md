@@ -2,7 +2,7 @@
 
 **Rule ID:** `avoid-named-constraint-in-temp-table`
 **Category:** Correctness
-**Severity:** Error
+**Severity:** Warning
 **Fixable:** No
 
 ## Description

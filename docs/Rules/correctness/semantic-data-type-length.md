@@ -108,6 +108,8 @@ DECLARE @Code CHAR(10);             -- Fixed-length codes
 
 **Never omit length** unless you explicitly want 1 byte/character (rare).
 
+The rule does not provide an automatic fix because the correct length depends on the column, parameter, or variable's business meaning. Choosing an arbitrary length could introduce truncation or unnecessary storage costs.
+
 ## Configuration
 
 To disable this rule, add it to your `tsqlrefine.json`:

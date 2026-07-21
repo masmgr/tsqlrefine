@@ -27,6 +27,10 @@ public sealed class NoTopWithoutOrderByInSelectIntoRuleTests
     [InlineData("SELECT TOP 10 id INTO #TopItems FROM dbo.Items ORDER BY id;")]
     [InlineData("SELECT id INTO #Items FROM dbo.Items;")]
     [InlineData("SELECT TOP 10 id FROM dbo.Items;")]
+    [InlineData("SELECT TOP 0 id INTO #Items FROM dbo.Items;")]
+    [InlineData("SELECT TOP (0) id INTO #Items FROM dbo.Items;")]
+    [InlineData("SELECT TOP (0.00) id INTO #Items FROM dbo.Items;")]
+    [InlineData("SELECT TOP 0 PERCENT id INTO #Items FROM dbo.Items;")]
     public void Analyze_NonViolatingSelect_ReturnsEmpty(string sql)
     {
         var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
@@ -78,6 +82,17 @@ public sealed class NoTopWithoutOrderByInSelectIntoRuleTests
     }
 
     [Fact]
+    public void Analyze_TopSelectInto_MessageDoesNotCallTargetPermanentTable()
+    {
+        const string sql = "SELECT TOP (10) id INTO #TopItems FROM dbo.Items;";
+
+        var diagnostic = Assert.Single(_rule.Analyze(RuleTestContext.CreateContext(sql)));
+
+        Assert.DoesNotContain("permanent table", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("non-deterministic rows", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void GetFixes_ReturnsEmpty()
     {
         var context = RuleTestContext.CreateContext("SELECT TOP 10 id INTO #TopItems FROM dbo.Items;");
@@ -91,7 +106,7 @@ public sealed class NoTopWithoutOrderByInSelectIntoRuleTests
     {
         Assert.Equal("avoid-top-without-order-by-in-select-into", _rule.Metadata.RuleId);
         Assert.Equal("Correctness", _rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Error, _rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Warning, _rule.Metadata.DefaultSeverity);
         Assert.False(_rule.Metadata.Fixable);
     }
 }

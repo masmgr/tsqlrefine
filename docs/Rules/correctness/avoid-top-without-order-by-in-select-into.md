@@ -2,14 +2,14 @@
 
 **Rule ID:** `avoid-top-without-order-by-in-select-into`
 **Category:** Correctness
-**Severity:** Error
+**Severity:** Warning
 **Fixable:** No
 
 ## Description
 
-Detects `SELECT TOP ... INTO` statements without `ORDER BY` clause, which creates permanent tables with non-deterministic data.
+Detects `SELECT TOP ... INTO` statements without an `ORDER BY` clause, which may select non-deterministic rows.
 
-For UNION, INTERSECT, and EXCEPT queries, each direct query branch containing `TOP` is checked. A constant `TOP 100 PERCENT` is excluded because it selects all rows; variable percentages and constants below 100 remain subject to the rule.
+For UNION, INTERSECT, and EXCEPT queries, each direct query branch containing `TOP` is checked. Constant `TOP 0` expressions are excluded because they select no rows. A constant `TOP 100 PERCENT` is also excluded because it selects all rows; variable percentages and other constants remain subject to the rule.
 
 ## Rationale
 
@@ -69,6 +69,11 @@ ORDER BY OrderDate DESC, OrderId DESC;
 -- All rows are selected, so row membership is deterministic
 SELECT TOP (100) PERCENT OrderId, CustomerId
 INTO #AllOrders
+FROM Orders;
+
+-- No rows are selected; this pattern is commonly used to create a table shape
+SELECT TOP (0) OrderId, CustomerId
+INTO #EmptyOrders
 FROM Orders;
 ```
 

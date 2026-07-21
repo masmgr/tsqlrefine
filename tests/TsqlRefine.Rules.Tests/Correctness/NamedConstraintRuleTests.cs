@@ -13,7 +13,7 @@ public sealed class NamedConstraintRuleTests
 
         Assert.Equal("avoid-named-constraint-in-temp-table", rule.Metadata.RuleId);
         Assert.Equal("Correctness", rule.Metadata.Category);
-        Assert.Equal(RuleSeverity.Error, rule.Metadata.DefaultSeverity);
+        Assert.Equal(RuleSeverity.Warning, rule.Metadata.DefaultSeverity);
         Assert.False(rule.Metadata.Fixable);
     }
 
