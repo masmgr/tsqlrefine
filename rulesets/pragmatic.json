@@ -3,6 +3,7 @@
     { "id": "transaction-not-closed-on-path" },
     { "id": "exec-parameter-count-mismatch" },
     { "id": "exec-parameter-name-mismatch" },
+    { "id": "exec-invalid-output-argument" },
     { "id": "dml-without-where" },
     { "id": "require-semicolon-before-throw" },
     { "id": "top-without-order-by" },
@@ -50,7 +51,10 @@
     { "id": "aggregate-in-where-clause" },
     { "id": "having-column-mismatch" },
     { "id": "insert-column-not-in-table" },
+    { "id": "insert-missing-required-column" },
+    { "id": "insert-into-generated-column" },
     { "id": "update-column-not-in-table" },
+    { "id": "update-generated-column" },
     { "id": "delete-column-not-in-table" }
   ]
 }

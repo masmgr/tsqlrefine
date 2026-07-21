@@ -46,6 +46,28 @@ public sealed class ExecParameterCountMismatchRuleTests
     }
 
     [Fact]
+    public void Analyze_DefaultForRequiredParameter_ReturnsDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "EXEC dbo.SaveUser 1, DEFAULT, DEFAULT;",
+            Definition);
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+
+        Assert.Contains("@active", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_DefaultForOptionalParameter_ReturnsNoDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "EXEC dbo.SaveUser 1, DEFAULT, 1;",
+            Definition);
+
+        Assert.Empty(_rule.Analyze(context));
+    }
+
+    [Fact]
     public void Analyze_NoCatalog_ReturnsNoDiagnostic()
     {
         Assert.Empty(_rule.Analyze(RuleTestContext.CreateContext("EXEC dbo.SaveUser;")));

@@ -1,6 +1,6 @@
 # TsqlRefine Rules
 
-This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **171 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
+This document provides an overview of all built-in rules in TsqlRefine. TsqlRefine includes **175 rules** covering various aspects of T-SQL code quality, from correctness and safety to performance and style.
 
 ## Table of Contents
 
@@ -33,7 +33,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Description |
 |------|--------|-------|-------------|
 | **Critical** | security-only | 17 | Security vulnerabilities and critical safety issues |
-| **Essential** | pragmatic | 35 | Production-ready minimum for correctness and runtime error prevention |
+| **Essential** | pragmatic | 39 | Production-ready minimum for correctness and runtime error prevention |
 | **Recommended** | recommended | 61 | Balanced production use with semantic analysis and best practices |
 | **Thorough** | strict-logic | 34 | Comprehensive correctness, performance, and schema checks |
 | **Cosmetic** | strict | 24 | Style consistency, formatting, and naming conventions |
@@ -127,10 +127,10 @@ TsqlRefine provides five preset rulesets:
 | Preset | Rules | Cumulative | Use Case |
 |--------|-------|------------|----------|
 | **security-only** | 17 | 17 | Security vulnerabilities and critical safety only |
-| **pragmatic** | 52 | 52 | Production-ready minimum for legacy codebases |
-| **recommended** | 113 | 113 | Balanced production use with semantic analysis (default) |
-| **strict-logic** | 147 | 147 | Comprehensive correctness without cosmetic style rules |
-| **strict** | 171 | 171 | Maximum enforcement including all style/cosmetic rules |
+| **pragmatic** | 56 | 56 | Production-ready minimum for legacy codebases |
+| **recommended** | 117 | 117 | Balanced production use with semantic analysis (default) |
+| **strict-logic** | 151 | 151 | Comprehensive correctness without cosmetic style rules |
+| **strict** | 175 | 175 | Maximum enforcement including all style/cosmetic rules |
 
 ```powershell
 # Use recommended preset (default)

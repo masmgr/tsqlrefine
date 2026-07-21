@@ -220,10 +220,10 @@ tsqlrefine includes built-in preset rulesets:
 
 | Preset | Rules | Description |
 |--------|-------|-------------|
-| `recommended` | 113 | Balanced production use with semantic analysis (default) |
-| `strict` | 171 | Maximum enforcement including all style/cosmetic rules |
-| `strict-logic` | 147 | Comprehensive correctness and semantic analysis without cosmetic style rules |
-| `pragmatic` | 52 | Production-ready minimum focusing on safety and critical issues |
+| `recommended` | 117 | Balanced production use with semantic analysis (default) |
+| `strict` | 175 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic` | 151 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `pragmatic` | 56 | Production-ready minimum focusing on safety and critical issues |
 | `security-only` | 17 | Security vulnerabilities and critical safety only |
 
 Use the `preset` property in `tsqlrefine.json` or the `--preset` CLI option:

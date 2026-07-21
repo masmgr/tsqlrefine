@@ -19,17 +19,17 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 171
-- **Fixable Rules**: 13 (8%)
+- **Total Rules**: 175
+- **Fixable Rules**: 13 (7%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
-  - Essential (pragmatic): 35 rules
+  - Essential (pragmatic): 39 rules
   - Recommended (recommended): 61 rules
   - Thorough (strict-logic): 34 rules
   - Cosmetic (strict): 24 rules
 - **By Severity**:
-  - Error: 26 rules (15%)
-  - Warning: 100 rules (58%)
+  - Error: 30 rules (17%)
+  - Warning: 100 rules (57%)
   - Information: 45 rules (26%)
 
 ## Importance Tiers
@@ -43,10 +43,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | Tier | Preset | Rules | Cumulative | Description |
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
-| **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 61 | 113 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 34 | 147 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 24 | 171 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Essential** | pragmatic | 39 | 56 | Production-ready minimum for correctness and preventing runtime errors |
+| **Recommended** | recommended | 61 | 117 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 34 | 151 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 24 | 175 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,10 +54,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 57 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 58 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 30 | Flags patterns that can cause performance issues |
 | **Transactions** | 16 | Ensures proper transaction handling and session settings |
-| **Schema** | 22 | Enforces database schema best practices |
+| **Schema** | 25 | Enforces database schema best practices |
 | **Style** | 33 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
@@ -101,9 +101,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Essential (pragmatic)
 
-**35 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
+**39 rules** — Production-ready minimum for correctness and preventing runtime errors. Fundamental checks that catch bugs before they reach production.
 
-#### Correctness (24 rules)
+#### Correctness (25 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -118,8 +118,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-set-rowcount](correctness/avoid-set-rowcount.md) | Detects SET ROWCOUNT statements which are deprecated and can cause unexpected behavior with triggers and nested statements. | Warning | No |
 | [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md) | Detects SELECT TOP ... INTO without ORDER BY, which may select non-deterministic rows. | Warning | No |
 | [duplicate-insert-column](correctness/duplicate-insert-column.md) | Detects duplicate column names in INSERT column lists; duplicate columns always cause a runtime error. | Error | No |
+| [exec-invalid-output-argument](correctness/exec-invalid-output-argument.md) | Detects EXEC arguments that use OUTPUT with an input-only procedure parameter. | Error | No |
 | [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md) | Detects EXEC calls with missing required or extra positional arguments. | Error | No |
-| [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md) | Detects named EXEC arguments that are absent from the procedure signature. | Error | No |
+| [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md) | Detects named EXEC arguments that are absent from the procedure signature or specified more than once. | Error | No |
 | [group-by-column-mismatch](correctness/group-by-column-mismatch.md) | Detects SELECT columns not contained in GROUP BY or an aggregate function. | Warning | No |
 | [having-column-mismatch](correctness/having-column-mismatch.md) | Detects columns in HAVING clause not in GROUP BY and not wrapped in an aggregate function. | Warning | No |
 | [insert-select-column-name-mismatch](correctness/insert-select-column-name-mismatch.md) | Warns when INSERT target column names do not match SELECT output column names in INSERT ... SELECT statements. | Information | No |
@@ -145,7 +146,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md) | Detects BEGIN TRANSACTION statements without corresponding COMMIT or ROLLBACK in the same batch. | Error | No |
 | [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md) | Detects execution paths that leave a transaction opened by the current scope unclosed. | Error | No |
 
-#### Schema (8 rules)
+#### Schema (11 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -156,7 +157,10 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [duplicate-table-variable-column](schema/duplicate-table-variable-column.md) | Detects duplicate column names in DECLARE @table TABLE variable definitions; duplicate columns always cause a runtime error. | Error | No |
 | [duplicate-view-column](schema/duplicate-view-column.md) | Detects duplicate column names in CREATE VIEW definitions; duplicate columns always cause a runtime error. | Error | No |
 | [insert-column-not-in-table](schema/insert-column-not-in-table.md) | Detects INSERT statements that reference columns not found in the target table. | Error | No |
+| [insert-into-generated-column](schema/insert-into-generated-column.md) | Detects explicit INSERT writes to computed columns or identity columns without IDENTITY_INSERT. | Error | No |
+| [insert-missing-required-column](schema/insert-missing-required-column.md) | Detects INSERT statements that omit non-nullable columns without generated or default values. | Error | No |
 | [update-column-not-in-table](schema/update-column-not-in-table.md) | Detects UPDATE statements that reference columns not found in the target table. | Error | No |
+| [update-generated-column](schema/update-generated-column.md) | Detects UPDATE assignments to computed or identity columns. | Error | No |
 
 ### Recommended
 
@@ -361,7 +365,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (26 rules)
+### Error (30 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
@@ -375,10 +379,13 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-table-variable-column](schema/duplicate-table-variable-column.md)
 - [duplicate-view-column](schema/duplicate-view-column.md)
 - [dynamic-sql-taint](security/dynamic-sql-taint.md)
+- [exec-invalid-output-argument](correctness/exec-invalid-output-argument.md)
 - [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)
 - [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md)
 - [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
+- [insert-into-generated-column](schema/insert-into-generated-column.md)
+- [insert-missing-required-column](schema/insert-missing-required-column.md)
 - [require-semicolon-before-throw](correctness/require-semicolon-before-throw.md)
 - [semantic/cte-name-conflict](correctness/semantic-cte-name-conflict.md)
 - [semantic/data-type-length](correctness/semantic-data-type-length.md)
@@ -389,6 +396,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [transaction-not-closed-on-path](transactions/transaction-not-closed-on-path.md)
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
+- [update-generated-column](schema/update-generated-column.md)
 
 ### Warning (100 rules)
 

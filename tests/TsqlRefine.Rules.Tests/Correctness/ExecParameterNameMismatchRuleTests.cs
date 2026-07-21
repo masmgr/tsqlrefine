@@ -24,4 +24,16 @@ public sealed class ExecParameterNameMismatchRuleTests
 
         Assert.Empty(_rule.Analyze(context));
     }
+
+    [Fact]
+    public void Analyze_DuplicateNamedParameter_ReturnsDiagnostic()
+    {
+        var context = ExecCatalogRuleTestHelper.CreateContext(
+            "EXEC dbo.FindUser @id = 1, @ID = 2;",
+            Definition);
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+
+        Assert.Contains("specified more than once", diagnostic.Message);
+    }
 }

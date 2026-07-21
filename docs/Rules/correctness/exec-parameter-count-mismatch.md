@@ -19,7 +19,8 @@ EXEC dbo.SaveUser 42, @active = 1; -- valid
 ## Detection
 
 The rule resolves the procedure through the object catalog, binds positional and named
-arguments, and accounts for parameter default values. Dynamic, external, unresolved, and
+arguments, accounts for parameter default values, and rejects `DEFAULT` for a parameter
+that has no default. Dynamic, external, unresolved, and
 ambiguous procedure calls are skipped. Generate and supply `objects.json` with
 `schema collect-objects` and `--objects-catalog` (or `schema.objectsCatalogPath`).
 

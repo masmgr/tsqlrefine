@@ -34,7 +34,7 @@ This creates `tsqlrefine.json` with sensible defaults:
 }
 ```
 
-The `recommended` preset enables 113 rules (out of 171 total). See [Preset Rulesets](#preset-rulesets) for other options.
+The `recommended` preset enables 117 rules (out of 175 total). See [Preset Rulesets](#preset-rulesets) for other options.
 
 For CI pipelines, use JSON output and exit codes:
 
@@ -83,7 +83,7 @@ T-SQL Refine catches problems **before execution** using static analysis on the 
 
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 171 built-in rules covering security, correctness, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 175 built-in rules covering security, correctness, performance, and coding conventions.
 
 Each rule is classified by severity:
 
@@ -174,6 +174,8 @@ password-bearing command-line argument:
 export TSQLREFINE_CONNECTION_STRING='Server=localhost;Database=app;User ID=...;Password=...'
 tsqlrefine schema snapshot --output .tsqlrefine/schema.json
 ```
+
+New snapshots record the database collation so schema-aware identifier resolution follows SQL Server's case, accent, kana, and width sensitivity.
 
 `--connection-string` remains available and takes precedence over
 `TSQLREFINE_CONNECTION_STRING` when both are supplied.
@@ -274,10 +276,10 @@ Creates the following files:
 | Preset | Rules | Use Case |
 |--------|-------|----------|
 | `security-only` | 17 | Security vulnerabilities and critical safety |
-| `pragmatic` | 52 | Production-ready minimum for legacy codebases |
-| `recommended` | 113 | Balanced for production (default) |
-| `strict-logic` | 147 | Comprehensive correctness without cosmetic rules |
-| `strict` | 171 | Maximum enforcement including style |
+| `pragmatic` | 56 | Production-ready minimum for legacy codebases |
+| `recommended` | 117 | Balanced for production (default) |
+| `strict-logic` | 151 | Comprehensive correctness without cosmetic rules |
+| `strict` | 175 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 

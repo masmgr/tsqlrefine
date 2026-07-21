@@ -17,7 +17,8 @@ public sealed class ExecParameterCountMismatchRule : ExecCatalogRuleBase
     private protected override IEnumerable<ExecIssue> Validate(ExecCall call)
     {
         var supplied = call.Bindings
-            .Where(binding => binding.Parameter is not null)
+            .Where(binding => binding.Parameter is not null &&
+                (binding.Argument.ParameterValue is not DefaultLiteral || binding.Parameter.HasDefault))
             .Select(binding => binding.Parameter!.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var missing = call.Procedure.Parameters
@@ -40,18 +41,53 @@ public sealed class ExecParameterNameMismatchRule : ExecCatalogRuleBase
 {
     public override RuleMetadata Metadata { get; } = new(
         "exec-parameter-name-mismatch",
-        "Detects named EXEC arguments that are absent from the procedure signature.",
+        "Detects named EXEC arguments that are absent from the procedure signature or specified more than once.",
         "Correctness",
         RuleSeverity.Error,
         false);
 
     private protected override IEnumerable<ExecIssue> Validate(ExecCall call)
     {
+        var suppliedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var binding in call.Bindings.Where(item => item.Argument.Variable is not null && item.Parameter is null))
         {
             yield return new ExecIssue(
                 binding.Argument.Variable!,
                 $"Parameter '{binding.Argument.Variable!.Name}' does not exist on procedure '{call.DisplayName}'.");
+        }
+        foreach (var binding in call.Bindings.Where(item => item.Argument.Variable is not null && item.Parameter is not null))
+        {
+            var name = binding.Argument.Variable!.Name;
+            if (!suppliedNames.Add(name))
+            {
+                yield return new ExecIssue(
+                    binding.Argument.Variable,
+                    $"Parameter '{name}' is specified more than once in the call to procedure '{call.DisplayName}'.");
+            }
+        }
+    }
+}
+
+/// <summary>Detects invalid uses of OUTPUT on EXEC arguments.</summary>
+public sealed class ExecInvalidOutputArgumentRule : ExecCatalogRuleBase
+{
+    public override RuleMetadata Metadata { get; } = new(
+        "exec-invalid-output-argument",
+        "Detects EXEC arguments that use OUTPUT with an input-only procedure parameter.",
+        "Correctness",
+        RuleSeverity.Error,
+        false);
+
+    private protected override IEnumerable<ExecIssue> Validate(ExecCall call)
+    {
+        foreach (var binding in call.Bindings.Where(item => item.Argument.IsOutput && item.Parameter is not null))
+        {
+            if (!binding.Parameter!.IsOutput)
+            {
+                yield return new ExecIssue(
+                    binding.Argument,
+                    $"Parameter '{binding.Parameter.Name}' on procedure '{call.DisplayName}' is not declared as OUTPUT.");
+            }
         }
     }
 }

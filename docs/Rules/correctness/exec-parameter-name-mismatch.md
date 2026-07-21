@@ -2,7 +2,8 @@
 
 ## Summary
 
-Reports named `EXEC` arguments that are not present in the resolved procedure signature.
+Reports named `EXEC` arguments that are not present in the resolved procedure signature or
+specify the same parameter more than once.
 
 ## Examples
 
