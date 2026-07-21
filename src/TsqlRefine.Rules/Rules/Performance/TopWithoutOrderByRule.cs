@@ -240,7 +240,9 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
         }
 
         private static bool IsNonWindowAggregate(FunctionCall function) =>
-            function.OverClause is null && TsqlRefine.Rules.Helpers.Analysis.AggregateFunctionHelpers.IsAggregateFunction(function);
+            function.CallTarget is null &&
+            function.OverClause is null &&
+            TsqlRefine.Rules.Helpers.Analysis.AggregateFunctionHelpers.IsAggregateFunction(function);
 
     }
 }

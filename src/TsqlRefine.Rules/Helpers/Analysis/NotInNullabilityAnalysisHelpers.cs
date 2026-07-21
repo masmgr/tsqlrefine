@@ -71,5 +71,6 @@ public static class NotInNullabilityAnalysisHelpers
     }
 
     private static bool IsFunction(FunctionCall function, string name) =>
+        function.CallTarget is null &&
         string.Equals(function.FunctionName.Value, name, StringComparison.OrdinalIgnoreCase);
 }

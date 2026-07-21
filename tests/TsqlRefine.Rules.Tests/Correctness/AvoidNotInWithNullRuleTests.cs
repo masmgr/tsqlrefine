@@ -327,6 +327,20 @@ public sealed class AvoidNotInWithNullRuleTests
         Assert.Single(diagnostics);
     }
 
+    [Theory]
+    [InlineData("dbo.COUNT(CustomerId)")]
+    [InlineData("dbo.ISNULL(CustomerId, 0)")]
+    public void Analyze_NotInWithSchemaQualifiedFunctionNamedLikeBuiltin_ReturnsDiagnostic(
+        string expression)
+    {
+        var sql = $"SELECT * FROM dbo.Orders WHERE CustomerId NOT IN (SELECT {expression} FROM dbo.NullableList);";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
     [Fact]
     public void Analyze_NotInWithSubquery_TempTable_ReturnsDiagnostic()
     {

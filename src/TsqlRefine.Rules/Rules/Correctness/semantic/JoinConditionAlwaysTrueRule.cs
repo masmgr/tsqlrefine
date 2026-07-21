@@ -110,7 +110,8 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
                 return false;
             }
 
-            if (query.TopRowFilter is { Percent: false } top && IsAtMostOne(top.Expression))
+            if (query.TopRowFilter is { Percent: false, WithTies: false } top &&
+                IsAtMostOne(top.Expression))
             {
                 return true;
             }
@@ -145,7 +146,9 @@ public sealed class JoinConditionAlwaysTrueRule : DiagnosticVisitorRuleBase
 
             public override void ExplicitVisit(FunctionCall node)
             {
-                if (node.OverClause is null && AggregateFunctionHelpers.IsAggregateFunction(node))
+                if (node.CallTarget is null &&
+                    node.OverClause is null &&
+                    AggregateFunctionHelpers.IsAggregateFunction(node))
                 {
                     HasAggregate = true;
                 }

@@ -67,6 +67,17 @@ public sealed class TopWithoutOrderByRuleTests
     }
 
     [Fact]
+    public void Analyze_TopWithSchemaQualifiedFunctionNamedLikeAggregate_ReturnsDiagnostic()
+    {
+        var rule = new TopWithoutOrderByRule();
+        var context = RuleTestContext.CreateContext("SELECT TOP 1 dbo.MAX(id) FROM users;");
+
+        var diagnostic = Assert.Single(rule.Analyze(context));
+
+        Assert.Equal("top-without-order-by", diagnostic.Data?.RuleId);
+    }
+
+    [Fact]
     public void Analyze_TopWithoutOrderBy_ReportsAtTopClause()
     {
         var rule = new TopWithoutOrderByRule();

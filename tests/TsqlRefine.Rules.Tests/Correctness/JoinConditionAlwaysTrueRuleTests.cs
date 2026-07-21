@@ -68,6 +68,20 @@ public sealed class JoinConditionAlwaysTrueRuleTests
     }
 
     [Theory]
+    [InlineData("SELECT * FROM t1 LEFT JOIN (SELECT TOP 1 WITH TIES value FROM settings ORDER BY priority) s ON 1=1")]
+    [InlineData("SELECT * FROM t1 LEFT JOIN (SELECT dbo.MAX(value) AS value FROM settings) s ON 1=1")]
+    public void Analyze_LiteralAlwaysTrueWithPotentiallyMultipleRowsRightSide_ReturnsDiagnostic(
+        string sql)
+    {
+        var rule = new JoinConditionAlwaysTrueRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostic = Assert.Single(rule.Analyze(context));
+
+        Assert.Equal("semantic-join-condition-always-true", diagnostic.Data?.RuleId);
+    }
+
+    [Theory]
     [InlineData("SELECT * FROM t1 JOIN t2 ON t1.id = t2.id")]  // valid join
     [InlineData("SELECT * FROM t1 JOIN t2 ON t1.status = 1")]  // valid filter (not always true)
     [InlineData("SELECT * FROM t1 a JOIN t2 b ON a.id = b.id")]  // valid join with aliases
