@@ -34,6 +34,7 @@ The following references are not validated:
 - **Wildcard** (`SELECT *`)
 - **Columns on unresolvable aliases** (CTEs, derived tables, temp tables)
 - **Columns on unresolved tables** (reported by `unresolved-table-reference` instead)
+- **Unqualified correlated columns that may come from an unresolvable DML target** (for example, an enclosing `UPDATE #Temp`)
 
 ## Examples
 

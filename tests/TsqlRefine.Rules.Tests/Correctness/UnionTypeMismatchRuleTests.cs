@@ -126,6 +126,20 @@ public sealed class UnionTypeMismatchRuleTests
         Assert.Empty(diagnostics);
     }
 
+    [Theory]
+    [InlineData("CONVERT(nvarchar(30), NULL)")]
+    [InlineData("CAST(NULL AS nvarchar(30))")]
+    [InlineData("TRY_CONVERT(nvarchar(30), NULL)")]
+    [InlineData("TRY_CAST(NULL AS nvarchar(30))")]
+    public void Analyze_TypedNullVsNumeric_NoDiagnostic(string typedNull)
+    {
+        var sql = $"SELECT 1 AS Id UNION ALL SELECT {typedNull} AS Id;";
+        var context = RuleTestContext.CreateContext(sql);
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
     [Fact]
     public void Analyze_UnionAll_ReturnsDiagnostic()
     {

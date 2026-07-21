@@ -90,6 +90,7 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
     private static readonly SqlValueState s_untrusted = SqlValueState.FromTrust(SqlTrustKind.UntrustedValue);
     private static readonly SqlValueState s_numeric = SqlValueState.FromTrust(SqlTrustKind.NumericValue);
     private readonly int _maxSegments = maxSegments;
+    private readonly HashSet<string> _numericVariables = CollectNumericVariables(scope);
 
     protected override Dictionary<string, SqlValueState> InitialState()
     {
@@ -98,7 +99,7 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
         {
             if (parameter.VariableName is { } name)
             {
-                state[name.Value] = s_untrusted;
+                state[name.Value] = IsNumericType(parameter.DataType) ? s_numeric : s_untrusted;
             }
         }
         return state;
@@ -116,14 +117,12 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
                 {
                     if (declaration.VariableName is { } name)
                     {
-                        output[name.Value] = declaration.Value is null
-                            ? s_unknown
-                            : Evaluate(declaration.Value, output);
+                        output[name.Value] = EvaluateAssignment(name.Value, declaration.Value, output);
                     }
                 }
                 break;
             case SetVariableStatement set when set.Variable is not null:
-                var assigned = Evaluate(set.Expression, output);
+                var assigned = EvaluateAssignment(set.Variable.Name, set.Expression, output);
                 output[set.Variable.Name] = set.AssignmentKind == AssignmentKind.Equals
                     ? assigned
                     : Concatenate(GetVariable(output, set.Variable.Name), assigned);
@@ -133,7 +132,7 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
                 select.Accept(visitor);
                 foreach (var assignment in visitor.Assignments)
                 {
-                    var value = Evaluate(assignment.Expression, output);
+                    var value = EvaluateAssignment(assignment.Variable.Name, assignment.Expression, output);
                     output[assignment.Variable.Name] = assignment.AssignmentKind == AssignmentKind.Equals
                         ? value
                         : Concatenate(GetVariable(output, assignment.Variable.Name), value);
@@ -152,6 +151,14 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
         }
         return output;
     }
+
+    private SqlValueState EvaluateAssignment(
+        string variableName,
+        ScalarExpression? expression,
+        IReadOnlyDictionary<string, SqlValueState> state) =>
+        IsNumericVariable(variableName)
+            ? s_numeric
+            : Evaluate(expression, state);
 
     private static bool IsDirectAssignment(TSqlStatement statement, string name) => statement switch
     {
@@ -214,11 +221,29 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
                 searchedCase.ElseExpression,
                 state),
             FunctionCall function => EvaluateFunction(function, state),
-            CastCall cast when IsNumericType(cast.DataType) => s_numeric,
-            ConvertCall convert when IsNumericType(convert.DataType) => s_numeric,
+            CastCall cast => EvaluateConversion(cast.DataType, cast.Parameter, state),
+            ConvertCall convert => EvaluateConversion(convert.DataType, convert.Parameter, state),
+            TryCastCall tryCast => EvaluateConversion(tryCast.DataType, tryCast.Parameter, state),
+            TryConvertCall tryConvert => EvaluateConversion(tryConvert.DataType, tryConvert.Parameter, state),
             UnaryExpression unary => Evaluate(unary.Expression, state),
             _ => s_unknown
         };
+    }
+
+    private SqlValueState EvaluateConversion(
+        DataTypeReference? targetType,
+        ScalarExpression? parameter,
+        IReadOnlyDictionary<string, SqlValueState> state)
+    {
+        if (IsNumericType(targetType))
+        {
+            return s_numeric;
+        }
+
+        var source = Evaluate(parameter, state);
+        return IsStringType(targetType) && source.Trust == SqlTrustKind.NumericValue
+            ? s_numeric
+            : s_unknown;
     }
 
     private SqlValueState EvaluateCase(
@@ -264,13 +289,23 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
 
     private SqlValueState Concatenate(SqlValueState left, SqlValueState right)
     {
-        if (left.Segments is null || right.Segments is null ||
-            left.Segments.Count + right.Segments.Count > _maxSegments)
+        if (left.Segments is null || right.Segments is null)
         {
             return s_unknown;
         }
 
         var segments = left.Segments.Concat(right.Segments).ToArray();
+        var candidate = new SqlValueState(SqlTrustKind.SqlFragment, segments);
+        if (IsBalancedSafeFragment(candidate))
+        {
+            return SqlValueState.FromConstant(string.Empty);
+        }
+
+        if (segments.Length > _maxSegments)
+        {
+            return s_unknown;
+        }
+
         var trust = segments.All(segment => segment.Trust == SqlTrustKind.Constant)
             ? SqlTrustKind.Constant
             : segments.Any(segment => segment.Trust == SqlTrustKind.Unknown)
@@ -305,10 +340,21 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
                 : s_unknown;
         }
 
+        // Different CASE/branch results can still be equally safe SQL fragments. Collapse
+        // only self-contained alternatives that are safe from an identifier position and
+        // do not leave a string literal open across the merge boundary.
+        if (IsBalancedSafeFragment(left) && IsBalancedSafeFragment(right))
+        {
+            return SqlValueState.FromConstant(string.Empty);
+        }
+
         return left.Trust == right.Trust && left.Trust is not (SqlTrustKind.SqlFragment or SqlTrustKind.Unknown)
             ? SqlValueState.FromTrust(left.Trust)
             : s_unknown;
     }
+
+    private static bool IsBalancedSafeFragment(SqlValueState value) =>
+        !value.IsUnsafeSqlText() && !GetQuoteParity(value);
 
     private static bool GetQuoteParity(SqlValueState value)
     {
@@ -329,6 +375,37 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
             SqlDataTypeOption.Int or SqlDataTypeOption.BigInt or SqlDataTypeOption.Decimal or
             SqlDataTypeOption.Numeric or SqlDataTypeOption.Money or SqlDataTypeOption.SmallMoney or
             SqlDataTypeOption.Float or SqlDataTypeOption.Real;
+
+    private static bool IsStringType(DataTypeReference? dataType) =>
+        dataType is SqlDataTypeReference sqlType && sqlType.SqlDataTypeOption is
+            SqlDataTypeOption.Char or SqlDataTypeOption.VarChar or
+            SqlDataTypeOption.NChar or SqlDataTypeOption.NVarChar;
+
+    private bool IsNumericVariable(string name) => _numericVariables.Contains(name);
+
+    private static HashSet<string> CollectNumericVariables(ControlFlowScope scope)
+    {
+        var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in scope.Parameters)
+        {
+            if (parameter.VariableName is { } name && IsNumericType(parameter.DataType))
+            {
+                variables.Add(name.Value);
+            }
+        }
+
+        foreach (var statement in scope.Graph.Nodes.Select(node => node.Statement).OfType<DeclareVariableStatement>())
+        {
+            foreach (var declaration in statement.Declarations)
+            {
+                if (declaration.VariableName is { } name && IsNumericType(declaration.DataType))
+                {
+                    variables.Add(name.Value);
+                }
+            }
+        }
+        return variables;
+    }
 
     private sealed class SelectAssignmentVisitor : TSqlFragmentVisitor
     {

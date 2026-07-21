@@ -9,52 +9,30 @@ namespace TsqlRefine.Rules.Helpers.Schema;
 internal sealed class SchemaColumnResolver
 {
     private readonly ISchemaProvider _schema;
-    private readonly Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?> _resolvedColumnCache;
-    private readonly Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache;
-    private readonly Dictionary<string, (ResolvedTable Table, string ColumnName)?> _unqualifiedColumnResolutionCache;
+    private Dictionary<string, (ResolvedTable Table, string ColumnName)?>? _unqualifiedColumnResolutionCache;
 
     public SchemaColumnResolver(ISchemaProvider schema, AliasMap aliasMap)
     {
         _schema = schema;
         AliasMap = aliasMap;
-        _resolvedColumnCache = new Dictionary<ColumnReferenceExpression, (ResolvedTable Table, string ColumnName)?>(
-            ReferenceEqualityComparer.Instance);
-        _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(
-            ResolvedTableComparers.TableColumnKeyComparer.Instance);
-        _unqualifiedColumnResolutionCache = new Dictionary<string, (ResolvedTable Table, string ColumnName)?>(
-            StringComparer.OrdinalIgnoreCase);
     }
 
     public AliasMap AliasMap { get; }
 
     /// <summary>
-    /// Resolves a column reference to its table and column name, with caching.
+    /// Resolves a column reference to its table and column name.
     /// </summary>
     public (ResolvedTable Table, string ColumnName)? ResolveColumnToTable(ColumnReferenceExpression colRef)
     {
-        if (_resolvedColumnCache.TryGetValue(colRef, out var cached))
-        {
-            return cached;
-        }
-
-        var resolved = ResolveColumnToTableCore(colRef);
-        _resolvedColumnCache[colRef] = resolved;
-        return resolved;
+        return ResolveColumnToTableCore(colRef);
     }
 
     /// <summary>
-    /// Checks whether a column exists in the given table, with caching.
+    /// Checks whether a column exists in the given table.
     /// </summary>
     public bool ColumnExists(ResolvedTable table, string columnName)
     {
-        if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
-        {
-            return exists;
-        }
-
-        exists = _schema.ResolveColumn(table, columnName) is not null;
-        _columnExistsCache[(table, columnName)] = exists;
-        return exists;
+        return _schema.ResolveColumn(table, columnName) is not null;
     }
 
     private (ResolvedTable Table, string ColumnName)? ResolveColumnToTableCore(ColumnReferenceExpression colRef)
@@ -89,7 +67,7 @@ internal sealed class SchemaColumnResolver
             return null;
         }
 
-        if (_unqualifiedColumnResolutionCache.TryGetValue(columnName, out var unqualifiedCached))
+        if (_unqualifiedColumnResolutionCache?.TryGetValue(columnName, out var unqualifiedCached) == true)
         {
             return unqualifiedCached;
         }
@@ -104,13 +82,13 @@ internal sealed class SchemaColumnResolver
                 matchCount++;
                 if (matchCount > 1)
                 {
-                    _unqualifiedColumnResolutionCache[columnName] = null;
+                    (_unqualifiedColumnResolutionCache ??= new(StringComparer.OrdinalIgnoreCase))[columnName] = null;
                     return null;
                 }
             }
         }
 
-        _unqualifiedColumnResolutionCache[columnName] = match;
+        (_unqualifiedColumnResolutionCache ??= new(StringComparer.OrdinalIgnoreCase))[columnName] = match;
         return match;
     }
 }

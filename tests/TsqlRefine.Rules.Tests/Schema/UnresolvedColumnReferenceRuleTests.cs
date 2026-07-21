@@ -489,4 +489,58 @@ public sealed class UnresolvedColumnReferenceRuleTests
 
         Assert.Empty(diagnostics);
     }
+
+    [Fact]
+    public void Analyze_CorrelatedSubqueryReferencingTempUpdateTarget_ReturnsNoDiagnostics()
+    {
+        const string sql = """
+            CREATE TABLE #Work (OuterId int, Value int);
+
+            UPDATE #Work
+            SET Value = (
+                SELECT TOP (1) o.Total
+                FROM dbo.Orders AS o
+                WHERE o.Id = OuterId
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_SubqueryMissingFromPersistentUpdateTarget_ReturnsDiagnostic()
+    {
+        const string sql = """
+            UPDATE dbo.Users
+            SET Name = (
+                SELECT TOP (1) MissingColumn
+                FROM dbo.Orders
+            );
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+
+        Assert.Contains("MissingColumn", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_WidthInsensitiveDatabaseCollation_ResolvesDifferentWidthIdentifier()
+    {
+        var schema = new SchemaProvider(TestSchemaBuilder.Create()
+            .WithDatabaseCollation("Japanese_CI_AS", 1041, comparisonStyle: 1 | 65536 | 131072)
+            .AddView("dbo", "V_NIPPOU_KYUKA", view => view
+                .AddColumn("日付の種類（承認済）", "nvarchar", maxLength: 100))
+            .Build());
+        var context = RuleTestContext.CreateContext(
+            "SELECT v.[日付の種類(承認済)] FROM dbo.V_NIPPOU_KYUKA AS v;",
+            schema);
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
 }

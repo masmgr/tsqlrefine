@@ -21,6 +21,9 @@ The following references are not validated:
 - **Temp tables** (`#TempTable`, `##GlobalTemp`)
 - **Table variables** (`@TableVar`)
 - **System schemas** (`sys.*`, `INFORMATION_SCHEMA.*`)
+- **SQL Server system compatibility views** (`sysobjects`, `syscolumns`, and related views)
+- **Trigger pseudo-tables** (`INSERTED`, `DELETED`) inside trigger bodies
+- **Objects in explicitly named databases that are not covered by the loaded single-database snapshot**
 
 ## Examples
 
@@ -48,6 +51,12 @@ SELECT * FROM #TempTable;
 -- System schemas are skipped
 SELECT * FROM sys.objects;
 SELECT * FROM INFORMATION_SCHEMA.TABLES;
+
+-- Legacy system compatibility views are skipped
+SELECT * FROM sysobjects;
+
+-- A snapshot of the current database cannot prove that this external object is missing
+SELECT * FROM master..sysprocesses;
 ```
 
 ## Configuration

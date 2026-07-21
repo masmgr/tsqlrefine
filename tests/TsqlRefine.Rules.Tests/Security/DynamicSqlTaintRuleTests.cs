@@ -220,6 +220,75 @@ public sealed class DynamicSqlTaintRuleTests
     }
 
     [Fact]
+    public void Analyze_NumericVariableSelectedFromTableAndConvertedToString_ReturnsEmpty()
+    {
+        const string sql = """
+            DECLARE @id int;
+            DECLARE @sql nvarchar(max);
+            SELECT TOP (1) @id = Id FROM dbo.CustomFields;
+            SET @sql = N'SELECT ' + N'CUSTOM_FIELD_' + CONVERT(nvarchar(30), @id) + N' FROM dbo.ImportData';
+            EXEC(@sql);
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_FixedNumericIdentifierWithOptionalConstantSuffix_ReturnsEmpty()
+    {
+        const string sql = """
+            DECLARE @id int;
+            DECLARE @isReference bit;
+            DECLARE @columnName nvarchar(50);
+            DECLARE @sql nvarchar(max);
+            SELECT TOP (1) @id = Id, @isReference = IsReference FROM dbo.CustomFields;
+            SET @columnName = CASE
+                WHEN @isReference = 1 THEN N'CUSTOM_FIELD_' + CONVERT(nvarchar(30), @id) + N'_CODE'
+                ELSE N'CUSTOM_FIELD_' + CONVERT(nvarchar(30), @id)
+            END;
+            SET @sql = N'SELECT ' + @columnName + N' FROM dbo.ImportData';
+            EXEC(@sql);
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_LongSqlWithRepeatedFixedNumericIdentifier_ReturnsEmpty()
+    {
+        var repeatedColumns = string.Join(
+            " + N', ' + ",
+            Enumerable.Repeat("@columnName", 40));
+        var sql = $$"""
+            DECLARE @id int;
+            DECLARE @columnName nvarchar(50);
+            DECLARE @sql nvarchar(max);
+            SELECT TOP (1) @id = Id FROM dbo.CustomFields;
+            SET @columnName = N'CUSTOM_FIELD_' + CONVERT(nvarchar(30), @id);
+            SET @sql = N'SELECT ' + {{repeatedColumns}} + N' FROM dbo.ImportData';
+            EXEC(@sql);
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_NumericProcedureParameterInDynamicSql_ReturnsEmpty()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.ReadCustomField @id int
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max) = N'SELECT CUSTOM_FIELD_' + CONVERT(nvarchar(30), @id)
+                    + N' FROM dbo.ImportData';
+                EXEC(@sql);
+            END;
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
     public void Analyze_SearchedCaseWithConstantResultsAndQuotedIdentifier_ReturnsEmpty()
     {
         const string sql = """

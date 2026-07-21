@@ -13,7 +13,7 @@ Detects JOINs where the ON columns match a foreign key relationship but the join
 
 When a table has a foreign key constraint (e.g., `Orders.UserId → Users.Id`), JOIN conditions using those columns should connect the correct tables. If the ON clause uses FK columns but joins to a different table than the FK target, it is almost certainly a bug — the developer likely intended to join to the FK target table but accidentally specified the wrong table.
 
-This rule cross-references the schema snapshot's foreign key definitions with the actual JOIN targets in the query. It checks both directions: outgoing FKs (where the table owns the FK) and incoming/referencing FKs (where the table is referenced by another table's FK).
+This rule cross-references foreign keys owned by each table in the JOIN with the actual target table. The ON expression is checked in both operand orders, but unrelated foreign keys from other tables that reference the same parent column are not considered.
 
 ## Examples
 

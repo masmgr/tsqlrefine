@@ -25,6 +25,11 @@ public sealed class JoinForeignKeyMismatchRuleTests
                 .AddColumn("Id", "int")
                 .AddColumn("Value", "nvarchar", maxLength: 200)
                 .WithPrimaryKey(true, "Id"))
+            .AddTable("dbo", "TableD", t => t
+                .AddColumn("Id", "int")
+                .AddColumn("ID_B", "int")
+                .WithPrimaryKey(true, "Id")
+                .AddForeignKey("FK_D_B", ["ID_B"], "dbo", "TableB", ["Id"]))
             .AddTable("dbo", "SelfRef", t => t
                 .AddColumn("Id", "int")
                 .AddColumn("ParentId", "int")

@@ -26,10 +26,8 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
         private HashSet<string>? _currentSelectAliases;
         private bool _selectAliasesAllowed;
         private readonly List<AliasMap> _outerAliasMaps = [];
-        private Dictionary<(ResolvedTable Table, string ColumnName), bool> _columnExistsCache =
-            new(ResolvedTableComparers.TableColumnKeyComparer.Instance);
-        private Dictionary<string, IReadOnlyList<ResolvedTable>> _unqualifiedColumnMatchesCache =
-            new(StringComparer.OrdinalIgnoreCase);
+        private readonly DmlTargetColumnScopeManager _dmlTargetScopes = new(schema);
+        private Dictionary<string, IReadOnlyList<ResolvedTable>>? _unqualifiedColumnMatchesCache;
 
         public override void ExplicitVisit(QuerySpecification node)
         {
@@ -41,12 +39,10 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             if (node.FromClause?.TableReferences is { Count: > 0 } tableRefs)
             {
                 var previousMap = _currentAliasMap;
-                var previousColumnExistsCache = _columnExistsCache;
                 var previousUnqualifiedColumnMatchesCache = _unqualifiedColumnMatchesCache;
 
                 _currentAliasMap = AliasMapBuilder.Build(tableRefs, schema);
-                _columnExistsCache = new Dictionary<(ResolvedTable Table, string ColumnName), bool>(ResolvedTableComparers.TableColumnKeyComparer.Instance);
-                _unqualifiedColumnMatchesCache = new Dictionary<string, IReadOnlyList<ResolvedTable>>(StringComparer.OrdinalIgnoreCase);
+                _unqualifiedColumnMatchesCache = null;
 
                 if (previousMap is not null)
                 {
@@ -68,7 +64,6 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                     _currentAliasMap = previousMap;
                     _currentSelectAliases = previousSelectAliases;
                     _selectAliasesAllowed = previousSelectAliasesAllowed;
-                    _columnExistsCache = previousColumnExistsCache;
                     _unqualifiedColumnMatchesCache = previousUnqualifiedColumnMatchesCache;
                 }
 
@@ -85,6 +80,24 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             {
                 _currentSelectAliases = previousSelectAliases;
                 _selectAliasesAllowed = previousSelectAliasesAllowed;
+            }
+        }
+
+        public override void ExplicitVisit(UpdateStatement node)
+        {
+            if (!_dmlTargetScopes.TryPush(node.UpdateSpecification))
+            {
+                base.ExplicitVisit(node);
+                return;
+            }
+
+            try
+            {
+                node.AcceptChildren(this);
+            }
+            finally
+            {
+                _dmlTargetScopes.Pop();
             }
         }
 
@@ -217,6 +230,11 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 return;
             }
 
+            if (_dmlTargetScopes.CanResolve(columnName))
+            {
+                return;
+            }
+
             AddDiagnostic(
                 fragment: node,
                 message: $"Column '{columnName}' not found in any table in the current scope.",
@@ -239,19 +257,12 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
 
         private bool ColumnExists(ResolvedTable table, string columnName)
         {
-            if (_columnExistsCache.TryGetValue((table, columnName), out var exists))
-            {
-                return exists;
-            }
-
-            exists = schema.ResolveColumn(table, columnName) is not null;
-            _columnExistsCache[(table, columnName)] = exists;
-            return exists;
+            return schema.ResolveColumn(table, columnName) is not null;
         }
 
         private IReadOnlyList<ResolvedTable> FindTablesContainingColumn(string columnName)
         {
-            if (_unqualifiedColumnMatchesCache.TryGetValue(columnName, out var cached))
+            if (_unqualifiedColumnMatchesCache?.TryGetValue(columnName, out var cached) == true)
             {
                 return cached;
             }
@@ -259,7 +270,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             if (_currentAliasMap is null || _currentAliasMap.AllTables.Count == 0)
             {
                 cached = Array.Empty<ResolvedTable>();
-                _unqualifiedColumnMatchesCache[columnName] = cached;
+                (_unqualifiedColumnMatchesCache ??= new(StringComparer.OrdinalIgnoreCase))[columnName] = cached;
                 return cached;
             }
 
@@ -273,7 +284,7 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
             }
 
             cached = matches.Count == 0 ? Array.Empty<ResolvedTable>() : matches;
-            _unqualifiedColumnMatchesCache[columnName] = cached;
+            (_unqualifiedColumnMatchesCache ??= new(StringComparer.OrdinalIgnoreCase))[columnName] = cached;
             return cached;
         }
 
@@ -320,5 +331,6 @@ public sealed class UnresolvedColumnReferenceRule : SchemaAwareVisitorRuleBase
                 fixable: false
             );
         }
+
     }
 }

@@ -26,8 +26,26 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
     {
         private static readonly FrozenSet<string> ExcludedSchemas =
             FrozenSet.ToFrozenSet(["sys", "INFORMATION_SCHEMA"], StringComparer.OrdinalIgnoreCase);
+        private static readonly FrozenSet<string> TriggerPseudoTables =
+            FrozenSet.ToFrozenSet(["INSERTED", "DELETED"], StringComparer.OrdinalIgnoreCase);
+        private static readonly FrozenSet<string> SystemCompatibilityViews =
+            FrozenSet.ToFrozenSet(
+                [
+                    "syscolumns", "syscomments", "sysconstraints", "sysdepends", "sysfilegroups",
+                    "sysfiles", "sysforeignkeys", "sysfulltextcatalogs", "sysindexes", "sysmembers",
+                    "sysobjects", "syspermissions", "sysprotects", "sysreferences", "syssegments",
+                    "systypes", "sysusers"
+                ],
+                StringComparer.OrdinalIgnoreCase);
         private readonly Stack<HashSet<string>> _cteScopes = new();
         private readonly Stack<HashSet<string>> _dmlAliasScopes = new();
+        private int _triggerDepth;
+
+        public override void ExplicitVisit(CreateTriggerStatement node) => VisitTriggerBody(node);
+
+        public override void ExplicitVisit(AlterTriggerStatement node) => VisitTriggerBody(node);
+
+        public override void ExplicitVisit(CreateOrAlterTriggerStatement node) => VisitTriggerBody(node);
 
         public override void ExplicitVisit(SelectStatement node)
         {
@@ -142,6 +160,27 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
 
         private bool ShouldSkipLookup(NamedTableReference node, string? dbName, string? schemaName, string tableName)
         {
+            // A single-database snapshot cannot prove that an explicitly referenced
+            // external database object is missing.
+            if (dbName is not null &&
+                !string.Equals(dbName, schema.Metadata.DatabaseName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (dbName is null && schemaName is null)
+            {
+                if (_triggerDepth > 0 && TriggerPseudoTables.Contains(tableName))
+                {
+                    return true;
+                }
+
+                if (SystemCompatibilityViews.Contains(tableName))
+                {
+                    return true;
+                }
+            }
+
             // CTE references are represented as NamedTableReference but are not base objects.
             if (dbName is null && schemaName is null && IsInCteScope(tableName))
             {
@@ -155,6 +194,19 @@ public sealed class UnresolvedTableReferenceRule : SchemaAwareVisitorRuleBase
             }
 
             return false;
+        }
+
+        private void VisitTriggerBody(TriggerStatementBody node)
+        {
+            _triggerDepth++;
+            try
+            {
+                node.AcceptChildren(this);
+            }
+            finally
+            {
+                _triggerDepth--;
+            }
         }
 
         private bool IsInCteScope(string tableName) =>

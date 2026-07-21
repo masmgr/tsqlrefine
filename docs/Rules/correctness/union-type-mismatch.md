@@ -54,6 +54,11 @@ SELECT 1 AS Id
 UNION ALL
 SELECT NULL AS Id;
 
+-- A typed NULL is also a safe placeholder
+SELECT Amount FROM Payments
+UNION ALL
+SELECT CONVERT(nvarchar(30), NULL);
+
 -- Column references (types not determinable statically)
 SELECT Name FROM Users
 UNION ALL

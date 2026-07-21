@@ -24,10 +24,6 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
     private sealed class JoinForeignKeyMismatchVisitor(ISchemaProvider schema) : DiagnosticVisitorBase
     {
         private SchemaColumnResolver? _resolver;
-        private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _foreignKeysCache =
-            new(ResolvedTableComparers.TableKeyComparer.Instance);
-        private readonly Dictionary<ResolvedTable, IReadOnlyList<SchemaForeignKeyInfo>> _referencingForeignKeysCache =
-            new(ResolvedTableComparers.TableKeyComparer.Instance);
 
         public override void ExplicitVisit(QuerySpecification node)
         {
@@ -84,7 +80,7 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
             string joinedColumnName,
             BooleanComparisonExpression diagnosticTarget)
         {
-            var fks = GetForeignKeys(sourceTable);
+            var fks = schema.GetForeignKeys(sourceTable);
             foreach (var fk in fks)
             {
                 var idx = FindColumnIndex(fk.SourceColumns, sourceColumnName);
@@ -110,57 +106,7 @@ public sealed class JoinForeignKeyMismatchRule : SchemaAwareVisitorRuleBase
                 }
             }
 
-            var refFks = GetReferencingForeignKeys(sourceTable);
-            foreach (var fk in refFks)
-            {
-                var idx = FindColumnIndex(fk.TargetColumns, sourceColumnName);
-                if (idx < 0 || idx >= fk.SourceColumns.Count)
-                {
-                    continue;
-                }
-
-                if (!string.Equals(fk.SourceColumns[idx], joinedColumnName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (!ResolvedTableComparers.TablesAreEqual(joinedTable, fk.SourceTable))
-                {
-                    AddDiagnostic(
-                        fragment: diagnosticTarget,
-                        message: $"Column '{sourceTable.SchemaName}.{sourceTable.TableName}.{sourceColumnName}' is referenced by foreign key ('{fk.Name}') from '{fk.SourceTable.SchemaName}.{fk.SourceTable.TableName}.{fk.SourceColumns[idx]}', but this JOIN targets '{joinedTable.SchemaName}.{joinedTable.TableName}' instead.",
-                        code: "join-foreign-key-mismatch",
-                        category: "Schema",
-                        fixable: false
-                    );
-                }
-            }
         }
-
-        private IReadOnlyList<SchemaForeignKeyInfo> GetForeignKeys(ResolvedTable table)
-        {
-            if (_foreignKeysCache.TryGetValue(table, out var cached))
-            {
-                return cached;
-            }
-
-            cached = schema.GetForeignKeys(table);
-            _foreignKeysCache[table] = cached;
-            return cached;
-        }
-
-        private IReadOnlyList<SchemaForeignKeyInfo> GetReferencingForeignKeys(ResolvedTable table)
-        {
-            if (_referencingForeignKeysCache.TryGetValue(table, out var cached))
-            {
-                return cached;
-            }
-
-            cached = schema.GetReferencingForeignKeys(table);
-            _referencingForeignKeysCache[table] = cached;
-            return cached;
-        }
-
         private static int FindColumnIndex(IReadOnlyList<string> columns, string columnName)
         {
             for (var i = 0; i < columns.Count; i++)

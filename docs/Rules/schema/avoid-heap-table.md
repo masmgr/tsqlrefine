@@ -91,6 +91,13 @@ CREATE TABLE order_items (
     CONSTRAINT PK_OrderItems PRIMARY KEY CLUSTERED (order_id, line_number)
 );
 
+-- A clustered index may also be created in a following statement
+CREATE TABLE audit_log (
+    id INT PRIMARY KEY NONCLUSTERED,
+    created_at DATETIME NOT NULL
+);
+CREATE CLUSTERED INDEX IX_audit_log ON audit_log (created_at, id);
+
 -- Temporary tables (automatically excluded from this rule)
 CREATE TABLE #temp_staging (
     id INT,

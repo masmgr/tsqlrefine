@@ -150,6 +150,32 @@ public sealed class AvoidHeapTableRuleTests
     }
 
     [Fact]
+    public void Analyze_SeparateClusteredIndexForTable_ReturnsEmpty()
+    {
+        const string sql = """
+            CREATE TABLE dbo.users (
+                id INT PRIMARY KEY NONCLUSTERED,
+                name VARCHAR(50)
+            );
+            CREATE CLUSTERED INDEX IX_users ON dbo.users (id);
+            """;
+
+        Assert.Empty(_rule.Analyze(CreateContext(sql)));
+    }
+
+    [Fact]
+    public void Analyze_SeparateClusteredIndexForOtherTable_ReturnsDiagnostic()
+    {
+        const string sql = """
+            CREATE TABLE dbo.users (id INT PRIMARY KEY NONCLUSTERED);
+            CREATE TABLE dbo.logs (id INT PRIMARY KEY NONCLUSTERED);
+            CREATE CLUSTERED INDEX IX_logs ON dbo.logs (id);
+            """;
+
+        Assert.Single(_rule.Analyze(CreateContext(sql)));
+    }
+
+    [Fact]
     public void Analyze_TableWithConstraintClusteredPrimaryKey_ReturnsEmpty()
     {
         // Arrange

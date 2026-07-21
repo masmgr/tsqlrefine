@@ -82,6 +82,18 @@ SET @sql = N'SELECT * FROM dbo.Users WHERE Id = ' + CONVERT(int, @id);
 EXEC sys.sp_executesql @sql;
 ```
 
+Values constrained by a numeric variable or parameter type remain safe when converted to text.
+This also supports fixed identifier formats whose variable portion is numeric:
+
+```sql
+DECLARE @customFieldId int;
+SELECT TOP (1) @customFieldId = Id FROM dbo.CustomFields;
+
+SET @sql = N'SELECT CUSTOM_FIELD_' + CONVERT(nvarchar(30), @customFieldId)
+    + N' FROM dbo.ImportData';
+EXEC sys.sp_executesql @sql;
+```
+
 ## Analysis Boundaries
 
 - Analysis is intraprocedural and uses the control-flow graph for each batch or routine, including
@@ -89,8 +101,9 @@ EXEC sys.sp_executesql @sql;
 - Symbolic SQL text is bounded to 32 segments. More complex values widen to `Unknown` and are
   reported at a sink.
 - Scopes containing unsupported `GOTO` control flow are skipped to avoid misleading results.
-- Table-column assignments are treated as untrusted. A typed option for changing this source
-  policy is planned with per-rule options.
+- Table-column expressions are treated as untrusted. Assignment to a numeric variable is treated
+  as numeric because SQL Server enforces the declared variable type before the value reaches the
+  dynamic SQL text.
 - `QUOTENAME` length and nullability do not make input trusted; callers should still account for a
   possible `NULL` result.
 - Indirect variable writes, such as `EXEC ... INTO @variable` and `SELECT @variable = ...`

@@ -141,6 +141,57 @@ public sealed class UnresolvedTableReferenceRuleTests
         Assert.Empty(diagnostics);
     }
 
+    [Theory]
+    [InlineData("SELECT * FROM sysobjects;")]
+    [InlineData("SELECT * FROM syscolumns;")]
+    [InlineData("SELECT * FROM sysreferences;")]
+    public void Analyze_SystemCompatibilityView_SkipsValidation(string sql)
+    {
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_ExternalDatabaseOutsideSnapshot_SkipsValidation()
+    {
+        var context = RuleTestContext.CreateContext(
+            "SELECT * FROM master..sysprocesses;", CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TriggerPseudoTables_SkipValidation()
+    {
+        const string sql = """
+            CREATE TRIGGER dbo.Users_Insert
+            ON dbo.Users
+            AFTER INSERT
+            AS
+            SELECT i.Id FROM INSERTED AS i;
+            """;
+        var context = RuleTestContext.CreateContext(sql, CreateSchema());
+
+        var diagnostics = _rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_InsertedOutsideTrigger_ReturnsDiagnostic()
+    {
+        var context = RuleTestContext.CreateContext("SELECT * FROM INSERTED;", CreateSchema());
+
+        var diagnostic = Assert.Single(_rule.Analyze(context));
+
+        Assert.Contains("INSERTED", diagnostic.Message);
+    }
+
     [Fact]
     public void Analyze_NoSchema_ReturnsNoDiagnostics()
     {

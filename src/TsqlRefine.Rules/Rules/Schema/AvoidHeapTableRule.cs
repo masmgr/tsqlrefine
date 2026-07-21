@@ -24,6 +24,12 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
 
     private sealed class AvoidHeapTableVisitor : DiagnosticVisitorBase
     {
+        private const string DefaultSchemaName = "dbo";
+        private const char KeySeparator = '\u001F';
+
+        private readonly List<CreateTableStatement> _candidateTables = [];
+        private readonly HashSet<string> _clusteredIndexTables = new(StringComparer.OrdinalIgnoreCase);
+
         public override void ExplicitVisit(CreateTableStatement node)
         {
             // Skip temporary tables (#temp, ##temp)
@@ -39,17 +45,47 @@ public sealed class AvoidHeapTableRule : DiagnosticVisitorRuleBase
 
             if (!hasClusteredIndex)
             {
-                AddDiagnostic(
-                    range: ScriptDomHelpers.GetFirstTokenRange(node),
-                    message: "Table is created as a heap (no clustered index); consider adding a clustered index to improve performance and reduce fragmentation.",
-                    code: "avoid-heap-table",
-                    category: "Schema",
-                    fixable: false
-                );
+                _candidateTables.Add(node);
             }
 
             base.ExplicitVisit(node);
         }
+
+        public override void ExplicitVisit(CreateIndexStatement node)
+        {
+            if (node.Clustered == true && node.OnName?.BaseIdentifier?.Value is { } tableName)
+            {
+                _clusteredIndexTables.Add(BuildTableKey(
+                    node.OnName.SchemaIdentifier?.Value ?? DefaultSchemaName,
+                    tableName));
+            }
+
+            base.ExplicitVisit(node);
+        }
+
+        public override void ExplicitVisit(TSqlScript node)
+        {
+            base.ExplicitVisit(node);
+
+            foreach (var table in _candidateTables)
+            {
+                var tableName = table.SchemaObjectName.BaseIdentifier.Value;
+                var key = BuildTableKey(
+                    table.SchemaObjectName.SchemaIdentifier?.Value ?? DefaultSchemaName,
+                    tableName);
+                if (_clusteredIndexTables.Contains(key))
+                {
+                    continue;
+                }
+
+                AddDiagnostic(
+                    ScriptDomHelpers.GetFirstTokenRange(table),
+                    "Table is created as a heap (no clustered index); consider adding a clustered index to improve performance and reduce fragmentation.");
+            }
+        }
+
+        private static string BuildTableKey(string schemaName, string tableName) =>
+            string.Concat(schemaName, KeySeparator, tableName);
 
         private static bool HasClusteredTableConstraint(TableDefinition? definition)
         {

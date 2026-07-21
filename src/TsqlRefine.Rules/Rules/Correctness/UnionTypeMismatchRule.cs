@@ -179,6 +179,13 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
                 expression = paren.Expression;
             }
 
+            // A typed NULL remains compatible with every UNION result type. The cast only
+            // supplies metadata for the placeholder; it cannot introduce a conversion error.
+            if (IsTypedNull(expression))
+            {
+                return null;
+            }
+
             // Unwrap CAST/CONVERT — the target type is what matters, not the source
             if (expression is CastCall castCall)
             {
@@ -210,6 +217,30 @@ public sealed class UnionTypeMismatchRule : DiagnosticVisitorRuleBase
                 NullLiteral => null,   // NULL is compatible with any type
                 _ => null              // Can't determine type from column refs, expressions, etc.
             };
+        }
+
+        private static bool IsTypedNull(ScalarExpression? expression)
+        {
+            while (expression is ParenthesisExpression parenthesis)
+            {
+                expression = parenthesis.Expression;
+            }
+
+            var parameter = expression switch
+            {
+                CastCall cast => cast.Parameter,
+                ConvertCall convert => convert.Parameter,
+                TryCastCall tryCast => tryCast.Parameter,
+                TryConvertCall tryConvert => tryConvert.Parameter,
+                _ => null
+            };
+
+            while (parameter is ParenthesisExpression parenthesis)
+            {
+                parameter = parenthesis.Expression;
+            }
+
+            return parameter is NullLiteral;
         }
 
         private static string? GetDataTypeName(DataTypeReference? dataType)
