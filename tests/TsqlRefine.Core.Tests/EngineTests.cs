@@ -120,5 +120,36 @@ public sealed class EngineTests
             d => d.Code == TsqlRefineEngine.ParseErrorCode);
         Assert.Null(parseErrorDiag.Data?.CodeDescriptionHref);
     }
+
+    [Fact]
+    public void Run_WhenRuleThrows_ReturnsInternalAnalysisDiagnostic()
+    {
+        var engine = new TsqlRefineEngine([new ThrowingRule()]);
+
+        var result = engine.Run(
+            command: "lint",
+            inputs: [new SqlInput("a.sql", "SELECT 1;")],
+            options: new EngineOptions());
+
+        var diagnostic = Assert.Single(result.Files[0].Diagnostics);
+        Assert.Equal(TsqlRefineEngine.RuleExceptionCode, diagnostic.Code);
+        Assert.Equal("Internal", diagnostic.Data?.Category);
+        Assert.Contains("throwing-rule", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class ThrowingRule : IRule
+    {
+        public RuleMetadata Metadata { get; } = new(
+            "throwing-rule",
+            "Throws for testing.",
+            "Test",
+            RuleSeverity.Error,
+            false);
+
+        public IEnumerable<Diagnostic> Analyze(RuleContext context) =>
+            throw new InvalidOperationException("Expected test exception.");
+
+        public IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) => [];
+    }
 }
 

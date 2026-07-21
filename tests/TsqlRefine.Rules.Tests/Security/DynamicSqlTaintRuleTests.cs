@@ -219,6 +219,56 @@ public sealed class DynamicSqlTaintRuleTests
         Assert.Empty(Analyze(sql));
     }
 
+    [Fact]
+    public void Analyze_SearchedCaseWithConstantResultsAndQuotedIdentifier_ReturnsEmpty()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.ChangeTable @name sysname, @alter bit
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                SET @sql = CASE WHEN @alter = 1 THEN N'ALTER' ELSE N'CREATE' END
+                    + N' TABLE ' + QUOTENAME(@name);
+                EXEC sys.sp_executesql @sql;
+            END;
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_SimpleCaseWithConstantResultsAndQuotedIdentifier_ReturnsEmpty()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.ReadTable @name sysname, @kind int
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                SET @sql = CASE @kind WHEN 1 THEN N'SELECT * FROM ' ELSE N'SELECT TOP (1) * FROM ' END
+                    + QUOTENAME(@name);
+                EXEC sys.sp_executesql @sql;
+            END;
+            """;
+
+        Assert.Empty(Analyze(sql));
+    }
+
+    [Fact]
+    public void Analyze_CaseWithUnsafeResult_ReturnsDiagnostic()
+    {
+        const string sql = """
+            CREATE PROCEDURE dbo.RunSql @input nvarchar(max), @useInput bit
+            AS
+            BEGIN
+                DECLARE @sql nvarchar(max);
+                SET @sql = CASE WHEN @useInput = 1 THEN @input ELSE N'SELECT 1' END;
+                EXEC sys.sp_executesql @sql;
+            END;
+            """;
+
+        Assert.Single(Analyze(sql));
+    }
+
     [Theory]
     [InlineData("EXEC dbo.BuildQuery @sql OUTPUT;")]
     [InlineData("EXEC @result = dbo.BuildQuery;")]

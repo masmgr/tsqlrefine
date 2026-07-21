@@ -43,31 +43,40 @@ public static class SqlMetricsCollector
                 switch (statement)
                 {
                     case ProcedureStatementBody procedure:
-                        results.Add(Measure(
-                            GetName(procedure.ProcedureReference?.Name),
-                            "Procedure",
-                            (TSqlFragment?)procedure.ProcedureReference?.Name.BaseIdentifier ?? procedure,
-                            procedure.StatementList,
-                            procedure.Parameters.Count));
                         objectCount++;
+                        if (procedure.StatementList is not null)
+                        {
+                            results.Add(Measure(
+                                GetName(procedure.ProcedureReference?.Name),
+                                "Procedure",
+                                (TSqlFragment?)procedure.ProcedureReference?.Name.BaseIdentifier ?? procedure,
+                                procedure.StatementList,
+                                procedure.Parameters.Count));
+                        }
                         break;
-                    case FunctionStatementBody function when function.StatementList is not null:
-                        results.Add(Measure(
-                            GetName(function.Name),
-                            "Function",
-                            (TSqlFragment?)function.Name?.BaseIdentifier ?? function,
-                            function.StatementList,
-                            function.Parameters.Count));
+                    case FunctionStatementBody function:
                         objectCount++;
+                        if (function.StatementList is not null)
+                        {
+                            results.Add(Measure(
+                                GetName(function.Name),
+                                "Function",
+                                (TSqlFragment?)function.Name?.BaseIdentifier ?? function,
+                                function.StatementList,
+                                function.Parameters.Count));
+                        }
                         break;
                     case TriggerStatementBody trigger:
-                        results.Add(Measure(
-                            GetName(trigger.Name),
-                            "Trigger",
-                            (TSqlFragment?)trigger.Name?.BaseIdentifier ?? trigger,
-                            trigger.StatementList,
-                            0));
                         objectCount++;
+                        if (trigger.StatementList is not null)
+                        {
+                            results.Add(Measure(
+                                GetName(trigger.Name),
+                                "Trigger",
+                                (TSqlFragment?)trigger.Name?.BaseIdentifier ?? trigger,
+                                trigger.StatementList,
+                                0));
+                        }
                         break;
                     case ViewStatementBody view:
                         results.Add(Measure(

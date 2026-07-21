@@ -4,13 +4,13 @@ using TsqlRefine.PluginSdk;
 namespace TsqlRefine.Rules.Rules.Correctness.Semantic;
 
 /// <summary>
-/// Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
+/// Detects national string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
 /// </summary>
 public sealed class UnicodeStringRule : IRule
 {
     public RuleMetadata Metadata { get; } = new(
         RuleId: "semantic-unicode-string",
-        Description: "Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.",
+        Description: "Detects national string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.",
         Category: "Correctness",
         DefaultSeverity: RuleSeverity.Error,
         Fixable: true
@@ -116,7 +116,7 @@ public sealed class UnicodeStringRule : IRule
         public override void ExplicitVisit(SetVariableStatement node)
         {
             // Check if assigning a string literal to a VARCHAR/CHAR variable
-            if (node.Expression is Literal literal && literal.LiteralType == LiteralType.String)
+            if (node.Expression is StringLiteral { IsNational: true } literal)
             {
                 CheckStringAssignment(node.Variable.Name, literal);
             }
@@ -139,7 +139,9 @@ public sealed class UnicodeStringRule : IRule
                 return;
             }
 
-            // Check if the literal value contains Unicode characters.
+            // A non-national literal is already interpreted using the database code page.
+            // Its representability cannot be determined without collation information and is
+            // covered separately by prefer-unicode-string-literals.
             var literalValue = literal.Value;
 
             if (!string.IsNullOrEmpty(literalValue) && SqlDataTypeHelpers.ContainsUnicodeCharacters(literalValue))

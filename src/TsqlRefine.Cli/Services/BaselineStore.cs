@@ -267,7 +267,9 @@ public static class BaselineStore
     }
 
     public static bool IsAnalysisFailure(Diagnostic diagnostic) =>
-        diagnostic.Code is TsqlRefineEngine.ParseErrorCode or TsqlRefineEngine.ParserExceptionCode;
+        diagnostic.Code is TsqlRefineEngine.ParseErrorCode or
+            TsqlRefineEngine.ParserExceptionCode or
+            TsqlRefineEngine.RuleExceptionCode;
 
     private static BaselineEntry[] CreateEntries(
         IReadOnlyList<FileResult> files,

@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `avoid-top-without-order-by-in-select-into` no longer reports constant `TOP 0`, uses table-neutral wording, and defaults to Warning
 - `avoid-named-constraint-in-temp-table` now defaults to Warning
 - `semantic-data-type-length` no longer offers arbitrary length autofixes; lengths must be selected explicitly
+- `semantic-unicode-string` now reports only national (`N'...'`) literals converted to `VARCHAR`/`CHAR`; non-national literal policy remains with `prefer-unicode-string-literals`
+
+### Fixed
+
+- Empty procedure and trigger bodies no longer crash control-flow and SQL metrics rules
+- Rule implementation exceptions use the dedicated `rule-exception` analysis-failure diagnostic instead of masquerading as rule violations
+- `dynamic-sql-taint` now preserves trust through simple and searched `CASE` expressions
 
 ## [2.0.0] - 2026-07-20
 

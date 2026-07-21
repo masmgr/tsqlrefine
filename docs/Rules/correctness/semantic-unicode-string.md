@@ -7,11 +7,13 @@
 
 ## Description
 
-Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
+Detects national (`N'...'`) string literals assigned to non-Unicode (`VARCHAR`/`CHAR`) variables, which may cause data loss.
 
 ## Rationale
 
-Unicode characters in non-Unicode (VARCHAR/CHAR) variables cause **silent data corruption** with no error or warning.
+Assigning a national string literal to a non-Unicode (`VARCHAR`/`CHAR`) variable requires a code-page conversion. Characters that are not representable in the database collation's code page are replaced or otherwise lose information.
+
+Non-national literals such as `'こんにちは'` are not reported by this rule. SQL Server interprets those literals in the database code page before assignment, so this rule cannot determine their representability without collation information. Use `prefer-unicode-string-literals` to require the `N` prefix when Unicode semantics are intended.
 
 **Silent data corruption**:
 
@@ -19,15 +21,15 @@ When Unicode characters are stored in VARCHAR/CHAR variables, they are converted
 
 ```sql
 DECLARE @Name VARCHAR(50);
-SET @Name = 'こんにちは';  -- Japanese "Hello"
+SET @Name = N'こんにちは';  -- Japanese "Hello"
 SELECT @Name;               -- Returns '?????' (data corrupted!)
 ```
 
 **Why this happens**:
 
-1. **VARCHAR/CHAR encoding**: Uses single-byte or code page encoding (ASCII, Windows-1252, etc.)
-   - Supports only 256 different characters (0-255)
-   - Cannot represent most international characters
+1. **VARCHAR/CHAR encoding**: Uses the code page associated with the SQL Server collation
+   - Some code pages, including Japanese code page 932, represent multibyte character sets
+   - Characters outside the selected code page cannot be represented
 
 2. **NVARCHAR/NCHAR encoding**: Uses UTF-16 (Unicode)
    - Supports 65,536+ characters (all languages, emojis, symbols)
@@ -69,26 +71,26 @@ SELECT @Name;               -- Returns '?????' (data corrupted!)
 1. **International names**: User names with non-ASCII characters
    ```sql
    DECLARE @Name VARCHAR(100);
-   SET @Name = 'François Müller';  -- Becomes 'Fran?ois M?ller'
+   SET @Name = N'François Müller';  -- May lose characters during conversion
    ```
 
 2. **User-generated content**: Comments, reviews, messages with emoji
    ```sql
    DECLARE @Comment VARCHAR(500);
-   SET @Name = 'Great product! 😀👍';  -- Becomes 'Great product! ??'
+   SET @Name = N'Great product! 😀👍';  -- May lose characters during conversion
    ```
 
 3. **Multi-language applications**: Supporting Japanese, Chinese, Arabic, etc.
    ```sql
    DECLARE @Description VARCHAR(1000);
-   SET @Description = '製品の説明';  -- Becomes '?????'
+   SET @Description = N'製品の説明';  -- May lose characters during conversion
    ```
 
 **Fix: Use NVARCHAR/NCHAR**:
 
 ```sql
 DECLARE @Name NVARCHAR(100);  -- Supports Unicode
-SET @Name = 'François Müller';  -- Stored correctly
+SET @Name = N'François Müller';  -- Stored correctly
 SELECT @Name;  -- Returns 'François Müller'
 ```
 
@@ -99,27 +101,27 @@ SELECT @Name;  -- Returns 'François Müller'
 ```sql
 -- Japanese text in VARCHAR (corrupted to '?????')
 DECLARE @Greeting VARCHAR(50);
-SET @Greeting = 'こんにちは';  -- Stored as '?????'
+SET @Greeting = N'こんにちは';  -- May lose characters during conversion
 
 -- Chinese text in VARCHAR
 DECLARE @Name VARCHAR(100);
-SET @Name = '张伟';  -- Stored as '??'
+SET @Name = N'张伟';  -- May lose characters during conversion
 
 -- Arabic text in VARCHAR
 DECLARE @Message VARCHAR(200);
-SET @Message = 'مرحبا بك';  -- Stored as '???? ??'
+SET @Message = N'مرحبا بك';  -- May lose characters during conversion
 
 -- Emoji in VARCHAR
 DECLARE @Comment VARCHAR(500);
-SET @Comment = 'Great! 😀👍';  -- Stored as 'Great! ??'
+SET @Comment = N'Great! 😀👍';  -- May lose characters during conversion
 
 -- Accented characters in VARCHAR
 DECLARE @CustomerName VARCHAR(100);
-SET @CustomerName = 'François Müller';  -- Stored as 'Fran?ois M?ller'
+SET @CustomerName = N'François Müller';  -- May lose characters during conversion
 
 -- Mathematical symbols in VARCHAR
 DECLARE @Formula VARCHAR(100);
-SET @Formula = 'Sum: ∑(x) ≠ ∞';  -- Stored as 'Sum: ?(x) ? ?'
+SET @Formula = N'Sum: ∑(x) ≠ ∞';  -- May lose characters during conversion
 
 -- Multi-language product description
 CREATE TABLE Products (
@@ -127,7 +129,7 @@ CREATE TABLE Products (
     Description VARCHAR(1000)  -- Wrong: Cannot store international text
 );
 INSERT INTO Products (ProductId, Description)
-VALUES (1, '高品質の製品');  -- Stored as '??????'
+VALUES (1, N'高品質の製品');  -- May lose characters during conversion
 
 -- User comments with emoji
 CREATE TABLE Comments (
@@ -135,7 +137,7 @@ CREATE TABLE Comments (
     CommentText VARCHAR(MAX)  -- Wrong: MAX doesn't fix encoding issue
 );
 INSERT INTO Comments (CommentId, CommentText)
-VALUES (1, 'Amazing product! 🎉❤️');  -- Stored as 'Amazing product! ??'
+VALUES (1, N'Amazing product! 🎉❤️');  -- May lose characters during conversion
 ```
 
 ### Good
@@ -143,27 +145,27 @@ VALUES (1, 'Amazing product! 🎉❤️');  -- Stored as 'Amazing product! ??'
 ```sql
 -- Japanese text in NVARCHAR (stored correctly)
 DECLARE @Greeting NVARCHAR(50);
-SET @Greeting = 'こんにちは';  -- Stored as 'こんにちは'
+SET @Greeting = N'こんにちは';  -- Stored as 'こんにちは'
 
 -- Chinese text in NVARCHAR
 DECLARE @Name NVARCHAR(100);
-SET @Name = '张伟';  -- Stored as '张伟'
+SET @Name = N'张伟';  -- Stored as '张伟'
 
 -- Arabic text in NVARCHAR
 DECLARE @Message NVARCHAR(200);
-SET @Message = 'مرحبا بك';  -- Stored as 'مرحبا بك'
+SET @Message = N'مرحبا بك';  -- Stored as 'مرحبا بك'
 
 -- Emoji in NVARCHAR
 DECLARE @Comment NVARCHAR(500);
-SET @Comment = 'Great! 😀👍';  -- Stored as 'Great! 😀👍'
+SET @Comment = N'Great! 😀👍';  -- Stored as 'Great! 😀👍'
 
 -- Accented characters in NVARCHAR
 DECLARE @CustomerName NVARCHAR(100);
-SET @CustomerName = 'François Müller';  -- Stored as 'François Müller'
+SET @CustomerName = N'François Müller';  -- Stored as 'François Müller'
 
 -- Mathematical symbols in NVARCHAR
 DECLARE @Formula NVARCHAR(100);
-SET @Formula = 'Sum: ∑(x) ≠ ∞';  -- Stored as 'Sum: ∑(x) ≠ ∞'
+SET @Formula = N'Sum: ∑(x) ≠ ∞';  -- Stored as 'Sum: ∑(x) ≠ ∞'
 
 -- Multi-language product description
 CREATE TABLE Products (
@@ -171,7 +173,7 @@ CREATE TABLE Products (
     Description NVARCHAR(1000)  -- Correct: Supports all languages
 );
 INSERT INTO Products (ProductId, Description)
-VALUES (1, '高品質の製品');  -- Stored correctly
+VALUES (1, N'高品質の製品');  -- Stored correctly
 
 -- User comments with emoji
 CREATE TABLE Comments (
@@ -179,11 +181,11 @@ CREATE TABLE Comments (
     CommentText NVARCHAR(MAX)  -- Correct: Supports Unicode
 );
 INSERT INTO Comments (CommentId, CommentText)
-VALUES (1, 'Amazing product! 🎉❤️');  -- Stored correctly
+VALUES (1, N'Amazing product! 🎉❤️');  -- Stored correctly
 
 -- Mixed English and international text
 DECLARE @FullName NVARCHAR(200);
-SET @FullName = 'John Doe (ジョン・ドウ)';  -- Stored correctly
+SET @FullName = N'John Doe (ジョン・ドウ)';  -- Stored correctly
 
 -- ASCII-only text can use VARCHAR (safe)
 DECLARE @StateCode VARCHAR(2);  -- OK: Only storing 'CA', 'NY', etc.

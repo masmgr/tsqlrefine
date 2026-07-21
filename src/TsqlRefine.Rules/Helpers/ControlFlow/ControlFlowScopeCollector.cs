@@ -37,9 +37,13 @@ public static class ControlFlowScopeCollector
             var containsRoutine = false;
             foreach (var statement in batch.Statements)
             {
-                if (TryGetRoutineBody(statement, out var owner, out var body, out var parameters))
+                if (IsRoutine(statement))
                 {
                     containsRoutine = true;
+                }
+
+                if (TryGetRoutineBody(statement, out var owner, out var body, out var parameters))
+                {
                     var result = ControlFlowGraphBuilder.Build(body);
                     scopes.Add(new ControlFlowScope(
                         owner,
@@ -58,6 +62,9 @@ public static class ControlFlowScopeCollector
         return scopes.ToArray();
     }
 
+    private static bool IsRoutine(TSqlStatement statement) =>
+        statement is ProcedureStatementBody or FunctionStatementBody or TriggerStatementBody;
+
     private static bool TryGetRoutineBody(
         TSqlStatement statement,
         out TSqlFragment owner,
@@ -66,7 +73,7 @@ public static class ControlFlowScopeCollector
     {
         switch (statement)
         {
-            case ProcedureStatementBody procedure:
+            case ProcedureStatementBody procedure when procedure.StatementList is not null:
                 owner = procedure;
                 body = procedure.StatementList;
                 parameters = procedure.Parameters.ToArray();

@@ -227,6 +227,8 @@ public sealed class TsqlRefineEngine
 
     public const string ParserExceptionCode = "parser-exception";
 
+    public const string RuleExceptionCode = "rule-exception";
+
     private static void AppendParseErrors(ScriptDomAst ast, List<Diagnostic> diagnostics)
     {
         // Report parser exception if any
@@ -365,8 +367,8 @@ public sealed class TsqlRefineEngine
             Range: ZeroRange,
             Message: $"Rule '{rule.Metadata.RuleId}' {suffix}: {ex.GetType().Name}: {ex.Message}",
             Severity: DiagnosticSeverity.Error,
-            Code: rule.Metadata.RuleId,
-            Data: new DiagnosticData(rule.Metadata.RuleId, rule.Metadata.Category, rule.Metadata.Fixable)
+            Code: RuleExceptionCode,
+            Data: new DiagnosticData(RuleExceptionCode, "Internal", false)
         );
     }
 

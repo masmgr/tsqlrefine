@@ -205,12 +205,33 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
             ParenthesisExpression parenthesis => Evaluate(parenthesis.Expression, state),
             BinaryExpression binary when binary.BinaryExpressionType == BinaryExpressionType.Add =>
                 Concatenate(Evaluate(binary.FirstExpression, state), Evaluate(binary.SecondExpression, state)),
+            SimpleCaseExpression simpleCase => EvaluateCase(
+                simpleCase.WhenClauses.Select(clause => clause.ThenExpression),
+                simpleCase.ElseExpression,
+                state),
+            SearchedCaseExpression searchedCase => EvaluateCase(
+                searchedCase.WhenClauses.Select(clause => clause.ThenExpression),
+                searchedCase.ElseExpression,
+                state),
             FunctionCall function => EvaluateFunction(function, state),
             CastCall cast when IsNumericType(cast.DataType) => s_numeric,
             ConvertCall convert when IsNumericType(convert.DataType) => s_numeric,
             UnaryExpression unary => Evaluate(unary.Expression, state),
             _ => s_unknown
         };
+    }
+
+    private SqlValueState EvaluateCase(
+        IEnumerable<ScalarExpression> resultExpressions,
+        ScalarExpression? elseExpression,
+        IReadOnlyDictionary<string, SqlValueState> state)
+    {
+        var values = resultExpressions.Select(expression => Evaluate(expression, state)).ToList();
+        values.Add(elseExpression is null
+            ? SqlValueState.FromConstant(string.Empty)
+            : Evaluate(elseExpression, state));
+
+        return values.Aggregate(Join);
     }
 
     private SqlValueState EvaluateFunction(

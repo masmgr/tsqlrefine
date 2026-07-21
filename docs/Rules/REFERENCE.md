@@ -177,7 +177,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [semantic/alias-scope-violation](correctness/semantic-alias-scope-violation.md) | Detects potential scope violations where aliases from outer queries are referenced in inner queries without clear correlation intent. | Warning | No |
 | [semantic/join-table-not-referenced-in-on](correctness/semantic-join-table-not-referenced-in-on.md) | Detects JOIN operations where the joined table is not referenced in the ON clause. | Warning | No |
 | [semantic/return-after-statements](correctness/semantic-return-after-statements.md) | Detects unreachable statements after a RETURN statement in stored procedures or functions. | Warning | No |
-| [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
+| [semantic/unicode-string](correctness/semantic-unicode-string.md) | Detects national string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss. | Error | **Yes** |
 | [string-agg-nvarchar-max](correctness/string-agg-nvarchar-max.md) | Detects STRING_AGG whose first argument is not explicitly cast to NVARCHAR(MAX), which risks intermediate result truncation (8000-byte / 4000-char limit). | Warning | No |
 | [string-agg-without-order-by](correctness/string-agg-without-order-by.md) | Detects STRING_AGG without WITHIN GROUP (ORDER BY), which may produce non-deterministic string concatenation results. | Warning | No |
 | [string-assignment-length-mismatch](correctness/string-assignment-length-mismatch.md) | Detects string assignments whose statically known maximum length exceeds the destination capacity. | Warning | No |
@@ -547,7 +547,7 @@ The following 13 rules support automatic fixing:
 9. [require-as-for-table-alias](style/require-as-for-table-alias.md) - Table aliases should use the AS keyword
 10. [require-begin-end-strict](style/require-begin-end-strict.md) - Require BEGIN/END blocks in conditional statements for clarity and maintainability
 11. [require-explicit-join-type](style/require-explicit-join-type.md) - Disallows ambiguous JOIN shorthand; makes JOIN semantics explicit and consistent across a codebase.
-12. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects Unicode characters in string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
+12. [semantic/unicode-string](correctness/semantic-unicode-string.md) - Detects national string literals assigned to non-Unicode (VARCHAR/CHAR) variables, which may cause data loss.
 13. [semicolon-termination](style/semicolon-termination.md) - SQL statements should be terminated with a semicolon
 
 To apply auto-fixes, use the `fix` command:

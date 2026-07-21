@@ -36,7 +36,7 @@ public sealed class UnicodeStringRuleTests
     }
 
     [Fact]
-    public void Analyze_VarcharWithUnicodeString_ReturnsDiagnostic()
+    public void Analyze_VarcharWithNonNationalString_NoDiagnostics()
     {
         // Arrange
         var sql = "DECLARE @Name VARCHAR(50); SET @Name = 'こんにちは';";
@@ -45,9 +45,7 @@ public sealed class UnicodeStringRuleTests
         var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
 
         // Assert
-        var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("semantic-unicode-string", diagnostic.Code);
-        Assert.Contains("Unicode", diagnostic.Message);
+        Assert.Empty(diagnostics);
     }
 
     [Fact]
@@ -69,7 +67,7 @@ public sealed class UnicodeStringRuleTests
     public void Analyze_VarcharWithEmojiString_ReturnsDiagnostic()
     {
         // Arrange
-        var sql = "DECLARE @Message VARCHAR(100); SET @Message = 'Hello 😊';";
+        var sql = "DECLARE @Message VARCHAR(100); SET @Message = N'Hello 😊';";
 
         // Act
         var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
