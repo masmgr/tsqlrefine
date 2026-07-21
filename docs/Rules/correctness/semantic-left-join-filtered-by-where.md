@@ -86,6 +86,8 @@ This rule detects the following predicate types on right-side tables in WHERE cl
 - **BETWEEN predicates**: `column BETWEEN x AND y`
 - **NOT expressions**: `NOT (condition)` wrapping any of the above
 
+Diagnostics include the right-side table and column names used by the null-rejecting WHERE predicates. Explicit `IS NULL` and `IS NOT NULL` predicates are not included in this list; when combined with another right-side filter, the diagnostic identifies the additional filter that excludes NULL-extended rows.
+
 ## Exceptions
 
 The following predicate types on right-side tables are **not** flagged as violations because they preserve LEFT JOIN semantics:

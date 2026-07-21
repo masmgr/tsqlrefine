@@ -109,7 +109,8 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
             QualifiedJoin join,
             AliasMap? aliasMap)
         {
-            var defaultMessage = $"LEFT JOIN with table '{tableName}' {DefaultMessageSuffix}";
+            var filteredColumns = FormatFilteredColumns(tableName, filteredColumnNames);
+            var defaultMessage = $"LEFT JOIN with table '{tableName}' {DefaultMessageSuffix} WHERE clause filter column(s): {filteredColumns}.";
 
             if (schema is null || aliasMap is null)
             {
@@ -161,17 +162,22 @@ public sealed class LeftJoinFilteredByWhereRule : DiagnosticVisitorRuleBase
                 var fkSuffix = hasFkRelationship
                     ? " The JOIN follows a foreign key relationship, confirming this conversion."
                     : "";
-                return $"LEFT JOIN with table '{tableName}' is definitively converted to INNER JOIN by WHERE clause filter on NOT NULL column(s). Use INNER JOIN instead.{fkSuffix}";
+                return $"LEFT JOIN with table '{tableName}' is definitively converted to INNER JOIN by WHERE clause filter on NOT NULL column(s) ({filteredColumns}). Use INNER JOIN instead.{fkSuffix}";
             }
 
             if (anyNotNull)
             {
-                return $"LEFT JOIN with table '{tableName}' is negated by WHERE clause filter (includes NOT NULL column(s)). This effectively makes it an INNER JOIN. Consider using INNER JOIN instead.";
+                return $"LEFT JOIN with table '{tableName}' is negated by WHERE clause filter (includes NOT NULL column(s): {filteredColumns}). This effectively makes it an INNER JOIN. Consider using INNER JOIN instead.";
             }
 
             // All filtered columns are nullable (or unresolvable)
             return defaultMessage;
         }
+
+        private static string FormatFilteredColumns(string tableName, List<string> filteredColumnNames) =>
+            string.Join(", ", filteredColumnNames
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(columnName => $"{tableName}.{columnName}"));
 
         private bool HasForeignKeyRelationship(
             QualifiedJoin join,

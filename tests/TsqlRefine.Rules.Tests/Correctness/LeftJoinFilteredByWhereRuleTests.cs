@@ -53,6 +53,34 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         });
     }
 
+    [Fact]
+    public void Analyze_WhenIsNullAndRightSideFilterAreCombined_ReturnsDiagnosticWithFilteredColumns()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.id IS NULL AND t2.status = 1";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostic = rule.Analyze(context)
+            .Single(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where");
+
+        Assert.Contains("t2.status", diagnostic.Message);
+        Assert.DoesNotContain("t2.id", diagnostic.Message);
+    }
+
+    [Fact]
+    public void Analyze_WhenIsNotNullAndRightSideFilterAreCombined_ReturnsDiagnosticWithFilteredColumns()
+    {
+        var rule = new LeftJoinFilteredByWhereRule();
+        const string sql = "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.id IS NOT NULL AND t2.status = 1";
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostic = rule.Analyze(context)
+            .Single(d => d.Data?.RuleId == "semantic-left-join-filtered-by-where");
+
+        Assert.Contains("t2.status", diagnostic.Message);
+        Assert.DoesNotContain("t2.id", diagnostic.Message);
+    }
+
     [Theory]
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t1.status = 1")]  // filters left side
     [InlineData("SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id WHERE t2.id IS NOT NULL")]  // intentional IS NOT NULL
@@ -190,6 +218,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         Assert.Single(diagnostics);
         Assert.Contains("definitively", diagnostics[0].Message);
         Assert.Contains("NOT NULL", diagnostics[0].Message);
+        Assert.Contains("c.Name", diagnostics[0].Message);
     }
 
     [Fact]
@@ -204,6 +233,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
         Assert.Single(diagnostics);
         Assert.DoesNotContain("definitively", diagnostics[0].Message);
         Assert.Contains("Consider using INNER JOIN instead", diagnostics[0].Message);
+        Assert.Contains("c.Email", diagnostics[0].Message);
     }
 
     [Fact]
@@ -245,6 +275,7 @@ public sealed class LeftJoinFilteredByWhereRuleTests
 
         Assert.Single(diagnostics);
         Assert.Contains("Consider using INNER JOIN instead", diagnostics[0].Message);
+        Assert.Contains("c.Name", diagnostics[0].Message);
         Assert.DoesNotContain("definitively", diagnostics[0].Message);
     }
 
