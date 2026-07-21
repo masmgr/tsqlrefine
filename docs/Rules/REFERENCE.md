@@ -19,18 +19,18 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 169
-- **Fixable Rules**: 14 (8%)
+- **Total Rules**: 171
+- **Fixable Rules**: 13 (8%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
   - Essential (pragmatic): 35 rules
-  - Recommended (recommended): 60 rules
+  - Recommended (recommended): 61 rules
   - Thorough (strict-logic): 34 rules
-  - Cosmetic (strict): 23 rules
+  - Cosmetic (strict): 24 rules
 - **By Severity**:
-  - Error: 28 rules (17%)
-  - Warning: 97 rules (57%)
-  - Information: 44 rules (26%)
+  - Error: 26 rules (15%)
+  - Warning: 100 rules (58%)
+  - Information: 45 rules (26%)
 
 ## Importance Tiers
 
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 35 | 52 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 60 | 112 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 34 | 146 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 23 | 169 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 61 | 113 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 34 | 147 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 24 | 171 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -57,8 +57,8 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | **Correctness** | 57 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 30 | Flags patterns that can cause performance issues |
 | **Transactions** | 16 | Ensures proper transaction handling and session settings |
-| **Schema** | 21 | Enforces database schema best practices |
-| **Style** | 32 | Maintains code formatting and consistency |
+| **Schema** | 22 | Enforces database schema best practices |
+| **Style** | 33 | Maintains code formatting and consistency |
 | **Debug** | 1 | Controls debug and output statements |
 
 ## Rules by Importance Tier
@@ -160,7 +160,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**60 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**61 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
 #### Correctness (18 rules)
 
@@ -236,11 +236,12 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [unresolved-table-reference](schema/unresolved-table-reference.md) | Detects references to tables or views that do not exist in the schema snapshot. | Warning | No |
 | [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md) | Detects UPDATE...FROM...JOIN where the join may produce multiple rows per target row, causing non-deterministic updates. | Warning | No |
 
-#### Style (6 rules)
+#### Style (7 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
 | [avoid-order-by-ordinal](style/avoid-order-by-ordinal.md) | Forbids ORDER BY with ordinal positions (e.g., ORDER BY 1, 2) which break silently when columns are reordered. | Information | No |
+| [prefer-eomonth-over-date-arithmetic](style/prefer-eomonth-over-date-arithmetic.md) | Recommends EOMONTH over common DATEADD-based month-end calculations. | Information | No |
 | [prefer-unicode-string-literals](style/prefer-unicode-string-literals.md) | Encourages Unicode string literals (N'...') to avoid encoding issues, using conservative safe-mode autofixes. | Information | **Yes** |
 | [require-qualified-columns-everywhere](style/require-qualified-columns-everywhere.md) | Requires column qualification in WHERE / JOIN / ORDER BY when multiple tables are referenced; stricter than qualified-select-columns. | Warning | No |
 | [require-schema-qualify-exec](style/require-schema-qualify-exec.md) | Requires schema qualification on EXEC procedure calls (e.g., EXEC dbo.ProcName instead of EXEC ProcName). | Warning | No |
@@ -317,7 +318,13 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Cosmetic (strict)
 
-**23 rules** — Style consistency, formatting, and naming conventions for maximum code uniformity.
+**24 rules** — Style consistency, formatting, and naming conventions for maximum code uniformity.
+
+#### Schema (1 rules)
+
+| Rule ID | Description | Severity | Fixable |
+|---------|-------------|----------|---------|
+| [require-named-default-constraint](schema/require-named-default-constraint.md) | Requires DEFAULT constraints on permanent table columns to have explicit names. | Warning | No |
 
 #### Style (22 rules)
 
@@ -354,13 +361,11 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ## Rules by Severity
 
-### Error (28 rules)
+### Error (26 rules)
 
 - [aggregate-in-where-clause](correctness/aggregate-in-where-clause.md)
 - [avoid-legacy-join-syntax](correctness/avoid-legacy-join-syntax.md)
-- [avoid-named-constraint-in-temp-table](correctness/avoid-named-constraint-in-temp-table.md)
 - [avoid-null-comparison](correctness/avoid-null-comparison.md)
-- [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md)
 - [avoid-transaction-without-commit](transactions/avoid-transaction-without-commit.md)
 - [delete-column-not-in-table](schema/delete-column-not-in-table.md)
 - [dml-without-where](safety/dml-without-where.md)
@@ -385,7 +390,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [union-type-mismatch](correctness/union-type-mismatch.md)
 - [update-column-not-in-table](schema/update-column-not-in-table.md)
 
-### Warning (97 rules)
+### Warning (100 rules)
 
 - [avoid-ambiguous-datetime-literal](correctness/avoid-ambiguous-datetime-literal.md)
 - [avoid-atat-identity](correctness/avoid-atat-identity.md)
@@ -403,6 +408,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-implicit-conversion-in-predicate](performance/avoid-implicit-conversion-in-predicate.md)
 - [avoid-max-plus-one-key-generation](correctness/avoid-max-plus-one-key-generation.md)
 - [avoid-merge](safety/avoid-merge.md)
+- [avoid-named-constraint-in-temp-table](correctness/avoid-named-constraint-in-temp-table.md)
 - [avoid-nolock](correctness/avoid-nolock.md)
 - [avoid-non-sargable-predicate](performance/avoid-non-sargable-predicate.md)
 - [avoid-not-in-with-null](correctness/avoid-not-in-with-null.md)
@@ -415,6 +421,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [avoid-set-rowcount](correctness/avoid-set-rowcount.md)
 - [avoid-top-100-percent-order-by](performance/avoid-top-100-percent-order-by.md)
 - [avoid-top-in-dml](performance/avoid-top-in-dml.md)
+- [avoid-top-without-order-by-in-select-into](correctness/avoid-top-without-order-by-in-select-into.md)
 - [avoid-upper-lower-in-predicate](performance/avoid-upper-lower-in-predicate.md)
 - [circular-object-reference](correctness/circular-object-reference.md)
 - [cross-database-transaction](safety/cross-database-transaction.md)
@@ -450,6 +457,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [require-column-list-for-insert-values](correctness/require-column-list-for-insert-values.md)
 - [require-explicit-join](style/require-explicit-join.md)
 - [require-explicit-join-type](style/require-explicit-join-type.md)
+- [require-named-default-constraint](schema/require-named-default-constraint.md)
 - [require-parameterized-sp-executesql](security/require-parameterized-sp-executesql.md)
 - [require-parentheses-for-mixed-and-or](correctness/require-parentheses-for-mixed-and-or.md)
 - [require-primary-key-or-unique-constraint](schema/require-primary-key-or-unique-constraint.md)
@@ -485,7 +493,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [update-join-cardinality-mismatch](schema/update-join-cardinality-mismatch.md)
 - [variable-used-before-assignment](correctness/variable-used-before-assignment.md)
 
-### Information (44 rules)
+### Information (45 rules)
 
 - [avoid-full-text-search](performance/avoid-full-text-search.md)
 - [avoid-information-schema](performance/avoid-information-schema.md)
@@ -509,6 +517,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [prefer-concat-over-plus](style/prefer-concat-over-plus.md)
 - [prefer-concat-with-nullable](style/prefer-concat-with-nullable.md)
 - [prefer-concat-ws](style/prefer-concat-ws.md)
+- [prefer-eomonth-over-date-arithmetic](style/prefer-eomonth-over-date-arithmetic.md)
 - [prefer-exists-over-in-subquery](performance/prefer-exists-over-in-subquery.md)
 - [prefer-json-functions](style/prefer-json-functions.md)
 - [prefer-string-agg-over-stuff](style/prefer-string-agg-over-stuff.md)

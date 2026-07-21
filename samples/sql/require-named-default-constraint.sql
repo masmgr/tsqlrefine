@@ -1,0 +1,5 @@
+CREATE TABLE dbo.T_SAMPLE_DEFAULT
+(
+    ID int NOT NULL,
+    IS_VALID tinyint NOT NULL DEFAULT ((1))
+);

@@ -132,6 +132,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
 
         // === Schema ===
         new NamedConstraintRule(),
+        new RequireNamedDefaultConstraintRule(),
         new RequirePrimaryKeyOrUniqueConstraintRule(),
         new AvoidHeapTableRule(),
         new RequireMsDescriptionForTableDefinitionFileRule(),
@@ -192,6 +193,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new PreferConcatWsRule(),
         new PreferStringAggOverStuffRule(),
         new PreferJsonFunctionsRule(),
+        new PreferEomonthOverDateArithmeticRule(),
         new UpperLowerRule(),
         new UtcDatetimeRule(),
 

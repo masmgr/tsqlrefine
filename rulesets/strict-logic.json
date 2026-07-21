@@ -35,6 +35,7 @@
     { "id": "semantic-set-variable" },
     { "id": "semantic-unicode-string" },
     { "id": "prefer-unicode-string-literals" },
+    { "id": "prefer-eomonth-over-date-arithmetic" },
     { "id": "avoid-atat-identity" },
     { "id": "avoid-ambiguous-datetime-literal" },
     { "id": "order-by-in-subquery" },

@@ -220,9 +220,9 @@ tsqlrefine includes built-in preset rulesets:
 
 | Preset | Rules | Description |
 |--------|-------|-------------|
-| `recommended` | 112 | Balanced production use with semantic analysis (default) |
-| `strict` | 169 | Maximum enforcement including all style/cosmetic rules |
-| `strict-logic` | 146 | Comprehensive correctness and semantic analysis without cosmetic style rules |
+| `recommended` | 113 | Balanced production use with semantic analysis (default) |
+| `strict` | 171 | Maximum enforcement including all style/cosmetic rules |
+| `strict-logic` | 147 | Comprehensive correctness and semantic analysis without cosmetic style rules |
 | `pragmatic` | 52 | Production-ready minimum focusing on safety and critical issues |
 | `security-only` | 17 | Security vulnerabilities and critical safety only |
 

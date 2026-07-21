@@ -34,7 +34,7 @@ This creates `tsqlrefine.json` with sensible defaults:
 }
 ```
 
-The `recommended` preset enables 112 rules (out of 169 total). See [Preset Rulesets](#preset-rulesets) for other options.
+The `recommended` preset enables 113 rules (out of 171 total). See [Preset Rulesets](#preset-rulesets) for other options.
 
 For CI pipelines, use JSON output and exit codes:
 
@@ -83,7 +83,7 @@ T-SQL Refine catches problems **before execution** using static analysis on the 
 
 ### Lint - Static Analysis
 
-Detects issues in T-SQL code. Includes 169 built-in rules covering security, correctness, performance, and coding conventions.
+Detects issues in T-SQL code. Includes 171 built-in rules covering security, correctness, performance, and coding conventions.
 
 Each rule is classified by severity:
 
@@ -275,9 +275,9 @@ Creates the following files:
 |--------|-------|----------|
 | `security-only` | 17 | Security vulnerabilities and critical safety |
 | `pragmatic` | 52 | Production-ready minimum for legacy codebases |
-| `recommended` | 112 | Balanced for production (default) |
-| `strict-logic` | 146 | Comprehensive correctness without cosmetic rules |
-| `strict` | 169 | Maximum enforcement including style |
+| `recommended` | 113 | Balanced for production (default) |
+| `strict-logic` | 147 | Comprehensive correctness without cosmetic rules |
+| `strict` | 171 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
