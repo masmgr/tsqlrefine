@@ -66,6 +66,21 @@ public sealed class CliOptionValidationTests
     }
 
     [Fact]
+    public async Task Lint_InvalidLocale_ReturnsConfigError()
+    {
+        var stdin = new StringReader("SELECT 1;");
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+
+        var code = await CliApp.RunAsync(
+            ["lint", "--stdin", "--locale", "not_locale"],
+            stdin, stdout, stderr);
+
+        Assert.Equal(ExitCodes.ConfigError, code);
+        Assert.Contains("Invalid locale", stderr.ToString());
+    }
+
+    [Fact]
     public async Task Lint_InvalidOutput_ReturnsConfigError()
     {
         var stdin = new StringReader("SELECT 1;");

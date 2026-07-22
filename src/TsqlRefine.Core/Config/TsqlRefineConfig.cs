@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 using System.Text.Json;
 
 namespace TsqlRefine.Core.Config;
@@ -105,6 +106,7 @@ public sealed record SchemaConfig(
 /// <param name="Rules">Per-rule severity overrides and typed options.</param>
 /// <param name="Schema">Schema-aware analysis settings.</param>
 /// <param name="Baseline">Path to a baseline JSON file. Relative paths are resolved from the config file directory.</param>
+/// <param name="Locale">Optional diagnostic message locale, such as "ja-JP".</param>
 public sealed record TsqlRefineConfig(
     int CompatLevel = 150,
     string? Ruleset = null,
@@ -113,7 +115,8 @@ public sealed record TsqlRefineConfig(
     FormattingConfig? Formatting = null,
     IReadOnlyDictionary<string, RuleConfig>? Rules = null,
     SchemaConfig? Schema = null,
-    string? Baseline = null
+    string? Baseline = null,
+    string? Locale = null
 )
 {
     /// <summary>
@@ -241,6 +244,18 @@ public sealed record TsqlRefineConfig(
         if (Baseline is not null && string.IsNullOrWhiteSpace(Baseline))
         {
             return "Invalid baseline: must not be empty.";
+        }
+
+        if (Locale is not null)
+        {
+            try
+            {
+                _ = CultureInfo.GetCultureInfo(Locale);
+            }
+            catch (CultureNotFoundException)
+            {
+                return $"Invalid locale: {Locale}.";
+            }
         }
 
         return null;

@@ -30,9 +30,37 @@ public abstract class DiagnosticVisitorBase : TSqlFragmentVisitor
     /// </summary>
     /// <param name="fragment">The TSqlFragment to get the range from.</param>
     /// <param name="message">The diagnostic message.</param>
+    /// <param name="localization">The resource key and named arguments for localization.</param>
     /// <param name="severity">Optional severity override. If null, the rule's default severity is used.</param>
     /// <param name="fixable">Optional fixability override for this diagnostic. If null, the metadata value is used.</param>
     /// <exception cref="InvalidOperationException">Thrown when <see cref="RuleMetadata"/> has not been assigned.</exception>
+    protected void AddDiagnostic(
+        TSqlFragment fragment,
+        string message,
+        DiagnosticMessage localization,
+        DiagnosticSeverity? severity = null,
+        bool? fixable = null)
+    {
+        ArgumentNullException.ThrowIfNull(fragment);
+        ArgumentNullException.ThrowIfNull(localization);
+
+        var metadata = RuleMetadata ?? throw new InvalidOperationException(
+            $"{nameof(RuleMetadata)} must be assigned before the metadata-based AddDiagnostic overloads can be used.");
+        var diagnostic = new Diagnostic(
+            Range: ScriptDomHelpers.GetRange(fragment),
+            Message: message,
+            Severity: severity,
+            Code: metadata.RuleId,
+            Data: new DiagnosticData(metadata.RuleId, metadata.Category, fixable ?? metadata.Fixable))
+        {
+            Localization = localization
+        };
+        _diagnostics.Add(diagnostic);
+    }
+
+    /// <summary>
+    /// Creates and adds a localizable diagnostic using rule metadata.
+    /// </summary>
     protected void AddDiagnostic(
         TSqlFragment fragment,
         string message,

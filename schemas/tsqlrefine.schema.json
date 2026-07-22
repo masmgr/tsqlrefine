@@ -12,6 +12,11 @@
       "default": 150,
       "examples": [150, 160]
     },
+    "locale": {
+      "type": "string",
+      "description": "Diagnostic message locale, for example ja-JP. CLI --locale overrides this value.",
+      "examples": ["en-US", "ja-JP"]
+    },
     "ruleset": {
       "type": "string",
       "description": "Custom ruleset name or file path. A short name (e.g. 'my-team') is resolved from .tsqlrefine/rulesets/ directories (CWD then HOME). A file path (containing '/' or '\\' or ending in '.json') is resolved relative to the working directory or as an absolute path. For built-in presets, use the 'preset' property instead.",

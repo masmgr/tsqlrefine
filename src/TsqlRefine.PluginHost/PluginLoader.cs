@@ -61,12 +61,14 @@ public sealed class LoadedPlugin : IDisposable
         bool enabled,
         IReadOnlyList<IRuleProvider> providers,
         PluginLoadDiagnostic diagnostic,
-        AssemblyLoadContext? loadContext = null)
+        AssemblyLoadContext? loadContext = null,
+        IReadOnlyList<IDiagnosticLocalizationProvider>? localizationProviders = null)
     {
         Path = path;
         Enabled = enabled;
         Providers = providers;
         Diagnostic = diagnostic;
+        LocalizationProviders = localizationProviders ?? Array.Empty<IDiagnosticLocalizationProvider>();
         _loadContext = loadContext;
     }
 
@@ -74,6 +76,7 @@ public sealed class LoadedPlugin : IDisposable
     public bool Enabled { get; }
     public IReadOnlyList<IRuleProvider> Providers { get; }
     public PluginLoadDiagnostic Diagnostic { get; }
+    public IReadOnlyList<IDiagnosticLocalizationProvider> LocalizationProviders { get; }
 
     // Legacy error property for backwards compatibility
     public string? Error => Diagnostic.Status == PluginLoadStatus.Success ? null : Diagnostic.Message;
@@ -152,6 +155,10 @@ public sealed record PluginLoadSummary(
 /// <summary>
 /// Loads plugin assemblies and discovers rule providers within them.
 /// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage(
+    "Maintainability",
+    "CA1506",
+    Justification = "Plugin discovery intentionally supports both rule and localization providers.")]
 public sealed class PluginLoader
 {
     /// <summary>
@@ -348,7 +355,7 @@ public sealed class PluginLoader
                 loadContext = new PluginLoadContext(fullPath);
                 var assembly = loadContext.LoadFromAssemblyPath(fullPath);
 
-                var (compatibleProviders, incompatibleProviders) = DiscoverProviders(assembly);
+                var (compatibleProviders, incompatibleProviders, localizationProviders) = DiscoverProviders(assembly);
 
                 // Check for version mismatches
                 if (compatibleProviders.Count == 0 && incompatibleProviders.Count > 0)
@@ -367,7 +374,7 @@ public sealed class PluginLoader
                     continue;
                 }
 
-                if (compatibleProviders.Count == 0)
+                if (compatibleProviders.Count == 0 && localizationProviders.Count == 0)
                 {
                     results.Add(new LoadedPlugin(
                         plugin.Path,
@@ -375,7 +382,7 @@ public sealed class PluginLoader
                         Array.Empty<IRuleProvider>(),
                         new PluginLoadDiagnostic(
                             PluginLoadStatus.NoProviders,
-                            "No IRuleProvider implementations found in plugin assembly."),
+                            "No IRuleProvider or IDiagnosticLocalizationProvider implementations found in plugin assembly."),
                         loadContext));
                     continue;
                 }
@@ -386,8 +393,9 @@ public sealed class PluginLoader
                     compatibleProviders,
                     new PluginLoadDiagnostic(
                         PluginLoadStatus.Success,
-                        $"Successfully loaded {compatibleProviders.Count} provider(s)."),
-                    loadContext));
+                        $"Successfully loaded {compatibleProviders.Count} rule provider(s) and {localizationProviders.Count} localization provider(s)."),
+                    loadContext,
+                    localizationProviders));
             }
             catch (DllNotFoundException dllEx)
             {
@@ -457,18 +465,22 @@ public sealed class PluginLoader
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;
 
-    private static (IReadOnlyList<IRuleProvider> Compatible, IReadOnlyList<IRuleProvider> Incompatible) DiscoverProviders(Assembly assembly)
+    private static (
+        IReadOnlyList<IRuleProvider> Compatible,
+        IReadOnlyList<IRuleProvider> Incompatible,
+        IReadOnlyList<IDiagnosticLocalizationProvider> Localization) DiscoverProviders(Assembly assembly)
     {
         // Check assembly-level PluginApiVersion attribute first (no instantiation needed).
         // This prevents constructor side effects from running for incompatible plugins.
         var assemblyVersionAttr = assembly.GetCustomAttribute<PluginApiVersionAttribute>();
         if (assemblyVersionAttr is not null && assemblyVersionAttr.Version != PluginApi.CurrentVersion)
         {
-            return (Array.Empty<IRuleProvider>(), [new IncompatibleProviderStub(assemblyVersionAttr.Version)]);
+            return (Array.Empty<IRuleProvider>(), [new IncompatibleProviderStub(assemblyVersionAttr.Version)], Array.Empty<IDiagnosticLocalizationProvider>());
         }
 
         var compatible = new List<IRuleProvider>();
         var incompatible = new List<IRuleProvider>();
+        var localization = new List<IDiagnosticLocalizationProvider>();
 
         foreach (var type in SafeGetTypes(assembly))
         {
@@ -477,7 +489,8 @@ public sealed class PluginLoader
                 continue;
             }
 
-            if (!typeof(IRuleProvider).IsAssignableFrom(type))
+            if (!typeof(IRuleProvider).IsAssignableFrom(type) &&
+                !typeof(IDiagnosticLocalizationProvider).IsAssignableFrom(type))
             {
                 continue;
             }
@@ -487,10 +500,10 @@ public sealed class PluginLoader
                 continue;
             }
 
-            IRuleProvider? provider = null;
+            object? instance = null;
             try
             {
-                provider = Activator.CreateInstance(type) as IRuleProvider;
+                instance = Activator.CreateInstance(type);
             }
 #pragma warning disable CA1031 // We ignore broken providers during discovery.
             catch
@@ -499,7 +512,7 @@ public sealed class PluginLoader
             }
 #pragma warning restore CA1031
 
-            if (provider is not null)
+            if (instance is IRuleProvider provider)
             {
                 if (provider.PluginApiVersion == PluginApi.CurrentVersion)
                 {
@@ -510,9 +523,13 @@ public sealed class PluginLoader
                     incompatible.Add(provider);
                 }
             }
+            if (instance is IDiagnosticLocalizationProvider localizationProvider)
+            {
+                localization.Add(localizationProvider);
+            }
         }
 
-        return (compatible, incompatible);
+        return (compatible, incompatible, localization);
     }
 
     private static IEnumerable<Type> SafeGetTypes(Assembly assembly)

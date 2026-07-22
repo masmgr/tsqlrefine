@@ -33,6 +33,7 @@ Use `tsqlrefine init` to create a `.tsqlrefine/` directory with default configur
 `tsqlrefine.json` supports these top-level properties:
 
 - `compatLevel` (integer): SQL Server compatibility level used by the parser (`100`, `110`, `120`, `130`, `140`, `150`, `160`).
+- `locale` (string): Locale used for diagnostic messages, such as `ja-JP`. The CLI `--locale` option takes precedence. The built-in default is English; translations are supplied by plugins.
 - `preset` (string): name of a built-in preset ruleset (e.g. `"recommended"`, `"strict"`).
 - `ruleset` (string): custom ruleset name or file path. A short name (e.g. `"my-team"`) is resolved from `.tsqlrefine/rulesets/` directories. A file path (containing `/`, `\`, or ending in `.json`) is resolved relative to the working directory or as an absolute path. For built-in presets, use `preset` instead.
 - `plugins` (array): plugin DLLs to load (optional). Plugin rules are enabled by default regardless of preset selection. Paths can be relative (resolved from config file directory) or filename-only (searched in config dir, `CWD/.tsqlrefine/plugins/`, and `HOME/.tsqlrefine/plugins/`).
@@ -46,6 +47,7 @@ Example:
 ```json
 {
   "compatLevel": 150,
+  "locale": "ja-JP",
   "preset": "recommended",
   "baseline": "baseline.json",
   "plugins": [

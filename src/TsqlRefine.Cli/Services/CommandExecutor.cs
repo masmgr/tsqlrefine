@@ -315,13 +315,14 @@ public sealed class CommandExecutor
         }
 
         var config = ConfigLoader.LoadConfig(args);
-        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var localizationProviders = new List<IDiagnosticLocalizationProvider>();
+        var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders);
         var result = engine.Run(command, read.Inputs, options);
         if (args.ChangedOnly || args.ChangedLinesFrom is not null)
         {
@@ -448,11 +449,12 @@ public sealed class CommandExecutor
         }
 
         var config = ConfigLoader.LoadConfig(args);
-        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var localizationProviders = new List<IDiagnosticLocalizationProvider>();
+        var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
-        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders);
         var result = new TsqlRefineEngine(rules).Run("report", read.Inputs, options);
         var sources = read.Inputs.ToDictionary(
             input => input.FilePath,
@@ -514,14 +516,15 @@ public sealed class CommandExecutor
         }
 
         var config = ConfigLoader.LoadConfig(args);
-        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var localizationProviders = new List<IDiagnosticLocalizationProvider>();
+        var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog));
+            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -565,14 +568,15 @@ public sealed class CommandExecutor
             return errorCode!.Value;
         }
 
-        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var localizationProviders = new List<IDiagnosticLocalizationProvider>();
+        var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
         var result = new TsqlRefineEngine(rules).Run(
             "lint",
             read.Inputs,
-            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog));
+            CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders));
         var summary = SummarizeDiagnostics(result.Files);
         if (summary.HasParseErrors)
         {
@@ -639,7 +643,8 @@ public sealed class CommandExecutor
         var outputJson = string.Equals(args.Output, "json", StringComparison.OrdinalIgnoreCase);
 
         var config = ConfigLoader.LoadConfig(args);
-        var rules = ConfigLoader.LoadRules(args, config, stderr);
+        var localizationProviders = new List<IDiagnosticLocalizationProvider>();
+        var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
 
         // Validate --rule option (existence check + fixable check)
         ConfigLoader.ValidateRuleIdForFix(args, rules);
@@ -649,7 +654,7 @@ public sealed class CommandExecutor
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
 
         var engine = new TsqlRefineEngine(rules);
-        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog);
+        var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders);
         var result = engine.Fix(read.Inputs, options);
 
         if (outputJson)
@@ -977,16 +982,32 @@ public sealed class CommandExecutor
     private static EngineOptions CreateEngineOptions(
         CliArgs args, TsqlRefineConfig config, IReadOnlyList<IRule> rules, Ruleset? ruleset,
         ISchemaContext? schemaContext = null,
-        IObjectCatalogProvider? objectCatalog = null)
+        IObjectCatalogProvider? objectCatalog = null,
+        IReadOnlyList<IDiagnosticLocalizationProvider>? localizationProviders = null)
     {
         var minimumSeverity = args.MinimumSeverity ?? DiagnosticSeverity.Warning;
+        var locale = args.Locale ?? config.Locale;
+        CultureInfo? culture = null;
+        if (!string.IsNullOrWhiteSpace(locale))
+        {
+            try
+            {
+                culture = CultureInfo.GetCultureInfo(locale);
+            }
+            catch (CultureNotFoundException)
+            {
+                throw new ConfigException($"Invalid locale: {locale}.");
+            }
+        }
         return new EngineOptions(
             CompatLevel: args.CompatLevel ?? config.CompatLevel,
             MinimumSeverity: minimumSeverity,
             Ruleset: ruleset,
             RuleSettingsByRule: ConfigLoader.LoadRuleSettings(config, rules),
             SchemaContext: schemaContext,
-            ObjectCatalog: objectCatalog
+            ObjectCatalog: objectCatalog,
+            Culture: culture,
+            LocalizationProviders: localizationProviders
         );
     }
 

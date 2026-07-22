@@ -1,3 +1,4 @@
+using System.Globalization;
 using TsqlRefine.Core.Config;
 using TsqlRefine.PluginSdk;
 
@@ -13,6 +14,8 @@ namespace TsqlRefine.Core.Engine;
 /// <param name="RuleSettingsByRule">Rule-ID keyed settings. Overrides <paramref name="RuleSettings"/>.</param>
 /// <param name="SchemaContext">Optional unified schema context for schema-aware analysis.</param>
 /// <param name="ObjectCatalog">Optional cross-object catalog.</param>
+/// <param name="Culture">Optional culture used for diagnostic message localization.</param>
+/// <param name="LocalizationProviders">Optional plugin localization providers.</param>
 public sealed record EngineOptions(
     int CompatLevel = 150,
     DiagnosticSeverity MinimumSeverity = DiagnosticSeverity.Hint,
@@ -20,7 +23,9 @@ public sealed record EngineOptions(
     RuleSettings? RuleSettings = null,
     IReadOnlyDictionary<string, RuleSettings>? RuleSettingsByRule = null,
     ISchemaContext? SchemaContext = null,
-    IObjectCatalogProvider? ObjectCatalog = null
+    IObjectCatalogProvider? ObjectCatalog = null,
+    CultureInfo? Culture = null,
+    IReadOnlyList<IDiagnosticLocalizationProvider>? LocalizationProviders = null
 )
 {
     /// <summary>

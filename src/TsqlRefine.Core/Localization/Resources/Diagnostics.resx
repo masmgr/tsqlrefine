@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0</value></resheader>
+  <data name="core.parse-error" xml:space="preserve"><value>{prefix}: {errorMessage}</value></data>
+  <data name="core.tokenization-error" xml:space="preserve"><value>{prefix}: {errorMessage}</value></data>
+  <data name="core.parser-exception" xml:space="preserve"><value>Parser exception: {exceptionType}: {errorMessage}</value></data>
+  <data name="core.rule-exception" xml:space="preserve"><value>Rule '{ruleId}' {suffix}: {exceptionType}: {errorMessage}</value></data>
+  <data name="tsqlrefine.rule.avoid-select-star" xml:space="preserve"><value>Avoid SELECT *; explicitly list required columns.</value></data>
+</root>

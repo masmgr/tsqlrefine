@@ -1,5 +1,7 @@
 using System.Reflection;
+using System.Globalization;
 using TsqlRefine.Core.Config;
+using TsqlRefine.Core.Localization;
 using TsqlRefine.Core.Model;
 using TsqlRefine.PluginSdk;
 
@@ -146,7 +148,10 @@ public sealed class TsqlRefineEngine
         IReadOnlyList<DiagnosticFixGroup> collectedFixGroups =
             fixGroups is null ? Array.Empty<DiagnosticFixGroup>() : fixGroups;
 
-        return new AnalysisPassResult(diagnostics, collectedFixGroups);
+        var localizer = new DiagnosticLocalizer(options.LocalizationProviders);
+        var culture = options.Culture ?? CultureInfo.InvariantCulture;
+        var localizedDiagnostics = diagnostics.Select(diagnostic => localizer.Localize(diagnostic, culture)).ToArray();
+        return new AnalysisPassResult(localizedDiagnostics, collectedFixGroups);
     }
 
     private static IReadOnlyList<DisabledRange> BuildDisabledRanges(string text, IReadOnlyList<Token> tokens)
@@ -241,21 +246,28 @@ public sealed class TsqlRefineEngine
                 Severity: DiagnosticSeverity.Error,
                 Code: ParserExceptionCode,
                 Data: new DiagnosticData(ParserExceptionCode, "Syntax", false)
-            ));
+            )
+            {
+                Localization = new DiagnosticMessage("core.parser-exception", new Dictionary<string, object?>
+                {
+                    ["exceptionType"] = ex.GetType().Name,
+                    ["errorMessage"] = ex.Message
+                })
+            });
         }
 
         foreach (var parseError in ast.ParseErrors)
         {
-            diagnostics.Add(CreateParseErrorDiagnostic("Parse error", parseError));
+            diagnostics.Add(CreateParseErrorDiagnostic("Parse error", parseError, "core.parse-error"));
         }
 
         foreach (var tokenError in ast.TokenizationErrors)
         {
-            diagnostics.Add(CreateParseErrorDiagnostic("Tokenization error", tokenError));
+            diagnostics.Add(CreateParseErrorDiagnostic("Tokenization error", tokenError, "core.tokenization-error"));
         }
     }
 
-    private static Diagnostic CreateParseErrorDiagnostic(string prefix, Microsoft.SqlServer.TransactSql.ScriptDom.ParseError error)
+    private static Diagnostic CreateParseErrorDiagnostic(string prefix, Microsoft.SqlServer.TransactSql.ScriptDom.ParseError error, string key)
     {
         var line = Math.Max(0, error.Line - 1);
         var column = Math.Max(0, error.Column - 1);
@@ -267,7 +279,14 @@ public sealed class TsqlRefineEngine
             Severity: DiagnosticSeverity.Error,
             Code: ParseErrorCode,
             Data: new DiagnosticData(ParseErrorCode, "Syntax", false)
-        );
+        )
+        {
+            Localization = new DiagnosticMessage(key, new Dictionary<string, object?>
+            {
+                ["prefix"] = prefix,
+                ["errorMessage"] = error.Message
+            })
+        };
     }
 
     private static RuleContext CreateContext(SqlInput input, EngineOptions options)
@@ -368,8 +387,16 @@ public sealed class TsqlRefineEngine
             Message: $"Rule '{rule.Metadata.RuleId}' {suffix}: {ex.GetType().Name}: {ex.Message}",
             Severity: DiagnosticSeverity.Error,
             Code: RuleExceptionCode,
-            Data: new DiagnosticData(RuleExceptionCode, "Internal", false)
-        );
+            Data: new DiagnosticData(RuleExceptionCode, "Internal", false))
+        {
+            Localization = new DiagnosticMessage("core.rule-exception", new Dictionary<string, object?>
+            {
+                ["ruleId"] = rule.Metadata.RuleId,
+                ["suffix"] = suffix,
+                ["exceptionType"] = ex.GetType().Name,
+                ["errorMessage"] = ex.Message
+            })
+        };
     }
 
     private sealed record AnalysisPassResult(

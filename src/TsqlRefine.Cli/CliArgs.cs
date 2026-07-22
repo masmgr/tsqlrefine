@@ -9,6 +9,7 @@ namespace TsqlRefine.Cli;
 /// <param name="Command">The command to execute (lint, format, fix, etc.).</param>
 /// <param name="IsExplicitCommand">Whether the command was explicitly provided or inferred.</param>
 /// <param name="ConfigPath">Path to tsqlrefine.json configuration file.</param>
+/// <param name="Locale">Optional diagnostic message locale.</param>
 /// <param name="IgnoreListPath">Path to ignore list file.</param>
 /// <param name="DetectEncoding">Whether to detect file encoding automatically.</param>
 /// <param name="Stdin">Whether to read from standard input.</param>
@@ -64,6 +65,7 @@ public sealed record CliArgs(
     string Command,
     bool IsExplicitCommand,
     string? ConfigPath,
+    string? Locale,
     string? IgnoreListPath,
     bool DetectEncoding,
     bool Stdin,

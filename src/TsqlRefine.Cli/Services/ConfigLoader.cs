@@ -380,7 +380,11 @@ public sealed class ConfigLoader
         }
     }
 
-    public static IReadOnlyList<IRule> LoadRules(CliArgs args, TsqlRefineConfig config, TextWriter? stderr = null)
+    public static IReadOnlyList<IRule> LoadRules(
+        CliArgs args,
+        TsqlRefineConfig config,
+        TextWriter? stderr = null,
+        ICollection<IDiagnosticLocalizationProvider>? localizationProviders = null)
     {
         var rules = new List<IRule>();
         rules.AddRange(new BuiltinRuleProvider().GetRules());
@@ -424,6 +428,13 @@ public sealed class ConfigLoader
 
             foreach (var p in loaded)
             {
+                if (localizationProviders is not null)
+                {
+                    foreach (var provider in p.LocalizationProviders)
+                    {
+                        localizationProviders.Add(provider);
+                    }
+                }
                 TryAppendPluginRules(rules, p, knownRuleIds, stderr, args.Quiet);
             }
         }
@@ -431,7 +442,12 @@ public sealed class ConfigLoader
         {
             foreach (var p in loaded)
             {
-                p.Dispose();
+                // Localization providers retain resources from the plugin ALC for the duration
+                // of this CLI process, so do not unload that ALC before analysis completes.
+                if (localizationProviders is null || p.LocalizationProviders.Count == 0)
+                {
+                    p.Dispose();
+                }
             }
         }
 

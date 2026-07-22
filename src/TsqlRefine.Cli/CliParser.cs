@@ -43,6 +43,13 @@ public static class CliParser
             Recursive = true
         };
 
+        public static readonly Option<string?> Locale = new("--locale")
+        {
+            Description = "Diagnostic message locale (for example: ja-JP or en-US)",
+            Arity = ArgumentArity.ZeroOrOne,
+            Recursive = true
+        };
+
         // Input options
         public static readonly Option<string?> IgnoreList = new("--ignorelist")
         {
@@ -666,6 +673,7 @@ public static class CliParser
 
         // Global options (--help and --version are added automatically by System.CommandLine)
         root.Options.Add(Options.Config);
+        root.Options.Add(Options.Locale);
         root.Options.Add(Options.Utf8);
         root.Options.Add(Options.AllowPlugins);
 
@@ -729,6 +737,7 @@ public static class CliParser
             Command: command,
             IsExplicitCommand: isExplicit,
             ConfigPath: GetOptionValue<string?>(parseResult, "--config"),
+            Locale: GetOptionValue<string?>(parseResult, "--locale"),
             IgnoreListPath: GetOptionValue<string?>(parseResult, "--ignorelist"),
             DetectEncoding: GetOptionValue<bool>(parseResult, "--detect-encoding"),
             Stdin: GetOptionValue<bool>(parseResult, "--stdin"),

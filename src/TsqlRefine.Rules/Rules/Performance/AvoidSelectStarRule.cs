@@ -79,7 +79,10 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
                 return;
             }
 
-            AddDiagnostic(node, "Avoid SELECT *; explicitly list required columns.");
+            AddDiagnostic(
+                node,
+                "Avoid SELECT *; explicitly list required columns.",
+                new DiagnosticMessage("tsqlrefine.rule.avoid-select-star"));
 
             base.ExplicitVisit(node);
         }

@@ -30,9 +30,13 @@ This creates `tsqlrefine.json` with sensible defaults:
 ```json
 {
   "compatLevel": 150,
-  "preset": "recommended"
+  "preset": "recommended",
+  "locale": "ja-JP"
 }
 ```
+
+`locale` selects the diagnostic message language. The built-in default is English;
+custom translations can be supplied by a trusted localization plugin.
 
 The `recommended` preset enables 117 rules (out of 175 total). See [Preset Rulesets](#preset-rulesets) for other options.
 

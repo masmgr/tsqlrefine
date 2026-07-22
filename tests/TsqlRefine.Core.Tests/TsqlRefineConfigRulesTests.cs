@@ -79,6 +79,23 @@ public sealed class TsqlRefineConfigRulesTests
     }
 
     [Fact]
+    public void Validate_WithInvalidLocale_ReturnsError()
+    {
+        var error = new TsqlRefineConfig(Locale: "not_locale").Validate();
+
+        Assert.Contains("Invalid locale", error);
+    }
+
+    [Fact]
+    public void Deserialize_WithLocale_PopulatesLocale()
+    {
+        var config = JsonSerializer.Deserialize<TsqlRefineConfig>("{ \"locale\": \"ja-JP\" }", JsonDefaults.Options)!;
+
+        Assert.Equal("ja-JP", config.Locale);
+        Assert.Null(config.Validate());
+    }
+
+    [Fact]
     public void Deserialize_WithRuleOptions_PopulatesTypedValues()
     {
         var json = """

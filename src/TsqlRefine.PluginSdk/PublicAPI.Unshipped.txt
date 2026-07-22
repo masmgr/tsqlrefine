@@ -1,5 +1,20 @@
 #nullable enable
 const TsqlRefine.PluginSdk.PluginApi.CurrentVersion = 5 -> int
+TsqlRefine.PluginSdk.DiagnosticMessage
+TsqlRefine.PluginSdk.DiagnosticMessage.DiagnosticMessage(string! Key, System.Collections.Generic.IReadOnlyDictionary<string!, object?>? Arguments = null) -> void
+TsqlRefine.PluginSdk.DiagnosticMessage.Arguments.get -> System.Collections.Generic.IReadOnlyDictionary<string!, object?>?
+TsqlRefine.PluginSdk.DiagnosticMessage.Arguments.init -> void
+TsqlRefine.PluginSdk.DiagnosticMessage.Key.get -> string!
+TsqlRefine.PluginSdk.DiagnosticMessage.Key.init -> void
+TsqlRefine.PluginSdk.Diagnostic.Localization.get -> TsqlRefine.PluginSdk.DiagnosticMessage?
+TsqlRefine.PluginSdk.Diagnostic.Localization.init -> void
+TsqlRefine.PluginSdk.IDiagnosticLocalizationProvider
+TsqlRefine.PluginSdk.IDiagnosticLocalizationProvider.GetString(string! key, System.Globalization.CultureInfo! culture) -> string?
+TsqlRefine.PluginSdk.IDiagnosticLocalizationProvider.Name.get -> string!
+TsqlRefine.PluginSdk.ResourceManagerDiagnosticLocalizationProvider
+TsqlRefine.PluginSdk.ResourceManagerDiagnosticLocalizationProvider.Name.get -> string!
+TsqlRefine.PluginSdk.ResourceManagerDiagnosticLocalizationProvider.ResourceManagerDiagnosticLocalizationProvider(string! name, string! resourceBaseName, System.Reflection.Assembly! assembly) -> void
+TsqlRefine.PluginSdk.ResourceManagerDiagnosticLocalizationProvider.GetString(string! key, System.Globalization.CultureInfo! culture) -> string?
 TsqlRefine.PluginSdk.IRuleOptions
 TsqlRefine.PluginSdk.IRuleOptions.TryGetBoolean(string! name, out bool value) -> bool
 TsqlRefine.PluginSdk.IRuleOptions.TryGetInt32(string! name, out int value) -> bool

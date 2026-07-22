@@ -1,4 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace TsqlRefine.PluginSdk;
+
+/// <summary>Identifies a localizable diagnostic message and its named format arguments.</summary>
+public sealed record DiagnosticMessage(
+    string Key,
+    IReadOnlyDictionary<string, object?>? Arguments = null);
 
 /// <summary>
 /// Represents a position in a source file using 0-based line and character indices.
@@ -75,5 +82,19 @@ public sealed record Diagnostic(
     string? Code = null,
     string Source = "tsqlrefine",
     IReadOnlyList<DiagnosticTag>? Tags = null,
-    DiagnosticData? Data = null
-);
+    DiagnosticData? Data = null)
+{
+    /// <summary>Optional resource key and named arguments used to localize <see cref="Message"/>.</summary>
+    [JsonIgnore]
+    public DiagnosticMessage? Localization { get; init; }
+}
+
+/// <summary>Provides localized diagnostic strings for a plugin.</summary>
+public interface IDiagnosticLocalizationProvider
+{
+    /// <summary>Stable provider name used for diagnostics and provider ordering.</summary>
+    string Name { get; }
+
+    /// <summary>Returns a localized string, or null when the provider has no value for the key.</summary>
+    string? GetString(string key, System.Globalization.CultureInfo culture);
+}

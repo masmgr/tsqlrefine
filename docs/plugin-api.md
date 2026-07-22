@@ -227,7 +227,34 @@ Plugin rules are **enabled by default** regardless of which preset or ruleset is
 
 ---
 
-## 6. Compatibility
+## 6. Diagnostic localization
+
+Plugins may provide translations without changing the built-in rules. Implement
+`IDiagnosticLocalizationProvider` and use the supplied resource-manager adapter:
+
+```csharp
+public sealed class JapaneseResources : ResourceManagerDiagnosticLocalizationProvider
+{
+    public JapaneseResources()
+        : base("Japanese diagnostics", "MyPlugin.Resources.Diagnostics", typeof(JapaneseResources).Assembly) { }
+}
+```
+
+The plugin assembly should contain `Resources/Diagnostics.ja-JP.resx` (or its
+satellite assembly). A rule opts into localization by setting
+`Diagnostic.Localization` to a stable key and named arguments:
+
+```csharp
+new DiagnosticMessage(
+    "my-plugin.rule.invalid-table",
+    new Dictionary<string, object?> { ["tableName"] = tableName })
+```
+
+Resource values use matching named placeholders such as
+`テーブル {tableName} が見つかりません。`. Missing keys, invalid placeholders,
+and provider failures fall back to the original message.
+
+## 7. Compatibility
 
 - Core has a `pluginApiVersion` (currently `5`, see `PluginApi.CurrentVersion`)
 - Plugin assemblies declare their built version via `[assembly: PluginApiVersion(5)]` (or the
