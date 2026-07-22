@@ -100,6 +100,11 @@ public static class BaselineStore
     }
 
     public static string ResolveRootForCreate(string? explicitRoot, IReadOnlyList<SqlInput> inputs)
+        => ResolveRootForCreate(
+            explicitRoot,
+            inputs.Where(input => !IsStdin(input.FilePath)).Select(input => input.FilePath).ToArray());
+
+    public static string ResolveRootForCreate(string? explicitRoot, IReadOnlyList<string> inputPaths)
     {
         if (!string.IsNullOrWhiteSpace(explicitRoot))
         {
@@ -111,9 +116,8 @@ public static class BaselineStore
             return resolved;
         }
 
-        var filePaths = inputs
-            .Where(input => !IsStdin(input.FilePath))
-            .Select(input => Path.GetFullPath(input.FilePath))
+        var filePaths = inputPaths
+            .Select(Path.GetFullPath)
             .ToArray();
         var gitRoot = FindGitRoot(Directory.GetCurrentDirectory());
         if (gitRoot is not null && filePaths.All(path => IsUnderDirectory(gitRoot, path)))

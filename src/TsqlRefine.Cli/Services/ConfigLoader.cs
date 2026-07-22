@@ -158,7 +158,7 @@ public sealed class ConfigLoader
     public static Ruleset LoadRuleset(CliArgs args, TsqlRefineConfig config, IReadOnlyList<IRule> allRules)
     {
         // When --rule is specified, use a single-rule whitelist.
-        // Rule ID validation is performed by ValidateRuleIdForFix.
+        // Rule ID validation is performed by the command executor.
         if (!string.IsNullOrWhiteSpace(args.RuleId))
         {
             return Ruleset.CreateSingleRuleWhitelist(args.RuleId);
@@ -513,10 +513,9 @@ public sealed class ConfigLoader
     }
 
     /// <summary>
-    /// Validates --rule for fix command.
-    /// Throws ConfigException when the rule does not exist or is not fixable.
+    /// Validates that --rule refers to a loaded rule.
     /// </summary>
-    public static void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
+    public static void ValidateRuleId(CliArgs args, IReadOnlyList<IRule> rules)
     {
         if (string.IsNullOrWhiteSpace(args.RuleId))
         {
@@ -531,7 +530,23 @@ public sealed class ConfigLoader
         {
             throw new ConfigException($"Unknown rule ID: {ruleId}");
         }
+    }
 
+    /// <summary>
+    /// Validates --rule for fix command.
+    /// Throws ConfigException when the rule does not exist or is not fixable.
+    /// </summary>
+    public static void ValidateRuleIdForFix(CliArgs args, IReadOnlyList<IRule> rules)
+    {
+        ValidateRuleId(args, rules);
+        if (string.IsNullOrWhiteSpace(args.RuleId))
+        {
+            return;
+        }
+
+        var ruleId = args.RuleId;
+        var rule = rules.First(r =>
+            string.Equals(r.Metadata.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
         if (!rule.Metadata.Fixable)
         {
             throw new ConfigException($"Rule '{ruleId}' does not support auto-fix.");

@@ -428,6 +428,7 @@ public static class CliParser
             .WithOutputOption()
             .WithCompatLevelOption()
             .WithRuleOptions()
+            .WithRuleIdOption()
             .WithSchemaOption()
             .WithPathsArgument();
         command.Options.Add(Options.Verbose);

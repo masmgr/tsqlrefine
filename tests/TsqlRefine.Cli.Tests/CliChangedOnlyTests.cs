@@ -64,6 +64,36 @@ public sealed class CliChangedOnlyTests
     }
 
     [Fact]
+    public async Task ChangedLinesFile_UnchangedFile_IsNotReadOrAnalyzed()
+    {
+        var context = await TestContext.CreateAsync("SELECT * FROM dbo.ChangedTable;");
+        try
+        {
+            var unchangedPath = Path.Combine(context.Directory, "unchanged.sql");
+            await File.WriteAllTextAsync(unchangedPath, "SELECT (");
+            await WriteChangedLinesAsync(context, 1, new ChangedLineRange(1, 1));
+
+            var result = await RunAsync([
+                "lint", "--changed-lines-from", context.ChangedLinesPath,
+                "--output", "json", "--quiet", context.Directory
+            ]);
+
+            Assert.Equal(ExitCodes.Violations, result.Code);
+            using var document = JsonDocument.Parse(result.Stdout);
+            var files = document.RootElement.GetProperty("files");
+            var file = Assert.Single(files.EnumerateArray());
+            Assert.Equal(context.SqlPath, file.GetProperty("filePath").GetString());
+            Assert.DoesNotContain(
+                file.GetProperty("diagnostics").EnumerateArray(),
+                diagnostic => diagnostic.GetProperty("code").GetString() == "parse-error");
+        }
+        finally
+        {
+            await context.DisposeAsync();
+        }
+    }
+
+    [Fact]
     public async Task ChangedOnly_GitWorkingTree_UsesModifiedLines()
     {
         var context = await TestContext.CreateAsync(

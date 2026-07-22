@@ -308,7 +308,7 @@ public sealed class CommandExecutor
     {
         var stopwatch = Stopwatch.StartNew();
 
-        var (read, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+        var (read, changedLines, inputScopePaths, errorCode) = await LoadLintInputsAsync(args, stdin, stderr);
         if (read is null)
         {
             return errorCode!.Value;
@@ -317,6 +317,7 @@ public sealed class CommandExecutor
         var config = ConfigLoader.LoadConfig(args);
         var localizationProviders = new List<IDiagnosticLocalizationProvider>();
         var rules = ConfigLoader.LoadRules(args, config, stderr, localizationProviders);
+        ConfigLoader.ValidateRuleId(args, rules);
         var ruleset = ConfigLoader.LoadRuleset(args, config, rules);
         var schemaContext = ConfigLoader.LoadSchemaContext(args, config, stderr);
         var objectCatalog = ConfigLoader.LoadObjectCatalog(args, config, stderr);
@@ -324,9 +325,8 @@ public sealed class CommandExecutor
         var engine = new TsqlRefineEngine(rules);
         var options = CreateEngineOptions(args, config, rules, ruleset, schemaContext, objectCatalog, localizationProviders);
         var result = engine.Run(command, read.Inputs, options);
-        if (args.ChangedOnly || args.ChangedLinesFrom is not null)
+        if (changedLines is not null)
         {
-            var changedLines = await GitDiffReader.ReadAsync(args, read.Inputs);
             result = GitDiffReader.Filter(result, changedLines);
         }
         var sourceByPath = read.Inputs.ToDictionary(
@@ -345,7 +345,7 @@ public sealed class CommandExecutor
         }
         else
         {
-            root = BaselineStore.ResolveRootForCreate(args.BaselineRoot, read.Inputs);
+            root = BaselineStore.ResolveRootForCreate(args.BaselineRoot, inputScopePaths);
         }
 
         var classified = BaselineStore.Classify(result.Files, sourceByPath, root, baseline);
@@ -1026,6 +1026,46 @@ public sealed class CommandExecutor
         }
 
         return (read, null);
+    }
+
+    private async Task<(
+        InputReader.ReadInputsResult? Read,
+        ChangedLineMap? ChangedLines,
+        IReadOnlyList<string> InputScopePaths,
+        int? ErrorCode)>
+        LoadLintInputsAsync(CliArgs args, TextReader stdin, TextWriter stderr)
+    {
+        if (!args.ChangedOnly && args.ChangedLinesFrom is null)
+        {
+            var (loadedInputs, errorCode) = await LoadInputsAsync(args, stdin, stderr);
+            var inputPaths = loadedInputs?.Inputs
+                .Where(input => !string.Equals(input.FilePath, StdinFilePath, StringComparison.Ordinal))
+                .Select(input => input.FilePath)
+                .ToArray() ?? [];
+            return (loadedInputs, null, inputPaths, errorCode);
+        }
+
+        if (args.Stdin || args.Paths.Contains("-", StringComparer.Ordinal))
+        {
+            throw new ConfigException("Changed-only lint does not support stdin; use path inputs.");
+        }
+
+        var ignorePatterns = ConfigLoader.LoadIgnorePatterns(args.IgnoreListPath);
+        var readablePaths = _inputReader.DiscoverPaths(
+            args,
+            args.Paths,
+            ignorePatterns,
+            stderr);
+        if (readablePaths.Count == 0)
+        {
+            var errorCode = await OutputWriter.WriteErrorAsync(stderr, "No input.");
+            return (null, null, [], errorCode);
+        }
+
+        var changedLines = await GitDiffReader.ReadAsync(args, readablePaths);
+        var changedPaths = readablePaths.Where(changedLines.ContainsFile).ToArray();
+        var read = await InputReader.ReadPathsAsync(args, changedPaths);
+        return (read, changedLines, readablePaths, null);
     }
 
     private static LintDiagnosticsSummary SummarizeDiagnostics(IReadOnlyList<FileResult> files)

@@ -1,6 +1,4 @@
 using System.Text;
-using Microsoft.Extensions.FileSystemGlobbing;
-using Microsoft.Extensions.FileSystemGlobbing.Abstractions;
 using TsqlRefine.Core.Engine;
 
 namespace TsqlRefine.Cli.Services;
@@ -10,8 +8,7 @@ namespace TsqlRefine.Cli.Services;
 /// </summary>
 public sealed class InputReader
 {
-    private Matcher? _cachedIgnoreMatcher;
-    private IReadOnlyList<string>? _cachedIgnorePatterns;
+    private readonly InputPathDiscovery _pathDiscovery = new();
 
     public sealed record ReadInputsResult(
         List<SqlInput> Inputs,
@@ -56,31 +53,37 @@ public sealed class InputReader
             }
         }
 
-        var ignoreList = ignorePatterns as IReadOnlyList<string> ?? ignorePatterns.ToArray();
-        var ignoreBaseDirectory = ResolveIgnoreBaseDirectory(args.IgnoreListPath);
-        var readablePaths = new List<string>();
-        foreach (var path in ExpandPaths(paths, ignoreList, ignoreBaseDirectory))
+        var readablePaths = DiscoverPaths(args, paths, ignorePatterns, stderr);
+        var files = await ReadPathsAsync(args, readablePaths);
+        inputs.AddRange(files.Inputs);
+        foreach (var pair in files.WriteEncodings)
         {
-            if (!File.Exists(path))
-            {
-                await stderr.WriteLineAsync($"File not found: {path}");
-                continue;
-            }
-
-            // Check file size before reading
-            if (args.MaxFileSize > 0)
-            {
-                var fileInfo = new FileInfo(path);
-                if (fileInfo.Length > args.MaxFileSize)
-                {
-                    await stderr.WriteLineAsync(
-                        $"Skipped {path}: file size ({fileInfo.Length / (1024 * 1024)} MB) exceeds maximum ({args.MaxFileSize / (1024 * 1024)} MB). Use --max-file-size to increase.");
-                    continue;
-                }
-            }
-
-            readablePaths.Add(path);
+            encodings[pair.Key] = pair.Value;
         }
+
+        return new ReadInputsResult(inputs, encodings);
+    }
+
+    public List<string> DiscoverPaths(
+        CliArgs args,
+        IEnumerable<string> paths,
+        IEnumerable<string> ignorePatterns,
+        TextWriter stderr)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        ArgumentNullException.ThrowIfNull(paths);
+        ArgumentNullException.ThrowIfNull(ignorePatterns);
+        ArgumentNullException.ThrowIfNull(stderr);
+
+        return _pathDiscovery.Discover(args, paths, ignorePatterns, stderr);
+    }
+
+    public static async Task<ReadInputsResult> ReadPathsAsync(
+        CliArgs args,
+        IReadOnlyList<string> readablePaths)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        ArgumentNullException.ThrowIfNull(readablePaths);
 
         var slots = new (SqlInput Input, Encoding WriteEncoding)?[readablePaths.Count];
         await Parallel.ForEachAsync(
@@ -89,14 +92,21 @@ public sealed class InputReader
             {
                 var path = readablePaths[index];
                 var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
-                var decoded = CharsetDetection.Decode(bytes);
-                var utf8Offset = HasUtf8Bom(bytes) ? 3 : 0;
-                var sql = args.DetectEncoding || ShouldUseDetectedEncodingForWriteBack(args.Command)
-                    ? decoded.Text
-                    : Encoding.UTF8.GetString(bytes, utf8Offset, bytes.Length - utf8Offset);
-                slots[index] = (new SqlInput(path, sql), decoded.WriteEncoding);
+                if (args.DetectEncoding || ShouldUseDetectedEncodingForWriteBack(args.Command))
+                {
+                    var decoded = CharsetDetection.Decode(bytes);
+                    slots[index] = (new SqlInput(path, decoded.Text), decoded.WriteEncoding);
+                }
+                else
+                {
+                    var utf8Offset = HasUtf8Bom(bytes) ? 3 : 0;
+                    var sql = Encoding.UTF8.GetString(bytes, utf8Offset, bytes.Length - utf8Offset);
+                    slots[index] = (new SqlInput(path, sql), Encoding.UTF8);
+                }
             });
 
+        var inputs = new List<SqlInput>(readablePaths.Count);
+        var encodings = new Dictionary<string, Encoding>(readablePaths.Count, StringComparer.OrdinalIgnoreCase);
         foreach (var slot in slots)
         {
             if (slot is not { } value)
@@ -114,82 +124,6 @@ public sealed class InputReader
     private static bool ShouldUseDetectedEncodingForWriteBack(string command)
     {
         return command is "format" or "fix";
-    }
-
-    private IEnumerable<string> ExpandPaths(
-        IEnumerable<string> paths,
-        IReadOnlyList<string> ignorePatterns,
-        string ignoreBaseDirectory)
-    {
-        foreach (var path in paths)
-        {
-            if (Directory.Exists(path))
-            {
-                var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
-                matcher.AddInclude("**/*.sql");
-
-                for (var i = 0; i < ignorePatterns.Count; i++)
-                {
-                    matcher.AddExclude(ignorePatterns[i]);
-                }
-
-                var result = matcher.Execute(
-                    new DirectoryInfoWrapper(new DirectoryInfo(path)));
-
-                foreach (var file in result.Files)
-                    yield return Path.Combine(path, file.Path);
-
-                continue;
-            }
-
-            // For individual files, check if they match ignore patterns
-            if (!ShouldIgnoreFile(path, ignorePatterns, ignoreBaseDirectory))
-                yield return path;
-        }
-    }
-
-    private bool ShouldIgnoreFile(
-        string filePath,
-        IReadOnlyList<string> ignorePatterns,
-        string ignoreBaseDirectory)
-    {
-        if (ignorePatterns.Count == 0)
-            return false;
-
-        var matcher = GetIgnoreMatcher(ignorePatterns);
-        var fullPath = Path.GetFullPath(filePath);
-        var candidatePaths = new[]
-        {
-            Path.GetFileName(fullPath),
-            GetRelativePathIfUnderBase(Directory.GetCurrentDirectory(), fullPath),
-            GetRelativePathIfUnderBase(ignoreBaseDirectory, fullPath)
-        };
-
-        return candidatePaths
-            .Where(p => !string.IsNullOrEmpty(p))
-            .Select(p => p!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Any(p => matcher.Match(ignoreBaseDirectory, [p]).HasMatches);
-    }
-
-    private Matcher GetIgnoreMatcher(IReadOnlyList<string> ignorePatterns)
-    {
-        if (_cachedIgnoreMatcher is not null &&
-            _cachedIgnorePatterns is not null &&
-            ReferenceEquals(_cachedIgnorePatterns, ignorePatterns))
-        {
-            return _cachedIgnoreMatcher;
-        }
-
-        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
-        for (var i = 0; i < ignorePatterns.Count; i++)
-        {
-            matcher.AddInclude(ignorePatterns[i]);
-        }
-
-        _cachedIgnoreMatcher = matcher;
-        _cachedIgnorePatterns = ignorePatterns;
-        return matcher;
     }
 
     private static async Task<string?> ReadBoundedAsync(TextReader reader, long maxBytes)
@@ -218,23 +152,4 @@ public sealed class InputReader
         return bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
     }
 
-    private static string ResolveIgnoreBaseDirectory(string? ignoreListPath)
-    {
-        if (string.IsNullOrWhiteSpace(ignoreListPath))
-        {
-            return Directory.GetCurrentDirectory();
-        }
-
-        var fullPath = Path.GetFullPath(ignoreListPath);
-        return Path.GetDirectoryName(fullPath) ?? Directory.GetCurrentDirectory();
-    }
-
-    private static string? GetRelativePathIfUnderBase(string baseDirectory, string fullPath)
-    {
-        var fullBase = Path.GetFullPath(baseDirectory);
-        var relative = Path.GetRelativePath(fullBase, fullPath);
-        return relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative)
-            ? null
-            : relative;
-    }
 }

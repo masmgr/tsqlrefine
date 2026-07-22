@@ -281,14 +281,20 @@ Creates the following files:
 |--------|-------|----------|
 | `security-only` | 17 | Security vulnerabilities and critical safety |
 | `pragmatic` | 56 | Production-ready minimum for legacy codebases |
-| `recommended` | 117 | Balanced for production (default) |
-| `strict-logic` | 151 | Comprehensive correctness without cosmetic rules |
-| `strict` | 175 | Maximum enforcement including style |
+| `recommended` | 118 | Balanced for production (default) |
+| `strict-logic` | 152 | Comprehensive correctness without cosmetic rules |
+| `strict` | 176 | Maximum enforcement including style |
 
 Each preset is a strict superset of the one below: `security-only` ⊂ `pragmatic` ⊂ `recommended` ⊂ `strict-logic` ⊂ `strict`
 
 ```bash
 tsqlrefine lint --preset strict path/to/file.sql
+```
+
+Run a single rule when investigating or incrementally adopting a check:
+
+```bash
+tsqlrefine lint --rule exec-parameter-function-call path/to/sql
 ```
 
 ### .editorconfig

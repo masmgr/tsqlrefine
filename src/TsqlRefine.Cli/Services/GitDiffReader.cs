@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using TsqlRefine.Core;
-using TsqlRefine.Core.Engine;
 using TsqlRefine.Core.Model;
 
 namespace TsqlRefine.Cli.Services;
@@ -38,6 +37,9 @@ public sealed class ChangedLineMap
         }
         return ranges.Any(range => range.StartLine <= endLine && range.EndLine >= startLine);
     }
+
+    public bool ContainsFile(string filePath) =>
+        _rangesByPath.ContainsKey(Path.GetFullPath(filePath));
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing Git diff integration service; tracked as coupling baseline debt.")]
@@ -50,15 +52,15 @@ public static class GitDiffReader
 
     public static async Task<ChangedLineMap> ReadAsync(
         CliArgs args,
-        IReadOnlyList<SqlInput> inputs)
+        IReadOnlyList<string> inputPaths)
     {
-        if (inputs.Any(input => string.Equals(input.FilePath, "<stdin>", StringComparison.Ordinal)))
+        if (args.Stdin || args.Paths.Contains("-", StringComparer.Ordinal))
         {
             throw new ConfigException("Changed-only lint does not support stdin; use path inputs.");
         }
         return args.ChangedLinesFrom is not null
             ? ReadDocument(args.ChangedLinesFrom)
-            : await ReadGitAsync(args.BaseRef ?? "origin/main", inputs);
+            : await ReadGitAsync(args.BaseRef ?? "origin/main", inputPaths);
     }
 
     public static LintResult Filter(LintResult result, ChangedLineMap changedLines)
@@ -122,7 +124,7 @@ public static class GitDiffReader
         }
     }
 
-    private static async Task<ChangedLineMap> ReadGitAsync(string baseRef, IReadOnlyList<SqlInput> inputs)
+    private static async Task<ChangedLineMap> ReadGitAsync(string baseRef, IReadOnlyList<string> inputPaths)
     {
         var rootResult = await RunGitAsync(["rev-parse", "--show-toplevel"]);
         var root = Path.GetFullPath(rootResult.Trim());
@@ -137,15 +139,16 @@ public static class GitDiffReader
         var untrackedOutput = await RunGitAsync([
             "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard", "--"
         ]);
-        var inputByPath = inputs.ToDictionary(
-            input => Path.GetFullPath(input.FilePath),
-            GetPathComparer());
+        var inputPathSet = inputPaths
+            .Select(Path.GetFullPath)
+            .ToHashSet(GetPathComparer());
         foreach (var relativePath in SplitLines(untrackedOutput).Where(line => line.Length > 0))
         {
             var fullPath = Path.GetFullPath(UnquoteGitPath(relativePath), root);
-            if (inputByPath.TryGetValue(fullPath, out var input))
+            if (inputPathSet.Contains(fullPath) && File.Exists(fullPath))
             {
-                var lineCount = Math.Max(1, CountLines(input.Text));
+                var text = await File.ReadAllTextAsync(fullPath);
+                var lineCount = Math.Max(1, CountLines(text));
                 AddRange(ranges, fullPath, new ChangedLineRange(1, lineCount));
             }
         }

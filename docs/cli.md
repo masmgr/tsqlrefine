@@ -84,6 +84,7 @@ tsqlrefine lint [options] [paths...]
 | `--severity <error\|warning\|info\|hint>` | Minimum severity filter |
 | `--preset <name>` | Preset selection |
 | `--ruleset <name\|path>` | Custom ruleset name or file |
+| `--rule <id>` | Run only the specified rule |
 | `--schema <path>` | Schema snapshot for schema-aware analysis |
 | `--relations-profile <path>` | JOIN relation profile for deviation analysis |
 | `--objects-catalog <path>` | Object catalog for cross-object analysis |
@@ -126,9 +127,9 @@ SARIF output conforms to SARIF 2.1.0 and includes rule metadata, source location
 
 `--changed-only` combines added-line ranges from `<base-ref>...HEAD`, the index, and the working
 tree. Renames use the destination path, deleted lines do not create a reportable range, and every
-line of an untracked input file is considered changed. Diagnostics intersecting those 1-based line
-ranges are retained. Parse errors and parser exceptions are always retained, even outside changed
-lines.
+line of an untracked input file is considered changed. Only input files with changed ranges are
+read and analyzed. Diagnostics intersecting those 1-based line ranges are retained. Within an
+analyzed file, parse errors and parser exceptions are always retained, even outside changed lines.
 
 When Git is unavailable, `--changed-lines-from` activates the same filtering using JSON relative to
 the JSON file's directory:
