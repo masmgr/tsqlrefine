@@ -6,6 +6,7 @@
     { "id": "unreachable-statement" },
     { "id": "unused-variable" },
     { "id": "inconsistent-result-set" },
+    { "id": "exec-parameter-function-call" },
     { "id": "exec-parameter-count-mismatch" },
     { "id": "exec-parameter-name-mismatch" },
     { "id": "exec-invalid-output-argument" },

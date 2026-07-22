@@ -71,6 +71,7 @@ public sealed class BuiltinRuleProvider : IRuleProvider
         new StringAssignmentLengthMismatchRule(),
         new MixedStringLengthFunctionsInLoopRule(),
         new RequireSemicolonBeforeThrowRule(),
+        new ExecParameterFunctionCallRule(),
         new ExecParameterCountMismatchRule(),
         new ExecParameterNameMismatchRule(),
         new ExecInvalidOutputArgumentRule(),

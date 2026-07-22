@@ -19,16 +19,16 @@
 
 ## Rule Statistics
 
-- **Total Rules**: 175
+- **Total Rules**: 176
 - **Fixable Rules**: 13 (7%)
 - **By Importance Tier**:
   - Critical (security-only): 17 rules
   - Essential (pragmatic): 39 rules
-  - Recommended (recommended): 61 rules
+  - Recommended (recommended): 62 rules
   - Thorough (strict-logic): 34 rules
   - Cosmetic (strict): 24 rules
 - **By Severity**:
-  - Error: 30 rules (17%)
+  - Error: 31 rules (18%)
   - Warning: 100 rules (57%)
   - Information: 45 rules (26%)
 
@@ -44,9 +44,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |------|--------|-------|------------|-------------|
 | **Critical** | security-only | 17 | 17 | Security vulnerabilities and critical safety issues that can cause data loss or security breaches |
 | **Essential** | pragmatic | 39 | 56 | Production-ready minimum for correctness and preventing runtime errors |
-| **Recommended** | recommended | 61 | 117 | Balanced production use with semantic analysis and best practices |
-| **Thorough** | strict-logic | 34 | 151 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
-| **Cosmetic** | strict | 24 | 175 | Style consistency, formatting, and naming conventions for maximum code uniformity |
+| **Recommended** | recommended | 62 | 118 | Balanced production use with semantic analysis and best practices |
+| **Thorough** | strict-logic | 34 | 152 | Comprehensive correctness, performance, and schema checks without cosmetic style enforcement |
+| **Cosmetic** | strict | 24 | 176 | Style consistency, formatting, and naming conventions for maximum code uniformity |
 
 ## Rule Categories
 
@@ -54,7 +54,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 |----------|-------|-------------|
 | **Security** | 7 | Identifies security vulnerabilities like SQL injection |
 | **Safety** | 5 | Prevents destructive or dangerous operations |
-| **Correctness** | 58 | Detects code that may produce incorrect results or runtime errors |
+| **Correctness** | 59 | Detects code that may produce incorrect results or runtime errors |
 | **Performance** | 30 | Flags patterns that can cause performance issues |
 | **Transactions** | 16 | Ensures proper transaction handling and session settings |
 | **Schema** | 25 | Enforces database schema best practices |
@@ -120,6 +120,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 | [duplicate-insert-column](correctness/duplicate-insert-column.md) | Detects duplicate column names in INSERT column lists; duplicate columns always cause a runtime error. | Error | No |
 | [exec-invalid-output-argument](correctness/exec-invalid-output-argument.md) | Detects EXEC arguments that use OUTPUT with an input-only procedure parameter. | Error | No |
 | [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md) | Detects EXEC calls with missing required or extra positional arguments. | Error | No |
+| [exec-parameter-function-call](correctness/exec-parameter-function-call.md) | Detects function calls passed directly as EXEC procedure arguments, which SQL Server rejects. | Error | No |
 | [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md) | Detects named EXEC arguments that are absent from the procedure signature or specified more than once. | Error | No |
 | [group-by-column-mismatch](correctness/group-by-column-mismatch.md) | Detects SELECT columns not contained in GROUP BY or an aggregate function. | Warning | No |
 | [having-column-mismatch](correctness/having-column-mismatch.md) | Detects columns in HAVING clause not in GROUP BY and not wrapped in an aggregate function. | Warning | No |
@@ -164,9 +165,9 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 
 ### Recommended
 
-**61 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
+**62 rules** — Balanced production use with semantic analysis and best practices. This is the default preset, providing comprehensive validation without excessive noise.
 
-#### Correctness (18 rules)
+#### Correctness (19 rules)
 
 | Rule ID | Description | Severity | Fixable |
 |---------|-------------|----------|---------|
@@ -381,6 +382,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [dynamic-sql-taint](security/dynamic-sql-taint.md)
 - [exec-invalid-output-argument](correctness/exec-invalid-output-argument.md)
 - [exec-parameter-count-mismatch](correctness/exec-parameter-count-mismatch.md)
+- [exec-parameter-function-call](correctness/exec-parameter-function-call.md)
 - [exec-parameter-name-mismatch](correctness/exec-parameter-name-mismatch.md)
 - [index-column-not-in-table](schema/index-column-not-in-table.md)
 - [insert-column-not-in-table](schema/insert-column-not-in-table.md)
@@ -442,6 +444,7 @@ security-only ⊂ pragmatic ⊂ recommended ⊂ strict-logic ⊂ strict
 - [duplicate-select-column](correctness/duplicate-select-column.md)
 - [escape-keyword-identifier](correctness/escape-keyword-identifier.md)
 - [exec-output-not-captured](correctness/exec-output-not-captured.md)
+- [exec-parameter-function-call](correctness/exec-parameter-function-call.md)
 - [exec-parameter-type-mismatch](correctness/exec-parameter-type-mismatch.md)
 - [group-by-column-mismatch](correctness/group-by-column-mismatch.md)
 - [having-column-mismatch](correctness/having-column-mismatch.md)

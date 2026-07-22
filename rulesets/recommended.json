@@ -4,6 +4,7 @@
     { "id": "cursor-not-deallocated-on-path" },
     { "id": "variable-used-before-assignment" },
     { "id": "unreachable-statement" },
+    { "id": "exec-parameter-function-call" },
     { "id": "exec-parameter-count-mismatch" },
     { "id": "exec-parameter-name-mismatch" },
     { "id": "exec-invalid-output-argument" },
