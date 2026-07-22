@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.SqlServer.TransactSql.ScriptDom;
 using TsqlRefine.PluginSdk;
+using TsqlRefine.Rules.Helpers.Schema;
 
 namespace TsqlRefine.Rules.Rules.Correctness;
 
@@ -18,12 +19,12 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
     );
 
     protected override DiagnosticVisitorBase CreateVisitor(RuleContext context) =>
-        new NoTopWithoutOrderByInSelectIntoVisitor();
+        new NoTopWithoutOrderByInSelectIntoVisitor(context.Schema);
 
     public override IEnumerable<Fix> GetFixes(RuleContext context, Diagnostic diagnostic) =>
         RuleHelpers.NoFixes(context, diagnostic);
 
-    private sealed class NoTopWithoutOrderByInSelectIntoVisitor : DiagnosticVisitorBase
+    private sealed class NoTopWithoutOrderByInSelectIntoVisitor(ISchemaProvider? schema) : DiagnosticVisitorBase
     {
         public override void ExplicitVisit(SelectStatement node)
         {
@@ -34,7 +35,8 @@ public sealed class NoTopWithoutOrderByInSelectIntoRule : DiagnosticVisitorRuleB
                     if (querySpec.TopRowFilter is not null &&
                         querySpec.OrderByClause is null &&
                         !IsTopZero(querySpec.TopRowFilter) &&
-                        !IsTopOneHundredPercent(querySpec.TopRowFilter))
+                        !IsTopOneHundredPercent(querySpec.TopRowFilter) &&
+                        !QueryCardinalityAnalysisHelpers.ReturnsAtMostOneRow(querySpec, schema))
                     {
                         AddDiagnostic(
                             fragment: querySpec.TopRowFilter,

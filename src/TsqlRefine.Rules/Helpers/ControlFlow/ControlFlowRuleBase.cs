@@ -22,6 +22,7 @@ public abstract class ControlFlowRuleBase : IRule
             .Select(issue => new Diagnostic(
                 ScriptDomHelpers.GetRange(issue.Fragment),
                 issue.Message,
+                Severity: issue.Severity,
                 Code: Metadata.RuleId,
                 Data: new DiagnosticData(Metadata.RuleId, Metadata.Category, false)))
             .ToArray();
@@ -33,4 +34,7 @@ public abstract class ControlFlowRuleBase : IRule
     private protected abstract IEnumerable<ControlFlowIssue> AnalyzeScope(ControlFlowScope scope);
 }
 
-internal sealed record ControlFlowIssue(TSqlFragment Fragment, string Message);
+internal sealed record ControlFlowIssue(
+    TSqlFragment Fragment,
+    string Message,
+    DiagnosticSeverity? Severity = null);

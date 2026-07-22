@@ -14,6 +14,15 @@ public enum SqlTrustKind
     Unknown
 }
 
+/// <summary>Explains whether and why a symbolic SQL value is unsafe.</summary>
+public enum SqlTextSafety
+{
+    Safe,
+    Unknown,
+    Untrusted,
+    IncorrectEscaping
+}
+
 /// <summary>One bounded symbolic component of a dynamic SQL value.</summary>
 public sealed record SqlSegment(SqlTrustKind Trust, string? ConstantText = null);
 
@@ -27,14 +36,23 @@ public sealed record SqlValueState(SqlTrustKind Trust, IReadOnlyList<SqlSegment>
         new(trust, [new SqlSegment(trust)]);
 
     /// <summary>Returns true when the symbolic value contains an unsafe dynamic SQL segment.</summary>
-    public bool IsUnsafeSqlText()
+    public bool IsUnsafeSqlText() => GetSqlTextSafety() != SqlTextSafety.Safe;
+
+    /// <summary>Classifies unsafe dynamic SQL without treating analysis uncertainty as proven taint.</summary>
+    public SqlTextSafety GetSqlTextSafety()
     {
         if (Segments is null)
         {
-            return Trust is not (SqlTrustKind.Constant or SqlTrustKind.NumericValue);
+            return Trust switch
+            {
+                SqlTrustKind.Constant or SqlTrustKind.NumericValue => SqlTextSafety.Safe,
+                SqlTrustKind.Unknown => SqlTextSafety.Unknown,
+                _ => SqlTextSafety.Untrusted
+            };
         }
 
         var insideStringLiteral = false;
+        var safety = SqlTextSafety.Safe;
         foreach (var segment in Segments)
         {
             switch (segment.Trust)
@@ -47,20 +65,23 @@ public sealed record SqlValueState(SqlTrustKind Trust, IReadOnlyList<SqlSegment>
                 case SqlTrustKind.EscapedStringLiteral:
                     if (!insideStringLiteral)
                     {
-                        return true;
+                        return SqlTextSafety.IncorrectEscaping;
                     }
                     break;
                 case SqlTrustKind.QuotedIdentifier:
                     if (insideStringLiteral)
                     {
-                        return true;
+                        return SqlTextSafety.IncorrectEscaping;
                     }
                     break;
+                case SqlTrustKind.Unknown:
+                    safety = SqlTextSafety.Unknown;
+                    break;
                 default:
-                    return true;
+                    return SqlTextSafety.Untrusted;
             }
         }
-        return false;
+        return safety;
     }
 
     internal static void UpdateStringLiteralContext(string text, ref bool insideStringLiteral)
@@ -329,6 +350,15 @@ internal sealed class SqlTaintAnalysis(ControlFlowScope scope, int maxSegments =
         if (ValueEquals(left, right))
         {
             return left;
+        }
+
+        // A value is unsafe when any reachable branch is known to contain tainted
+        // or incorrectly escaped SQL text. Preserve that evidence instead of
+        // collapsing the merge to Unknown and lowering the diagnostic confidence.
+        if (left.GetSqlTextSafety() is SqlTextSafety.Untrusted or SqlTextSafety.IncorrectEscaping ||
+            right.GetSqlTextSafety() is SqlTextSafety.Untrusted or SqlTextSafety.IncorrectEscaping)
+        {
+            return s_untrusted;
         }
 
         if (left.Trust == SqlTrustKind.Constant && right.Trust == SqlTrustKind.Constant)

@@ -22,6 +22,39 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
     private sealed class AvoidSelectStarVisitor : DiagnosticVisitorBase
     {
         private int _existsDepth;
+        private bool _allowTemporarySelectInto;
+
+        public override void ExplicitVisit(SelectStatement node)
+        {
+            var previousAllowTemporarySelectInto = _allowTemporarySelectInto;
+            _allowTemporarySelectInto = IsTemporarySelectInto(node);
+            base.ExplicitVisit(node);
+            _allowTemporarySelectInto = previousAllowTemporarySelectInto;
+        }
+
+        public override void ExplicitVisit(QueryDerivedTable node)
+        {
+            var previousAllowTemporarySelectInto = _allowTemporarySelectInto;
+            _allowTemporarySelectInto = false;
+            base.ExplicitVisit(node);
+            _allowTemporarySelectInto = previousAllowTemporarySelectInto;
+        }
+
+        public override void ExplicitVisit(ScalarSubquery node)
+        {
+            var previousAllowTemporarySelectInto = _allowTemporarySelectInto;
+            _allowTemporarySelectInto = false;
+            base.ExplicitVisit(node);
+            _allowTemporarySelectInto = previousAllowTemporarySelectInto;
+        }
+
+        public override void ExplicitVisit(CommonTableExpression node)
+        {
+            var previousAllowTemporarySelectInto = _allowTemporarySelectInto;
+            _allowTemporarySelectInto = false;
+            base.ExplicitVisit(node);
+            _allowTemporarySelectInto = previousAllowTemporarySelectInto;
+        }
 
         public override void ExplicitVisit(ExistsPredicate node)
         {
@@ -33,7 +66,7 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
         public override void ExplicitVisit(SelectStarExpression node)
         {
             // Skip if inside EXISTS clause - SELECT * is acceptable there
-            if (_existsDepth > 0)
+            if (_existsDepth > 0 || _allowTemporarySelectInto)
             {
                 base.ExplicitVisit(node);
                 return;
@@ -50,5 +83,8 @@ public sealed class AvoidSelectStarRule : DiagnosticVisitorRuleBase
 
             base.ExplicitVisit(node);
         }
+
+        private static bool IsTemporarySelectInto(SelectStatement node) =>
+            node.Into?.BaseIdentifier?.Value.StartsWith('#') is true;
     }
 }

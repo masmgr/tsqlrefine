@@ -11,6 +11,10 @@ Detects `SELECT TOP ... INTO` statements without an `ORDER BY` clause, which may
 
 For UNION, INTERSECT, and EXCEPT queries, each direct query branch containing `TOP` is checked. Constant `TOP 0` expressions are excluded because they select no rows. A constant `TOP 100 PERCENT` is also excluded because it selects all rows; variable percentages and other constants remain subject to the rule.
 
+When a schema snapshot is available, a simple single-table query is not reported if equality
+predicates cover a complete primary key, unique constraint, or unique index. Such a query returns
+at most one row, so row ordering cannot change which row is persisted.
+
 ## Rationale
 
 Unlike regular `SELECT TOP` (which is a runtime issue affecting result display), `SELECT TOP ... INTO` **persists non-deterministic data to storage**. This creates serious problems:
@@ -75,6 +79,12 @@ FROM Orders;
 SELECT TOP (0) OrderId, CustomerId
 INTO #EmptyOrders
 FROM Orders;
+
+-- With schema analysis, the primary-key predicate proves that at most one row is returned
+SELECT TOP (1) OrderId, CustomerId
+INTO #SelectedOrder
+FROM Orders
+WHERE OrderId = @orderId;
 ```
 
 ## Common Patterns

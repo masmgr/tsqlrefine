@@ -1,12 +1,22 @@
 using TsqlRefine.PluginSdk;
 using TsqlRefine.Rules.Rules.Correctness;
 using TsqlRefine.Rules.Tests.Helpers;
+using TsqlRefine.Schema.Resolution;
+using TsqlRefine.Schema.Tests.Helpers;
 
 namespace TsqlRefine.Rules.Tests.Correctness;
 
 public sealed class NoTopWithoutOrderByInSelectIntoRuleTests
 {
     private readonly NoTopWithoutOrderByInSelectIntoRule _rule = new();
+
+    private static SchemaProvider CreateSchema() =>
+        new(TestSchemaBuilder.Create()
+            .AddTable("dbo", "Items", table => table
+                .AddColumn("Id", "int")
+                .AddColumn("CategoryId", "int")
+                .WithPrimaryKey(true, "Id"))
+            .Build());
 
     [Theory]
     [InlineData("SELECT TOP 10 id INTO dbo.TopItems FROM dbo.Items;")]
@@ -90,6 +100,26 @@ public sealed class NoTopWithoutOrderByInSelectIntoRuleTests
 
         Assert.DoesNotContain("permanent table", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("non-deterministic rows", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Analyze_TopSelectIntoFilteredByPrimaryKey_WithSchema_ReturnsEmpty()
+    {
+        const string sql = "SELECT TOP 1 Id INTO #Item FROM dbo.Items WHERE Id = @id;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql, CreateSchema())).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_TopSelectIntoFilteredByNonUniqueColumn_WithSchema_ReturnsDiagnostic()
+    {
+        const string sql = "SELECT TOP 1 Id INTO #Item FROM dbo.Items WHERE CategoryId = @categoryId;";
+
+        var diagnostics = _rule.Analyze(RuleTestContext.CreateContext(sql, CreateSchema())).ToArray();
+
+        Assert.Single(diagnostics);
     }
 
     [Fact]

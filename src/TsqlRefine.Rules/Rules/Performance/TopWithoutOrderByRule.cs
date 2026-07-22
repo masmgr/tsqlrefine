@@ -67,7 +67,7 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
                 !IsTopOneHundredPercent(node.TopRowFilter) &&
                 !IsSingleRowAggregateQuery(node))
             {
-                if (!IsWhereOnUniqueColumns(node))
+                if (!QueryCardinalityAnalysisHelpers.ReturnsAtMostOneRow(node, schema))
                 {
                     AddDiagnostic(
                         fragment: node.TopRowFilter,
@@ -80,123 +80,6 @@ public sealed class TopWithoutOrderByRule : DiagnosticVisitorRuleBase
             }
 
             base.ExplicitVisit(node);
-        }
-
-        /// <summary>
-        /// Checks whether the WHERE clause filters on a complete unique column set for any table.
-        /// </summary>
-        private bool IsWhereOnUniqueColumns(QuerySpecification node)
-        {
-            if (schema is null ||
-                node.WhereClause?.SearchCondition is null ||
-                node.FromClause?.TableReferences is not { Count: > 0 } tableRefs)
-            {
-                return false;
-            }
-
-            // Suppress only for simple single-table queries.
-            // In joined queries, uniqueness on one side does not guarantee a single-row result set.
-            if (tableRefs.Count != 1 || tableRefs[0] is not NamedTableReference)
-            {
-                return false;
-            }
-
-            var aliasMap = AliasMapBuilder.Build(tableRefs, schema);
-            var equalityColumns = CollectEqualityColumns(node.WhereClause.SearchCondition);
-
-            if (equalityColumns.Count == 0)
-            {
-                return false;
-            }
-
-            if (aliasMap.AllTables.Count != 1)
-            {
-                return false;
-            }
-
-            var resolvedTable = aliasMap.AllTables[0];
-            var columnsForTable = GetColumnsForTable(equalityColumns, resolvedTable, aliasMap);
-            return columnsForTable.Count > 0 &&
-                   schema.IsUniqueColumnSet(resolvedTable, columnsForTable);
-        }
-
-        /// <summary>
-        /// Collects column references from AND-connected equality conditions in the WHERE clause.
-        /// OR branches are conservatively ignored (cannot guarantee uniqueness).
-        /// </summary>
-        private static List<(string? Qualifier, string ColumnName)> CollectEqualityColumns(
-            BooleanExpression condition)
-        {
-            var result = new List<(string?, string)>();
-            CollectEqualityColumnsCore(condition, result);
-            return result;
-        }
-
-        private static void CollectEqualityColumnsCore(
-            BooleanExpression expression,
-            List<(string? Qualifier, string ColumnName)> result)
-        {
-            switch (expression)
-            {
-                case BooleanComparisonExpression { ComparisonType: BooleanComparisonType.Equals } comp:
-                    AddColumnFromComparison(comp.FirstExpression, result);
-                    AddColumnFromComparison(comp.SecondExpression, result);
-                    break;
-
-                case BooleanBinaryExpression { BinaryExpressionType: BooleanBinaryExpressionType.And } binary:
-                    CollectEqualityColumnsCore(binary.FirstExpression, result);
-                    CollectEqualityColumnsCore(binary.SecondExpression, result);
-                    break;
-
-                case BooleanParenthesisExpression paren:
-                    CollectEqualityColumnsCore(paren.Expression, result);
-                    break;
-
-                    // OR, NOT, and other expressions are conservatively ignored
-            }
-        }
-
-        private static void AddColumnFromComparison(
-            ScalarExpression expression,
-            List<(string? Qualifier, string ColumnName)> result)
-        {
-            if (expression is ColumnReferenceExpression colRef &&
-                colRef.MultiPartIdentifier?.Identifiers is { Count: > 0 } identifiers)
-            {
-                var columnName = identifiers[^1].Value;
-                var qualifier = ColumnReferenceHelpers.GetTableQualifier(colRef);
-                result.Add((qualifier, columnName));
-            }
-        }
-
-        /// <summary>
-        /// Filters equality columns to those belonging to a specific resolved table.
-        /// </summary>
-        private static List<string> GetColumnsForTable(
-            List<(string? Qualifier, string ColumnName)> equalityColumns,
-            ResolvedTable resolvedTable,
-            AliasMap aliasMap)
-        {
-            var columns = new List<string>();
-
-            foreach (var (qualifier, columnName) in equalityColumns)
-            {
-                if (qualifier is null)
-                {
-                    // Unqualified column — if only one table in scope, assume it belongs there
-                    if (aliasMap.AllTables.Count == 1)
-                    {
-                        columns.Add(columnName);
-                    }
-                }
-                else if (aliasMap.TryResolve(qualifier, out var resolved) &&
-                         resolved == resolvedTable)
-                {
-                    columns.Add(columnName);
-                }
-            }
-
-            return columns;
         }
 
         private static bool IsTopZero(ScalarExpression expression) =>

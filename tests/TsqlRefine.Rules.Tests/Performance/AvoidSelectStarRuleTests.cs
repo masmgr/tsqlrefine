@@ -131,6 +131,42 @@ public sealed class AvoidSelectStarRuleTests
         Assert.Single(diagnostics);
     }
 
+    [Theory]
+    [InlineData("SELECT * INTO #Temp FROM dbo.Users;")]
+    [InlineData("SELECT * INTO ##GlobalTemp FROM dbo.Users;")]
+    [InlineData("SELECT * INTO #Temp FROM dbo.Users WHERE 1 = 0;")]
+    public void Analyze_WhenSelectStarIntoTemporaryTable_ReturnsEmpty(string sql)
+    {
+        var rule = new AvoidSelectStarRule();
+        var context = RuleTestContext.CreateContext(sql);
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenSelectStarIntoPermanentTable_ReturnsDiagnostic()
+    {
+        var rule = new AvoidSelectStarRule();
+        var context = RuleTestContext.CreateContext("SELECT * INTO dbo.UsersCopy FROM dbo.Users;");
+
+        var diagnostics = rule.Analyze(context).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
+    [Fact]
+    public void Analyze_WhenTemporarySelectIntoContainsPermanentDerivedSelect_ReturnsDiagnosticForDerivedSelect()
+    {
+        var rule = new AvoidSelectStarRule();
+        const string sql = "SELECT * INTO #Temp FROM (SELECT * FROM dbo.Users) AS u;";
+
+        var diagnostics = rule.Analyze(RuleTestContext.CreateContext(sql)).ToArray();
+
+        Assert.Single(diagnostics);
+    }
+
     [Fact]
     public void Analyze_WhenSelectDistinctStar_ReturnsDiagnostic()
     {

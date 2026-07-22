@@ -11,6 +11,12 @@ Tracks values from procedure and function parameters, table columns, and unknown
 through variable assignments into `EXEC(...)` and `sp_executesql` SQL-text arguments. Reports
 dynamic SQL when an unsafe value can reach an execution sink on any supported control-flow path.
 
+Known untrusted values and incorrectly escaped values use the rule's default `Error` severity.
+When analysis cannot prove safety because a value comes from an unsupported function, indirect
+write, or an overly complex symbolic expression, the diagnostic is retained at `Warning`
+severity. This keeps uncertain internal SQL generation visible without presenting it as proven
+tainted input.
+
 Unlike syntax-only dynamic SQL rules, this rule follows assignments across variables and branches.
 The existing `avoid-exec-dynamic-sql` and `require-parameterized-sp-executesql` rules remain useful
 for inexpensive pattern checks, so more than one diagnostic can identify the same call.
@@ -99,15 +105,16 @@ EXEC sys.sp_executesql @sql;
 - Analysis is intraprocedural and uses the control-flow graph for each batch or routine, including
   trigger bodies.
 - Symbolic SQL text is bounded to 32 segments. More complex values widen to `Unknown` and are
-  reported at a sink.
+  reported as warnings at a sink.
 - Scopes containing unsupported `GOTO` control flow are skipped to avoid misleading results.
 - Table-column expressions are treated as untrusted. Assignment to a numeric variable is treated
   as numeric because SQL Server enforces the declared variable type before the value reaches the
   dynamic SQL text.
 - `QUOTENAME` length and nullability do not make input trusted; callers should still account for a
   possible `NULL` result.
-- Indirect variable writes, such as `EXEC ... INTO @variable` and `SELECT @variable = ...`
-  assignments, widen the variable to `Unknown` instead of leaving its prior state unchanged.
+- Indirect variable writes, such as `EXEC ... INTO @variable` and unsupported assignments, widen
+  the variable to `Unknown` instead of leaving its prior state unchanged. These uncertain flows
+  are reported as warnings unless another reachable path is known to be unsafe.
 - Adjacent string-literal concatenations are constant-folded by tracking quote parity, so
   splitting a literal across multiple `+` operands does not by itself defeat detection.
 

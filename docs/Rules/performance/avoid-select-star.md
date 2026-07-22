@@ -83,6 +83,10 @@ Avoid SELECT * in queries.
 4. **Temporary tables**: `SELECT * INTO #Temp FROM ...` when all columns are needed
 5. **Table variables**: Small scope, short-lived, all columns needed
 
+The rule does not report `SELECT * INTO #Temp` or `SELECT * INTO ##Temp`. These statements are
+commonly used to clone a row shape for a temporary work table. `SELECT * INTO` targeting a
+permanent table remains subject to the rule.
+
 **Best practice**: Always list explicit columns in production code.
 
 ## Examples

@@ -30,11 +30,15 @@ public sealed class DynamicSqlTaintRule : ControlFlowRuleBase
             foreach (var sqlExpression in GetDynamicSqlExpressions(execute))
             {
                 var value = analysis.Evaluate(sqlExpression, state);
-                if (value.IsUnsafeSqlText())
+                var safety = value.GetSqlTextSafety();
+                if (safety != SqlTextSafety.Safe)
                 {
                     issues.Add(new ControlFlowIssue(
                         sqlExpression,
-                        "Dynamic SQL text contains an untrusted, unknown, or incorrectly escaped value. Use sp_executesql parameters, QUOTENAME for identifiers, or context-appropriate escaping."));
+                        safety == SqlTextSafety.Unknown
+                            ? "Dynamic SQL safety could not be proven because the SQL text contains a value from an unsupported or indeterminate source. Review the value's origin and ensure identifiers are quoted and data values are parameterized."
+                            : "Dynamic SQL text contains an untrusted or incorrectly escaped value. Use sp_executesql parameters, QUOTENAME for identifiers, or context-appropriate escaping.",
+                        safety == SqlTextSafety.Unknown ? DiagnosticSeverity.Warning : null));
                     break;
                 }
             }

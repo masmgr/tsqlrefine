@@ -82,6 +82,28 @@ public sealed class DynamicSqlTaintRuleTests
     }
 
     [Fact]
+    public void Analyze_UnknownFunctionResult_ReturnsWarning()
+    {
+        const string sql = "DECLARE @sql nvarchar(max) = dbo.BuildSql(); EXEC(@sql);";
+
+        var diagnostic = Assert.Single(Analyze(sql));
+
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Contains("could not be proven", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Analyze_ProcedureParameter_RemainsDefaultErrorSeverity()
+    {
+        const string sql = "CREATE PROCEDURE dbo.RunSql @sql nvarchar(max) AS EXEC(@sql);";
+
+        var diagnostic = Assert.Single(Analyze(sql));
+
+        Assert.Null(diagnostic.Severity);
+        Assert.Contains("untrusted", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Analyze_ParameterizedSpExecutesql_ReturnsEmpty()
     {
         const string sql = """
@@ -197,7 +219,10 @@ public sealed class DynamicSqlTaintRuleTests
             END;
             """;
 
-        Assert.Single(Analyze(sql));
+        var diagnostic = Assert.Single(Analyze(sql));
+
+        Assert.Null(diagnostic.Severity);
+        Assert.Contains("untrusted", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
