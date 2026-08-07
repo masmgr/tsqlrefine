@@ -25,7 +25,7 @@ jobs:
         run: dotnet run --project benchmarks/TsqlRefine.Benchmarks -c Release -- --filter '*'
 
       - name: Restore benchmark history
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .benchmark-cache
           key: benchmark-${{ runner.os }}
