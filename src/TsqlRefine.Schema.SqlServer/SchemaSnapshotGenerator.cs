@@ -1,5 +1,7 @@
 using System.Collections.Frozen;
+using System.Data;
 using System.Globalization;
+using System.Text;
 using Microsoft.Data.SqlClient;
 using TsqlRefine.Schema.Model;
 using TsqlRefine.Schema.Snapshot;
@@ -13,6 +15,8 @@ namespace TsqlRefine.Schema.SqlServer;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1506", Justification = "Existing schema extraction orchestration; tracked as coupling baseline debt.")]
 public static class SchemaSnapshotGenerator
 {
+    private const int MaxSchemaFilterParameters = 2000;
+
     private static readonly FrozenSet<string> DefaultExcludeSchemas =
         FrozenSet.ToFrozenSet(["sys", "INFORMATION_SCHEMA"], StringComparer.OrdinalIgnoreCase);
 
@@ -71,7 +75,7 @@ public static class SchemaSnapshotGenerator
         return new SchemaSnapshot(metadata, databases);
     }
 
-    private static FrozenSet<string> BuildExcludeSet(SchemaSnapshotOptions options)
+    internal static FrozenSet<string> BuildExcludeSet(SchemaSnapshotOptions options)
     {
         if (options.ExcludeSchemas is not { Count: > 0 })
         {
@@ -87,7 +91,7 @@ public static class SchemaSnapshotGenerator
         return combined.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
     }
 
-    private static bool ShouldInclude(
+    internal static bool ShouldInclude(
         string schemaName,
         FrozenSet<string>? includeSchemas,
         FrozenSet<string> excludeSchemas)
@@ -98,6 +102,66 @@ public static class SchemaSnapshotGenerator
         }
 
         return includeSchemas is null || includeSchemas.Contains(schemaName);
+    }
+
+    internal static SqlCommand CreateCatalogCommand(
+        string query,
+        SqlConnection connection,
+        FrozenSet<string>? includeSchemas,
+        FrozenSet<string> excludeSchemas)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(excludeSchemas);
+
+        var parameterCount = (includeSchemas?.Count ?? 0) + excludeSchemas.Count;
+        if (parameterCount > MaxSchemaFilterParameters)
+        {
+            return new SqlCommand(query.Replace(CatalogQueries.SchemaFilterMarker, string.Empty, StringComparison.Ordinal), connection);
+        }
+
+        var command = new SqlCommand(string.Empty, connection);
+        var filter = new StringBuilder();
+        AppendSchemaFilter(filter, command, includeSchemas, "include", "IN");
+        AppendSchemaFilter(filter, command, excludeSchemas, "exclude", "NOT IN");
+        command.CommandText = query.Replace(CatalogQueries.SchemaFilterMarker, filter.ToString(), StringComparison.Ordinal);
+        return command;
+    }
+
+    private static void AppendSchemaFilter(
+        StringBuilder filter,
+        SqlCommand command,
+        IEnumerable<string>? schemas,
+        string parameterPrefix,
+        string sqlOperator)
+    {
+        if (schemas is null)
+        {
+            return;
+        }
+
+        var schemaList = schemas.OrderBy(static schema => schema, StringComparer.OrdinalIgnoreCase).ToArray();
+        if (schemaList.Length == 0)
+        {
+            return;
+        }
+
+        var parameterNames = new string[schemaList.Length];
+        for (var i = 0; i < schemaList.Length; i++)
+        {
+            var parameterName = $"@{parameterPrefix}Schema{i}";
+            parameterNames[i] = parameterName;
+            command.Parameters.Add(new SqlParameter(parameterName, SqlDbType.NVarChar, 128)
+            {
+                Value = schemaList[i]
+            });
+        }
+
+        filter.Append("AND s.name ")
+            .Append(sqlOperator)
+            .Append(" (")
+            .AppendJoin(", ", parameterNames)
+            .AppendLine(")");
     }
 
     private static async Task<(string DbName, string ServerName, int CompatLevel)> ReadDatabaseInfoAsync(
@@ -111,14 +175,18 @@ public static class SchemaSnapshotGenerator
             throw new InvalidOperationException("Failed to read database information.");
         }
 
+        var databaseNameOrdinal = reader.GetOrdinal("DatabaseName");
+        var serverNameOrdinal = reader.GetOrdinal("ServerName");
+        var compatLevelOrdinal = reader.GetOrdinal("CompatLevel");
+
         return (
-            reader.GetString(0),
-            reader.GetString(1),
-            reader.GetByte(2)
+            reader.GetString(databaseNameOrdinal),
+            reader.IsDBNull(serverNameOrdinal) ? string.Empty : reader.GetString(serverNameOrdinal),
+            reader.GetByte(compatLevelOrdinal)
         );
     }
 
-    private record TableEntry(string SchemaName, string ObjectName, bool IsView);
+    internal sealed record TableEntry(string SchemaName, string ObjectName, bool IsView);
 
     private static async Task<List<TableEntry>> ReadTablesAndViewsAsync(
         SqlConnection connection,
@@ -126,13 +194,16 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.TablesAndViews, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.TablesAndViews, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<TableEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var objectNameOrdinal = reader.GetOrdinal("ObjectName");
+        var typeDescOrdinal = reader.GetOrdinal("TypeDesc");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -140,15 +211,15 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new TableEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(2) == "VIEW"
+                reader.GetString(objectNameOrdinal),
+                reader.GetString(typeDescOrdinal) == "VIEW"
             ));
         }
 
         return result;
     }
 
-    private record ColumnEntry(
+    internal sealed record ColumnEntry(
         string SchemaName, string ObjectName, string ColumnName, string TypeName,
         short MaxLength, byte Precision, byte Scale,
         bool IsNullable, bool IsIdentity, bool IsComputed,
@@ -160,13 +231,25 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.Columns, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.Columns, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<ColumnEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var objectNameOrdinal = reader.GetOrdinal("ObjectName");
+        var columnNameOrdinal = reader.GetOrdinal("ColumnName");
+        var typeNameOrdinal = reader.GetOrdinal("TypeName");
+        var maxLengthOrdinal = reader.GetOrdinal("MaxLength");
+        var precisionOrdinal = reader.GetOrdinal("Precision");
+        var scaleOrdinal = reader.GetOrdinal("Scale");
+        var isNullableOrdinal = reader.GetOrdinal("IsNullable");
+        var isIdentityOrdinal = reader.GetOrdinal("IsIdentity");
+        var isComputedOrdinal = reader.GetOrdinal("IsComputed");
+        var defaultExpressionOrdinal = reader.GetOrdinal("DefaultExpression");
+        var collationOrdinal = reader.GetOrdinal("Collation");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -174,24 +257,24 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new ColumnEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.GetString(3),
-                reader.GetInt16(4),
-                reader.GetByte(5),
-                reader.GetByte(6),
-                reader.GetBoolean(7),
-                reader.GetBoolean(8),
-                reader.GetBoolean(9),
-                reader.IsDBNull(10) ? null : reader.GetString(10),
-                reader.IsDBNull(11) ? null : reader.GetString(11)
+                reader.GetString(objectNameOrdinal),
+                reader.GetString(columnNameOrdinal),
+                reader.GetString(typeNameOrdinal),
+                reader.GetInt16(maxLengthOrdinal),
+                reader.GetByte(precisionOrdinal),
+                reader.GetByte(scaleOrdinal),
+                reader.GetBoolean(isNullableOrdinal),
+                reader.GetBoolean(isIdentityOrdinal),
+                reader.GetBoolean(isComputedOrdinal),
+                reader.IsDBNull(defaultExpressionOrdinal) ? null : reader.GetString(defaultExpressionOrdinal),
+                reader.IsDBNull(collationOrdinal) ? null : reader.GetString(collationOrdinal)
             ));
         }
 
         return result;
     }
 
-    private record PkEntry(string SchemaName, string TableName, bool IsClustered, string ColumnName);
+    internal sealed record PkEntry(string SchemaName, string TableName, bool IsClustered, string ColumnName);
 
     private static async Task<List<PkEntry>> ReadPrimaryKeysAsync(
         SqlConnection connection,
@@ -199,13 +282,17 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.PrimaryKeys, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.PrimaryKeys, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<PkEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var tableNameOrdinal = reader.GetOrdinal("TableName");
+        var indexTypeOrdinal = reader.GetOrdinal("IndexType");
+        var columnNameOrdinal = reader.GetOrdinal("ColumnName");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -213,16 +300,16 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new PkEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(3) == "CLUSTERED",
-                reader.GetString(5)
+                reader.GetString(tableNameOrdinal),
+                reader.GetString(indexTypeOrdinal) == "CLUSTERED",
+                reader.GetString(columnNameOrdinal)
             ));
         }
 
         return result;
     }
 
-    private record UqEntry(string SchemaName, string TableName, string ConstraintName, string ColumnName);
+    internal sealed record UqEntry(string SchemaName, string TableName, string ConstraintName, string ColumnName);
 
     private static async Task<List<UqEntry>> ReadUniqueConstraintsAsync(
         SqlConnection connection,
@@ -230,13 +317,17 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.UniqueConstraints, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.UniqueConstraints, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<UqEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var tableNameOrdinal = reader.GetOrdinal("TableName");
+        var constraintNameOrdinal = reader.GetOrdinal("ConstraintName");
+        var columnNameOrdinal = reader.GetOrdinal("ColumnName");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -244,16 +335,16 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new UqEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.GetString(4)
+                reader.GetString(tableNameOrdinal),
+                reader.GetString(constraintNameOrdinal),
+                reader.GetString(columnNameOrdinal)
             ));
         }
 
         return result;
     }
 
-    private record FkEntry(
+    internal sealed record FkEntry(
         string SchemaName, string TableName, string ForeignKeyName,
         string SourceColumn, string TargetSchema, string TargetTable, string TargetColumn);
 
@@ -263,13 +354,20 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.ForeignKeys, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.ForeignKeys, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<FkEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var tableNameOrdinal = reader.GetOrdinal("TableName");
+        var foreignKeyNameOrdinal = reader.GetOrdinal("ForeignKeyName");
+        var sourceColumnOrdinal = reader.GetOrdinal("SourceColumn");
+        var targetSchemaOrdinal = reader.GetOrdinal("TargetSchema");
+        var targetTableOrdinal = reader.GetOrdinal("TargetTable");
+        var targetColumnOrdinal = reader.GetOrdinal("TargetColumn");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -277,19 +375,19 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new FkEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.GetString(4),
-                reader.GetString(5),
-                reader.GetString(6),
-                reader.GetString(7)
+                reader.GetString(tableNameOrdinal),
+                reader.GetString(foreignKeyNameOrdinal),
+                reader.GetString(sourceColumnOrdinal),
+                reader.GetString(targetSchemaOrdinal),
+                reader.GetString(targetTableOrdinal),
+                reader.GetString(targetColumnOrdinal)
             ));
         }
 
         return result;
     }
 
-    private record IdxEntry(
+    internal sealed record IdxEntry(
         string SchemaName, string TableName, string IndexName,
         bool IsUnique, bool IsClustered, string ColumnName);
 
@@ -299,13 +397,19 @@ public static class SchemaSnapshotGenerator
         FrozenSet<string> excludeSchemas,
         CancellationToken cancellationToken)
     {
-        await using var cmd = new SqlCommand(CatalogQueries.Indexes, connection);
+        await using var cmd = CreateCatalogCommand(CatalogQueries.Indexes, connection, includeSchemas, excludeSchemas);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
         var result = new List<IdxEntry>();
+        var schemaNameOrdinal = reader.GetOrdinal("SchemaName");
+        var tableNameOrdinal = reader.GetOrdinal("TableName");
+        var indexNameOrdinal = reader.GetOrdinal("IndexName");
+        var isUniqueOrdinal = reader.GetOrdinal("IsUnique");
+        var indexTypeOrdinal = reader.GetOrdinal("IndexType");
+        var columnNameOrdinal = reader.GetOrdinal("ColumnName");
         while (await reader.ReadAsync(cancellationToken))
         {
-            var schemaName = reader.GetString(0);
+            var schemaName = reader.GetString(schemaNameOrdinal);
             if (!ShouldInclude(schemaName, includeSchemas, excludeSchemas))
             {
                 continue;
@@ -313,20 +417,20 @@ public static class SchemaSnapshotGenerator
 
             result.Add(new IdxEntry(
                 schemaName,
-                reader.GetString(1),
-                reader.GetString(2),
-                reader.GetBoolean(3),
-                reader.GetString(4) == "CLUSTERED",
-                reader.GetString(6)
+                reader.GetString(tableNameOrdinal),
+                reader.GetString(indexNameOrdinal),
+                reader.GetBoolean(isUniqueOrdinal),
+                reader.GetString(indexTypeOrdinal) == "CLUSTERED",
+                reader.GetString(columnNameOrdinal)
             ));
         }
 
         return result;
     }
 
-    private record TableBuildResult(TableSchema Schema, bool IsView);
+    internal sealed record TableBuildResult(TableSchema Schema, bool IsView);
 
-    private static List<TableBuildResult> BuildTableSchemas(
+    internal static List<TableBuildResult> BuildTableSchemas(
         List<TableEntry> tables,
         List<ColumnEntry> columns,
         List<PkEntry> primaryKeys,
@@ -334,19 +438,19 @@ public static class SchemaSnapshotGenerator
         List<FkEntry> foreignKeys,
         List<IdxEntry> indexes)
     {
-        var columnsByTable = columns.GroupBy(c => (c.SchemaName, c.ObjectName))
+        var columnsByTable = columns.GroupBy(c => (c.SchemaName, c.ObjectName), TableKeyComparer.Instance)
             .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
 
-        var pkByTable = primaryKeys.GroupBy(p => (p.SchemaName, p.TableName))
+        var pkByTable = primaryKeys.GroupBy(p => (p.SchemaName, p.TableName), TableKeyComparer.Instance)
             .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
 
-        var uqByTable = uniqueConstraints.GroupBy(u => (u.SchemaName, u.TableName))
+        var uqByTable = uniqueConstraints.GroupBy(u => (u.SchemaName, u.TableName), TableKeyComparer.Instance)
             .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
 
-        var fkByTable = foreignKeys.GroupBy(f => (f.SchemaName, f.TableName))
+        var fkByTable = foreignKeys.GroupBy(f => (f.SchemaName, f.TableName), TableKeyComparer.Instance)
             .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
 
-        var idxByTable = indexes.GroupBy(i => (i.SchemaName, i.TableName))
+        var idxByTable = indexes.GroupBy(i => (i.SchemaName, i.TableName), TableKeyComparer.Instance)
             .ToDictionary(g => g.Key, g => g.ToList(), TableKeyComparer.Instance);
 
         var result = new List<TableBuildResult>(tables.Count);

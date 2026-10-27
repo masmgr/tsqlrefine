@@ -5,6 +5,8 @@ namespace TsqlRefine.Schema.SqlServer;
 /// </summary>
 internal static class CatalogQueries
 {
+    internal const string SchemaFilterMarker = "/* schema-filter */";
+
     internal const string TablesAndViews = """
         SELECT
             s.name AS SchemaName,
@@ -13,6 +15,7 @@ internal static class CatalogQueries
         FROM sys.objects o
         JOIN sys.schemas s ON o.schema_id = s.schema_id
         WHERE o.type IN ('U', 'V')
+        /* schema-filter */
         ORDER BY s.name, o.name
         """;
 
@@ -37,6 +40,7 @@ internal static class CatalogQueries
         JOIN sys.types t ON c.user_type_id = t.user_type_id
         LEFT JOIN sys.default_constraints dc ON c.default_object_id = dc.object_id
         WHERE o.type IN ('U', 'V')
+        /* schema-filter */
         ORDER BY s.name, o.name, c.column_id
         """;
 
@@ -54,6 +58,7 @@ internal static class CatalogQueries
         JOIN sys.objects o ON i.object_id = o.object_id
         JOIN sys.schemas s ON o.schema_id = s.schema_id
         WHERE i.is_primary_key = 1 AND o.type = 'U'
+        /* schema-filter */
         ORDER BY s.name, o.name, ic.key_ordinal
         """;
 
@@ -70,6 +75,7 @@ internal static class CatalogQueries
         JOIN sys.objects o ON i.object_id = o.object_id
         JOIN sys.schemas s ON o.schema_id = s.schema_id
         WHERE i.is_unique_constraint = 1 AND o.type = 'U'
+        /* schema-filter */
         ORDER BY s.name, o.name, i.name, ic.key_ordinal
         """;
 
@@ -91,6 +97,8 @@ internal static class CatalogQueries
         JOIN sys.objects tgtTable ON fkc.referenced_object_id = tgtTable.object_id
         JOIN sys.schemas tgtSchema ON tgtTable.schema_id = tgtSchema.schema_id
         JOIN sys.columns tgtCol ON fkc.referenced_object_id = tgtCol.object_id AND fkc.referenced_column_id = tgtCol.column_id
+        WHERE 1 = 1
+        /* schema-filter */
         ORDER BY s.name, o.name, fk.name, fkc.constraint_column_id
         """;
 
@@ -113,6 +121,7 @@ internal static class CatalogQueries
           AND i.type > 0
           AND o.type = 'U'
           AND ic.is_included_column = 0
+        /* schema-filter */
         ORDER BY s.name, o.name, i.name, ic.key_ordinal
         """;
 

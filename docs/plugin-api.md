@@ -89,6 +89,11 @@ public sealed record RuleContext(
 );
 ```
 
+The engine analyzes multiple SQL inputs in parallel and shares each `IRule` instance across those
+analyses. Consequently, `Analyze` and `GetFixes` can be called concurrently on the same instance.
+Rule implementations must be thread-safe. Prefer stateless rules; if a rule keeps mutable instance
+state, synchronize access to it.
+
 ### 4.1 Typed rule options
 
 A plugin rule that accepts options implements `IRuleOptionsDescriptorProvider`. The engine validates
@@ -155,6 +160,10 @@ public interface IObjectCatalogProvider
     // Reference lookups for an object or one of its columns.
 }
 ```
+
+`ResolveObject` returns the object only when exactly one candidate matches. It returns `null` both
+when no candidate exists and when multiple candidates match; callers can narrow the kind filter to
+avoid ambiguity.
 
 `RuleContext.Schema` and `RuleContext.RelationDeviations` are shorthand properties derived from
 `SchemaContext`, kept for source compatibility with rules written before `ISchemaContext` was

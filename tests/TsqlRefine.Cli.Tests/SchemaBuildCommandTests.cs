@@ -50,4 +50,27 @@ public sealed class SchemaBuildCommandTests
         Assert.Equal(ExitCodes.ConfigError, code);
         Assert.Contains("--output-dir", stderr.ToString());
     }
+
+    [Fact]
+    public async Task SchemaSnapshot_CanceledToken_ReturnsFatalWithoutConnecting()
+    {
+        var stdout = new StringWriter();
+        var stderr = new StringWriter();
+        using var cancellationSource = new CancellationTokenSource();
+        cancellationSource.Cancel();
+
+        var code = await CliApp.RunAsync(
+            [
+                "schema", "snapshot",
+                "--connection-string", "Server=localhost;Database=Test;Integrated Security=true;",
+                "--output", "schema.json"
+            ],
+            TextReader.Null,
+            stdout,
+            stderr,
+            cancellationSource.Token);
+
+        Assert.Equal(ExitCodes.Fatal, code);
+        Assert.Contains("Operation canceled.", stderr.ToString());
+    }
 }

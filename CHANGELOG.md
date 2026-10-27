@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-07-20
+
 ### Added
 
 - `analyze impact` / `analyze graph` CLI commands: transitive object-catalog impact analysis and dependency-graph export (JSON/DOT)
@@ -296,7 +298,8 @@ First stable release.
 - `--quiet` option to suppress informational output for IDE integration
 - Exit codes for programmatic usage (0=success, 1=violations, 2=parse error, 3=config error, 4=fatal error)
 
-[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/masmgr/tsqlrefine/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/masmgr/tsqlrefine/compare/v1.2.0...v2.0.0
 [1.2.0]: https://github.com/masmgr/tsqlrefine/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/masmgr/tsqlrefine/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/masmgr/tsqlrefine/compare/v1.0.0...v1.0.1

@@ -6,9 +6,10 @@ public sealed class RelationExtractorTests
 {
     private static List<RawJoinInfo> ExtractFromSql(string sql)
     {
-        var fragment = SqlParser.Parse(sql, 150);
-        Assert.NotNull(fragment);
-        return RelationExtractor.Extract(fragment!, "test.sql");
+        var result = SqlParser.Parse(sql, 150);
+        Assert.Empty(result.Errors);
+        Assert.NotNull(result.Fragment);
+        return RelationExtractor.Extract(result.Fragment, "test.sql");
     }
 
     [Fact]
@@ -218,9 +219,10 @@ public sealed class RelationExtractorTests
     [Fact]
     public void Extract_SourceFileIsSet()
     {
-        var fragment = SqlParser.Parse(
+        var result = SqlParser.Parse(
             "SELECT * FROM dbo.A a INNER JOIN dbo.B b ON a.Id = b.AId", 150);
-        var joins = RelationExtractor.Extract(fragment!, "my/query.sql");
+        Assert.Empty(result.Errors);
+        var joins = RelationExtractor.Extract(result.Fragment!, "my/query.sql");
 
         Assert.Single(joins);
         Assert.Equal("my/query.sql", joins[0].SourceFile);

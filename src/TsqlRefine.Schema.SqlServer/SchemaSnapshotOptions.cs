@@ -9,5 +9,11 @@ namespace TsqlRefine.Schema.SqlServer;
 public sealed record SchemaSnapshotOptions(
     IReadOnlyList<string>? IncludeSchemas = null,
     IReadOnlyList<string>? ExcludeSchemas = null,
-    int CompatLevel = 150
-);
+    int CompatLevel = SchemaSnapshotOptions.DefaultCompatLevel
+)
+{
+    /// <summary>
+    /// Default SQL Server compatibility level used for schema snapshots.
+    /// </summary>
+    public const int DefaultCompatLevel = 150;
+}

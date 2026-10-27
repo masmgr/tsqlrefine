@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema.Tests", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema.SqlServer", "TsqlRefine.Schema.SqlServer\TsqlRefine.Schema.SqlServer.csproj", "{7952E765-BF74-4803-879F-CFF3D678160E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Schema.SqlServer.Tests", "..\tests\TsqlRefine.Schema.SqlServer.Tests\TsqlRefine.Schema.SqlServer.Tests.csproj", "{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TsqlRefine.Qa.Tests", "..\tests\TsqlRefine.Qa.Tests\TsqlRefine.Qa.Tests.csproj", "{60754C92-1744-4DB6-9663-FD68144A9BF7}"
 EndProject
 Global
@@ -197,6 +199,18 @@ Global
 		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x64.Build.0 = Release|Any CPU
 		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x86.ActiveCfg = Release|Any CPU
 		{7952E765-BF74-4803-879F-CFF3D678160E}.Release|x86.Build.0 = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|x64.Build.0 = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Debug|x86.Build.0 = Debug|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|x64.ActiveCfg = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|x64.Build.0 = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|x86.ActiveCfg = Release|Any CPU
+		{A8CB6E4B-28B1-46AB-93DA-A9D0EB3FD171}.Release|x86.Build.0 = Release|Any CPU
 		{60754C92-1744-4DB6-9663-FD68144A9BF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{60754C92-1744-4DB6-9663-FD68144A9BF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60754C92-1744-4DB6-9663-FD68144A9BF7}.Debug|x64.ActiveCfg = Debug|Any CPU

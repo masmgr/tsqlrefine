@@ -33,7 +33,6 @@ internal sealed class FixApplier
         foreach (var group in orderedGroups)
         {
             var ruleId = group.Rule.Metadata.RuleId;
-            var applied = false;
 
             foreach (var fix in group.Fixes)
             {
@@ -52,13 +51,7 @@ internal sealed class FixApplier
                 appliedFixes.Add(new AppliedFix(ruleId, fix.Title, fix.Edits));
                 resolvedEdits.AddRange(resolved.Edits);
                 appliedRanges.AddRange(resolved.Edits.Select(e => new TextRange(e.Start, e.End)));
-                applied = true;
                 break;
-            }
-
-            if (!applied && group.Fixes.Count == 0)
-            {
-                skippedFixes.Add(new SkippedFix(ruleId, "(no fix)", "No applicable fixes."));
             }
         }
 

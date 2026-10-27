@@ -343,6 +343,9 @@ tsqlrefine lint --preset strict src/**/*.sql
 | 3 | Config error |
 | 4 | Runtime exception |
 
+Schema relation/object collection reports malformed SQL with file locations, returns exit code 2,
+and does not write a partial artifact.
+
 ## Rules and Plugins
 
 ```bash

@@ -8,6 +8,7 @@ namespace TsqlRefine.Schema.Catalog;
 public static class ObjectCatalogCollector
 {
     /// <summary>Collects an object catalog from SQL text and file path pairs.</summary>
+    /// <exception cref="InvalidDataException">One or more inputs contain SQL parse errors.</exception>
     public static ObjectCatalog Collect(
         IEnumerable<(string Sql, string FilePath)> inputs,
         int compatLevel,
@@ -20,17 +21,26 @@ public static class ObjectCatalogCollector
         var inputList = inputs.ToArray();
         var objects = new List<CatalogObject>();
         var references = new List<CatalogReference>();
+        var parseErrors = new List<string>();
         foreach (var (sql, filePath) in inputList)
         {
-            var fragment = SqlParser.Parse(sql, compatLevel);
-            if (fragment is null)
+            var parseResult = SqlParser.Parse(sql, compatLevel);
+            if (parseResult.Errors.Count > 0)
             {
+                parseErrors.AddRange(parseResult.Errors.Select(error => SqlParser.FormatError(filePath, error)));
+                continue;
+            }
+            if (parseResult.Fragment is null)
+            {
+                parseErrors.Add($"{filePath}: SQL parser returned no syntax tree.");
                 continue;
             }
 
             var visitor = new CollectorVisitor(filePath, defaultSchema, objects, references);
-            fragment.Accept(visitor);
+            parseResult.Fragment.Accept(visitor);
         }
+
+        SqlParser.ThrowIfErrors(parseErrors);
 
         var resolvedReferences = ResolveReferences(objects, references);
         var databases = objects.Select(obj => obj.Id.DatabaseName)
@@ -308,7 +318,7 @@ public static class ObjectCatalogCollector
         {
             var targets = _querySources
                 .SelectMany(sources => sources.Values)
-                .Distinct()
+                .DistinctBy(CreateObjectIdentityKey, StringComparer.OrdinalIgnoreCase)
                 .Take(2)
                 .ToArray();
             if (targets.Length == 1)
@@ -319,6 +329,9 @@ public static class ObjectCatalogCollector
             target = null!;
             return false;
         }
+
+        private static string CreateObjectIdentityKey(CatalogObjectId id) =>
+            $"{id.DatabaseName ?? string.Empty}\u001f{id.SchemaName}\u001f{id.Name}";
 
         private bool IsTransientTableSource(SchemaObjectName name)
         {
